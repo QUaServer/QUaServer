@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 		// request add object to server
 		UA_NodeId *outNewNodeId;
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-		oAttr.displayName = UA_LOCALIZEDTEXT("en-US", name);
+		oAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", name);
 		UA_StatusCode retval = UA_Client_addObjectNode(client,
 						                               UA_NODEID_NULL,                              // const UA_NodeId           requestedNewNodeId,
 						                               UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),// const UA_NodeId           parentNodeId,

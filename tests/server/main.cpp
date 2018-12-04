@@ -10,29 +10,74 @@
 /* predefined identifier for later use */
 UA_NodeId pumpTypeId = { 1, UA_NODEIDTYPE_NUMERIC,{ 1001 } };
 
+// Define Object Constructor
+static UA_StatusCode pumpTypeConstructor(UA_Server      *server, 
+	                                    const UA_NodeId *sessionId, 
+	                                    void            *sessionContext,
+	                                    const UA_NodeId *typeId,
+	                                    void            *typeContext,
+	                                    const UA_NodeId *nodeId, 
+	                                    void            **nodeContext) {
+	qDebug() << "Pump constructor called";
+	/* Find the NodeId of the status child variable */
+
+	// Define the relation between the pump Object and the status Variable
+	UA_RelativePathElement rpe;
+	UA_RelativePathElement_init(&rpe);
+	rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+	rpe.isInverse       = false;
+	rpe.includeSubtypes = false;
+	rpe.targetName      = UA_QUALIFIEDNAME(1, (char*)"Status");
+	// Define the path between the pump Object and the status Variable, based in relation
+	UA_BrowsePath bp;
+	UA_BrowsePath_init(&bp);
+	bp.startingNode              = *nodeId;
+	bp.relativePath.elementsSize = 1;
+	bp.relativePath.elements     = &rpe;
+	// Translate the path to a NodeId
+	UA_BrowsePathResult bpr = UA_Server_translateBrowsePathToNodeIds(server, &bp);
+	// Check translation result
+	if (bpr.statusCode != UA_STATUSCODE_GOOD || bpr.targetsSize < 1)
+	{
+		return bpr.statusCode;
+	}
+
+	/* Set the status value */
+	UA_Boolean status = true;
+	UA_Variant value;
+	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
+	UA_Server_writeValue(server, bpr.targets[0].targetId.nodeId, value);
+	UA_BrowsePathResult_deleteMembers(&bpr);
+
+	/* At this point we could replace the node context .. */
+
+	return UA_STATUSCODE_GOOD;
+}
+
+// Create Object Types
 static void defineObjectTypes(UA_Server *server) 
 {
 	/* Define the object type for "Device" */
 	UA_NodeId deviceTypeId; /* get the nodeid assigned by the server */
 	UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
-	dtAttr.displayName = UA_LOCALIZEDTEXT("en-US", "DeviceType");
+	dtAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"DeviceType");
 	UA_Server_addObjectTypeNode(server, 
 		                        UA_NODEID_NULL,
 		                        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
 		                        UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-		                        UA_QUALIFIEDNAME(1, "DeviceType"), 
+		                        UA_QUALIFIEDNAME(1, (char*)"DeviceType"),
 		                        dtAttr,
 		                        NULL, 
 		                        &deviceTypeId);
 
 	UA_VariableAttributes mnAttr = UA_VariableAttributes_default;
-	mnAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ManufacturerName");
+	mnAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ManufacturerName");
 	UA_NodeId manufacturerNameId;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      deviceTypeId,
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                      UA_QUALIFIEDNAME(1, "ManufacturerName"),
+		                      UA_QUALIFIEDNAME(1, (char*)"ManufacturerName"),
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      mnAttr, 
 		                      NULL, 
@@ -45,12 +90,12 @@ static void defineObjectTypes(UA_Server *server)
 		                   true);
 
 	UA_VariableAttributes modelAttr = UA_VariableAttributes_default;
-	modelAttr.displayName = UA_LOCALIZEDTEXT("en-US", "ModelName");
+	modelAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ModelName");
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      deviceTypeId,
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                      UA_QUALIFIEDNAME(1, "ModelName"),
+		                      UA_QUALIFIEDNAME(1, (char*)"ModelName"),
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      modelAttr, 
 		                      NULL, 
@@ -58,25 +103,25 @@ static void defineObjectTypes(UA_Server *server)
 
 	/* Define the object type for "Pump" */
 	UA_ObjectTypeAttributes ptAttr = UA_ObjectTypeAttributes_default;
-	ptAttr.displayName = UA_LOCALIZEDTEXT("en-US", "PumpType");
+	ptAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"PumpType");
 	UA_Server_addObjectTypeNode(server, 
 		                        pumpTypeId,
 		                        deviceTypeId, 
 		                        UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-		                        UA_QUALIFIEDNAME(1, "PumpType"), 
+		                        UA_QUALIFIEDNAME(1, (char*)"PumpType"),
 		                        ptAttr,
 		                        NULL, 
 		                        NULL);
 
 	UA_VariableAttributes statusAttr = UA_VariableAttributes_default;
-	statusAttr.displayName = UA_LOCALIZEDTEXT("en-US", "Status");
+	statusAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Status");
 	statusAttr.valueRank = UA_VALUERANK_SCALAR;
 	UA_NodeId statusId;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      pumpTypeId,
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                      UA_QUALIFIEDNAME(1, "Status"),
+		                      UA_QUALIFIEDNAME(1, (char*)"Status"),
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      statusAttr, 
 		                      NULL, 
@@ -89,23 +134,30 @@ static void defineObjectTypes(UA_Server *server)
 		                   true);
 
 	UA_VariableAttributes rpmAttr = UA_VariableAttributes_default;
-	rpmAttr.displayName = UA_LOCALIZEDTEXT("en-US", "MotorRPM");
+	rpmAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"MotorRPM");
 	rpmAttr.valueRank = UA_VALUERANK_SCALAR;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      pumpTypeId,
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-		                      UA_QUALIFIEDNAME(1, "MotorRPMs"),
+		                      UA_QUALIFIEDNAME(1, (char*)"MotorRPMs"),
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      rpmAttr, 
 		                      NULL, 
 		                      NULL);
+	// Add constructor
+	UA_NodeTypeLifecycle lifecycle;
+	lifecycle.constructor = pumpTypeConstructor;
+	lifecycle.destructor  = NULL;
+	UA_Server_setNodeTypeLifecycle(server, pumpTypeId, lifecycle);
 }
+
+
 
 static void addPumpObjectInstance(UA_Server *server, char *name) 
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-	oAttr.displayName = UA_LOCALIZEDTEXT("en-US", name);
+	oAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", name);
 	UA_Server_addObjectNode(server, 
 		                    UA_NODEID_NULL,
 		                    UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
@@ -146,7 +198,7 @@ int main(int argc, char *argv[])
 			running = true;
 			// configure server
 			defineObjectTypes(server);
-			addPumpObjectInstance(server, "pump1");
+			addPumpObjectInstance(server, (char*)"pump1");
 			// run server (blocking)
 			UA_StatusCode retval = UA_Server_run(server, &running);
 			QString       strRetCode = UA_StatusCode_name(retval);
