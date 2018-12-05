@@ -10,30 +10,25 @@
 /* predefined identifier for later use */
 UA_NodeId pumpTypeId = { 1, UA_NODEIDTYPE_NUMERIC,{ 1001 } };
 
-// Define Object Constructor
-static UA_StatusCode pumpTypeConstructor(UA_Server      *server, 
-	                                    const UA_NodeId *sessionId, 
-	                                    void            *sessionContext,
-	                                    const UA_NodeId *typeId,
-	                                    void            *typeContext,
-	                                    const UA_NodeId *nodeId, 
-	                                    void            **nodeContext) {
-	qDebug() << "Pump constructor called";
-	/* Find the NodeId of the status child variable */
-
+// Helper tofind object component by UA_QualifiedName
+static UA_StatusCode findNodeIdComponentByQualifiedName(UA_Server              *server, 
+	                                                    const UA_NodeId        *nodeId, 
+	                                                    const UA_QualifiedName *componentQualName, 
+	                                                    UA_NodeId              *componentNodeId)
+{
 	// Define the relation between the pump Object and the status Variable
 	UA_RelativePathElement rpe;
 	UA_RelativePathElement_init(&rpe);
 	rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 	rpe.isInverse       = false;
 	rpe.includeSubtypes = false;
-	rpe.targetName      = UA_QUALIFIEDNAME(1, (char*)"Status");
+	rpe.targetName      = *componentQualName;
 	// Define the path between the pump Object and the status Variable, based in relation
 	UA_BrowsePath bp;
 	UA_BrowsePath_init(&bp);
-	bp.startingNode              = *nodeId;
+	bp.startingNode = *nodeId;
 	bp.relativePath.elementsSize = 1;
-	bp.relativePath.elements     = &rpe;
+	bp.relativePath.elements = &rpe;
 	// Translate the path to a NodeId
 	UA_BrowsePathResult bpr = UA_Server_translateBrowsePathToNodeIds(server, &bp);
 	// Check translation result
@@ -41,23 +36,171 @@ static UA_StatusCode pumpTypeConstructor(UA_Server      *server,
 	{
 		return bpr.statusCode;
 	}
+	*componentNodeId = bpr.targets[0].targetId.nodeId;
+	UA_BrowsePathResult_deleteMembers(&bpr);
+	return UA_STATUSCODE_GOOD;
+}
+
+// Define ObjectType "PumpType" Constructor
+static UA_StatusCode pumpTypeConstructor(UA_Server      *server, 
+	                                    const UA_NodeId *sessionId, 
+	                                    void            *sessionContext,
+	                                    const UA_NodeId *typeId,
+	                                    void            *typeContext,
+	                                    const UA_NodeId *nodeId,
+	                                    void            **nodeContext) {
+	qDebug() << "Pump constructor called";
+	/* Find the NodeId of the status child variable */
+	UA_NodeId statusNodeId;
+	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server, 
+		                                                      nodeId, 
+		                                                      &UA_QUALIFIEDNAME(1, (char*)"Status"), 
+		                                                      &statusNodeId);
+	if (retVal != UA_STATUSCODE_GOOD)
+	{
+		return retVal;
+	}
 
 	/* Set the status value */
-	UA_Boolean status = true;
+	UA_Boolean status = false;
 	UA_Variant value;
 	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
-	UA_Server_writeValue(server, bpr.targets[0].targetId.nodeId, value);
-	UA_BrowsePathResult_deleteMembers(&bpr);
+	UA_Server_writeValue(server, statusNodeId, value);
 
 	/* At this point we could replace the node context .. */
+	static int counter = 0;
+	int * p_intContext = new int;
+	*p_intContext = ++counter;
+	// NOTE : UA_Server_setNodeContext(server, *nodeId, p_intContext); would not work, gets overwritten by context below
+	*nodeContext = p_intContext;
 
 	return UA_STATUSCODE_GOOD;
 }
 
+// Define ObjectType "PumpType" Destructor
+static void pumpTypeDestructor(UA_Server       *server,
+	                           const UA_NodeId *sessionId,
+	                           void            *sessionContext,
+	                           const UA_NodeId *typeId,
+	                           void            *typeContext,
+	                           const UA_NodeId *nodeId,
+	                           void            **nodeContext) {
+	
+	// cleanup context
+	int * p_intContext = (int *)&nodeContext;
+	qDebug() << "Pump destructor called : " << *p_intContext;
+	delete p_intContext;
+}
+
+static UA_StatusCode pumpStartPumpMethod(
+	UA_Server        *server,
+	const UA_NodeId  *sessionId, 
+	void             *sessionHandle,
+	const UA_NodeId  *methodId, 
+	void             *methodContext,
+	const UA_NodeId  *objectId, 
+	void             *objectContext,
+	size_t            inputSize, 
+	const UA_Variant *input,
+	size_t            outputSize, 
+	UA_Variant       *output) 
+{
+
+	/*
+	// Alternative
+	void *parentContext;
+	UA_Server_getNodeContext(server, *objectId, &parentContext);
+	const int * p_intObjContext = (const int *)(parentContext);
+	*/
+	const int * p_intObjContext = (const int *)(*(uintptr_t*)objectContext);
+	qDebug() << "Start Pump method called with object context : " << *p_intObjContext;
+
+	UA_NodeId statusNodeId;
+	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server, 
+		                                                      objectId, 
+		                                                      &UA_QUALIFIEDNAME(1, (char*)"Status"), 
+		                                                      &statusNodeId);
+	if (retVal != UA_STATUSCODE_GOOD)
+	{
+		return retVal;
+	}
+
+	// Get the status value
+	UA_Variant outValue;
+	retVal = UA_Server_readValue(server, statusNodeId, &outValue);
+	// Check if already started
+	UA_Boolean status = *(UA_Boolean *)outValue.data;
+	if (status)
+	{
+		return UA_STATUSCODE_BADNOTSUPPORTED;
+	}
+
+	// Set the status value
+	status = true;
+	UA_Variant value;
+	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
+	retVal = UA_Server_writeValue(server, statusNodeId, value);
+	
+	return retVal;
+}
+
+static UA_StatusCode pumpStopPumpMethod(
+	UA_Server        *server,
+	const UA_NodeId  *sessionId,
+	void             *sessionHandle,
+	const UA_NodeId  *methodId,
+	void             *methodContext,
+	const UA_NodeId  *objectId,
+	void             *objectContext,
+	size_t            inputSize,
+	const UA_Variant *input,
+	size_t            outputSize,
+	UA_Variant       *output)
+{
+
+	/*
+	// Alternative
+	void *parentContext;
+	UA_Server_getNodeContext(server, *objectId, &parentContext);
+	const int * p_intObjContext = (const int *)(parentContext);
+	*/
+	const int * p_intObjContext = (const int *)(*(uintptr_t*)objectContext);
+	qDebug() << "Stop Pump method called with object context : " << *p_intObjContext;
+
+	UA_NodeId statusNodeId;
+	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server,
+		objectId,
+		&UA_QUALIFIEDNAME(1, (char*)"Status"),
+		&statusNodeId);
+	if (retVal != UA_STATUSCODE_GOOD)
+	{
+		return retVal;
+	}
+
+	// Get the status value
+	UA_Variant outValue;
+	retVal = UA_Server_readValue(server, statusNodeId, &outValue);
+	// Check if already started
+	UA_Boolean status = *(UA_Boolean *)outValue.data;
+	if (!status)
+	{
+		return UA_STATUSCODE_BADNOTSUPPORTED;
+	}
+
+	// Set the status value
+	status = false;
+	UA_Variant value;
+	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
+	retVal = UA_Server_writeValue(server, statusNodeId, value);
+
+	return retVal;
+}
+
+
 // Create Object Types
 static void defineObjectTypes(UA_Server *server) 
 {
-	/* Define the object type for "Device" */
+	// Define (abstract) ObjectType "Device"
 	UA_NodeId deviceTypeId; /* get the nodeid assigned by the server */
 	UA_ObjectTypeAttributes dtAttr = UA_ObjectTypeAttributes_default;
 	dtAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"DeviceType");
@@ -69,7 +212,7 @@ static void defineObjectTypes(UA_Server *server)
 		                        dtAttr,
 		                        NULL, 
 		                        &deviceTypeId);
-
+	// Define "ManufacturerName" Component (Variable) for Device
 	UA_VariableAttributes mnAttr = UA_VariableAttributes_default;
 	mnAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ManufacturerName");
 	UA_NodeId manufacturerNameId;
@@ -82,13 +225,13 @@ static void defineObjectTypes(UA_Server *server)
 		                      mnAttr, 
 		                      NULL, 
 		                      &manufacturerNameId);
-	/* Make the manufacturer name mandatory */
+	// Define "ManufacturerName" mandatory by creating a special Reference from the Property to a special node called MODELLINGRULE_MANDATORY
 	UA_Server_addReference(server, 
 		                   manufacturerNameId,
 		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
 		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
 		                   true);
-
+	// Define "ModelName" Component (Variable) for Device
 	UA_VariableAttributes modelAttr = UA_VariableAttributes_default;
 	modelAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ModelName");
 	UA_Server_addVariableNode(server, 
@@ -101,7 +244,7 @@ static void defineObjectTypes(UA_Server *server)
 		                      NULL, 
 		                      NULL);
 
-	/* Define the object type for "Pump" */
+	// Define ObjectType "PumpType" that inherits from "Device" (using the Reference HASSUBTYPE)
 	UA_ObjectTypeAttributes ptAttr = UA_ObjectTypeAttributes_default;
 	ptAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"PumpType");
 	UA_Server_addObjectTypeNode(server, 
@@ -112,7 +255,7 @@ static void defineObjectTypes(UA_Server *server)
 		                        ptAttr,
 		                        NULL, 
 		                        NULL);
-
+	// Define "Status" Component (Variable) for PumpType
 	UA_VariableAttributes statusAttr = UA_VariableAttributes_default;
 	statusAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Status");
 	statusAttr.valueRank = UA_VALUERANK_SCALAR;
@@ -126,13 +269,13 @@ static void defineObjectTypes(UA_Server *server)
 		                      statusAttr, 
 		                      NULL, 
 		                      &statusId);
-	/* Make the status variable mandatory */
+	// Define "Status" mandatory
 	UA_Server_addReference(server, 
 		                   statusId,
 		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
 		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
 		                   true);
-
+	// Define "MotorRPM" Component (Variable) for PumpType
 	UA_VariableAttributes rpmAttr = UA_VariableAttributes_default;
 	rpmAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"MotorRPM");
 	rpmAttr.valueRank = UA_VALUERANK_SCALAR;
@@ -145,19 +288,77 @@ static void defineObjectTypes(UA_Server *server)
 		                      rpmAttr, 
 		                      NULL, 
 		                      NULL);
-	// Add constructor
+
+	// Add Constructor for PumpType
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = pumpTypeConstructor;
-	lifecycle.destructor  = NULL;
+	lifecycle.destructor  = pumpTypeDestructor;
 	UA_Server_setNodeTypeLifecycle(server, pumpTypeId, lifecycle);
+
+	// Add "StartPump" method
+	UA_MethodAttributes startAttrs = UA_MethodAttributes_default;
+	startAttrs.description    = UA_LOCALIZEDTEXT("en-US", "Starts the pump, setting the `Status` variable to true");
+	startAttrs.displayName    = UA_LOCALIZEDTEXT("en-US", "Start Pump");
+	startAttrs.executable     = true;
+	startAttrs.userExecutable = true;
+	UA_NodeId methodStartPumpId;
+	UA_Server_addMethodNode(                           
+		server,                                             // UA_Server                 *server, 
+		UA_NODEID_NULL,                                     // const UA_NodeId            requestedNewNodeId,
+		pumpTypeId,                                         // const UA_NodeId            parentNodeId, 
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),        // const UA_NodeId            referenceTypeId, (or ?UA_NS0ID_HASORDEREDCOMPONENT)
+		UA_QUALIFIEDNAME (1, "start pump"),                 // const UA_QualifiedName     browseName, 
+		startAttrs,                                          // const UA_MethodAttributes  attr,
+		&pumpStartPumpMethod,                               // UA_MethodCallback          method,
+		0,                                                  // size_t                     inputArgumentsSize, 
+		NULL,                                               // const UA_Argument         *inputArguments,
+		0,                                                  // size_t                     outputArgumentsSize, 
+		NULL,                                               // const UA_Argument         *outputArguments,
+		NULL,                                               // void                      *nodeContext, 
+		&methodStartPumpId                                  // UA_NodeId                 *outNewNodeId
+	);
+	// Define "StartPump" method mandatory
+	UA_Server_addReference(server, 
+		                   methodStartPumpId,
+		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                   true);
+
+	// Add "StopPump" method
+	UA_MethodAttributes stopAttrs = UA_MethodAttributes_default;
+	stopAttrs.description    = UA_LOCALIZEDTEXT("en-US", "Stops the pump, setting the `Status` variable to true");
+	stopAttrs.displayName    = UA_LOCALIZEDTEXT("en-US", "Stop Pump");
+	stopAttrs.executable     = true;
+	stopAttrs.userExecutable = true;
+	UA_NodeId methodStopPumpId;
+	UA_Server_addMethodNode(                         
+		server,                                      
+		UA_NODEID_NULL,                              
+		pumpTypeId,                                  
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), 
+		UA_QUALIFIEDNAME (1, "stop pump"),           
+		stopAttrs,                                   
+		&pumpStopPumpMethod,
+		0,                                           
+		NULL,                                        
+		0,                                           
+		NULL,                                        
+		NULL,                                        
+		&methodStopPumpId                            
+	);
+	// Define "StopPump" method mandatory
+	UA_Server_addReference(server, 
+		                   methodStopPumpId,
+		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                   true);
 }
-
-
 
 static void addPumpObjectInstance(UA_Server *server, char *name) 
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 	oAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", name);
+
 	UA_Server_addObjectNode(server, 
 		                    UA_NODEID_NULL,
 		                    UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
@@ -165,7 +366,7 @@ static void addPumpObjectInstance(UA_Server *server, char *name)
 		                    UA_QUALIFIEDNAME(1, name),
 		                    pumpTypeId, /* this refers to the object type identifier */
 		                    oAttr, 
-		                    NULL, 
+		                    NULL,    // void *nodeContext
 		                    NULL);
 }
 
