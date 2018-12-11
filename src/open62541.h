@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: v0.3-rc4
+ * Git-Revision: v0.3-rc4-17-g8332283b
  */
 
 /*
@@ -36,7 +36,7 @@ extern "C" {
 #define UA_OPEN62541_VER_MINOR 3
 #define UA_OPEN62541_VER_PATCH 0
 #define UA_OPEN62541_VER_LABEL "-rc4" /* Release candidate label, etc. */
-#define UA_OPEN62541_VER_COMMIT "v0.3-rc4"
+#define UA_OPEN62541_VER_COMMIT "v0.3-rc4-17-g8332283b"
 
 /**
  * Feature Options
@@ -3230,7 +3230,7 @@ deprecatedDateTimeMultiple(double multiple) {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/ua_types_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2018-11-22 04:59:20 */
+ * on host PPIC09 by user User at 2018-12-10 10:15:21 */
 
 
 #ifdef __cplusplus
@@ -5918,7 +5918,7 @@ typedef UA_Double UA_Duration;
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/ua_types_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2018-11-22 04:59:20 */
+ * on host PPIC09 by user User at 2018-12-10 10:15:21 */
 
 
 #ifdef __cplusplus
@@ -15305,6 +15305,77 @@ UA_CertificateVerification_Trustlist(UA_CertificateVerification *cv,
 }
 #endif
 
+
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/plugins/ua_securitypolicy_basic128rsa15.h" ***********************************/
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
+ */
+
+#ifndef UA_SECURITYPOLICY_BASIC128RSA15_H_
+#define UA_SECURITYPOLICY_BASIC128RSA15_H_
+
+
+#ifdef UA_ENABLE_ENCRYPTION
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+UA_EXPORT UA_StatusCode
+UA_SecurityPolicy_Basic128Rsa15(UA_SecurityPolicy *policy,
+                                UA_CertificateVerification *certificateVerification,
+                                const UA_ByteString localCertificate,
+                                const UA_ByteString localPrivateKey,
+                                UA_Logger logger);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UA_ENABLE_ENCRYPTION */
+
+#endif // UA_SECURITYPOLICY_BASIC128RSA15_H_
+
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/plugins/ua_securitypolicy_basic256sha256.h" ***********************************/
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
+ *    Copyright 2018 (c) Daniel Feist, Precitec GmbH & Co. KG
+ */
+
+#ifndef UA_SECURITYPOLICY_BASIC256SHA256_H_
+#define UA_SECURITYPOLICY_BASIC256SHA256_H_
+
+
+#ifdef UA_ENABLE_ENCRYPTION
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+UA_EXPORT UA_StatusCode
+UA_SecurityPolicy_Basic256Sha256(UA_SecurityPolicy *policy,
+                                 UA_CertificateVerification *certificateVerification,
+                                 const UA_ByteString localCertificate,
+                                 const UA_ByteString localPrivateKey,
+                                 UA_Logger logger);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UA_ENABLE_ENCRYPTION */
+
+#endif // UA_SECURITYPOLICY_BASIC256SHA256_H_
 
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/plugins/ua_log_stdout.h" ***********************************/
 

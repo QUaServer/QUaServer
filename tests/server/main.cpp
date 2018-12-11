@@ -48,9 +48,10 @@ static UA_StatusCode pumpTypeConstructor(UA_Server      *server,
 	                                    const UA_NodeId *typeId,
 	                                    void            *typeContext,
 	                                    const UA_NodeId *nodeId,
-	                                    void            **nodeContext) {
+	                                    void            **nodeContext) 
+{
 	qDebug() << "Pump constructor called";
-	/* Find the NodeId of the status child variable */
+	/* Find the NodeId of the "Status" child variable */
 	UA_NodeId statusNodeId;
 	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server, 
 		                                                      nodeId, 
@@ -61,11 +62,28 @@ static UA_StatusCode pumpTypeConstructor(UA_Server      *server,
 		return retVal;
 	}
 
-	/* Set the status value */
+	/* Set the default "Status" value */
 	UA_Boolean status = false;
-	UA_Variant value;
-	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
-	UA_Server_writeValue(server, statusNodeId, value);
+	UA_Variant valueStatus;
+	UA_Variant_setScalar(&valueStatus, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
+	UA_Server_writeValue(server, statusNodeId, valueStatus);
+
+	/* Find the "MotorRPMs" of the status child variable */
+	UA_NodeId rpmNodeId;
+	retVal = findNodeIdComponentByQualifiedName(server,
+		                                        nodeId,
+		                                        &UA_QUALIFIEDNAME(1, (char*)"MotorRPMs"),
+		                                        &rpmNodeId);
+	if (retVal != UA_STATUSCODE_GOOD)
+	{
+		return retVal;
+	}
+
+	/* Set the default "MotorRPMs" value */
+	UA_Double rpm = 0.0;
+	UA_Variant valueRpm;
+	UA_Variant_setScalar(&valueRpm, &rpm, &UA_TYPES[UA_TYPES_DOUBLE]);
+	UA_Server_writeValue(server, rpmNodeId, valueRpm);
 
 	/* At this point we could replace the node context .. */
 	static int counter = 0;
@@ -84,8 +102,8 @@ static void pumpTypeDestructor(UA_Server       *server,
 	                           const UA_NodeId *typeId,
 	                           void            *typeContext,
 	                           const UA_NodeId *nodeId,
-	                           void            **nodeContext) {
-	
+	                           void            **nodeContext) 
+{	
 	// cleanup context
 	int * p_intContext = (int *)&nodeContext;
 	qDebug() << "Pump destructor called : " << *p_intContext;
@@ -112,7 +130,7 @@ static UA_StatusCode pumpStartPumpMethod(
 	UA_Server_getNodeContext(server, *objectId, &parentContext);
 	const int * p_intObjContext = (const int *)(parentContext);
 	*/
-	const int * p_intObjContext = (const int *)(*(uintptr_t*)objectContext);
+	const int * p_intObjContext = (const int *)objectContext;
 	qDebug() << "Start Pump method called with object context : " << *p_intObjContext;
 
 	UA_NodeId statusNodeId;
@@ -157,14 +175,7 @@ static UA_StatusCode pumpStopPumpMethod(
 	size_t            outputSize,
 	UA_Variant       *output)
 {
-
-	/*
-	// Alternative
-	void *parentContext;
-	UA_Server_getNodeContext(server, *objectId, &parentContext);
-	const int * p_intObjContext = (const int *)(parentContext);
-	*/
-	const int * p_intObjContext = (const int *)(*(uintptr_t*)objectContext);
+	const int * p_intObjContext = (const int *)objectContext;
 	qDebug() << "Stop Pump method called with object context : " << *p_intObjContext;
 
 	UA_NodeId statusNodeId;
@@ -192,6 +203,56 @@ static UA_StatusCode pumpStopPumpMethod(
 	UA_Variant value;
 	UA_Variant_setScalar(&value, &status, &UA_TYPES[UA_TYPES_BOOLEAN]);
 	retVal = UA_Server_writeValue(server, statusNodeId, value);
+
+	return retVal;
+}
+
+static UA_StatusCode pumpIncRpmMethod(
+	UA_Server        *server,
+	const UA_NodeId  *sessionId,
+	void             *sessionHandle,
+	const UA_NodeId  *methodId,
+	void             *methodContext,
+	const UA_NodeId  *objectId,
+	void             *objectContext,
+	size_t            inputSize,
+	const UA_Variant *input,
+	size_t            outputSize,
+	UA_Variant       *output)
+{
+	const int * p_intObjContext = (const int *)objectContext;
+	qDebug() << "Increase RPM method called with object context : " << *p_intObjContext;
+
+	UA_NodeId rpmNodeId;
+	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server,
+		objectId,
+		&UA_QUALIFIEDNAME(1, (char*)"MotorRPMs"),
+		&rpmNodeId);
+	if (retVal != UA_STATUSCODE_GOOD)
+	{
+		return retVal;
+	}
+
+	// Get the current rpm value
+	UA_Variant outValue;
+	retVal = UA_Server_readValue(server, rpmNodeId, &outValue); // TODO : possible memory leak!
+	UA_Double rpm = *(UA_Double *)outValue.data;
+
+	// Get the delta rpm value
+	UA_Double delta_rpm = *(UA_Double *)input->data;
+
+	// Set the rpm value
+	rpm = rpm + delta_rpm;
+	UA_Variant value;
+	UA_Variant_setScalar(&value, &rpm, &UA_TYPES[UA_TYPES_DOUBLE]);
+	retVal = UA_Server_writeValue(server, rpmNodeId, value);
+
+	// Set the method output
+	UA_Variant_init(output);
+	output->type               = &UA_TYPES[UA_TYPES_DOUBLE];
+	output->arrayLength        = 0;
+	output->data               = UA_malloc(UA_TYPES[UA_TYPES_DOUBLE].memSize);
+	*(UA_Double *)output->data = rpm;
 
 	return retVal;
 }
@@ -258,7 +319,8 @@ static void defineObjectTypes(UA_Server *server)
 	// Define "Status" Component (Variable) for PumpType
 	UA_VariableAttributes statusAttr = UA_VariableAttributes_default;
 	statusAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Status");
-	statusAttr.valueRank = UA_VALUERANK_SCALAR;
+	statusAttr.valueRank   = UA_VALUERANK_SCALAR;
+	statusAttr.dataType    = UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN);
 	UA_NodeId statusId;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
@@ -278,7 +340,9 @@ static void defineObjectTypes(UA_Server *server)
 	// Define "MotorRPM" Component (Variable) for PumpType
 	UA_VariableAttributes rpmAttr = UA_VariableAttributes_default;
 	rpmAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"MotorRPM");
-	rpmAttr.valueRank = UA_VALUERANK_SCALAR;
+	rpmAttr.valueRank   = UA_VALUERANK_SCALAR;
+	rpmAttr.dataType    = UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE);
+	UA_NodeId rpmId;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      pumpTypeId,
@@ -287,8 +351,13 @@ static void defineObjectTypes(UA_Server *server)
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      rpmAttr, 
 		                      NULL, 
-		                      NULL);
-
+		                      &rpmId);
+	// Define "MotorRPM" mandatory
+	UA_Server_addReference(server, 
+		                   rpmId,
+		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                   true);
 	// Add Constructor for PumpType
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = pumpTypeConstructor;
@@ -297,8 +366,8 @@ static void defineObjectTypes(UA_Server *server)
 
 	// Add "StartPump" method
 	UA_MethodAttributes startAttrs = UA_MethodAttributes_default;
-	startAttrs.description    = UA_LOCALIZEDTEXT("en-US", "Starts the pump, setting the `Status` variable to true");
-	startAttrs.displayName    = UA_LOCALIZEDTEXT("en-US", "Start Pump");
+	startAttrs.description    = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Starts the pump, setting the `Status` variable to true");
+	startAttrs.displayName    = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Start Pump");
 	startAttrs.executable     = true;
 	startAttrs.userExecutable = true;
 	UA_NodeId methodStartPumpId;
@@ -306,9 +375,9 @@ static void defineObjectTypes(UA_Server *server)
 		server,                                             // UA_Server                 *server, 
 		UA_NODEID_NULL,                                     // const UA_NodeId            requestedNewNodeId,
 		pumpTypeId,                                         // const UA_NodeId            parentNodeId, 
-		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),        // const UA_NodeId            referenceTypeId, (or ?UA_NS0ID_HASORDEREDCOMPONENT)
-		UA_QUALIFIEDNAME (1, "start pump"),                 // const UA_QualifiedName     browseName, 
-		startAttrs,                                          // const UA_MethodAttributes  attr,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT), // const UA_NodeId            referenceTypeId, (or ?UA_NS0ID_HASORDEREDCOMPONENT)
+		UA_QUALIFIEDNAME (1, (char*)"start pump"),          // const UA_QualifiedName     browseName, 
+		startAttrs,                                         // const UA_MethodAttributes  attr,
 		&pumpStartPumpMethod,                               // UA_MethodCallback          method,
 		0,                                                  // size_t                     inputArgumentsSize, 
 		NULL,                                               // const UA_Argument         *inputArguments,
@@ -326,8 +395,8 @@ static void defineObjectTypes(UA_Server *server)
 
 	// Add "StopPump" method
 	UA_MethodAttributes stopAttrs = UA_MethodAttributes_default;
-	stopAttrs.description    = UA_LOCALIZEDTEXT("en-US", "Stops the pump, setting the `Status` variable to true");
-	stopAttrs.displayName    = UA_LOCALIZEDTEXT("en-US", "Stop Pump");
+	stopAttrs.description    = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Stops the pump, setting the `Status` variable to true");
+	stopAttrs.displayName    = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Stop Pump");
 	stopAttrs.executable     = true;
 	stopAttrs.userExecutable = true;
 	UA_NodeId methodStopPumpId;
@@ -335,8 +404,8 @@ static void defineObjectTypes(UA_Server *server)
 		server,                                      
 		UA_NODEID_NULL,                              
 		pumpTypeId,                                  
-		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), 
-		UA_QUALIFIEDNAME (1, "stop pump"),           
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT),
+		UA_QUALIFIEDNAME (1, (char*)"stop pump"),
 		stopAttrs,                                   
 		&pumpStopPumpMethod,
 		0,                                           
@@ -352,15 +421,68 @@ static void defineObjectTypes(UA_Server *server)
 		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
 		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
 		                   true);
+
+	/* "pumpIncRpmMethod" method input argument */
+    UA_Argument inputArgument;
+    UA_Argument_init(&inputArgument);
+    inputArgument.description         = UA_LOCALIZEDTEXT("en-US", "RPMs to be added to the current value [double]");
+    inputArgument.name                = UA_STRING("delta RPMs");
+	inputArgument.valueRank           = UA_VALUERANK_SCALAR;
+    inputArgument.dataType            = UA_TYPES[UA_TYPES_DOUBLE].typeId;
+	/* "pumpIncRpmMethod" method output argument */
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description         = UA_LOCALIZEDTEXT("en-US", "RPMs result after adding the delta input to the current value [double]");
+	outputArgument.name                = UA_STRING("result RPMs");
+	outputArgument.valueRank           = UA_VALUERANK_SCALAR;
+	outputArgument.dataType            = UA_TYPES[UA_TYPES_DOUBLE].typeId;
+	// Add "pumpIncRpmMethod" method
+	UA_MethodAttributes rpmAttrs   = UA_MethodAttributes_default;
+	rpmAttrs.description           = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Increases the Rpms in the pump, modifing the `MotorRPM` variable");
+	rpmAttrs.displayName           = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"Increase RPMs");
+	rpmAttrs.executable            = true;
+	rpmAttrs.userExecutable        = true;
+	UA_NodeId incRpmPumpId         = UA_NODEID_NULL;
+	incRpmPumpId.namespaceIndex    = 1;
+	incRpmPumpId.identifierType    = UA_NODEIDTYPE_STRING;
+	incRpmPumpId.identifier.string = UA_BYTESTRING_ALLOC((char*)"incrpms");
+	UA_Server_addMethodNode(                         
+		server,                                      
+		incRpmPumpId,
+		pumpTypeId,                                  
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT),
+		UA_QUALIFIEDNAME (1, (char*)"incrpms"),
+		rpmAttrs,
+		&pumpIncRpmMethod,
+		1,                                           
+		&inputArgument,
+		1,                                           
+		&outputArgument,
+		NULL,                                        
+		NULL
+	);
+	// Define "pumpIncRpmMethod" method mandatory
+	UA_Server_addReference(server, 
+		                   incRpmPumpId,
+		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                   true);
+
 }
 
-static void addPumpObjectInstance(UA_Server *server, char *name) 
+static void addPumpObjectInstance(UA_Server *server, char *name, char *nodeid) 
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-	oAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", name);
-
+	oAttr.displayName    = UA_LOCALIZEDTEXT((char*)"en-US", name);
+	UA_NodeId pumpNodeId = UA_NODEID_NULL;
+	if (nodeid)
+	{
+		pumpNodeId.namespaceIndex    = 1;
+		pumpNodeId.identifierType    = UA_NODEIDTYPE_STRING;
+		pumpNodeId.identifier.string = UA_BYTESTRING_ALLOC(nodeid);
+	}
 	UA_Server_addObjectNode(server, 
-		                    UA_NODEID_NULL,
+		                    pumpNodeId,
 		                    UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
 		                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
 		                    UA_QUALIFIEDNAME(1, name),
@@ -399,7 +521,7 @@ int main(int argc, char *argv[])
 			running = true;
 			// configure server
 			defineObjectTypes(server);
-			addPumpObjectInstance(server, (char*)"pump1");
+			addPumpObjectInstance(server, (char*)"pump1", (char*)"pump1");
 			// run server (blocking)
 			UA_StatusCode retval = UA_Server_run(server, &running);
 			QString       strRetCode = UA_StatusCode_name(retval);
