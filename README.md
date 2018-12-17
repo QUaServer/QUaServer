@@ -11,3 +11,13 @@ These files are **generated** by the *CMake* build of the [original library repo
 
 The library version of the `open62541` files used currently in this repo is `v0.3-rc4`.
 
+---
+
+## TODO
+
+1. Find out how to use enums.
+
+* <https://github.com/open62541/open62541/issues/2032>
+
+* <https://github.com/open62541/open62541/issues/2167>
+

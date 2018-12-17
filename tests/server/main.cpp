@@ -26,9 +26,9 @@ static UA_StatusCode findNodeIdComponentByQualifiedName(UA_Server              *
 	// Define the path between the pump Object and the status Variable, based in relation
 	UA_BrowsePath bp;
 	UA_BrowsePath_init(&bp);
-	bp.startingNode = *nodeId;
+	bp.startingNode              = *nodeId;
 	bp.relativePath.elementsSize = 1;
-	bp.relativePath.elements = &rpe;
+	bp.relativePath.elements     = &rpe;
 	// Translate the path to a NodeId
 	UA_BrowsePathResult bpr = UA_Server_translateBrowsePathToNodeIds(server, &bp);
 	// Check translation result
@@ -225,9 +225,9 @@ static UA_StatusCode pumpIncRpmMethod(
 
 	UA_NodeId rpmNodeId;
 	UA_StatusCode retVal = findNodeIdComponentByQualifiedName(server,
-		objectId,
-		&UA_QUALIFIEDNAME(1, (char*)"MotorRPMs"),
-		&rpmNodeId);
+		                                                      objectId,
+		                                                      &UA_QUALIFIEDNAME(1, (char*)"MotorRPMs"),
+		                                                      &rpmNodeId);
 	if (retVal != UA_STATUSCODE_GOOD)
 	{
 		return retVal;
@@ -294,7 +294,17 @@ static void defineObjectTypes(UA_Server *server)
 		                   true);
 	// Define "ModelName" Component (Variable) for Device
 	UA_VariableAttributes modelAttr = UA_VariableAttributes_default;
-	modelAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ModelName");
+	modelAttr.displayName     = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"ModelName");
+	modelAttr.valueRank       = UA_VALUERANK_SCALAR;
+	modelAttr.dataType        = UA_NODEID_NUMERIC(0, UA_NS0ID_STRING);
+	// Make writtable
+	modelAttr.accessLevel     = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+	modelAttr.userAccessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE; 
+	// Default value
+	UA_Variant_init(&modelAttr.value);
+	UA_String strModel = UA_STRING("unknown"); 
+	UA_Variant_setScalarCopy(&modelAttr.value, &strModel, &UA_TYPES[UA_TYPES_STRING]);
+	UA_NodeId modelNameId;
 	UA_Server_addVariableNode(server, 
 		                      UA_NODEID_NULL, 
 		                      deviceTypeId,
@@ -303,8 +313,36 @@ static void defineObjectTypes(UA_Server *server)
 		                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), 
 		                      modelAttr, 
 		                      NULL, 
-		                      NULL);
+		                      &modelNameId);
+	// Define "ModelName" mandatory
+	UA_Server_addReference(server, 
+		                   modelNameId,
+		                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                   UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                   true);
+	
+	// Add Write callback
+	UA_ValueCallback callback;
+	callback.onRead  = nullptr;
+	callback.onWrite = [](UA_Server             *server,
+		                  const UA_NodeId       *sessionId, 
+		                  void                  *sessionContext,
+		                  const UA_NodeId       *nodeId , 
+		                  void                  *nodeContext,
+		                  const UA_NumericRange *range, 
+		                  const UA_DataValue    *data) {
+		// After write callback
+		UA_Variant outValue;
+		UA_Server_readValue(server, *nodeId, &outValue);
+		UA_String strModel = *(UA_String *)outValue.data;
+		QString qstrModel = QString::fromUtf8((const char *)strModel.data, strModel.length);
+		qDebug() << "After write callback for Pump::ModelName " << qstrModel;
 
+		// TODO : find parent object?
+
+	};
+	UA_Server_setVariableNode_valueCallback(server, modelNameId, callback);
+	
 	// Define ObjectType "PumpType" that inherits from "Device" (using the Reference HASSUBTYPE)
 	UA_ObjectTypeAttributes ptAttr = UA_ObjectTypeAttributes_default;
 	ptAttr.displayName = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"PumpType");
