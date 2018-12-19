@@ -302,7 +302,7 @@ static void defineObjectTypes(UA_Server *server)
 	modelAttr.userAccessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE; 
 	// Default value
 	UA_Variant_init(&modelAttr.value);
-	UA_String strModel = UA_STRING("unknown"); 
+	UA_String strModel = UA_STRING((char*)"unknown");
 	UA_Variant_setScalarCopy(&modelAttr.value, &strModel, &UA_TYPES[UA_TYPES_STRING]);
 	UA_NodeId modelNameId;
 	UA_Server_addVariableNode(server, 
@@ -463,15 +463,15 @@ static void defineObjectTypes(UA_Server *server)
 	/* "pumpIncRpmMethod" method input argument */
     UA_Argument inputArgument;
     UA_Argument_init(&inputArgument);
-    inputArgument.description         = UA_LOCALIZEDTEXT("en-US", "RPMs to be added to the current value [double]");
-    inputArgument.name                = UA_STRING("delta RPMs");
+    inputArgument.description         = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"RPMs to be added to the current value [double]");
+    inputArgument.name                = UA_STRING((char*)"delta RPMs");
 	inputArgument.valueRank           = UA_VALUERANK_SCALAR;
     inputArgument.dataType            = UA_TYPES[UA_TYPES_DOUBLE].typeId;
 	/* "pumpIncRpmMethod" method output argument */
 	UA_Argument outputArgument;
 	UA_Argument_init(&outputArgument);
-	outputArgument.description         = UA_LOCALIZEDTEXT("en-US", "RPMs result after adding the delta input to the current value [double]");
-	outputArgument.name                = UA_STRING("result RPMs");
+	outputArgument.description         = UA_LOCALIZEDTEXT((char*)"en-US", (char*)"RPMs result after adding the delta input to the current value [double]");
+	outputArgument.name                = UA_STRING((char*)"result RPMs");
 	outputArgument.valueRank           = UA_VALUERANK_SCALAR;
 	outputArgument.dataType            = UA_TYPES[UA_TYPES_DOUBLE].typeId;
 	// Add "pumpIncRpmMethod" method

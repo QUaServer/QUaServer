@@ -3,16 +3,16 @@ CONFIG  += staticlib
 CONFIG  -= app_bundle
 CONFIG  -= qt
 
-DESTDIR  = $$PWD/build
+DESTDIR  = $$PWD/../build
 
 CONFIG(debug, debug|release) {
-	OBJECTS_DIR = $$PWD/build/debug
+	OBJECTS_DIR = $$DESTDIRdebug
 	TARGET = open62541d
 } else {
-	OBJECTS_DIR = $$PWD/build/release
+	OBJECTS_DIR = $$DESTDIR/release
 	TARGET = open62541
 }	
 
-INCLUDEPATH += $$PWD/src
+INCLUDEPATH += $$PWD
 
-SOURCES += $$PWD/src/open62541.c
+SOURCES += $$PWD/open62541.c

@@ -276,3 +276,4 @@ tmp/
 *.lib
 *.db
 *.opendb
+*.stash

@@ -3,7 +3,7 @@ CONFIG += c++11
 CONFIG += console
 CONFIG -= app_bundle
 
-include($$PWD/../../open62541.pri)
+include($$PWD/../../src/open62541.pri)
 include($$PWD/../../common/QConsoleListener.git/src/qconsolelistener.pri)
 include($$PWD/../../common/QDeferred.git/src/qlambdathreadworker.pri)
 
