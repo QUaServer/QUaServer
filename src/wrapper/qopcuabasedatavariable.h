@@ -1,13 +1,13 @@
 #ifndef QOPCUABASEDATAVARIABLE_H
 #define QOPCUABASEDATAVARIABLE_H
 
-#include <QObject>
+#include <QOpcUaBaseVariable>
 
-class QOpcUaBaseDataVariable : public QObject
+class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
 {
     Q_OBJECT
 public:
-    explicit QOpcUaBaseDataVariable(QObject *parent = 0);
+    explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
 signals:
 

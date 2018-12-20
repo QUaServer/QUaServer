@@ -6,12 +6,19 @@
 class QOpcUaFolderObject : public QOpcUaBaseObject
 {
     Q_OBJECT
+
+friend class QOpcUaServer;
+
 public:
-    explicit QOpcUaFolderObject(QObject *parent = 0);
+    explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
 
-signals:
+	QOpcUaBaseObject * addBaseObject(const QString &displayName = "", const QString &description = "");
 
-public slots:
+	// TODO : addBaseDataVariable
+
+private:
+	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
+	explicit QOpcUaFolderObject(QOpcUaServer *server);
 };
 
 #endif // QOPCUAFOLDEROBJECT_H
