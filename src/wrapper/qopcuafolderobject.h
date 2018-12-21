@@ -19,7 +19,7 @@ public:
 
 	QOpcUaFolderObject * addFolderObject();
 
-	static UA_NodeId m_typeNodeId;
+	
 
 private:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

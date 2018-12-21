@@ -1,7 +1,7 @@
 #include "qopcuafolderobject.h"
 
 // NOTE : define typeNodeId
-UA_NodeId QOpcUaFolderObject::m_typeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE);
+UA_NodeId QOpcUaNodeFactory<QOpcUaFolderObject>::m_typeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE);
 
 QOpcUaFolderObject::QOpcUaFolderObject(QOpcUaServerNode *parent) : QOpcUaAbstractObject(parent)
 {

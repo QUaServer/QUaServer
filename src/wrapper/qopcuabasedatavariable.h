@@ -9,7 +9,7 @@ class QOpcUaBaseDataVariable : public QOpcUaAbstractVariable, public QOpcUaNodeF
 public:
     explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
-	static UA_NodeId m_typeNodeId;
+	
 };
 
 #endif // QOPCUABASEDATAVARIABLE_H

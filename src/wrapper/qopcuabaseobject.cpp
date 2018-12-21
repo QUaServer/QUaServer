@@ -1,7 +1,7 @@
 #include "qopcuabaseobject.h"
 
 // NOTE : define typeNodeId
-UA_NodeId QOpcUaBaseObject::m_typeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+UA_NodeId QOpcUaNodeFactory<QOpcUaBaseObject>::m_typeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
 
 QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServerNode *parent) : QOpcUaAbstractObject(parent)
 {
