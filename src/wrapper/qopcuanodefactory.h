@@ -15,10 +15,9 @@ struct QOpcUaNodeFactory
 
     static void SetTypeNodeId(const UA_NodeId & typeNodeId)
     {
-        T::m_typeNodeId = typeNodeId;
+		T::m_typeNodeId = typeNodeId;
     }
 
-	static UA_NodeId m_typeNodeId;
 };
 
 #endif // QOPCUANODEFACTORY_H

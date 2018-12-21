@@ -8,7 +8,9 @@ SOURCES += \
     $$PWD/qopcuabaseobject.cpp \
     $$PWD/qopcuafolderobject.cpp \
     $$PWD/qopcuaservernode.cpp \
-    $$PWD/qopcuabasevariable.cpp
+    $$PWD/qopcuabasevariable.cpp \
+    $$PWD/qopcuaabstractobject.cpp \
+    $$PWD/qopcuaabstractvariable.cpp
 
 HEADERS += \
     $$PWD/qopcuaserver.h \
@@ -17,7 +19,9 @@ HEADERS += \
     $$PWD/qopcuafolderobject.h \
     $$PWD/qopcuaservernode.h \
     $$PWD/qopcuabasevariable.h \
-    $$PWD/qopcuanodefactory.h
+    $$PWD/qopcuanodefactory.h \
+    $$PWD/qopcuaabstractobject.h \
+    $$PWD/qopcuaabstractvariable.h
 
 DISTFILES += \
     $$PWD/QOpcUaServerNode \
@@ -27,4 +31,6 @@ DISTFILES += \
     $$PWD/QOpcUaServerNodeFactory \
     $$PWD/QOpcUaFolderObject \
     $$PWD/QOpcUaNodeFactory \
-    $$PWD/QOpcUaBaseDataVariable
+    $$PWD/QOpcUaBaseDataVariable \
+    $$PWD/QOpcUaAbstractVariable \
+    $$PWD/QOpcUaAbstractObject

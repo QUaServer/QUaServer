@@ -2,8 +2,9 @@
 #define QOPCUAFOLDEROBJECT_H
 
 #include <QOpcUaBaseObject>
+#include <QOpcUaBaseDataVariable>
 
-class QOpcUaFolderObject : public QOpcUaBaseObject, public QOpcUaNodeFactory<QOpcUaFolderObject>
+class QOpcUaFolderObject : public QOpcUaAbstractObject, public QOpcUaNodeFactory<QOpcUaFolderObject>
 {
     Q_OBJECT
 
@@ -14,7 +15,9 @@ public:
 
 	QOpcUaBaseObject * addBaseObject();
 
-	//QOpcUaBaseDataVariable * addBaseDataVariable();
+	QOpcUaBaseDataVariable * addBaseDataVariable();
+
+	QOpcUaFolderObject * addFolderObject();
 
 	static UA_NodeId m_typeNodeId;
 

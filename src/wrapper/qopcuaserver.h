@@ -63,7 +63,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 
 	// check if object or variable
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
-	if (T::staticMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
+	if (T::staticMetaObject.inherits(&QOpcUaAbstractObject::staticMetaObject))
 	{
 		// add to OpcUa
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
@@ -80,7 +80,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		// TODO ?
 		// UA_QualifiedName_deleteMembers or UA_QualifiedName_delete ??
 	}
-	else if (T::staticMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+	else if (T::staticMetaObject.inherits(&QOpcUaAbstractVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className());
