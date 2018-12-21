@@ -3,7 +3,7 @@
 
 #include <QOpcUaBaseObject>
 
-class QOpcUaFolderObject : public QOpcUaBaseObject
+class QOpcUaFolderObject : public QOpcUaBaseObject, public QOpcUaNodeFactory<QOpcUaFolderObject>
 {
     Q_OBJECT
 
@@ -12,9 +12,11 @@ friend class QOpcUaServer;
 public:
     explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
 
-	QOpcUaBaseObject * addBaseObject(const QString &displayName = "", const QString &description = "");
+	QOpcUaBaseObject * addBaseObject();
 
-	// TODO : addBaseDataVariable
+	//QOpcUaBaseDataVariable * addBaseDataVariable();
+
+	static UA_NodeId m_typeNodeId;
 
 private:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

@@ -1,7 +1,8 @@
 #ifndef QOPCUABASEOBJECT_H
 #define QOPCUABASEOBJECT_H
 
-#include <QOpcUaServerNode>
+#include <QOpcUaNodeFactory>
+#include <QOpcUaBaseDataVariable>
 
 /*
 typedef struct {                          // UA_ObjectTypeAttributes_default
@@ -27,7 +28,9 @@ typedef struct {                          // UA_ObjectAttributes_default
 } UA_ObjectAttributes;
 */
 
-class QOpcUaBaseObject : public QOpcUaServerNode
+
+
+class QOpcUaBaseObject : public QOpcUaServerNode, public QOpcUaNodeFactory<QOpcUaBaseObject>
 {
     Q_OBJECT
 
@@ -41,9 +44,14 @@ public:
 
 	// TODO : addBaseDataVariable
 
+	static UA_NodeId m_typeNodeId;
+
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
 	explicit QOpcUaBaseObject(QOpcUaServer *server);
 };
 
+
+
 #endif // QOPCUABASEOBJECT_H
+

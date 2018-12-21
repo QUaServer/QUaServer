@@ -3,15 +3,13 @@
 
 #include <QOpcUaBaseVariable>
 
-class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
+class QOpcUaBaseDataVariable : public QOpcUaBaseVariable, public QOpcUaNodeFactory<QOpcUaBaseDataVariable>
 {
     Q_OBJECT
 public:
     explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
-signals:
 
-public slots:
 };
 
 #endif // QOPCUABASEDATAVARIABLE_H

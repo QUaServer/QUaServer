@@ -16,7 +16,8 @@ HEADERS += \
     $$PWD/qopcuabaseobject.h \
     $$PWD/qopcuafolderobject.h \
     $$PWD/qopcuaservernode.h \
-    $$PWD/qopcuabasevariable.h
+    $$PWD/qopcuabasevariable.h \
+    $$PWD/qopcuanodefactory.h
 
 DISTFILES += \
     $$PWD/QOpcUaServerNode \
@@ -24,4 +25,6 @@ DISTFILES += \
     $$PWD/QOpcUaServer \
     $$PWD/QOpcUaBaseVariable \
     $$PWD/QOpcUaServerNodeFactory \
-    $$PWD/QOpcUaFolderObject
+    $$PWD/QOpcUaFolderObject \
+    $$PWD/QOpcUaNodeFactory \
+    $$PWD/QOpcUaBaseDataVariable

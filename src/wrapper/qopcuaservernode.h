@@ -34,8 +34,8 @@ class QOpcUaServerNode : public QObject
 	// Node Specifics
 
 	// Cannot be changed once a node has been created.
-	Q_PROPERTY(QString nodeId    READ get_nodeId   )
-	Q_PROPERTY(QString nodeClass READ get_nodeClass)
+	Q_PROPERTY(QString nodeId     READ get_nodeId   )
+	Q_PROPERTY(QString nodeClass  READ get_nodeClass)
 
 public:
 	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
@@ -49,17 +49,17 @@ public:
 
 	QString get_nodeId     () const;
 	QString get_nodeClass  () const;
+	
 
 	// private?
 
 	// TODO : change to QOpcUaServer server instance to be able to reuse methods in QOpcUaServerNode subclasses?
-	UA_Server * m_server;
+	QOpcUaServer * m_qopcuaserver;
 
 	// protected?
 
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
-	UA_NodeId m_typeNodeId;
 
 	static UA_NodeId nodeIdFromQString  (const QString &name);
 	static QString   nodeIdToQString    (const UA_NodeId &id);
@@ -71,6 +71,8 @@ public:
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
 	explicit QOpcUaServerNode(QOpcUaServer *server);
+
+private:
 
 };
 

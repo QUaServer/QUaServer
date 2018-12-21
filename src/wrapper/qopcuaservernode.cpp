@@ -6,25 +6,23 @@
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
-	m_server     = parent->m_server;
-	m_nodeId     = UA_NODEID_NULL;
+	m_qopcuaserver = parent->m_qopcuaserver;
+	m_nodeId       = UA_NODEID_NULL;
 	// NOTE : type NodeId is null until class is registered in server
-	m_typeNodeId = UA_NODEID_NULL;
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 }
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer * server) : QObject(server)
 {
-	m_server = server->m_server;
-	m_nodeId = UA_NODEID_NULL;
+	m_qopcuaserver = server;
+	m_nodeId       = UA_NODEID_NULL;
 	// NOTE : type NodeId is null until class is registered in server
-	m_typeNodeId = UA_NODEID_NULL;
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 }
 
 QString QOpcUaServerNode::get_displayName() const
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -32,25 +30,26 @@ QString QOpcUaServerNode::get_displayName() const
 	}
 	// read description
 	UA_LocalizedText outDisplayName;
-	UA_Server_readDisplayName(m_server, m_nodeId, &outDisplayName);
+	UA_Server_readDisplayName(m_qopcuaserver->m_server, m_nodeId, &outDisplayName);
 	return QOpcUaServerNode::uaStringToQString(outDisplayName.text);
 	// TODO : handle outDisplayName.locale
 }
 
 void QOpcUaServerNode::set_displayName(const QString & displayName)
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
-	UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", displayName.toUtf8().data());
+	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
+	UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 	// set value
-	UA_Server_writeDisplayName(m_server, m_nodeId, uaDisplayName);
+	UA_Server_writeDisplayName(m_qopcuaserver->m_server, m_nodeId, uaDisplayName);
 	// TODO : handle locale
 }
 
 QString QOpcUaServerNode::get_description() const
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -58,25 +57,26 @@ QString QOpcUaServerNode::get_description() const
 	}
 	// read description
 	UA_LocalizedText outDescription;
-	UA_Server_readDescription(m_server, m_nodeId, &outDescription);
+	UA_Server_readDescription(m_qopcuaserver->m_server, m_nodeId, &outDescription);
 	return QOpcUaServerNode::uaStringToQString(outDescription.text); 
 	// TODO : handle outDescription.locale
 }
 
 void QOpcUaServerNode::set_description(const QString & description)
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
-	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"", description.toUtf8().data());
+	QByteArray byteDescription = description.toUtf8(); // NOTE : QByteArray must exist in stack
+	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 	// set value
-	UA_Server_writeDescription(m_server, m_nodeId, uaDescription);
+	UA_Server_writeDescription(m_qopcuaserver->m_server, m_nodeId, uaDescription);
 	// TODO : handle locale
 }
 
 quint32 QOpcUaServerNode::get_writeMask() const
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -84,21 +84,21 @@ quint32 QOpcUaServerNode::get_writeMask() const
 	}
 	// read writeMask
 	UA_UInt32 outWriteMask;
-	UA_Server_readWriteMask(m_server, m_nodeId, &outWriteMask);
+	UA_Server_readWriteMask(m_qopcuaserver->m_server, m_nodeId, &outWriteMask);
 	return outWriteMask;
 }
 
 void QOpcUaServerNode::set_writeMask(const quint32 & writeMask)
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// set value
-	UA_Server_writeWriteMask(m_server, m_nodeId, writeMask);
+	UA_Server_writeWriteMask(m_qopcuaserver->m_server, m_nodeId, writeMask);
 }
 
 QString QOpcUaServerNode::get_nodeId() const
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -109,7 +109,7 @@ QString QOpcUaServerNode::get_nodeId() const
 
 QString QOpcUaServerNode::get_nodeClass() const
 {
-	Q_CHECK_PTR(m_server);
+	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -117,7 +117,7 @@ QString QOpcUaServerNode::get_nodeClass() const
 	}
 	// read nodeClass
 	UA_NodeClass outNodeClass;
-	UA_Server_readNodeClass(m_server, m_nodeId, &outNodeClass);
+	UA_Server_readNodeClass(m_qopcuaserver->m_server, m_nodeId, &outNodeClass);
 	// convert to QString
 	return QOpcUaServerNode::nodeClassToQString(outNodeClass);
 }
