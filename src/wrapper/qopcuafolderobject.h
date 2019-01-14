@@ -4,6 +4,8 @@
 #include <QOpcUaBaseObject>
 #include <QOpcUaBaseDataVariable>
 
+// Part 5 - 6.6 : FolderType
+
 class QOpcUaFolderObject : public QOpcUaAbstractObject, public QOpcUaNodeFactory<QOpcUaFolderObject>
 {
     Q_OBJECT
@@ -13,11 +15,11 @@ friend class QOpcUaServer;
 public:
     explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
 
-	QOpcUaBaseObject * addBaseObject();
+	QOpcUaBaseObject       * addBaseObject();
 
 	QOpcUaBaseDataVariable * addBaseDataVariable();
 
-	QOpcUaFolderObject * addFolderObject();
+	QOpcUaFolderObject     * addFolderObject();
 
 	
 

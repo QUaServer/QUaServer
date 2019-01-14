@@ -122,6 +122,33 @@ QString QOpcUaServerNode::get_nodeClass() const
 	return QOpcUaServerNode::nodeClassToQString(outNodeClass);
 }
 
+QPair<quint16, QString> QOpcUaServerNode::get_browseName() const
+{
+	Q_CHECK_PTR(m_qopcuaserver);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return QPair<quint16, QString>();
+	}
+	// read browse name
+	UA_QualifiedName outBrowseName;
+	UA_Server_readBrowseName(m_qopcuaserver->m_server, m_nodeId, &outBrowseName);
+	// populate return value
+	return QPair<quint16, QString>(outBrowseName.namespaceIndex, QOpcUaServerNode::uaStringToQString(outBrowseName.name));
+}
+
+void QOpcUaServerNode::set_browseName(const QPair<quint16, QString> & browseName)
+{
+	Q_CHECK_PTR(m_qopcuaserver);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	// convert to UA_QualifiedName
+	UA_QualifiedName bName;
+	bName.namespaceIndex = browseName.first;
+	bName.name           = QOpcUaServerNode::uaStringFromQString(browseName.second);
+	// set value
+	UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
+}
+
 UA_NodeId QOpcUaServerNode::nodeIdFromQString(const QString & name)
 {
 	quint16 namespaceIndex;

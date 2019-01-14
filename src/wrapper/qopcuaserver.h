@@ -67,12 +67,12 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	{
 		// add to OpcUa
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-		UA_QualifiedName    qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className());
+		UA_QualifiedName    bName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addObjectNode(m_server, 
 			                    UA_NODEID_NULL,
 			                    parentNode->m_nodeId,
 			                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-			                    qName,
+			                    bName,
 			                    typeNodeId,
 			                    oAttr, 
 			                    (void*)instance,      // set new instance as context
@@ -83,7 +83,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	else if (T::staticMetaObject.inherits(&QOpcUaAbstractVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
-		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className());
+		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addVariableNode(m_server,
 			                      UA_NODEID_NULL, 
 			                      parentNode->m_nodeId,
@@ -97,6 +97,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	else
 	{
 		Q_ASSERT_X(false, "QOpcUaServer::createInstance", "Unsopported type.");
+		delete instance;
 		return nullptr;
 	}
 

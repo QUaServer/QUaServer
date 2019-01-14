@@ -6,12 +6,16 @@
 // https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern#Static_polymorphism
 
 template <class T>
-struct QOpcUaNodeFactory
+class QOpcUaNodeFactory
 {
+public:
+
     static UA_NodeId GetTypeNodeId()
     {
         return m_typeNodeId;
     }
+
+private:
 
     static void SetTypeNodeId(const UA_NodeId & typeNodeId)
     {

@@ -37,6 +37,10 @@ class QOpcUaServerNode : public QObject
 	Q_PROPERTY(QString nodeId     READ get_nodeId   )
 	Q_PROPERTY(QString nodeClass  READ get_nodeClass)
 
+	// Other
+
+	Q_PROPERTY(QPair<quint16, QString> browseName READ get_browseName WRITE set_browseName)
+
 public:
 	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
 
@@ -50,10 +54,12 @@ public:
 	QString get_nodeId     () const;
 	QString get_nodeClass  () const;
 	
+	QPair<quint16, QString> get_browseName() const;
+	void                    set_browseName(const QPair<quint16, QString> &browseName);
 
 	// private?
 
-	// TODO : change to QOpcUaServer server instance to be able to reuse methods in QOpcUaServerNode subclasses?
+	// to be able to reuse methods in subclasses
 	QOpcUaServer * m_qopcuaserver;
 
 	// protected?
