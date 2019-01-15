@@ -299,7 +299,7 @@ static void defineObjectTypes(UA_Server *server)
 	modelAttr.dataType        = UA_NODEID_NUMERIC(0, UA_NS0ID_STRING);
 	// Make writtable
 	modelAttr.accessLevel     = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-	modelAttr.userAccessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE; 
+	modelAttr.userAccessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE; // possible, necessary?
 	// Default value
 	UA_Variant_init(&modelAttr.value);
 	UA_String strModel = UA_STRING((char*)"unknown");

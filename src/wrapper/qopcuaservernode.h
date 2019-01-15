@@ -67,12 +67,6 @@ public:
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
 
-	static UA_NodeId nodeIdFromQString  (const QString &name);
-	static QString   nodeIdToQString    (const UA_NodeId &id);
-	static bool      nodeIdStringSplit  (const QString &nodeIdString, quint16 *nsIndex, QString *identifier, char *identifierType);
-	static QString   nodeClassToQString (const UA_NodeClass &nclass);
-	static QString   uaStringToQString  (const UA_String &string);
-	static UA_String uaStringFromQString(const QString &uaString);
 
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

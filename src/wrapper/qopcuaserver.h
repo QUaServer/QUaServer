@@ -1,8 +1,7 @@
 #ifndef QOPCUASERVER_H
 #define QOPCUASERVER_H
 
-#include <QObject>
-#include "open62541.h"
+#include <QOpcUaTypesConverter>
 
 #include <type_traits>
 
@@ -13,6 +12,7 @@ class QOpcUaServer : public QObject
 	Q_OBJECT
 
 friend class QOpcUaServerNode;
+friend class QOpcUaAbstractVariable;
 
 public:
     explicit QOpcUaServer(QObject *parent = 0);
@@ -44,6 +44,17 @@ template<typename T>
 inline void QOpcUaServer::registerType()
 {
 	// TODO : T::SetTypeNodeId( ... );
+
+	/*
+	if (T::staticMetaObject.inherits(&QOpcUaAbstractObject::staticMetaObject))
+	{
+		UA_Server_addObjectTypeNode
+	}
+	else if (T::staticMetaObject.inherits(&QOpcUaAbstractVariable::staticMetaObject))
+	{
+		UA_Server_addVariableTypeNode
+	}
+	*/
 }
 
 template<typename T>
@@ -70,8 +81,8 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		UA_QualifiedName    bName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addObjectNode(m_server, 
 			                    UA_NODEID_NULL,
-			                    parentNode->m_nodeId,
-			                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+			                    parentNode->m_nodeId,                     // parent
+			                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES), // parent relation with child
 			                    bName,
 			                    typeNodeId,
 			                    oAttr, 
@@ -86,8 +97,8 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addVariableNode(m_server,
 			                      UA_NODEID_NULL, 
-			                      parentNode->m_nodeId,
-			                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+			                      parentNode->m_nodeId,                        // parent
+			                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), // parent relation with child
 			                      qName,
 			                      typeNodeId, 
 			                      vAttr, 
