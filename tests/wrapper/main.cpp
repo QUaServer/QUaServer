@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDateTime>
 
 #include <QOpcUaServer>
 #include <QOpcUaFolderObject>
@@ -19,13 +20,18 @@ int main(int argc, char *argv[])
 	auto varBase1 = objsFolder->addBaseDataVariable();
 	varBase1->set_displayName("MyDataVariable");
 	varBase1->set_description("This is my first data variable");
-	//varBase1->set_value("xxx");
 
 	//// NOTE : *runtime* error in console, seems value attribute dominates
 	//// - WriteRequest returned status code BadTypeMismatch
 	//// - Only Variables with data type BaseDataType may contain a null (empty) value
 	//// * This might not be the case when instantiating the variable
 	//varBase1->set_dataType(QMetaType::QString); 
+	//// - A Solution is that for tree-like API automatically assign dataType when calling set_value
+	////   and for object-oriented API, use static members (Static_polymorphism idiom)
+
+	// NOTE : use QVariant::fromValue to force dataType when there is no specific constructor in
+	//        http://doc.qt.io/qt-5/qvariant.html
+	varBase1->set_value(QByteArray("abcd1234")); 
 
 	auto folder1 = objsFolder->addFolderObject();
 	folder1->set_displayName("MyFolder");

@@ -61,12 +61,11 @@ class QOpcUaAbstractVariable : public QOpcUaServerNode
 
 	// Variable Attributes
 
-	Q_PROPERTY(QVariant        value               READ get_value               WRITE set_value              )
-	Q_PROPERTY(QMetaType::Type dataType            READ get_dataType            WRITE set_dataType           )
-	Q_PROPERTY(qint32          valueRank           READ get_valueRank           WRITE set_valueRank          )
-	Q_PROPERTY(quint32         arrayDimensionsSize READ get_arrayDimensionsSize WRITE set_arrayDimensionsSize)
-	Q_PROPERTY(QList<quint32>  arrayDimensions     READ get_arrayDimensions     WRITE set_arrayDimensions    )
-	Q_PROPERTY(quint8          accessLevel         READ get_accessLevel         WRITE set_accessLevel        )
+	Q_PROPERTY(QVariant          value               READ get_value               WRITE set_value              )
+	Q_PROPERTY(QMetaType::Type   dataType            READ get_dataType            WRITE set_dataType           )
+	Q_PROPERTY(qint32            valueRank           READ get_valueRank           WRITE set_valueRank          )
+	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ get_arrayDimensions     WRITE set_arrayDimensions    )
+	Q_PROPERTY(quint8            accessLevel         READ get_accessLevel         WRITE set_accessLevel        )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
 	// Q_PROPERTY(quint32 userAccessLevel READ get_userAccessLevel)	
@@ -79,21 +78,19 @@ class QOpcUaAbstractVariable : public QOpcUaServerNode
 public:
     explicit QOpcUaAbstractVariable(QOpcUaServerNode *parent);
 
-	QVariant        get_value                  () const;
-	void            set_value                  (const QVariant &value);
-	QMetaType::Type get_dataType               () const;
-	void            set_dataType               (const QMetaType::Type &dataType);
-	qint32          get_valueRank              () const;
-	void            set_valueRank              (const qint32 &valueRank);
-	quint32         get_arrayDimensionsSize    () const;
-	void            set_arrayDimensionsSize    (const quint32 &arrayDimensionsSize);
-	QList<quint32>  get_arrayDimensions        () const;
-	void            set_arrayDimensions        (const QList<quint32> &arrayDimensions);
-	quint8          get_accessLevel            () const;
-	void            set_accessLevel            (const quint8 &accessLevel);
-	double          get_minimumSamplingInterval() const;
-	void            set_minimumSamplingInterval(const double &minimumSamplingInterval);
-	bool            get_historizing            () const;
+	QVariant          get_value                  () const;
+	void              set_value                  (const QVariant &value); // NOTE : use QVariant::fromValue to force dataType
+	QMetaType::Type   get_dataType               () const;
+	void              set_dataType               (const QMetaType::Type &dataType);
+	qint32            get_valueRank              () const;
+	void              set_valueRank              (const qint32 &valueRank);
+	QVector<quint32>  get_arrayDimensions        () const;                            // includes arrayDimensionsSize
+	void              set_arrayDimensions        (QVector<quint32> &arrayDimensions); // includes arrayDimensionsSize
+	quint8            get_accessLevel            () const;
+	void              set_accessLevel            (const quint8 &accessLevel);
+	double            get_minimumSamplingInterval() const;
+	void              set_minimumSamplingInterval(const double &minimumSamplingInterval);
+	bool              get_historizing            () const;
 
 };
 
