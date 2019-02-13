@@ -78,18 +78,35 @@ class QOpcUaAbstractVariable : public QOpcUaServerNode
 public:
     explicit QOpcUaAbstractVariable(QOpcUaServerNode *parent);
 
+	//
 	QVariant          get_value                  () const;
-	void              set_value                  (const QVariant &value); // NOTE : use QVariant::fromValue to force dataType
+	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
+	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
+	// Use QVariant::fromValue or use casting to force a dataType
+	void              set_value                  (const QVariant &value); 
+	// 
 	QMetaType::Type   get_dataType               () const;
-	void              set_dataType               (const QMetaType::Type &dataType);
+	// If there is no old value, a default value is assigned with the new dataType
+	// If an old value exists and is convertible to the new dataType then the value is converted
+	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost
+	void              set_dataType               (const QMetaType::Type &dataType); // 
+	// 
 	qint32            get_valueRank              () const;
+	// 
 	void              set_valueRank              (const qint32 &valueRank);
-	QVector<quint32>  get_arrayDimensions        () const;                            // includes arrayDimensionsSize
-	void              set_arrayDimensions        (QVector<quint32> &arrayDimensions); // includes arrayDimensionsSize
+	// includes arrayDimensionsSize
+	QVector<quint32>  get_arrayDimensions        () const;
+	// includes arrayDimensionsSize
+	void              set_arrayDimensions        (QVector<quint32> &arrayDimensions);
+	// 
 	quint8            get_accessLevel            () const;
+	// 
 	void              set_accessLevel            (const quint8 &accessLevel);
+	// 
 	double            get_minimumSamplingInterval() const;
+	// 
 	void              set_minimumSamplingInterval(const double &minimumSamplingInterval);
+	// 
 	bool              get_historizing            () const;
 
 };

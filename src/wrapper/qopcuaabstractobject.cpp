@@ -8,5 +8,5 @@ QOpcUaAbstractObject::QOpcUaAbstractObject(QOpcUaServerNode *parent) : QOpcUaSer
 
 QOpcUaAbstractObject::QOpcUaAbstractObject(QOpcUaServer *server) : QOpcUaServerNode(server)
 {
-
+	// This private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
 }

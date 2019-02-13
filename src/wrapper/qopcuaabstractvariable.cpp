@@ -13,7 +13,7 @@ QVariant QOpcUaAbstractVariable::get_value() const
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
-		return QString();
+		return QVariant();
 	}
 	// read value
 	UA_Variant outValue;
@@ -27,14 +27,46 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert to UA_Variant and set value
-	auto st = UA_Server_writeValue(m_qopcuaserver->m_server, m_nodeId, QOpcUaTypesConverter::uaVariantFromQVariant(value));
+	// if new value dataType does not match the old value dataType
+	// we first gotta set type to UA_NS0ID_BASEDATATYPE in order to avoid the error
+	// "BadTypeMismatch" printed in the console
+	auto oldType = this->get_dataType();
+	auto newType = (QMetaType::Type)value.type();
+	if (qobject_cast<QOpcUaBaseDataVariable*>(this) &&                                 
+		newType != oldType &&
+		!value.canConvert(oldType))
+	{
+		auto st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
+			                              m_nodeId,
+					                      UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	// preserve dataType if possible
+	auto newValue = value;
+	if (value.canConvert(oldType))
+	{
+		newValue.convert(oldType);
+	}
+	// convert to UA_Variant and set new value
+	auto st = UA_Server_writeValue(m_qopcuaserver->m_server, 
+		                           m_nodeId, 
+		                           QOpcUaTypesConverter::uaVariantFromQVariant(newValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// if instance of QOpcUaBaseDataVariable, then also assign dataType, valueRank and arrayDimensions
+	// assign dataType, valueRank and arrayDimensions according to new value
 	if (qobject_cast<QOpcUaBaseDataVariable*>(this))
 	{
-		this->set_dataType((QMetaType::Type)value.type());
+		// set new dataType if necessary
+		if(!value.canConvert(oldType))
+		{
+			st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
+										 m_nodeId, 
+										 QOpcUaTypesConverter::uaTypeNodeIdFromQType(newType));
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+		}
+
 		// TODO : valueRank and arrayDimensions
 	}
 }
@@ -59,8 +91,36 @@ void QOpcUaAbstractVariable::set_dataType(const QMetaType::Type & dataType)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert to UA_NodeId and set type
-	auto st = UA_Server_writeDataType(m_qopcuaserver->m_server, m_nodeId, QOpcUaTypesConverter::uaTypeNodeIdFromQType(dataType));
+	// need to "reset" dataType before setting a new value
+	auto st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
+			                          m_nodeId,
+					                  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// check if old value is convertible
+	QVariant oldValue = this->get_value();
+	auto success = oldValue.convert(dataType);
+	if (success)
+	{
+		// if convertible set converted value
+		st = UA_Server_writeValue(m_qopcuaserver->m_server, 
+		                          m_nodeId, 
+		                          QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	else
+	{
+		// else set default value for type
+		st = UA_Server_writeValue(m_qopcuaserver->m_server, 
+		                          m_nodeId, 
+		                          QOpcUaTypesConverter::uaVariantFromQVariant(QVariant((QVariant::Type)dataType)));
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
+			                     m_nodeId,
+					             QOpcUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 }
