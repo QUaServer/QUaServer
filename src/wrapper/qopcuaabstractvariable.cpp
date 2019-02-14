@@ -27,14 +27,61 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// if new value dataType does not match the old value dataType
-	// we first gotta set type to UA_NS0ID_BASEDATATYPE in order to avoid the error
-	// "BadTypeMismatch" printed in the console
+	// got modifiable copy
+	auto newValue = value;
+	// get types
 	auto oldType = this->get_dataType();
-	auto newType = (QMetaType::Type)value.type();
+	auto newType = (QMetaType::Type)newValue.type();
+	// if variant list we need to adjust newType
+	if (newValue.canConvert<QVariantList>())
+	{
+		auto iter = newValue.value<QSequentialIterable>();
+		auto type = (QMetaType::Type)iter.at(0).type();
+		if (iter.size() > 0)
+		{
+			QVariantList listOldType;
+			newType = (QMetaType::Type)iter.at(0).type();
+			// check uniform type throughout array
+			for (int i = 0; i < iter.size(); i++)
+			{
+				auto tmpType = (QMetaType::Type)iter.at(i).type();
+				Q_ASSERT_X(type == tmpType, "QOpcUaAbstractVariable::set_value", "QVariant arrays must have same types in all its items.");
+				if (type != tmpType)
+				{
+					return;
+				}
+				// preserve dataType if possible
+				if (newType != oldType && 
+					iter.at(0).canConvert(oldType))
+				{
+					listOldType.append(iter.at(i));
+					listOldType[i].convert(oldType);
+				}
+			}
+			// preserve dataType if possible
+			if (newType != oldType &&
+				iter.at(0).canConvert(oldType))
+			{
+				newValue = listOldType;
+				newType  = oldType;
+			}
+		}
+		else
+		{
+			newType = oldType;
+		}
+	}
+	else if (newValue.canConvert(oldType)) // scalar
+	{
+		// preserve dataType if possible
+		newValue.convert(oldType);
+		newType = oldType;
+	}
+	// if new value dataType does not match the old value dataType
+	// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"	
 	if (qobject_cast<QOpcUaBaseDataVariable*>(this) &&                                 
 		newType != oldType &&
-		!value.canConvert(oldType))
+		!newValue.canConvert(oldType))
 	{
 		auto st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
 			                              m_nodeId,
@@ -42,12 +89,7 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-	// preserve dataType if possible
-	auto newValue = value;
-	if (value.canConvert(oldType))
-	{
-		newValue.convert(oldType);
-	}
+	
 	// convert to UA_Variant and set new value
 	auto st = UA_Server_writeValue(m_qopcuaserver->m_server, 
 		                           m_nodeId, 
@@ -58,7 +100,8 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 	if (qobject_cast<QOpcUaBaseDataVariable*>(this))
 	{
 		// set new dataType if necessary
-		if(!value.canConvert(oldType))
+		if(newType != oldType && 
+		   !newValue.canConvert(oldType))
 		{
 			st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
 										 m_nodeId, 
@@ -67,7 +110,27 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 			Q_UNUSED(st);
 		}
 
-		// TODO : valueRank and arrayDimensions
+		// set valueRank and arrayDimensions if necessary
+		if (newValue.canConvert<QVariantList>())
+		{
+			auto iter = newValue.value<QSequentialIterable>();
+			auto size = (quint32)iter.size();
+			// set valueRank
+			st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, UA_VALUERANK_ONE_DIMENSION);
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+			/*
+			// TODO : set arrayDimensions (bug in library?)
+			UA_Variant uaArrayDimensions;
+			uaArrayDimensions.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
+			uaArrayDimensions.arrayDimensions[0]  = size;
+			uaArrayDimensions.arrayDimensionsSize = (size_t)1;
+			st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+			*/
+		}
+
 	}
 }
 
@@ -97,27 +160,52 @@ void QOpcUaAbstractVariable::set_dataType(const QMetaType::Type & dataType)
 					                  UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// check if old value is convertible
+	// get old value
 	QVariant oldValue = this->get_value();
-	auto success = oldValue.convert(dataType);
-	if (success)
+	// handle array
+	if (oldValue.canConvert<QVariantList>())
 	{
-		// if convertible set converted value
-		st = UA_Server_writeValue(m_qopcuaserver->m_server, 
-		                          m_nodeId, 
-		                          QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
+		QVariantList listConvValues;
+		auto iter = oldValue.value<QSequentialIterable>();
+		// loop scalar or array
+		for (int i = 0; i < iter.size(); i++)
+		{
+			QVariant varCurr = iter.at(i);
+			if (varCurr.canConvert(dataType))
+			{
+				// convert in place
+				varCurr.convert(dataType);
+			}
+			else
+			{
+				// else set default value for type
+				varCurr = QVariant((QVariant::Type)dataType);
+			}
+			// append to list of converted values
+			listConvValues.append(varCurr);
+		}
+		// overwrite old value
+		oldValue = listConvValues;
+	}
+	// handle scalar
+	else if (oldValue.canConvert(dataType))
+	{
+		// convert in place
+		oldValue.convert(dataType);	
 	}
 	else
 	{
 		// else set default value for type
-		st = UA_Server_writeValue(m_qopcuaserver->m_server, 
-		                          m_nodeId, 
-		                          QOpcUaTypesConverter::uaVariantFromQVariant(QVariant((QVariant::Type)dataType)));
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
+		oldValue = QVariant((QVariant::Type)dataType);
 	}
+
+	// set converted or default value
+	st = UA_Server_writeValue(m_qopcuaserver->m_server, 
+		                        m_nodeId, 
+		                        QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// set new type
 	st = UA_Server_writeDataType(m_qopcuaserver->m_server, 
 			                     m_nodeId,
 					             QOpcUaTypesConverter::uaTypeNodeIdFromQType(dataType));
@@ -177,6 +265,7 @@ void QOpcUaAbstractVariable::set_arrayDimensions(QVector<quint32>& arrayDimensio
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert QList<quint32> to UA_Variant
 	UA_Variant uaArrayDimensions;
+	UA_Variant_init(&uaArrayDimensions);
 	uaArrayDimensions.arrayDimensionsSize = arrayDimensions.count();
 	uaArrayDimensions.arrayDimensions     = arrayDimensions.data();
 	// set arrayDimensions

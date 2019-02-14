@@ -21,27 +21,17 @@ int main(int argc, char *argv[])
 	varBase1->set_displayName("MyDataVariable");
 	varBase1->set_description("This is my first data variable");
 
-	//// NOTE : *runtime* error in console, seems value attribute dominates
-	//// - WriteRequest returned status code BadTypeMismatch
-	//// - Only Variables with data type BaseDataType may contain a null (empty) value
-	//// * This might not be the case when instantiating the variable
-	/*varBase1->set_dataType(QMetaType::UInt);*/
-	//// - A Solution is that for tree-like API automatically assign dataType when calling set_value
-	////   and for object-oriented API, use static members (Static_polymorphism idiom)
-
-	// NOTE : use QVariant::fromValue to force dataType when there is no specific constructor in
-	//        http://doc.qt.io/qt-5/qvariant.html
-	varBase1->set_dataType(QMetaType::QByteArray);
-	varBase1->set_value((double)3.256);
-	//varBase1->set_value(QByteArray("abcd1234"));
-	//varBase1->set_dataType(QMetaType::QByteArray);
-	//varBase1->set_value(666);		
+	//varBase1->set_value(QVariant::fromValue(QList<int>({ 1, 2, 3 })));
+	//varBase1->set_value(QVariant::fromValue(QList<int>()));
+	//varBase1->set_value(QVariantList() << 1.1 << 2.2 << 3.3);
+	//varBase1->set_value(QStringList() << "1.1" << "2.2" << "3.3");
+	//varBase1->set_dataType(QMetaType::ULongLong);
+	varBase1->set_value(QVariantList() << 1 << 4 << 6);
+	//varBase1->set_value(123);
+	//
 	
-
-
+	qDebug() << varBase1->get_value();
 	
-	
-
 	auto folder1 = objsFolder->addFolderObject();
 	folder1->set_displayName("MyFolder");
 	folder1->set_description("This is my first folder");
@@ -51,6 +41,17 @@ int main(int argc, char *argv[])
 	objBaseNested1->set_description("This is my first object nested within a folder");
 	objBaseNested1->set_browseName({ 1, "My Browse Name" });
 
+	////QVariant testVar = QVariant::fromValue(QList<int>({ 1, 2, 3 }));
+	//QVariant testVar = QVariantList({ 1, 2, 3 });
+	//if (testVar.canConvert<QVariantList>())
+	//{
+	//	auto iter = testVar.value<QSequentialIterable>();
+	//	auto type = (QMetaType::Type)iter.at(0).type();
+	//	qDebug() << "[TYPE]" << type;
+	//}
+
+
+	// [NOTE] blocking
 	server.start();
 
     return a.exec();

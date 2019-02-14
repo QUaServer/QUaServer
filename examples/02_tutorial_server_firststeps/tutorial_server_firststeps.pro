@@ -3,6 +3,6 @@ CONFIG   += console
 CONFIG   -= app_bundle
 CONFIG   -= qt
 
-include($$PWD/../../open62541.pri)
+include($$PWD/../../src/open62541.pri)
 
 SOURCES += tutorial_server_firststeps.c
