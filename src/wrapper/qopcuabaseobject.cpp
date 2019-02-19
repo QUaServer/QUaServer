@@ -8,8 +8,3 @@ QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServerNode *parent) : QOpcUaAbstractObj
 	// Set NodeId manually only for pre-defined types. 
 	// For custom types, the type NodeId is set upon registering the class in the server
 }
-
-QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server) : QOpcUaAbstractObject(server)
-{
-
-}

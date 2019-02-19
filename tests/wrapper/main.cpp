@@ -20,17 +20,15 @@ int main(int argc, char *argv[])
 	auto varBase1 = objsFolder->addBaseDataVariable();
 	varBase1->set_displayName("MyDataVariable");
 	varBase1->set_description("This is my first data variable");
-
 	//varBase1->set_value(QVariant::fromValue(QList<int>({ 1, 2, 3 })));
 	//varBase1->set_value(QVariant::fromValue(QList<int>()));
 	//varBase1->set_value(QVariantList() << 1.1 << 2.2 << 3.3);
 	//varBase1->set_value(QStringList() << "1.1" << "2.2" << "3.3");
 	//varBase1->set_dataType(QMetaType::ULongLong);
-	varBase1->set_value(QVariantList() << 1 << 4 << 6);
-	//varBase1->set_value(123);
+	//varBase1->set_value(QVariantList() << 1 << 4 << 6);
+	varBase1->set_value(123);
 	//
-	
-	qDebug() << varBase1->get_value();
+	//qDebug() << varBase1->get_value();
 	
 	auto folder1 = objsFolder->addFolderObject();
 	folder1->set_displayName("MyFolder");
@@ -41,17 +39,7 @@ int main(int argc, char *argv[])
 	objBaseNested1->set_description("This is my first object nested within a folder");
 	objBaseNested1->set_browseName({ 1, "My Browse Name" });
 
-	////QVariant testVar = QVariant::fromValue(QList<int>({ 1, 2, 3 }));
-	//QVariant testVar = QVariantList({ 1, 2, 3 });
-	//if (testVar.canConvert<QVariantList>())
-	//{
-	//	auto iter = testVar.value<QSequentialIterable>();
-	//	auto type = (QMetaType::Type)iter.at(0).type();
-	//	qDebug() << "[TYPE]" << type;
-	//}
-
-
-	// [NOTE] blocking
+	// [NOTE] blocking, TODO : move to thread
 	server.start();
 
     return a.exec();

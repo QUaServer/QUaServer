@@ -12,12 +12,8 @@ class QOpcUaBaseObject : public QOpcUaAbstractObject, public QOpcUaNodeFactory<Q
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
-	// TODO : addBaseDataVariable
 
-	
-protected:
-	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
-	explicit QOpcUaBaseObject(QOpcUaServer *server);
+
 };
 
 

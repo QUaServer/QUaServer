@@ -62,6 +62,7 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 			if (newType != oldType &&
 				iter.at(0).canConvert(oldType))
 			{
+				// overwrite newValue with converted list of old type
 				newValue = listOldType;
 				newType  = oldType;
 			}
@@ -109,17 +110,16 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 		}
-
 		// set valueRank and arrayDimensions if necessary
 		if (newValue.canConvert<QVariantList>())
-		{
-			auto iter = newValue.value<QSequentialIterable>();
-			auto size = (quint32)iter.size();
+		{			
 			// set valueRank
 			st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, UA_VALUERANK_ONE_DIMENSION);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			/*
+			auto iter = newValue.value<QSequentialIterable>();
+			auto size = (quint32)iter.size();
 			// TODO : set arrayDimensions (bug in library?)
 			UA_Variant uaArrayDimensions;
 			uaArrayDimensions.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
@@ -130,7 +130,6 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 			Q_UNUSED(st);
 			*/
 		}
-
 	}
 }
 
@@ -313,6 +312,8 @@ double QOpcUaAbstractVariable::get_minimumSamplingInterval() const
 	auto st = UA_Server_readMinimumSamplingInterval(m_qopcuaserver->m_server, m_nodeId, &outMinimumSamplingInterval);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// return
+	return outMinimumSamplingInterval;
 }
 
 void QOpcUaAbstractVariable::set_minimumSamplingInterval(const double & minimumSamplingInterval)
