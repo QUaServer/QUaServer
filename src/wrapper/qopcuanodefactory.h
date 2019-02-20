@@ -3,19 +3,15 @@
 
 #include <QOpcUaServerNode>
 
-// https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern#Static_polymorphism
-
-template <class T>
+// [TRAITS] : default implementation
+template <typename T>
 class QOpcUaNodeFactory
 {
 public:
-
     static UA_NodeId GetTypeNodeId()
     {
         return m_typeNodeId;
     }
-
-private:
 
     static void SetTypeNodeId(const UA_NodeId & typeNodeId)
     {
@@ -25,8 +21,17 @@ private:
 	static UA_NodeId m_typeNodeId;
 };
 
-// [NOTE] : do not define a default because sometimes overwrites the specialization
-//template <class T> 
-//UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
+template <class T> 
+UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
+
+/*
+template <class T>
+class QOpcUaObjectFactory : public QOpcUaNodeFactory<T>
+{
+public:
+
+
+};
+*/
 
 #endif // QOPCUANODEFACTORY_H

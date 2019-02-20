@@ -45,6 +45,8 @@ inline void QOpcUaServer::registerType()
 {
 	// TODO : T::SetTypeNodeId( ... );
 
+	QOpcUaNodeFactory<T>::SetTypeNodeId(UA_NODEID_NULL);
+
 	/*
 	if (T::staticMetaObject.inherits(&QOpcUaAbstractObject::staticMetaObject))
 	{
@@ -62,11 +64,11 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 {
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 	// try to get typeNodeId, if null, then register it
-	UA_NodeId typeNodeId = T::GetTypeNodeId();
+	UA_NodeId typeNodeId = QOpcUaNodeFactory<T>::GetTypeNodeId();
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
 		this->registerType<T>();
-		typeNodeId = T::GetTypeNodeId();
+		typeNodeId = QOpcUaNodeFactory<T>::GetTypeNodeId();
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// instantiate C++ object or variable

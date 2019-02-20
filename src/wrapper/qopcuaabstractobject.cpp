@@ -6,7 +6,9 @@ QOpcUaAbstractObject::QOpcUaAbstractObject(QOpcUaServerNode *parent) : QOpcUaSer
 	// For custom types, the type NodeId is set upon registering the class in the server
 }
 
+// PROTECTED
 QOpcUaAbstractObject::QOpcUaAbstractObject(QOpcUaServer *server) : QOpcUaServerNode(server)
 {
-	// This private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
+	// This is a private constructor meant to be called only by QOpcUaServerNode
+	// And its only purpose is to create the UA_NS0ID_OBJECTSFOLDER instance
 }

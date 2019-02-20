@@ -8,8 +8,11 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 	Q_CHECK_PTR(m_qopcuaserver);
 }
 
+// PROTECTED
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer * server) : QObject(server)
 {
+	// This is a private constructor meant to be called only by QOpcUaServerNode
+	// And its only purpose is to create the UA_NS0ID_OBJECTSFOLDER instance
 	m_qopcuaserver = server;
 	m_nodeId       = UA_NODEID_NULL;
 	// NOTE : type NodeId is null until class is registered in server

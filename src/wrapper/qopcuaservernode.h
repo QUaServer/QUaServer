@@ -71,9 +71,6 @@ public:
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
 	explicit QOpcUaServerNode(QOpcUaServer *server);
-
-private:
-
 };
 
 #endif // QOPCUASERVERNODE_H
