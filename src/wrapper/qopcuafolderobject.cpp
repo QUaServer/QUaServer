@@ -1,5 +1,8 @@
 #include "qopcuafolderobject.h"
 
+#include <QOpcUaBaseObject>
+#include <QOpcUaBaseDataVariable>
+
 // NOTE : define typeNodeId
 UA_NodeId QOpcUaNodeFactory<QOpcUaFolderObject>::m_typeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE);
 

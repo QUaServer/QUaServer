@@ -3,6 +3,8 @@
 
 #include <QOpcUaAbstractVariable>
 
+// Part 5 - 7.2 : BaseVariableType
+
 class QOpcUaBaseVariable : public QOpcUaAbstractVariable, public QOpcUaNodeFactory<QOpcUaBaseVariable>
 {
     Q_OBJECT

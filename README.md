@@ -15,9 +15,9 @@ The library version of the `open62541` files used currently in this repo is `v0.
 
 * Namespace `QOpcUaTypesConverter` : Implements helper methods to convert between OPC UA variables and Qt variables.
 
-* Class `QOpcUaServer` : Inherits `QObject`, to emit events and so. Encapsulates a OPC UA Server instance and is used to configure, start, atop and subscribe to server events. It is also used to access the **unique** *Objects Folder* using the `get_objectsFolder` method, from which we can start manually creating a tree of objects and variables. It implements the `registerType<>` and `createInstance<>` templated methods that are used internally to create the new objects and variables.
+* Class `QOpcUaServer` : Inherits `QObject`, to emit events and so. Encapsulates a OPC UA Server instance and is used to configure, start, stop and subscribe to server events. It is also used to access the **unique** *Objects Folder* using the `get_objectsFolder` method, from which we can start manually creating a tree of objects and variables. It implements the `registerType<>` and `createInstance<>` templated methods that are used internally to create the new objects and variables. **(TODO)** implement the events and move to thread to avoid blocking.
 
-* Class `QOpcUaServerNode` : Inherits `QObject` to make use of Qt's MetaProperty system. It provides access to the basic UA node attributes (*displayName*, *description*, and *writeMask*). It also contains and provides access to the **Node Id** and *browseName*. It's constructor accepts a mandatory parent reference (`QOpcUaServerNode *`) which is used to match the OPC UA address space with Qt's tree of objects, so the `QObject` API for tree-handling and memory management can be reused. The exception is the unique **unique** *Objects Folder* instance that upon instantiation uses a private method that accepts the server instance (`QOpcUaServer *`) as its mandatory parent reference.
+* Class `QOpcUaServerNode` : Inherits `QObject` to make use of Qt's MetaProperty system. It provides access to the basic UA node attributes (*displayName*, *description*, and *writeMask*). It also contains and provides access to the **Node Id** and *browseName*. It's constructor accepts a mandatory parent reference (`QOpcUaServerNode *`) which is used to match the OPC UA address space with Qt's tree of objects, so the `QObject` API for tree-handling and memory management can be reused. The exception is the **unique** *Objects Folder* instance that upon instantiation uses a **private** constructor that accepts the server instance (`QOpcUaServer *`) as its mandatory parent reference.
 
 * Class `QOpcUaAbstractObject` : Inherits `QOpcUaServerNode`. It implements access to the UA Object node attributes (only *eventNotifier*) **(TODO)**. All UA Object classes must derive from this class.
 
@@ -40,7 +40,9 @@ The library version of the `open62541` files used currently in this repo is `v0.
 
 ## TODO
 
-1. Find out how to use enums.
+1. Create `QOpcUaObjectFactory` and `QOpcUaVariableFactory` inheriting from `QOpcUaNodeFactory` to implement *Static Polymorphism* for ObjectType node attributes and VariableType node attributes respectively. Refactor code to inherit from these instead of `QOpcUaNodeFactory` directly.
+
+2. Find out how to use enums.
 
 * <https://github.com/open62541/open62541/issues/2032>
 

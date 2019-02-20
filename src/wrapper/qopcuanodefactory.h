@@ -25,7 +25,8 @@ private:
 	static UA_NodeId m_typeNodeId;
 };
 
-template <class T> 
-UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
+// [NOTE] : do not define a default because sometimes overwrites the specialization
+//template <class T> 
+//UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
 
 #endif // QOPCUANODEFACTORY_H

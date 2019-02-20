@@ -3,6 +3,7 @@
 #include <QDateTime>
 
 #include <QOpcUaServer>
+#include <QOpcUaBaseObject>
 #include <QOpcUaFolderObject>
 #include <QOpcUaBaseVariable>
 
@@ -37,7 +38,18 @@ int main(int argc, char *argv[])
 	auto objBaseNested1 = folder1->addBaseObject();
 	objBaseNested1->set_displayName("MyObject_Nested");
 	objBaseNested1->set_description("This is my first object nested within a folder");
-	objBaseNested1->set_browseName({ 1, "My Browse Name" });
+	objBaseNested1->set_browseName({ 1, "My Browse Name 1" });
+
+	auto objBaseNested2 = objBaseNested1->addBaseObject();
+	objBaseNested2->set_displayName("MyObject_DoublyNested");
+	objBaseNested2->set_description("This is an object nested within another object");
+	objBaseNested2->set_browseName({ 1, "Browse Name 2" });
+
+	auto varBase2 = objBaseNested1->addBaseDataVariable();
+	varBase2->set_displayName("DataVar2");
+
+	auto folder2 = objBaseNested1->addFolderObject();
+	folder2->set_displayName("MyFolder2");
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();

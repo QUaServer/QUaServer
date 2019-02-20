@@ -3,6 +3,9 @@
 
 #include <QOpcUaAbstractObject>
 
+class QOpcUaBaseDataVariable;
+class QOpcUaFolderObject;
+
 // Part 5 - 6.2 : BaseObjectType
 
 class QOpcUaBaseObject : public QOpcUaAbstractObject, public QOpcUaNodeFactory<QOpcUaBaseObject>
@@ -12,6 +15,11 @@ class QOpcUaBaseObject : public QOpcUaAbstractObject, public QOpcUaNodeFactory<Q
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
+	QOpcUaBaseObject       * addBaseObject();
+
+	QOpcUaBaseDataVariable * addBaseDataVariable();
+
+	QOpcUaFolderObject     * addFolderObject();
 
 
 };
