@@ -117,18 +117,17 @@ void QOpcUaAbstractVariable::set_value(const QVariant & value)
 			st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, UA_VALUERANK_ONE_DIMENSION);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
-			/*
+			// set arrayDimensions (bug : https://github.com/open62541/open62541/issues/2455)
 			auto iter = newValue.value<QSequentialIterable>();
 			auto size = (quint32)iter.size();
-			// TODO : set arrayDimensions (bug in library?)
+			// TODO : support multidimensional array
+			//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
 			UA_Variant uaArrayDimensions;
-			uaArrayDimensions.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
-			uaArrayDimensions.arrayDimensions[0]  = size;
-			uaArrayDimensions.arrayDimensionsSize = (size_t)1;
-			st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
+			UA_UInt32 arrayDims[1] = { size };
+			UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);
+			UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
-			*/
 		}
 	}
 }
@@ -251,22 +250,27 @@ QVector<quint32> QOpcUaAbstractVariable::get_arrayDimensions() const
 	Q_UNUSED(st);
 	// convert UA_Variant to QList<quint32>
 	QVector<quint32> retArr;
-	for (int i = 0; i < outArrayDimensions.arrayDimensionsSize; i++)
+	Q_ASSERT(outArrayDimensions.type == &UA_TYPES[UA_TYPES_UINT32]);
+	auto data = (quint32*)outArrayDimensions.data;
+	for (int i = 0; i < outArrayDimensions.arrayLength; i++)
 	{
-		retArr.append(outArrayDimensions.arrayDimensions[i]);
+		retArr.append(data[i]);
 	}
 	return retArr;
 }
 
 void QOpcUaAbstractVariable::set_arrayDimensions(QVector<quint32>& arrayDimensions)
 {
+	// TODO : support multidimensional array
+	//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert QList<quint32> to UA_Variant
 	UA_Variant uaArrayDimensions;
-	UA_Variant_init(&uaArrayDimensions);
-	uaArrayDimensions.arrayDimensionsSize = arrayDimensions.count();
-	uaArrayDimensions.arrayDimensions     = arrayDimensions.data();
+	UA_Variant_setArray(&uaArrayDimensions,
+		                arrayDimensions.data(), 
+		                arrayDimensions.count(), 
+		                &UA_TYPES[UA_TYPES_UINT32]);
 	// set arrayDimensions
 	auto st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);

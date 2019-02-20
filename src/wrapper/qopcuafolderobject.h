@@ -25,9 +25,8 @@ private:
 
 // [TRAITS] : specialization
 template <>
-class QOpcUaNodeFactory<QOpcUaFolderObject>
+struct QOpcUaNodeFactory<QOpcUaFolderObject>
 {
-public:
 	static UA_NodeId GetTypeNodeId()
 	{
 		return UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE);

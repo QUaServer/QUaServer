@@ -5,9 +5,8 @@
 
 // [TRAITS] : default implementation
 template <typename T>
-class QOpcUaNodeFactory
+struct QOpcUaNodeFactory
 {
-public:
     static UA_NodeId GetTypeNodeId()
     {
         return m_typeNodeId;
@@ -21,7 +20,7 @@ public:
 	static UA_NodeId m_typeNodeId;
 };
 
-template <class T> 
+template <typename T>
 UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
 
 /*

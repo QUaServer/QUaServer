@@ -4,6 +4,10 @@
 #include <QOpcUaAbstractVariable>
 
 // Part 5 - 7.2 : BaseVariableType
+/*
+The BaseVariableType is the abstract base type for all other VariableTypes. 
+However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
+*/
 
 class QOpcUaBaseVariable : public QOpcUaAbstractVariable
 {
@@ -16,9 +20,8 @@ public:
 
 // [TRAITS] : specialization
 template <>
-class QOpcUaNodeFactory<QOpcUaBaseVariable>
+struct QOpcUaNodeFactory<QOpcUaBaseVariable>
 {
-public:
 	static UA_NodeId GetTypeNodeId()
 	{
 		return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE);

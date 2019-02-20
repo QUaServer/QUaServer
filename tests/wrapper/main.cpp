@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 	varBase1->set_value(123);
 	//
 	//qDebug() << varBase1->get_value();
+	//qDebug() << varBase1->get_arrayDimensions();
 	
 	auto folder1 = objsFolder->addFolderObject();
 	folder1->set_displayName("MyFolder");

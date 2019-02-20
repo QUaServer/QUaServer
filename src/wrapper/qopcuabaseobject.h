@@ -30,9 +30,8 @@ protected:
 
 // [TRAITS] : specialization
 template <>
-class QOpcUaNodeFactory<QOpcUaBaseObject>
+struct QOpcUaNodeFactory<QOpcUaBaseObject>
 {
-public:
 	static UA_NodeId GetTypeNodeId()
 	{
 		return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
