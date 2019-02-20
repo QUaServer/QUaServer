@@ -2,12 +2,12 @@
 
 #include <QOpcUaFolderObject>
 
-
-
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
-	this->m_server   = UA_Server_new(config);
+	this->m_server = UA_Server_new(config);
+	// Create "Objects" folder using special constructor
+	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this);
 }
 

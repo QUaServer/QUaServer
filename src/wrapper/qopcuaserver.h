@@ -2,7 +2,6 @@
 #define QOPCUASERVER_H
 
 #include <QOpcUaTypesConverter>
-
 #include <type_traits>
 
 class QOpcUaFolderObject;
@@ -12,7 +11,7 @@ class QOpcUaServer : public QObject
 	Q_OBJECT
 
 friend class QOpcUaServerNode;
-friend class QOpcUaAbstractVariable;
+friend class QOpcUaBaseVariable;
 
 public:
     explicit QOpcUaServer(QObject *parent = 0);
@@ -74,9 +73,11 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	// instantiate C++ object or variable
 	T *  instance = new T(parentNode);
 
+	// TODO : adapt parent relation (referenceTypeId) to parent type
+
 	// check if object or variable
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
-	if (T::staticMetaObject.inherits(&QOpcUaAbstractObject::staticMetaObject))
+	if (T::staticMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
 	{
 		// add to OpcUa
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
@@ -93,7 +94,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		// TODO ?
 		// UA_QualifiedName_deleteMembers or UA_QualifiedName_delete ??
 	}
-	else if (T::staticMetaObject.inherits(&QOpcUaAbstractVariable::staticMetaObject))
+	else if (T::staticMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?

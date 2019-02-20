@@ -1,5 +1,7 @@
 # Compile
 
+**IMPORTANT** : Requires `Qt 5.7` or higher and `C++ 11`.
+
 The source code of the `open62541` library is contained in the files:
 
 ```

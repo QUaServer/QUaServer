@@ -24,8 +24,16 @@ template <typename T>
 UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
 
 /*
-template <class T>
-class QOpcUaObjectFactory : public QOpcUaNodeFactory<T>
+template <typename T>
+class QOpcUaObjectFactory
+{
+public:
+
+
+};
+
+template <typename T>
+class QOpcUaVariableFactory
 {
 public:
 

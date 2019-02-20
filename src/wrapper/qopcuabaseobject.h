@@ -1,25 +1,64 @@
 #ifndef QOPCUABASEOBJECT_H
 #define QOPCUABASEOBJECT_H
 
-#include <QOpcUaAbstractObject>
+#include <QOpcUaNodeFactory>
 
+/*
+typedef struct {                          // UA_ObjectTypeAttributes_default
+	// Node Attributes
+	UA_UInt32        specifiedAttributes; // 0,
+	UA_LocalizedText displayName;         // {{0, NULL}, {0, NULL}},
+	UA_LocalizedText description;         // {{0, NULL}, {0, NULL}},
+	UA_UInt32        writeMask;           // 0,
+	UA_UInt32        userWriteMask;       // 0,
+	// Object Type Attributes
+	UA_Boolean       isAbstract;          // false
+} UA_ObjectTypeAttributes;
+
+typedef struct {                          // UA_ObjectAttributes_default
+	// Node Attributes
+	UA_UInt32        specifiedAttributes; // 0,
+	UA_LocalizedText displayName;         // {{0, NULL}, {0, NULL}},
+	UA_LocalizedText description;         // {{0, NULL}, {0, NULL}},
+	UA_UInt32        writeMask;           // 0,
+	UA_UInt32        userWriteMask;       // 0,
+	// Object Attributes
+	UA_Byte          eventNotifier;       // 0
+} UA_ObjectAttributes;
+*/
+
+class QOpcUaProperty;
 class QOpcUaBaseDataVariable;
 class QOpcUaFolderObject;
 
 // Part 5 - 6.2 : BaseObjectType
+/*
+The BaseObjectType is used as type definition whenever there is an Object 
+having no more concrete type definitions available. 
+Servers should avoid using this ObjectType and use a more specific type, if possible. 
+This ObjectType is the base ObjectType and all other ObjectTypes shall either 
+directly or indirectly inherit from it.
+*/
 
-class QOpcUaBaseObject : public QOpcUaAbstractObject
+class QOpcUaBaseObject : public QOpcUaServerNode
 {
     Q_OBJECT
+
+	// Object Attributes
+
+	// TODO
+	//Q_PROPERTY(UA_Byte eventNotifier READ get_eventNotifier)
 
 friend class QOpcUaServer;
 
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
-	QOpcUaBaseObject       * addBaseObject();
+	QOpcUaProperty         * addProperty();
 
 	QOpcUaBaseDataVariable * addBaseDataVariable();
+
+	QOpcUaBaseObject       * addBaseObject();
 
 	QOpcUaFolderObject     * addFolderObject();
 

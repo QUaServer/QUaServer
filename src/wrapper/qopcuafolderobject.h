@@ -6,6 +6,13 @@
 class QOpcUaBaseDataVariable;
 
 // Part 5 - 6.6 : FolderType
+/*
+Instances of this ObjectType are used to organise the AddressSpace into 
+a hierarchy of Nodes. They represent the root Node of a subtree, and have 
+no other semantics associated with them. However, the DisplayName of an 
+instance of the FolderType, such as “ObjectTypes”, should imply the
+semantics associated with the use of it.
+*/
 
 class QOpcUaFolderObject : public QOpcUaBaseObject
 {
