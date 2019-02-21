@@ -1,7 +1,6 @@
 #include "qopcuatypesconverter.h"
 #include <cstring>
 
-
 QT_BEGIN_NAMESPACE
 
 namespace QOpcUaTypesConverter {
@@ -77,7 +76,7 @@ namespace QOpcUaTypesConverter {
 			break;
 		case UA_NODEIDTYPE_STRING:
 			result.append(QLatin1String("s="));
-			result.append(QString::fromLocal8Bit(reinterpret_cast<char *>(id.identifier.string.data), id.identifier.string.length));
+			result.append(QString::fromLocal8Bit(reinterpret_cast<char *>(id.identifier.string.data), static_cast<int>(id.identifier.string.length)));
 			break;
         case UA_NODEIDTYPE_GUID:
             {
@@ -89,7 +88,7 @@ namespace QOpcUaTypesConverter {
             }
         case UA_NODEIDTYPE_BYTESTRING:
             {
-			const QByteArray temp(reinterpret_cast<char *>(id.identifier.byteString.data), id.identifier.byteString.length);
+			const QByteArray temp(reinterpret_cast<char *>(id.identifier.byteString.data), static_cast<int>(id.identifier.byteString.length));
 			result.append(QStringLiteral("b=")).append(temp.toBase64());
 			break;
             }
@@ -170,7 +169,7 @@ namespace QOpcUaTypesConverter {
 
 	QString uaStringToQString(const UA_String & string)
 	{
-		return QString::fromLocal8Bit(reinterpret_cast<char *>(string.data), string.length);
+		return QString::fromLocal8Bit(reinterpret_cast<char *>(string.data), static_cast<int>(string.length));
 	}
 
 	UA_String uaStringFromQString(const QString & uaString)
@@ -748,13 +747,13 @@ namespace QOpcUaTypesConverter {
 	template<>
 	QString uaVariantToQVariantScalar<QString, UA_String>(const UA_String *data)
 	{
-		return QString::fromUtf8(reinterpret_cast<const char *>(data->data), data->length);
+		return QString::fromUtf8(reinterpret_cast<const char *>(data->data), static_cast<int>(data->length));
 	}
 	// specialization (QByteArray)
 	template<>
 	QByteArray uaVariantToQVariantScalar<QByteArray, UA_ByteString>(const UA_ByteString *data)
 	{
-		return QByteArray(reinterpret_cast<const char *>(data->data), data->length);
+		return QByteArray(reinterpret_cast<const char *>(data->data), static_cast<int>(data->length));
 	}
 	// specialization (QDateTime)
 	template<>
@@ -775,6 +774,7 @@ namespace QOpcUaTypesConverter {
 	template<>
 	QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant *data)
 	{
+		Q_UNUSED(data);
 		// TODO : this OK for QMetaType::UnknownType puposes?
 		return QVariant();
 	}

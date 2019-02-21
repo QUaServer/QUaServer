@@ -3,10 +3,6 @@
 #include <QDateTime>
 
 #include <QOpcUaServer>
-#include <QOpcUaProperty>
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaBaseObject>
-#include <QOpcUaFolderObject>
 
 int main(int argc, char *argv[])
 {

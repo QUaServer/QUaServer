@@ -1,13 +1,12 @@
 #ifndef QOPCUASERVER_H
 #define QOPCUASERVER_H
 
-#include <QOpcUaTypesConverter>
 #include <type_traits>
 
-#include <QOpcUaBaseObject>
-#include <QOpcUaBaseVariable>
-
-class QOpcUaFolderObject;
+#include <QOpcUaTypesConverter>
+#include <QOpcUaFolderObject>
+#include <QOpcUaBaseDataVariable>
+#include <QOpcUaProperty>
 
 class QOpcUaServer : public QObject
 {
@@ -31,7 +30,6 @@ public:
 
 	QOpcUaFolderObject * get_objectsFolder();
 	
-
 signals:
 
 public slots:

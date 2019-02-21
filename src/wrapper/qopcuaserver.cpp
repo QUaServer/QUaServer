@@ -1,9 +1,5 @@
 #include "qopcuaserver.h"
 
-#include <QOpcUaFolderObject>
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaProperty>
-
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
