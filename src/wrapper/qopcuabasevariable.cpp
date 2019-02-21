@@ -122,6 +122,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			auto size = (quint32)iter.size();
 			// TODO : support multidimensional array (create custom Qt type compatible with QVariant)
 			//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
+			// https://www.bogotobogo.com/Qt/Qt5_QVariant_meta_object_system_MetaType.php
 			UA_Variant uaArrayDimensions;
 			UA_UInt32 arrayDims[1] = { size };
 			UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);

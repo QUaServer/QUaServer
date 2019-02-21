@@ -15,6 +15,9 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
+	// TODO : add method support
+	//Q_STATIC_ASSERT_X() 
+
 	auto objBase1   = objsFolder->addBaseObject("MyObject_QN");
 	objBase1->set_displayName("MyObject");
 	objBase1->set_description("This is my first object");

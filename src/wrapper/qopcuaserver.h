@@ -80,8 +80,11 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode, const QSt
 		                                                         childNode->metaObject()->className());
 
 	// set qualified name, default is class name
-	UA_QualifiedName browseName = strBrowseName.isEmpty() ? UA_QUALIFIEDNAME_ALLOC(1, QString(T::staticMetaObject.className()).toUtf8())
-		                                                  : UA_QUALIFIEDNAME_ALLOC(1, strBrowseName.toUtf8());
+	UA_QualifiedName browseName;
+	browseName.namespaceIndex = 1;
+	browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strBrowseName.isEmpty() ? 
+		                                                                  QString(T::staticMetaObject.className()) : 
+		                                                                  strBrowseName);
 
 	// check if object or variable
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
@@ -118,8 +121,6 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode, const QSt
 		delete childNode;
 		return nullptr;
 	}
-	// TODO ?
-	// UA_QualifiedName_deleteMembers or UA_QualifiedName_delete ??
 
 	return childNode;
 }
