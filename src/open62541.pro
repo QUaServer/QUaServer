@@ -3,6 +3,8 @@ CONFIG  += staticlib
 CONFIG  -= app_bundle
 CONFIG  -= qt
 
+QMAKE_CFLAGS += -std=c99
+
 DESTDIR  = $$PWD/../build
 
 CONFIG(debug, debug|release) {

@@ -4,6 +4,9 @@
 #include <QOpcUaTypesConverter>
 #include <type_traits>
 
+#include <QOpcUaBaseObject>
+#include <QOpcUaBaseVariable>
+
 class QOpcUaFolderObject;
 
 class QOpcUaServer : public QObject

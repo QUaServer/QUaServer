@@ -1,5 +1,6 @@
 #include "qopcuabaseobject.h"
 
+#include <QOpcUaServer>
 #include <QOpcUaProperty>
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaFolderObject>

@@ -1,5 +1,6 @@
 #include "qopcuabasevariable.h"
 
+#include <QOpcUaServer>
 #include <QOpcUaBaseDataVariable>
 
 QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServerNode *parent) : QOpcUaServerNode(parent)

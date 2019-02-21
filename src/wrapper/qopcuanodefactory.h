@@ -2,6 +2,7 @@
 #define QOPCUANODEFACTORY_H
 
 #include <QOpcUaServerNode>
+#include "open62541.h"
 
 // [TRAITS] : default implementation
 template <typename T>

@@ -1,7 +1,12 @@
 #ifndef QOPCUASERVERNODE_H
 #define QOPCUASERVERNODE_H
 
-#include <QOpcUaServer>
+#include <QObject>
+#include <QVariant>
+
+#include "open62541.h"
+
+class QOpcUaServer;
 
 /*
 typedef struct {
@@ -13,6 +18,8 @@ typedef struct {
 	UA_UInt32        userWriteMask;
 } UA_NodeAttributes;
 */
+
+typedef QPair<quint16, QString> QBrowseName;
 
 class QOpcUaServerNode : public QObject
 {
@@ -39,7 +46,7 @@ class QOpcUaServerNode : public QObject
 
 	// Other
 
-	Q_PROPERTY(QPair<quint16, QString> browseName READ get_browseName WRITE set_browseName)
+    Q_PROPERTY(QBrowseName browseName READ get_browseName WRITE set_browseName)
 
 public:
 	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
@@ -55,7 +62,7 @@ public:
 	QString get_nodeClass  () const;
 	
 	QPair<quint16, QString> get_browseName() const;
-	void                    set_browseName(const QPair<quint16, QString> &browseName);
+    void                    set_browseName(const QBrowseName &browseName);
 
 	// private?
 

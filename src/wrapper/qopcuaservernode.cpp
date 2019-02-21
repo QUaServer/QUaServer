@@ -1,4 +1,5 @@
 #include "qopcuaservernode.h"
+#include <QOpcUaServer>
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
@@ -40,7 +41,7 @@ void QOpcUaServerNode::set_displayName(const QString & displayName)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
-	UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
+    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 	// set value
 	UA_Server_writeDisplayName(m_qopcuaserver->m_server, m_nodeId, uaDisplayName);
 	// TODO : handle locale
@@ -136,7 +137,7 @@ QPair<quint16, QString> QOpcUaServerNode::get_browseName() const
 	return QPair<quint16, QString>(outBrowseName.namespaceIndex, QOpcUaTypesConverter::uaStringToQString(outBrowseName.name));
 }
 
-void QOpcUaServerNode::set_browseName(const QPair<quint16, QString> & browseName)
+void QOpcUaServerNode::set_browseName(const QBrowseName & browseName)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));

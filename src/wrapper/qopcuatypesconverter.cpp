@@ -1,5 +1,5 @@
 #include "qopcuatypesconverter.h"
-
+#include <cstring>
 
 
 QT_BEGIN_NAMESPACE
@@ -23,7 +23,7 @@ namespace QOpcUaTypesConverter {
 		case 'i': {
 			bool isNumber;
 			uint identifier = identifierString.toUInt(&isNumber);
-			if (isNumber && identifier <= ((std::numeric_limits<quint32>::max)()))
+            if (isNumber)
 				return UA_NODEID_NUMERIC(namespaceIndex, static_cast<UA_UInt32>(identifier));
 			else
 				qWarning() << name << "does not contain a valid numeric identifier";
@@ -70,7 +70,8 @@ namespace QOpcUaTypesConverter {
 	{
 		QString result = QString::fromLatin1("ns=%1;").arg(id.namespaceIndex);
 
-		switch (id.identifierType) {
+        switch (id.identifierType)
+        {
 		case UA_NODEIDTYPE_NUMERIC:
 			result.append(QString::fromLatin1("i=%1").arg(id.identifier.numeric));
 			break;
@@ -78,22 +79,21 @@ namespace QOpcUaTypesConverter {
 			result.append(QLatin1String("s="));
 			result.append(QString::fromLocal8Bit(reinterpret_cast<char *>(id.identifier.string.data), id.identifier.string.length));
 			break;
-		case UA_NODEIDTYPE_GUID: {
+        case UA_NODEIDTYPE_GUID:
+            {
 			const UA_Guid &src = id.identifier.guid;
 			const QUuid uuid(src.data1, src.data2, src.data3, src.data4[0], src.data4[1], src.data4[2],
 				src.data4[3], src.data4[4], src.data4[5], src.data4[6], src.data4[7]);
-			result.append(QStringLiteral("g=")).append(uuid.toString().midRef(1, 36)); // Remove enclosing {...}
+            result.append(QStringLiteral("g=")).append(uuid.toString().midRef(1, 36));
 			break;
-		}
-		case UA_NODEIDTYPE_BYTESTRING: {
+            }
+        case UA_NODEIDTYPE_BYTESTRING:
+            {
 			const QByteArray temp(reinterpret_cast<char *>(id.identifier.byteString.data), id.identifier.byteString.length);
 			result.append(QStringLiteral("b=")).append(temp.toBase64());
 			break;
-		}
-		default:
-			qWarning() << "Open62541 Utils: Could not convert UA_NodeId to QString";
-			result.clear();
-		}
+            }
+        }
 		return result;
 	}
 
@@ -282,7 +282,7 @@ namespace QOpcUaTypesConverter {
 		}
 		else
 		{
-			qtType = (QMetaType::Type)var.type();
+            qtType = static_cast<QMetaType::Type>(var.type());
 			uaType = uaTypeFromQType(qtType);
 		}
 		// get ua type and call respective method
@@ -368,9 +368,9 @@ namespace QOpcUaTypesConverter {
 	template<>
 	void uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(const QByteArray &value, UA_ByteString *ptr)
 	{
-		ptr->length = value.length();
+        ptr->length = static_cast<size_t>(value.length());
 		UA_StatusCode success = UA_Array_copy(reinterpret_cast<const UA_Byte *>(value.constData()),
-			value.length(), reinterpret_cast<void **>(&ptr->data), &UA_TYPES[UA_TYPES_BYTE]);
+            static_cast<size_t>(value.length()), reinterpret_cast<void **>(&ptr->data), &UA_TYPES[UA_TYPES_BYTE]);
 		if (success != UA_STATUSCODE_GOOD) {
 			ptr->length = 0;
 			ptr->data = nullptr;
@@ -389,6 +389,7 @@ namespace QOpcUaTypesConverter {
 	template<>
 	void uaVariantFromQVariantScalar<UA_Variant, QVariant>(const QVariant &value, UA_Variant *ptr)
 	{
+        Q_UNUSED(value);
 		// TODO : this OK for QMetaType::UnknownType puposes?
 		UA_Variant_init(ptr);
 	}
@@ -397,7 +398,7 @@ namespace QOpcUaTypesConverter {
 	{
 		// assume that the type of the first elem of the array is the type of all the array
 		auto iter   = var.value<QSequentialIterable>();
-		auto qtType = (QMetaType::Type)iter.at(0).type();
+        auto qtType = static_cast<QMetaType::Type>(iter.at(0).type());
 		auto uaType = uaTypeFromQType(qtType);
 		switch (qtType)
 		{
@@ -457,88 +458,93 @@ namespace QOpcUaTypesConverter {
 			return retVar;
 		}
 		// instantiate ua array
-		TARGETTYPE *arr = static_cast<TARGETTYPE *>(UA_Array_new(iter.size(), type));
+        TARGETTYPE *arr = static_cast<TARGETTYPE *>(UA_Array_new(static_cast<size_t>(iter.size()), type));
 		// copy values
 		for (int i = 0; i < iter.size(); i++)
 		{
 			uaVariantFromQVariantScalar<TARGETTYPE, QTTYPE>(iter.at(i).value<QTTYPE>(), &arr[i]);
 		}
 		// set the array to the ua variant
-		UA_Variant_setArray(&retVar, arr, iter.size(), type);
+        UA_Variant_setArray(&retVar, arr, static_cast<size_t>(iter.size()), type);
 		// TODO : support multidimentional array
 		retVar.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
-		retVar.arrayDimensions[0]  = iter.size();
-		retVar.arrayDimensionsSize = (size_t)1;
+        retVar.arrayDimensions[0]  = static_cast<UA_UInt32>(iter.size());
+        retVar.arrayDimensionsSize = static_cast<size_t>(1);
 		// return ua variant
 		return retVar;
 	}
+
+    UA_Boolean UA_NodeId_equal_helper(const UA_NodeId *n1, const UA_NodeId n2)
+    {
+        return UA_NodeId_equal(n1, &n2);
+    }
 
 	QMetaType::Type uaTypeNodeIdToQType(const UA_NodeId * nodeId)
 	{
 		if (nodeId == nullptr) {
 			return QMetaType::UnknownType;
 		}
-		if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)))
+        if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)))
 		{
 			return QMetaType::UnknownType;
 		}
-		if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)))
 		{
 			return QMetaType::Bool;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)))
 		{
 			return QMetaType::Char;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)))
 		{
 			return QMetaType::UChar;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)))
 		{
 			return QMetaType::Short;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)))
 		{
 			return QMetaType::UShort;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)))
 		{
 			return QMetaType::Int;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)))
 		{
 			return QMetaType::UInt;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)))
 		{
 			return QMetaType::Long;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)))
 		{
 			return QMetaType::ULong;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)))
 		{
 			return QMetaType::Float;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)))
 		{
 			return QMetaType::Double;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)))
 		{
 			return QMetaType::QString;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)))
 		{
 			return QMetaType::QDateTime;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)))
 		{
 			return QMetaType::QUuid;
 		}
-		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)))
+        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)))
 		{
 			return QMetaType::QByteArray;
 		}
