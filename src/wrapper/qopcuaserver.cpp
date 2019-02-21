@@ -1,6 +1,8 @@
 #include "qopcuaserver.h"
 
 #include <QOpcUaFolderObject>
+#include <QOpcUaBaseDataVariable>
+#include <QOpcUaProperty>
 
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
@@ -26,4 +28,41 @@ void QOpcUaServer::start()
 QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()
 {
 	return m_pobjectsFolder;
+}
+
+UA_NodeId QOpcUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
+{
+	UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+	// adapt parent relation with child according to parent type
+	if (strParentClassName.compare(QOpcUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	{
+		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
+	}
+	else if (strParentClassName.compare(QOpcUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	{
+		if (strChildClassName.compare(QOpcUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
+			strChildClassName.compare(QOpcUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		{
+			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT);
+		}
+		else if (strChildClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		{
+			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+		}
+		else if (strChildClassName.compare(QOpcUaProperty::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		{
+			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
+		}
+	}
+	else if (strParentClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	{
+		// TODO
+		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+	}
+	else
+	{
+		Q_ASSERT_X(false, "QOpcUaServer::getReferenceTypeId", "Invalid parent type.");
+	}
+	
+	return referenceTypeId;
 }

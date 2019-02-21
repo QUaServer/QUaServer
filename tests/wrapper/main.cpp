@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	auto objBase1   = objsFolder->addBaseObject();
+	auto objBase1   = objsFolder->addBaseObject("MyObject_QN");
 	objBase1->set_displayName("MyObject");
 	objBase1->set_description("This is my first object");
 
@@ -29,7 +29,6 @@ int main(int argc, char *argv[])
 	//varBase1->set_dataType(QMetaType::ULongLong);
 	//varBase1->set_value(QVariantList() << 1 << 4 << 6);
 	varBase1->set_value(123);
-	//
 	//qDebug() << varBase1->get_value();
 	//qDebug() << varBase1->get_arrayDimensions();
 	
@@ -46,16 +45,19 @@ int main(int argc, char *argv[])
 	varProp->set_displayName("MyProp");
 	varProp->set_value(1.2345);
 
-	//auto objBaseNested2 = objBaseNested1->addBaseObject();
-	//objBaseNested2->set_displayName("MyObject_DoublyNested");
-	//objBaseNested2->set_description("This is an object nested within another object");
-	//objBaseNested2->set_browseName({ 1, "Browse Name 2" });
+	auto objBaseNested2 = objBaseNested1->addBaseObject();
+	objBaseNested2->set_displayName("MyObject_DoublyNested");
+	objBaseNested2->set_description("This is an object nested within another object");
+	objBaseNested2->set_browseName({ 1, "Browse Name 2" });
 
-	//auto varBase2 = objBaseNested1->addBaseDataVariable();
-	//varBase2->set_displayName("DataVar2");
+	auto varBase2 = objBaseNested1->addBaseDataVariable();
+	varBase2->set_displayName("DataVar2");
 
-	//auto folder2 = objBaseNested1->addFolderObject();
-	//folder2->set_displayName("MyFolder2");
+	auto folder2 = objBaseNested1->addFolderObject();
+	folder2->set_displayName("MyFolder2");
+
+	// Produces error!
+	//server.createInstance<QOpcUaBaseVariable>(objBase1);
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();

@@ -120,7 +120,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			// set arrayDimensions (bug : https://github.com/open62541/open62541/issues/2455)
 			auto iter = newValue.value<QSequentialIterable>();
 			auto size = (quint32)iter.size();
-			// TODO : support multidimensional array
+			// TODO : support multidimensional array (create custom Qt type compatible with QVariant)
 			//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
 			UA_Variant uaArrayDimensions;
 			UA_UInt32 arrayDims[1] = { size };

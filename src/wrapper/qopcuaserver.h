@@ -24,7 +24,7 @@ public:
 
 	// create instance of a given type
 	template<typename T>
-	T* createInstance(QOpcUaServerNode * parentNode);
+	T* createInstance(QOpcUaServerNode * parentNode, const QString &strBrowseName = "");
 
 	QOpcUaFolderObject * get_objectsFolder();
 	
@@ -37,6 +37,8 @@ private:
 	UA_Server * m_server;
 
 	QOpcUaFolderObject * m_pobjectsFolder;
+
+	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 };
 
 template<typename T>
@@ -59,7 +61,7 @@ inline void QOpcUaServer::registerType()
 }
 
 template<typename T>
-inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
+inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode, const QString &strBrowseName/* = ""*/)
 {
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 	// try to get typeNodeId, if null, then register it
@@ -71,9 +73,15 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// instantiate C++ object or variable
-	T *  instance = new T(parentNode);
+	T *  childNode = new T(parentNode);
 
-	// TODO : adapt parent relation (referenceTypeId) to parent type
+	// adapt parent relation with child according to parent type
+	UA_NodeId referenceTypeId = QOpcUaServer::getReferenceTypeId(parentNode->metaObject()->className(), 
+		                                                         childNode->metaObject()->className());
+
+	// set qualified name, default is class name
+	UA_QualifiedName browseName = strBrowseName.isEmpty() ? UA_QUALIFIEDNAME_ALLOC(1, QString(T::staticMetaObject.className()).toUtf8())
+		                                                  : UA_QUALIFIEDNAME_ALLOC(1, strBrowseName.toUtf8());
 
 	// check if object or variable
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
@@ -81,41 +89,39 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	{
 		// add to OpcUa
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-		UA_QualifiedName    bName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addObjectNode(m_server, 
-			                    UA_NODEID_NULL,
-			                    parentNode->m_nodeId,                     // parent
-			                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES), // parent relation with child
-			                    bName,
-			                    typeNodeId,
-			                    oAttr, 
-			                    (void*)instance,      // set new instance as context
-			                    &instance->m_nodeId); // set new nodeId to new instance
-		// TODO ?
-		// UA_QualifiedName_deleteMembers or UA_QualifiedName_delete ??
+                                UA_NODEID_NULL,       // requested nodeId
+                                parentNode->m_nodeId, // parent
+                                referenceTypeId,      // parent relation with child
+                                browseName,
+                                typeNodeId,
+                                oAttr, 
+                                (void*)childNode,      // set new instance as context
+                                &childNode->m_nodeId); // set new nodeId to new instance
 	}
 	else if (T::staticMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
-		UA_QualifiedName      qName = UA_QUALIFIEDNAME_ALLOC(1, T::staticMetaObject.className()); // TODO : get from instance? pass as argument?
 		UA_Server_addVariableNode(m_server,
-			                      UA_NODEID_NULL, 
-			                      parentNode->m_nodeId,                        // parent
-			                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), // parent relation with child
-			                      qName,
-			                      typeNodeId, 
-			                      vAttr, 
-			                      (void*)instance,      // set new instance as context
-			                      &instance->m_nodeId); // set new nodeId to new instance
+                                  UA_NODEID_NULL,       // requested nodeId
+                                  parentNode->m_nodeId, // parent
+                                  referenceTypeId,      // parent relation with child
+                                  browseName,
+                                  typeNodeId, 
+                                  vAttr, 
+                                  (void*)childNode,      // set new instance as context
+                                  &childNode->m_nodeId); // set new nodeId to new instance
 	}
 	else
 	{
 		Q_ASSERT_X(false, "QOpcUaServer::createInstance", "Unsopported type.");
-		delete instance;
+		delete childNode;
 		return nullptr;
 	}
+	// TODO ?
+	// UA_QualifiedName_deleteMembers or UA_QualifiedName_delete ??
 
-	return instance;
+	return childNode;
 }
 
 

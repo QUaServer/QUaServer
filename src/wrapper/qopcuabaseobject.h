@@ -54,13 +54,13 @@ friend class QOpcUaServer;
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
-	QOpcUaProperty         * addProperty();
+	QOpcUaProperty         * addProperty(const QString &strBrowseName = "");
 
-	QOpcUaBaseDataVariable * addBaseDataVariable();
+	QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "");
 
-	QOpcUaBaseObject       * addBaseObject();
+	QOpcUaBaseObject       * addBaseObject(const QString &strBrowseName = "");
 
-	QOpcUaFolderObject     * addFolderObject();
+	QOpcUaFolderObject     * addFolderObject(const QString &strBrowseName = "");
 
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

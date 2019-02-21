@@ -17,22 +17,22 @@ QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer * server) : QOpcUaServerNode(ser
 	// And its only purpose is to create the UA_NS0ID_OBJECTSFOLDER instance
 }
 
-QOpcUaProperty * QOpcUaBaseObject::addProperty()
+QOpcUaProperty * QOpcUaBaseObject::addProperty(const QString &strBrowseName/* = ""*/)
 {
-	return m_qopcuaserver->createInstance<QOpcUaProperty>(this);
+	return m_qopcuaserver->createInstance<QOpcUaProperty>(this, strBrowseName);
 }
 
-QOpcUaBaseDataVariable * QOpcUaBaseObject::addBaseDataVariable()
+QOpcUaBaseDataVariable * QOpcUaBaseObject::addBaseDataVariable(const QString &strBrowseName/* = ""*/)
 {
-	return m_qopcuaserver->createInstance<QOpcUaBaseDataVariable>(this);
+	return m_qopcuaserver->createInstance<QOpcUaBaseDataVariable>(this, strBrowseName);
 }
 
-QOpcUaBaseObject * QOpcUaBaseObject::addBaseObject()
+QOpcUaBaseObject * QOpcUaBaseObject::addBaseObject(const QString &strBrowseName/* = ""*/)
 {
-	return m_qopcuaserver->createInstance<QOpcUaBaseObject>(this);
+	return m_qopcuaserver->createInstance<QOpcUaBaseObject>(this, strBrowseName);
 }
 
-QOpcUaFolderObject * QOpcUaBaseObject::addFolderObject()
+QOpcUaFolderObject * QOpcUaBaseObject::addFolderObject(const QString &strBrowseName/* = ""*/)
 {
-	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this);
+	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this, strBrowseName);
 }
