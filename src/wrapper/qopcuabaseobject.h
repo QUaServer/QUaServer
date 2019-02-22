@@ -27,10 +27,6 @@ typedef struct {                          // UA_ObjectAttributes_default
 } UA_ObjectAttributes;
 */
 
-class QOpcUaProperty;
-class QOpcUaBaseDataVariable;
-class QOpcUaFolderObject;
-
 // Part 5 - 6.2 : BaseObjectType
 /*
 The BaseObjectType is used as type definition whenever there is an Object 
@@ -54,13 +50,7 @@ friend class QOpcUaServer;
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
-	QOpcUaProperty         * addProperty(const QString &strBrowseName = "");
 
-	QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "");
-
-	QOpcUaBaseObject       * addBaseObject(const QString &strBrowseName = "");
-
-	QOpcUaFolderObject     * addFolderObject(const QString &strBrowseName = "");
 
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

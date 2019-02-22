@@ -1,5 +1,9 @@
 #include "qopcuaservernode.h"
+
 #include <QOpcUaServer>
+#include <QOpcUaProperty>
+#include <QOpcUaBaseDataVariable>
+#include <QOpcUaFolderObject>
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
@@ -149,3 +153,22 @@ void QOpcUaServerNode::set_browseName(const QBrowseName & browseName)
 	UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
 }
 
+QOpcUaProperty * QOpcUaServerNode::addProperty(const QString &strBrowseName/* = ""*/)
+{
+	return m_qopcuaserver->createInstance<QOpcUaProperty>(this, strBrowseName);
+}
+
+QOpcUaBaseDataVariable * QOpcUaServerNode::addBaseDataVariable(const QString &strBrowseName/* = ""*/)
+{
+	return m_qopcuaserver->createInstance<QOpcUaBaseDataVariable>(this, strBrowseName);
+}
+
+QOpcUaBaseObject * QOpcUaServerNode::addBaseObject(const QString &strBrowseName/* = ""*/)
+{
+	return m_qopcuaserver->createInstance<QOpcUaBaseObject>(this, strBrowseName);
+}
+
+QOpcUaFolderObject * QOpcUaServerNode::addFolderObject(const QString &strBrowseName/* = ""*/)
+{
+	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this, strBrowseName);
+}

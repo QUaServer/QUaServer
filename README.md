@@ -22,7 +22,6 @@ https://doc.qt.io/qt-5/qvariant.html#details
 https://doc.qt.io/qt-5/custom-types.html
 https://www.bogotobogo.com/Qt/Qt5_QVariant_meta_object_system_MetaType.php
 https://stackoverflow.com/questions/9065081/how-do-i-get-the-argument-types-of-a-function-pointer-in-a-variadic-template-cla
-https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
 
 
 

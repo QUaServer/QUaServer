@@ -1,9 +1,6 @@
 #include "qopcuabaseobject.h"
 
 #include <QOpcUaServer>
-#include <QOpcUaProperty>
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaFolderObject>
 
 QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServerNode *parent) : QOpcUaServerNode(parent)
 {
@@ -18,22 +15,3 @@ QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer * server) : QOpcUaServerNode(ser
 	// And its only purpose is to create the UA_NS0ID_OBJECTSFOLDER instance
 }
 
-QOpcUaProperty * QOpcUaBaseObject::addProperty(const QString &strBrowseName/* = ""*/)
-{
-	return m_qopcuaserver->createInstance<QOpcUaProperty>(this, strBrowseName);
-}
-
-QOpcUaBaseDataVariable * QOpcUaBaseObject::addBaseDataVariable(const QString &strBrowseName/* = ""*/)
-{
-	return m_qopcuaserver->createInstance<QOpcUaBaseDataVariable>(this, strBrowseName);
-}
-
-QOpcUaBaseObject * QOpcUaBaseObject::addBaseObject(const QString &strBrowseName/* = ""*/)
-{
-	return m_qopcuaserver->createInstance<QOpcUaBaseObject>(this, strBrowseName);
-}
-
-QOpcUaFolderObject * QOpcUaBaseObject::addFolderObject(const QString &strBrowseName/* = ""*/)
-{
-	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this, strBrowseName);
-}

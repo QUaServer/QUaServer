@@ -17,7 +17,38 @@ class QOpcUaProperty : public QOpcUaBaseVariable
 public:
     explicit QOpcUaProperty(QOpcUaServerNode *parent);
 
-	
+	// delete methods from derived class
+	// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
+	template<typename T = bool>
+	QOpcUaProperty * addProperty(const QString &strBrowseName = "")
+	{
+		Q_UNUSED(strBrowseName);
+		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addProperty, properties cannot have children");
+		return nullptr;
+	}
+	template<typename T = bool>
+	QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "")
+	{
+		Q_UNUSED(strBrowseName);
+		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addBaseDataVariable, properties cannot have children");
+		return nullptr;
+	}
+	template<typename T = bool>
+	QOpcUaBaseObject * addBaseObject(const QString &strBrowseName = "")
+	{
+		Q_UNUSED(strBrowseName);
+		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addBaseObject, properties cannot have children");
+		return nullptr;
+	}
+	template<typename T = bool>
+	QOpcUaFolderObject * addFolderObject(const QString &strBrowseName = "")
+	{
+		Q_UNUSED(strBrowseName);
+		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addFolderObject, properties cannot have children");
+		return nullptr;
+	}
+
+
 };
 
 // [TRAITS] : specialization

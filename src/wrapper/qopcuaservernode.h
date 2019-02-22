@@ -7,6 +7,17 @@
 #include "open62541.h"
 
 class QOpcUaServer;
+class QOpcUaProperty;
+class QOpcUaBaseDataVariable;
+class QOpcUaBaseObject;
+class QOpcUaFolderObject;
+
+// traits used to static assert that a method is not used
+// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
+template <typename T>
+struct QOpcUaFail : std::false_type
+{
+};
 
 /*
 typedef struct {
@@ -51,6 +62,8 @@ class QOpcUaServerNode : public QObject
 public:
 	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
 
+	// OPC UA methods API
+
 	QString get_displayName() const;
 	void    set_displayName(const QString &displayName);
 	QString get_description() const;
@@ -63,6 +76,13 @@ public:
 	
 	QPair<quint16, QString> get_browseName() const;
     void                    set_browseName(const QBrowseName &browseName);
+
+	// Instance Creation API
+
+	virtual QOpcUaProperty         * addProperty        (const QString &strBrowseName = "");
+	virtual QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "");
+	virtual QOpcUaBaseObject       * addBaseObject      (const QString &strBrowseName = "");
+	virtual QOpcUaFolderObject     * addFolderObject    (const QString &strBrowseName = "");
 
 	// private?
 

@@ -11,9 +11,6 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	// TODO : add method support
-	//Q_STATIC_ASSERT_X() 
-
 	auto objBase1   = objsFolder->addBaseObject("MyObject_QN");
 	objBase1->set_displayName("MyObject");
 	objBase1->set_description("This is my first object");
@@ -55,8 +52,23 @@ int main(int argc, char *argv[])
 	auto folder2 = objBaseNested1->addFolderObject();
 	folder2->set_displayName("MyFolder2");
 
+	auto varProp2 = varBase2->addProperty("NestedProp");
+	varProp2->set_displayName("My Nested Prop");
+
+	auto varBase3 = varBase2->addBaseDataVariable("NestedBaseVar");
+	varBase3->set_displayName("My Nested Base Var");
+
+	auto objBase3 = varBase2->addBaseObject("NestedBaseObj");
+	objBase3->set_displayName("My Nested Base Obj");
+
+	auto folder3 = varBase2->addFolderObject("NestedFolder");
+	folder3->set_displayName("My Nested Folder");
+
+	
+
 	// Produces error!
 	//server.createInstance<QOpcUaBaseVariable>(objBase1);
+	//varProp->addBaseDataVariable("XX");
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();
