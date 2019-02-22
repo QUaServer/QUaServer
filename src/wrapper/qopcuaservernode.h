@@ -1,6 +1,9 @@
 #ifndef QOPCUASERVERNODE_H
 #define QOPCUASERVERNODE_H
 
+#include <functional>
+#include <typeinfo>
+
 #include <QObject>
 #include <QVariant>
 
@@ -19,6 +22,25 @@ struct QOpcUaFail : std::false_type
 {
 };
 
+// traits used to identify method arg and result types
+// https://stackoverflow.com/questions/9065081/how-do-i-get-the-argument-types-of-a-function-pointer-in-a-variadic-template-cla
+template<typename T>
+struct QOpcUaMethodTraits;
+
+template<typename R, typename ...Args>
+struct QOpcUaMethodTraits<std::function<R(Args...)>>
+{
+	static const size_t nargs = sizeof...(Args);
+
+	typedef R res_type;
+
+	template <size_t i>
+	struct arg
+	{
+		typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
+	};
+};
+
 /*
 typedef struct {
 	// Node Attributes
@@ -29,6 +51,13 @@ typedef struct {
 	UA_UInt32        userWriteMask;
 } UA_NodeAttributes;
 */
+
+//// TODO : try ?
+//// https://stackoverflow.com/questions/4642079/function-signature-like-expressions-as-c-template-arguments
+//template <typename T> class MyFunction;
+//template <typename Ret, typename ...Arg> class MyFunction<Ret(Arg...)> {
+//	/* ... */
+//};
 
 typedef QPair<quint16, QString> QBrowseName;
 
@@ -84,6 +113,12 @@ public:
 	virtual QOpcUaBaseObject       * addBaseObject      (const QString &strBrowseName = "");
 	virtual QOpcUaFolderObject     * addFolderObject    (const QString &strBrowseName = "");
 
+	template<typename T>
+	void addMethod(const QString &strMethodName, T methodCallback);
+
+	template<typename R, typename ...A>
+	void addMethod(const QString &strMethodName, std::function<R(A...)> methodCallback);
+
 	// private?
 
 	// to be able to reuse methods in subclasses
@@ -100,4 +135,22 @@ protected:
 	explicit QOpcUaServerNode(QOpcUaServer *server);
 };
 
+template<typename T>
+inline void QOpcUaServerNode::addMethod(const QString & strMethodName, T methodCallback)
+{
+	qDebug() << "T";
+	qDebug() << "Result Type" << typeid(QOpcUaMethodTraits<T>::res_type).name();
+	qDebug() << "Arg" << 0 << "Type" << typeid(QOpcUaMethodTraits<T>::arg<0>::type).name();
+}
+
+template<typename R, typename ...A>
+inline void QOpcUaServerNode::addMethod(const QString & strMethodName, std::function<R(A...)> methodCallback)
+{
+	qDebug() << "R(A...)";
+	qDebug() << "Result Type" << typeid(QOpcUaMethodTraits<std::function<R(A...)>>::res_type).name();
+	qDebug() << "Arg" << 0 << "Type" << typeid(QOpcUaMethodTraits<std::function<R(A...)>>::arg<0>::type).name();
+}
+
+
 #endif // QOPCUASERVERNODE_H
+

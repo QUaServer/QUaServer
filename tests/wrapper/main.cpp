@@ -64,11 +64,16 @@ int main(int argc, char *argv[])
 	auto folder3 = varBase2->addFolderObject("NestedFolder");
 	folder3->set_displayName("My Nested Folder");
 
-	
+	varBase1->addMethod("MyMethod", (std::function<int(double)>)[](double i) {
+		int val = 10 + i;
+		return val;
+	});
 
 	// Produces error!
 	//server.createInstance<QOpcUaBaseVariable>(objBase1);
 	//varProp->addBaseDataVariable("XX");
+
+
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();
