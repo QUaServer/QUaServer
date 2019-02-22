@@ -22,25 +22,6 @@ struct QOpcUaFail : std::false_type
 {
 };
 
-// traits used to identify method arg and result types
-// https://stackoverflow.com/questions/9065081/how-do-i-get-the-argument-types-of-a-function-pointer-in-a-variadic-template-cla
-template<typename T>
-struct QOpcUaMethodTraits;
-
-template<typename R, typename ...Args>
-struct QOpcUaMethodTraits<std::function<R(Args...)>>
-{
-	static const size_t nargs = sizeof...(Args);
-
-	typedef R res_type;
-
-	template <size_t i>
-	struct arg
-	{
-		typedef typename std::tuple_element<i, std::tuple<Args...>>::type type;
-	};
-};
-
 /*
 typedef struct {
 	// Node Attributes
@@ -113,11 +94,13 @@ public:
 	virtual QOpcUaBaseObject       * addBaseObject      (const QString &strBrowseName = "");
 	virtual QOpcUaFolderObject     * addFolderObject    (const QString &strBrowseName = "");
 
-	template<typename T>
-	void addMethod(const QString &strMethodName, T methodCallback);
+	template<typename RA, typename T>
+	void addMethod(const QString &strMethodName, const T &methodCallback);
 
 	template<typename R, typename ...A>
-	void addMethod(const QString &strMethodName, std::function<R(A...)> methodCallback);
+	void addMethod(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
+
+
 
 	// private?
 
@@ -133,22 +116,40 @@ public:
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
 	explicit QOpcUaServerNode(QOpcUaServer *server);
+
+private:
+
+	template<typename R, typename ...A>
+	void addMethodInternal(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
+
+	template<typename A>
+	QString processArgType();
 };
 
-template<typename T>
-inline void QOpcUaServerNode::addMethod(const QString & strMethodName, T methodCallback)
+template<typename RA, typename T>
+inline void QOpcUaServerNode::addMethod(const QString & strMethodName, const T &methodCallback)
 {
-	qDebug() << "T";
-	qDebug() << "Result Type" << typeid(QOpcUaMethodTraits<T>::res_type).name();
-	qDebug() << "Arg" << 0 << "Type" << typeid(QOpcUaMethodTraits<T>::arg<0>::type).name();
+	return this->addMethodInternal(strMethodName, (std::function<RA>)methodCallback);
 }
 
 template<typename R, typename ...A>
-inline void QOpcUaServerNode::addMethod(const QString & strMethodName, std::function<R(A...)> methodCallback)
+inline void QOpcUaServerNode::addMethod(const QString & strMethodName, const std::function<R(A...)> &methodCallback)
 {
-	qDebug() << "R(A...)";
-	qDebug() << "Result Type" << typeid(QOpcUaMethodTraits<std::function<R(A...)>>::res_type).name();
-	qDebug() << "Arg" << 0 << "Type" << typeid(QOpcUaMethodTraits<std::function<R(A...)>>::arg<0>::type).name();
+	return this->addMethodInternal(strMethodName, methodCallback);
+}
+
+template<typename R, typename ...A>
+inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, const std::function<R(A...)> &methodCallback)
+{
+	qDebug() << "Result Type" << typeid(R).name();
+	QList<QString> listArgTypes = { this->processArgType<A>()... };
+	qDebug() << "Arg Types" << listArgTypes;
+}
+
+template<typename A>
+inline QString QOpcUaServerNode::processArgType()
+{
+	return QString(typeid(A).name());
 }
 
 
