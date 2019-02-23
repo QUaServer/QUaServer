@@ -15,6 +15,8 @@ class QOpcUaBaseDataVariable;
 class QOpcUaBaseObject;
 class QOpcUaFolderObject;
 
+#include <QOpcUaTypesConverter>
+
 // traits used to static assert that a method is not used
 // https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
 template <typename T>
@@ -125,6 +127,8 @@ private:
 	template<typename A>
 	UA_Argument processArgType(const int &iArg);
 
+    UA_NodeId addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument);
+
 	static UA_StatusCode methodCallback(UA_Server        *server,
 		                                const UA_NodeId  *sessionId,
 		                                void             *sessionContext,
@@ -167,32 +171,10 @@ inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, c
 	const size_t nArgs = sizeof...(A);
 	UA_Argument inputArguments[nArgs] = { this->processArgType<A>(iArg++)... };
 	// add method node
-	UA_MethodAttributes methAttr = UA_MethodAttributes_default;
-	methAttr.executable     = true;
-	methAttr.userExecutable = true;
-	methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
-		                                       byteMethodName.data());
-	methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
-		                                       byteMethodName.data());
-	// create callback
-	UA_NodeId methNodeId;
-	auto st = UA_Server_addMethodNode(m_qopcuaserver->m_server,
-                                      UA_NODEID_NULL,
-                                      m_nodeId,
-                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                                      UA_QUALIFIEDNAME (1, byteMethodName.data()),
-                                      methAttr, 
-		                              &QOpcUaServerNode::methodCallback,
-                                      nArgs, 
-                                      inputArguments, 
-                                      1, 
-                                      &outputArgument,
-                                      this, 
-                                      &methNodeId);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
+    UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, &outputArgument);
 
 	// TODO : store method with node id as key (use UA_NodeId_hash)
+    Q_UNUSED(methNodeId);
 
 }
 

@@ -210,3 +210,34 @@ QOpcUaFolderObject * QOpcUaServerNode::addFolderObject(const QString &strBrowseN
 {
 	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this, strBrowseName);
 }
+
+UA_NodeId QOpcUaServerNode::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
+{
+    // add method node
+    UA_MethodAttributes methAttr = UA_MethodAttributes_default;
+    methAttr.executable     = true;
+    methAttr.userExecutable = true;
+    methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
+                                               byteMethodName.data());
+    methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
+                                               byteMethodName.data());
+    // create callback
+    UA_NodeId methNodeId;
+    auto st = UA_Server_addMethodNode(m_qopcuaserver->m_server,
+                                      UA_NODEID_NULL,
+                                      m_nodeId,
+                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                                      UA_QUALIFIEDNAME (1, byteMethodName.data()),
+                                      methAttr,
+                                      &QOpcUaServerNode::methodCallback,
+                                      nArgs,
+                                      inputArguments,
+                                      1,
+                                      outputArgument,
+                                      this,
+                                      &methNodeId);
+    Q_ASSERT(st == UA_STATUSCODE_GOOD);
+    Q_UNUSED(st);
+    // return new methos node id
+    return methNodeId;
+}
