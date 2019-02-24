@@ -127,7 +127,10 @@ private:
 	template<typename A>
 	UA_Argument processArgType(const int &iArg);
 
-    UA_NodeId addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument);
+    UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName, 
+		                            const size_t &nArgs, 
+		                            UA_Argument  * inputArguments, 
+		                            UA_Argument  * outputArgument);
 
 	static UA_StatusCode methodCallback(UA_Server        *server,
 		                                const UA_NodeId  *sessionId,
@@ -140,6 +143,18 @@ private:
 		                                const UA_Variant *input,
 		                                size_t            outputSize,
 		                                UA_Variant       *output);
+
+	QHash<UA_UInt32, std::function<UA_StatusCode(UA_Server*, 
+		                                         const UA_NodeId*, 
+		                                         void*, 
+		                                         const 
+		                                         UA_NodeId*, 
+		                                         void*, 
+		                                         const UA_NodeId*, 
+		                                         void*, size_t, 
+		                                         const UA_Variant*, 
+		                                         size_t, 
+		                                         UA_Variant*)>> m_hashCallbacks;
 };
 
 template<typename RA, typename T>
@@ -174,7 +189,22 @@ inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, c
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, &outputArgument);
 
 	// TODO : store method with node id as key (use UA_NodeId_hash)
-    Q_UNUSED(methNodeId);
+	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
+	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
+	m_hashCallbacks[hashNodeId] = [](UA_Server        * server,
+                                     const UA_NodeId  * sessionId,
+                                     void             * sessionContext,
+                                     const UA_NodeId  * methodId,
+                                     void             * methodContext,
+                                     const UA_NodeId  * objectId,
+                                     void             * objectContext,
+                                     size_t             inputSize,
+                                     const UA_Variant * input,
+                                     size_t             outputSize,
+                                     UA_Variant       * output) {
+		qDebug() << "Lambda called";
+		return UA_STATUSCODE_GOOD;
+	};
 
 }
 

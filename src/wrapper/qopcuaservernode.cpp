@@ -18,8 +18,22 @@ UA_StatusCode QOpcUaServerNode::methodCallback(UA_Server        * server,
 	                                           size_t             outputSize, 
 	                                           UA_Variant       * output)
 {
-	qDebug() << "Method called";
-	return UA_STATUSCODE_GOOD;
+	qDebug() << "Static method called";
+	auto node = static_cast<QOpcUaServerNode*>(objectContext);
+	Q_CHECK_PTR(node);
+	UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
+	Q_ASSERT(node->m_hashCallbacks.contains(hashNodeId));
+	return node->m_hashCallbacks[hashNodeId](server, 
+		                                     sessionId, 
+		                                     sessionContext, 
+		                                     methodId, 
+		                                     methodContext, 
+		                                     objectId, 
+		                                     objectContext, 
+		                                     inputSize, 
+		                                     input, 
+		                                     outputSize, 
+		                                     output);
 }
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
