@@ -24,6 +24,12 @@ namespace QOpcUaTypesConverter {
 	QString   uaStringToQString  (const UA_String &string);
 	UA_String uaStringFromQString(const QString &uaString);
 
+	// ua from c++
+	template<typename T>
+	UA_NodeId uaTypeNodeIdFromCpp();
+	// qt from c++
+	template<typename T>
+	QMetaType::Type qtTypeFromCpp();
 	// ua from qt
 	UA_NodeId          uaTypeNodeIdFromQType(const QMetaType::Type &type);
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
@@ -51,6 +57,166 @@ namespace QOpcUaTypesConverter {
 	QVariant uaVariantToQVariantArray(const UA_Variant  &uaVariant);
 	template<typename TARGETTYPE, typename UATYPE>
 	QVariant uaVariantToQVariantArray(const UA_Variant &var, QMetaType::Type type);
+
+
+	template<typename T>
+	UA_NodeId uaTypeNodeIdFromCpp()
+	{
+		if (std::is_same<T, QVariant>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
+		}
+		else if (std::is_same<T, bool>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN);
+		}
+		else if (std::is_same<T, char>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE);
+		}
+		else if (std::is_same<T, uchar>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE);
+		}
+		else if (std::is_same<T, qint16>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_INT16);
+		}
+		else if (std::is_same<T, quint16>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16);
+		}
+		else if (std::is_same<T, int>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_INT32);
+		}
+		else if (std::is_same<T, qint32>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_INT32);
+		}
+		else if (std::is_same<T, quint32>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32);
+		}
+		else if (std::is_same<T, int64_t>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_INT64);
+		}
+		else if (std::is_same<T, uint64_t>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64);
+		}
+		else if (std::is_same<T, float>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT);
+		}
+		else if (std::is_same<T, double>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE);
+		}
+		else if (std::is_same<T, QString>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_STRING);
+		}
+		else if (std::is_same<T, QDateTime>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME);
+		}
+		else if (std::is_same<T, QUuid>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_GUID);
+		}
+		else if (std::is_same<T, QByteArray>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);
+		}
+		// TODO : ?
+		//else if (std::is_same<T, QVariantList>::value)
+		//{
+		//	return ;
+		//}
+		Q_ASSERT_X(false, "uaTypeNodeIdFromCpp", "Unsupported type");
+		return UA_NodeId();
+	}
+
+	template<typename T>
+	QMetaType::Type qtTypeFromCpp()
+	{
+		if (std::is_same<T, QVariant>::value)
+		{
+			return QMetaType::UnknownType;
+		}
+		else if (std::is_same<T, bool>::value)
+		{
+			return QMetaType::Bool;
+		}
+		else if (std::is_same<T, char>::value)
+		{
+			return QMetaType::Char;
+		}
+		else if (std::is_same<T, uchar>::value)
+		{
+			return QMetaType::UChar;
+		}
+		else if (std::is_same<T, qint16>::value)
+		{
+			return QMetaType::Short;
+		}
+		else if (std::is_same<T, quint16>::value)
+		{
+			return QMetaType::UShort;
+		}
+		else if (std::is_same<T, int>::value)
+		{
+			return QMetaType::Int;
+		}
+		else if (std::is_same<T, qint32>::value)
+		{
+			return QMetaType::Int;
+		}
+		else if (std::is_same<T, quint32>::value)
+		{
+			return QMetaType::UInt;
+		}
+		else if (std::is_same<T, int64_t>::value)
+		{
+			return QMetaType::LongLong;
+		}
+		else if (std::is_same<T, uint64_t>::value)
+		{
+			return QMetaType::ULongLong;
+		}
+		else if (std::is_same<T, float>::value)
+		{
+			return QMetaType::Float;
+		}
+		else if (std::is_same<T, double>::value)
+		{
+			return QMetaType::Double;
+		}
+		else if (std::is_same<T, QString>::value)
+		{
+			return QMetaType::QString;
+		}
+		else if (std::is_same<T, QDateTime>::value)
+		{
+			return QMetaType::QDateTime;
+		}
+		else if (std::is_same<T, QUuid>::value)
+		{
+			return QMetaType::QUuid;
+		}
+		else if (std::is_same<T, QByteArray>::value)
+		{
+			return QMetaType::QByteArray;
+		}
+		else if (std::is_same<T, QVariantList>::value)
+		{
+			return QMetaType::QVariantList;
+		}
+		Q_ASSERT_X(false, "qtTypeFromCpp", "Unsupported type");
+		return QMetaType::UnknownType;
+	}
 
 }
 

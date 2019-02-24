@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	auto folder3 = varBase2->addFolderObject("NestedFolder");
 	folder3->set_displayName("My Nested Folder");
 
-	varBase1->addMethod<int(double, QString, int)>("MyMethod", [](double i, QString str, int x) {
+	objBase1->addMethod<int(double, QString, int)>("MyMethod", [](double i, QString str, int x) {
 		int val = 10 + i;
 		return val;
 	});

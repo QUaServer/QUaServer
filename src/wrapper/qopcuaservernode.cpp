@@ -5,6 +5,23 @@
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaFolderObject>
 
+// [STATIC]
+UA_StatusCode QOpcUaServerNode::methodCallback(UA_Server        * server, 
+	                                           const UA_NodeId  * sessionId, 
+	                                           void             * sessionContext, 
+	                                           const UA_NodeId  * methodId, 
+	                                           void             * methodContext, 
+	                                           const UA_NodeId  * objectId, 
+	                                           void             * objectContext, 
+	                                           size_t             inputSize, 
+	                                           const UA_Variant * input, 
+	                                           size_t             outputSize, 
+	                                           UA_Variant       * output)
+{
+	qDebug() << "Method called";
+	return UA_STATUSCODE_GOOD;
+}
+
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
 	m_qopcuaserver = parent->m_qopcuaserver;
@@ -34,7 +51,10 @@ QString QOpcUaServerNode::get_displayName() const
 	}
 	// read description
 	UA_LocalizedText outDisplayName;
-	UA_Server_readDisplayName(m_qopcuaserver->m_server, m_nodeId, &outDisplayName);
+	auto st = UA_Server_readDisplayName(m_qopcuaserver->m_server, m_nodeId, &outDisplayName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
+	// return
 	return QOpcUaTypesConverter::uaStringToQString(outDisplayName.text);
 	// TODO : handle outDisplayName.locale
 }
@@ -45,9 +65,11 @@ void QOpcUaServerNode::set_displayName(const QString & displayName)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
-    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
+    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT(trUtf8("en-US").toUtf8().data(), byteDisplayName.data());
 	// set value
-	UA_Server_writeDisplayName(m_qopcuaserver->m_server, m_nodeId, uaDisplayName);
+	auto st = UA_Server_writeDisplayName(m_qopcuaserver->m_server, m_nodeId, uaDisplayName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 	// TODO : handle locale
 }
 
@@ -61,7 +83,10 @@ QString QOpcUaServerNode::get_description() const
 	}
 	// read description
 	UA_LocalizedText outDescription;
-	UA_Server_readDescription(m_qopcuaserver->m_server, m_nodeId, &outDescription);
+	auto st = UA_Server_readDescription(m_qopcuaserver->m_server, m_nodeId, &outDescription);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
+	// return
 	return QOpcUaTypesConverter::uaStringToQString(outDescription.text);
 	// TODO : handle outDescription.locale
 }
@@ -72,9 +97,11 @@ void QOpcUaServerNode::set_description(const QString & description)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDescription = description.toUtf8(); // NOTE : QByteArray must exist in stack
-	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
+	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT(trUtf8("en-US").toUtf8().data(), byteDescription.data());
 	// set value
-	UA_Server_writeDescription(m_qopcuaserver->m_server, m_nodeId, uaDescription);
+	auto st = UA_Server_writeDescription(m_qopcuaserver->m_server, m_nodeId, uaDescription);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 	// TODO : handle locale
 }
 
@@ -88,7 +115,10 @@ quint32 QOpcUaServerNode::get_writeMask() const
 	}
 	// read writeMask
 	UA_UInt32 outWriteMask;
-	UA_Server_readWriteMask(m_qopcuaserver->m_server, m_nodeId, &outWriteMask);
+	auto st = UA_Server_readWriteMask(m_qopcuaserver->m_server, m_nodeId, &outWriteMask);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
+	// return
 	return outWriteMask;
 }
 
@@ -97,7 +127,9 @@ void QOpcUaServerNode::set_writeMask(const quint32 & writeMask)
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// set value
-	UA_Server_writeWriteMask(m_qopcuaserver->m_server, m_nodeId, writeMask);
+	auto st = UA_Server_writeWriteMask(m_qopcuaserver->m_server, m_nodeId, writeMask);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 }
 
 QString QOpcUaServerNode::get_nodeId() const
@@ -121,7 +153,9 @@ QString QOpcUaServerNode::get_nodeClass() const
 	}
 	// read nodeClass
 	UA_NodeClass outNodeClass;
-	UA_Server_readNodeClass(m_qopcuaserver->m_server, m_nodeId, &outNodeClass);
+	auto st = UA_Server_readNodeClass(m_qopcuaserver->m_server, m_nodeId, &outNodeClass);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 	// convert to QString
 	return QOpcUaTypesConverter::nodeClassToQString(outNodeClass);
 }
@@ -136,7 +170,9 @@ QPair<quint16, QString> QOpcUaServerNode::get_browseName() const
 	}
 	// read browse name
 	UA_QualifiedName outBrowseName;
-	UA_Server_readBrowseName(m_qopcuaserver->m_server, m_nodeId, &outBrowseName);
+	auto st = UA_Server_readBrowseName(m_qopcuaserver->m_server, m_nodeId, &outBrowseName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 	// populate return value
 	return QPair<quint16, QString>(outBrowseName.namespaceIndex, QOpcUaTypesConverter::uaStringToQString(outBrowseName.name));
 }
@@ -150,7 +186,9 @@ void QOpcUaServerNode::set_browseName(const QBrowseName & browseName)
 	bName.namespaceIndex = browseName.first;
 	bName.name           = QOpcUaTypesConverter::uaStringFromQString(browseName.second);
 	// set value
-	UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
+	auto st = UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
 }
 
 QOpcUaProperty * QOpcUaServerNode::addProperty(const QString &strBrowseName/* = ""*/)

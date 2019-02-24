@@ -123,7 +123,19 @@ private:
 	void addMethodInternal(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
 
 	template<typename A>
-	QString processArgType();
+	UA_Argument processArgType(const int &iArg);
+
+	static UA_StatusCode methodCallback(UA_Server        *server,
+		                                const UA_NodeId  *sessionId,
+		                                void             *sessionContext,
+		                                const UA_NodeId  *methodId,
+		                                void             *methodContext,
+		                                const UA_NodeId  *objectId,
+		                                void             *objectContext,
+		                                size_t            inputSize,
+		                                const UA_Variant *input,
+		                                size_t            outputSize,
+		                                UA_Variant       *output);
 };
 
 template<typename RA, typename T>
@@ -141,15 +153,61 @@ inline void QOpcUaServerNode::addMethod(const QString & strMethodName, const std
 template<typename R, typename ...A>
 inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, const std::function<R(A...)> &methodCallback)
 {
-	qDebug() << "Result Type" << typeid(R).name();
-	QList<QString> listArgTypes = { this->processArgType<A>()... };
-	qDebug() << "Arg Types" << listArgTypes;
+	QByteArray byteMethodName = strMethodName.toUtf8();
+	// create output argument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US",
+		                                          (char *)"Result Value");
+	outputArgument.name        = QOpcUaTypesConverter::uaStringFromQString((char *)"Result");
+	outputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromCpp<R>();
+	outputArgument.valueRank   = UA_VALUERANK_SCALAR;
+	// create input arguments
+	int iArg = 0;
+	const size_t nArgs = sizeof...(A);
+	UA_Argument inputArguments[nArgs] = { this->processArgType<A>(iArg++)... };
+	// add method node
+	UA_MethodAttributes methAttr = UA_MethodAttributes_default;
+	methAttr.executable     = true;
+	methAttr.userExecutable = true;
+	methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
+		                                       byteMethodName.data());
+	methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
+		                                       byteMethodName.data());
+	// create callback
+	UA_NodeId methNodeId;
+	auto st = UA_Server_addMethodNode(m_qopcuaserver->m_server,
+                                      UA_NODEID_NULL,
+                                      m_nodeId,
+                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                                      UA_QUALIFIEDNAME (1, byteMethodName.data()),
+                                      methAttr, 
+		                              &QOpcUaServerNode::methodCallback,
+                                      nArgs, 
+                                      inputArguments, 
+                                      1, 
+                                      &outputArgument,
+                                      this, 
+                                      &methNodeId);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+
+	// TODO : store method with node id as key (use UA_NodeId_hash)
+
 }
 
 template<typename A>
-inline QString QOpcUaServerNode::processArgType()
+inline UA_Argument QOpcUaServerNode::processArgType(const int &iArg)
 {
-	return QString(typeid(A).name());
+	UA_Argument inputArgument;
+	UA_Argument_init(&inputArgument);
+	// create n-th argument with name "Arg" + number
+	inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
+	inputArgument.name        = QOpcUaTypesConverter::uaStringFromQString(trUtf8("Arg%1").arg(iArg));
+	inputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromCpp<A>();
+	inputArgument.valueRank   = UA_VALUERANK_SCALAR;
+	// return
+	return inputArgument;
 }
 
 

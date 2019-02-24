@@ -216,6 +216,9 @@ namespace QOpcUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_GUID      );    // 13 : UA_Guid      : { UA_UInt32 data1; UA_UInt16 data2; UA_UInt16 data3; UA_Byte data4[8]; }
 		case QMetaType::QByteArray:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);    // 14 : UA_ByteString : UA_String * A sequence of octets. */
+		
+		// TODO : QMetaType::QVariantList ???
+		
 		default:
 			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
