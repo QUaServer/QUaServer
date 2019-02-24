@@ -18,11 +18,14 @@ UA_StatusCode QOpcUaServerNode::methodCallback(UA_Server        * server,
 	                                           size_t             outputSize, 
 	                                           UA_Variant       * output)
 {
-	qDebug() << "Static method called";
+	// get node from context object
 	auto node = static_cast<QOpcUaServerNode*>(objectContext);
 	Q_CHECK_PTR(node);
+	// get method hash
 	UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
+	// get method from node callbacks map
 	Q_ASSERT(node->m_hashCallbacks.contains(hashNodeId));
+	// call method
 	return node->m_hashCallbacks[hashNodeId](server, 
 		                                     sessionId, 
 		                                     sessionContext, 

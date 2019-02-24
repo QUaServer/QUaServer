@@ -127,6 +127,9 @@ private:
 	template<typename A>
 	UA_Argument processArgType(const int &iArg);
 
+	template<typename A>
+	static A convertArgType(const UA_Variant * input, const int &iArg);
+
     UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName, 
 		                            const size_t &nArgs, 
 		                            UA_Argument  * inputArguments, 
@@ -191,18 +194,24 @@ inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, c
 	// TODO : store method with node id as key (use UA_NodeId_hash)
 	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
 	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
-	m_hashCallbacks[hashNodeId] = [](UA_Server        * server,
-                                     const UA_NodeId  * sessionId,
-                                     void             * sessionContext,
-                                     const UA_NodeId  * methodId,
-                                     void             * methodContext,
-                                     const UA_NodeId  * objectId,
-                                     void             * objectContext,
-                                     size_t             inputSize,
-                                     const UA_Variant * input,
-                                     size_t             outputSize,
-                                     UA_Variant       * output) {
-		qDebug() << "Lambda called";
+	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+                                                   const UA_NodeId  * sessionId,
+                                                   void             * sessionContext,
+                                                   const UA_NodeId  * methodId,
+                                                   void             * methodContext,
+                                                   const UA_NodeId  * objectId,
+                                                   void             * objectContext,
+                                                   size_t             inputSize,
+                                                   const UA_Variant * input,
+                                                   size_t             outputSize,
+                                                   UA_Variant       * output) {
+		// call method
+		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
+		// TODO : case no args?
+		int iArg = sizeof...(A) -1;
+		QVariant varResult = methodCallback(QOpcUaServerNode::convertArgType<A>(input, iArg--)...);
+		// set result
+		*output = QOpcUaTypesConverter::uaVariantFromQVariant(varResult);
 		return UA_STATUSCODE_GOOD;
 	};
 
@@ -222,6 +231,13 @@ inline UA_Argument QOpcUaServerNode::processArgType(const int &iArg)
 	return inputArgument;
 }
 
+template<typename A>
+inline A QOpcUaServerNode::convertArgType(const UA_Variant * input, const int &iArg)
+{
+	QVariant varQt = QOpcUaTypesConverter::uaVariantToQVariant(input[iArg]);
+	qDebug() << "iArg =" << iArg << ", varQt =" << varQt;
+	return varQt.value<A>();
+}
 
 #endif // QOPCUASERVERNODE_H
 

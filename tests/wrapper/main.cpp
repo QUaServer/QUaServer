@@ -65,7 +65,8 @@ int main(int argc, char *argv[])
 	folder3->set_displayName("My Nested Folder");
 
 	objBase1->addMethod<int(double, QString, int)>("MyMethod", [](double i, QString str, int x) {
-		int val = 10 + i;
+		qDebug() << "Actual method called with" << i << str << x;
+		int val = 10 + x;
 		return val;
 	});
 
