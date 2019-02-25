@@ -291,7 +291,7 @@ namespace QOpcUaTypesConverter {
 		switch (qtType)
 		{
 		case QMetaType::UnknownType:   // 23 : UA_Variant   : QVariant(QMetaType::UnknownType)
-			return { NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL };
+			return uaVariantFromQVariantScalar<UA_Variant   , QVariant  >(var, uaType);
 		case QMetaType::Bool:          // 0  : UA_Boolean   : bool
 			return uaVariantFromQVariantScalar<UA_Boolean   , bool      >(var, uaType);
 		case QMetaType::Char:
@@ -345,6 +345,14 @@ namespace QOpcUaTypesConverter {
 		uaVariantFromQVariantScalar<TARGETTYPE, QTTYPE>(var.value<QTTYPE>(), temp);
 		UA_Variant_setScalar(&open62541value, temp, type);
 		return open62541value;
+	}
+
+	template<>
+	UA_Variant uaVariantFromQVariantScalar<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type)
+	{
+		Q_ASSERT(type == &UA_TYPES[UA_TYPES_VARIANT]);
+		Q_UNUSED(var);
+		return { NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL };
 	}
 
 	template<typename TARGETTYPE, typename QTTYPE>
@@ -464,6 +472,36 @@ namespace QOpcUaTypesConverter {
 		retVar.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
         retVar.arrayDimensions[0]  = static_cast<UA_UInt32>(iter.size());
         retVar.arrayDimensionsSize = static_cast<size_t>(1);
+		// return ua variant
+		return retVar;
+	}
+
+	template<>
+	UA_Variant uaVariantFromQVariantArray<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type)
+	{
+		UA_Variant retVar;
+		UA_Variant_init(&retVar);
+		// if empty
+		auto iter = var.value<QSequentialIterable>();
+		if (iter.size() <= 0)
+		{
+			return retVar;
+		}
+		// instantiate ua array
+		UA_Variant *arr = static_cast<UA_Variant *>(UA_Array_new(static_cast<size_t>(iter.size()), type));
+		// copy values
+		for (int i = 0; i < iter.size(); i++)
+		{
+			// NOTE : because specialization "uaVariantFromQVariantScalar<QVariant, UA_Variant>(const QVariant &value, UA_Variant *ptr)"
+			//        does not work, assigning a value to UA_Variant *ptr creates a read error in client
+			arr[i] = uaVariantFromQVariantScalar<UA_Variant, QVariant>(iter.at(i), &UA_TYPES[UA_TYPES_VARIANT]);
+		}
+		// set the array to the ua variant
+		UA_Variant_setArray(&retVar, arr, static_cast<size_t>(iter.size()), type);
+		// TODO : support multidimentional array
+		retVar.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
+		retVar.arrayDimensions[0]  = static_cast<UA_UInt32>(iter.size());
+		retVar.arrayDimensionsSize = static_cast<size_t>(1);
 		// return ua variant
 		return retVar;
 	}
@@ -608,7 +646,7 @@ namespace QOpcUaTypesConverter {
 		// handle scalar
 		switch (uaVariant.type->typeIndex) {
 		case UA_TYPES_VARIANT:
-			return QVariant((QVariant::Type)QMetaType::UnknownType);
+			return uaVariantToQVariantScalar<QVariant   , UA_Variant   >(uaVariant, QMetaType::UnknownType);
 		case UA_TYPES_BOOLEAN:
 			return uaVariantToQVariantScalar<bool       , UA_Boolean   >(uaVariant, QMetaType::Bool);
 		case UA_TYPES_SBYTE:										   
@@ -731,6 +769,14 @@ namespace QOpcUaTypesConverter {
 			tempVar.convert(type);
 		}
 		return tempVar;
+	}
+
+	template<>
+	QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant & uaVariant, QMetaType::Type type)
+	{
+		Q_ASSERT(type == QMetaType::UnknownType);
+		Q_UNUSED(uaVariant);
+		return QVariant((QVariant::Type)QMetaType::UnknownType);
 	}
 
 	template<typename TARGETTYPE, typename UATYPE>

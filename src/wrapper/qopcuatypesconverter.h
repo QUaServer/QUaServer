@@ -35,27 +35,34 @@ namespace QOpcUaTypesConverter {
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
 	UA_Variant         uaVariantFromQVariant(const QVariant        & var);
 	// ua from qt : scalar
-	template<typename TARGETTYPE, typename QTTYPE>
+	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	UA_Variant uaVariantFromQVariantScalar(const QVariant &var, const UA_DataType *type);
+	template<> // TODO
+	UA_Variant uaVariantFromQVariantScalar<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type);
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	void       uaVariantFromQVariantScalar(const QTTYPE &var, TARGETTYPE *ptr);
 	// ua from qt : array
 	UA_Variant uaVariantFromQVariantArray(const QVariant & var);
 	template<typename TARGETTYPE, typename QTTYPE>
 	UA_Variant uaVariantFromQVariantArray(const QVariant &var, const UA_DataType *type);
+	template<> // TODO
+	UA_Variant uaVariantFromQVariantArray<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type);
 
 	// ua to qt
 	QMetaType::Type uaTypeNodeIdToQType(const UA_NodeId   *nodeId   );
 	QMetaType::Type uaTypeToQType      (const UA_DataType *uaType   );
 	QVariant        uaVariantToQVariant(const UA_Variant  &uaVariant);
 	// ua to qt : scalar
-	template<typename TARGETTYPE, typename UATYPE>
+	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	QVariant   uaVariantToQVariantScalar(const UA_Variant &uaVariant, QMetaType::Type type);
+	// TODO
+	template<>
+	QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant & uaVariant, QMetaType::Type type);
 	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	TARGETTYPE uaVariantToQVariantScalar(const UATYPE *data);
 	// ua to qt : array
 	QVariant uaVariantToQVariantArray(const UA_Variant  &uaVariant);
-	template<typename TARGETTYPE, typename UATYPE>
+	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	QVariant uaVariantToQVariantArray(const UA_Variant &var, QMetaType::Type type);
 
 

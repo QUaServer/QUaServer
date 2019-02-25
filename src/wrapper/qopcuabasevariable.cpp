@@ -242,21 +242,6 @@ qint32 QOpcUaBaseVariable::get_valueRank() const
 	return outValueRank;
 }
 
-void QOpcUaBaseVariable::set_valueRank(const qint32 & valueRank)
-{
-	Q_CHECK_PTR(m_qopcuaserver);
-	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-
-	// TODO : fix value accordingly
-
-	// set valueRank
-	auto st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, valueRank);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-	// emit valueRank changed
-	emit this->valueRankChanged(UA_VALUERANK_ONE_DIMENSION);
-}
-
 QVector<quint32> QOpcUaBaseVariable::get_arrayDimensions() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
@@ -279,29 +264,6 @@ QVector<quint32> QOpcUaBaseVariable::get_arrayDimensions() const
 		retArr.append(data[i]);
 	}
 	return retArr;
-}
-
-void QOpcUaBaseVariable::set_arrayDimensions(QVector<quint32>& arrayDimensions)
-{
-	// TODO : support multidimensional array
-	//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
-	Q_CHECK_PTR(m_qopcuaserver);
-	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert QList<quint32> to UA_Variant
-	UA_Variant uaArrayDimensions;
-	UA_Variant_setArray(&uaArrayDimensions,
-		arrayDimensions.data(),
-		arrayDimensions.count(),
-		&UA_TYPES[UA_TYPES_UINT32]);
-
-	// TODO : fix value accordingly
-
-	// set arrayDimensions
-	auto st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-	// emit arrayDimensions changed
-	emit this->arrayDimensionsChanged(arrayDimensions);
 }
 
 quint8 QOpcUaBaseVariable::get_accessLevel() const

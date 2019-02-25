@@ -96,8 +96,17 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	if (T::staticMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
 	{
-		// add to OpcUa
-		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+		UA_ObjectAttributes oAttr     = UA_ObjectAttributes_default;
+		// set node traits			  
+		QByteArray byteDisplayName    = QOpcUaNodeFactory<T>::GetDisplayName().toUtf8();
+		oAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		QByteArray byteDescription    = QOpcUaNodeFactory<T>::GetDescription().toUtf8();
+		oAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		oAttr.writeMask               = QOpcUaNodeFactory<T>::GetWriteMask();
+
+		// TODO : set object traits
+
+		// add object
 		UA_Server_addObjectNode(m_server, 
                                 UA_NODEID_NULL,       // requested nodeId
                                 parentNode->m_nodeId, // parent
@@ -110,23 +119,27 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	}
 	else if (T::staticMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
 	{
-		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
-		// set node traits
-		QByteArray byteDisplayName  = QOpcUaNodeFactory<T>::GetDisplayName().toUtf8();
-		vAttr.displayName           = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
-		QByteArray byteDescription  = QOpcUaNodeFactory<T>::GetDescription().toUtf8();
-		vAttr.description           = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
-		vAttr.writeMask             = QOpcUaNodeFactory<T>::GetWriteMask();
-		// set variable traits
-		QVariant varDefaultValue    = QOpcUaVariableFactory<T>::GetValue();
-		vAttr.value                 = QOpcUaTypesConverter::uaVariantFromQVariant(varDefaultValue);
-		vAttr.dataType              = QOpcUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)varDefaultValue.type());
-		vAttr.valueRank             = QOpcUaBaseVariable::GetValueRankFromQVariant(varDefaultValue);
-		QVector<quint32> qtArrayDim = QOpcUaBaseVariable::GetArrayDimensionsFromQVariant(varDefaultValue);
-		vAttr.arrayDimensions       = qtArrayDim.count() > 0 ? qtArrayDim.data() : nullptr;
-		vAttr.arrayDimensionsSize   = qtArrayDim.count();
-		vAttr.accessLevel           = QOpcUaVariableFactory<T>::GetAccessLevel();
-		// add node
+		UA_VariableAttributes vAttr   = UA_VariableAttributes_default;
+
+		// TODO : move below to adding variable type, then what to do with defaults?
+
+		// set node traits			  
+		QByteArray byteDisplayName    = QOpcUaNodeFactory<T>::GetDisplayName().toUtf8();
+		vAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		QByteArray byteDescription    = QOpcUaNodeFactory<T>::GetDescription().toUtf8();
+		vAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		vAttr.writeMask               = QOpcUaNodeFactory<T>::GetWriteMask();
+		// set variable traits		  
+		QVariant varDefaultValue      = QOpcUaVariableFactory<T>::GetValue();
+		vAttr.value                   = QOpcUaTypesConverter::uaVariantFromQVariant(varDefaultValue);
+		vAttr.dataType                = QOpcUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)varDefaultValue.type());
+		vAttr.valueRank               = QOpcUaBaseVariable::GetValueRankFromQVariant(varDefaultValue);
+		QVector<quint32> qtArrayDim   = QOpcUaBaseVariable::GetArrayDimensionsFromQVariant(varDefaultValue);
+		vAttr.arrayDimensions         = qtArrayDim.count() > 0 ? qtArrayDim.data() : nullptr;
+		vAttr.arrayDimensionsSize     = qtArrayDim.count();
+		vAttr.accessLevel             = QOpcUaVariableFactory<T>::GetAccessLevel();
+		vAttr.minimumSamplingInterval = QOpcUaVariableFactory<T>::GetMinimumSamplingInterval();
+		// add variable
 		UA_Server_addVariableNode(m_server,
                                   UA_NODEID_NULL,       // requested nodeId
                                   parentNode->m_nodeId, // parent

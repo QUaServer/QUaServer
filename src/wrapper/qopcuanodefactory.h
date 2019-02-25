@@ -63,6 +63,11 @@ struct QOpcUaVariableFactory
 		return UA_ACCESSLEVELMASK_READ;
 	}
 
+	static double   GetMinimumSamplingInterval()
+	{
+		return 0.0;
+	}
+
 };
 
 #endif // QOPCUANODEFACTORY_H
