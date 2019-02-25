@@ -5,40 +5,6 @@
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaFolderObject>
 
-// [STATIC]
-UA_StatusCode QOpcUaServerNode::methodCallback(UA_Server        * server, 
-	                                           const UA_NodeId  * sessionId, 
-	                                           void             * sessionContext, 
-	                                           const UA_NodeId  * methodId, 
-	                                           void             * methodContext, 
-	                                           const UA_NodeId  * objectId, 
-	                                           void             * objectContext, 
-	                                           size_t             inputSize, 
-	                                           const UA_Variant * input, 
-	                                           size_t             outputSize, 
-	                                           UA_Variant       * output)
-{
-	// get node from context object
-	auto node = static_cast<QOpcUaServerNode*>(methodContext);
-	Q_CHECK_PTR(node);
-	// get method hash
-	UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
-	// get method from node callbacks map
-	Q_ASSERT(node->m_hashCallbacks.contains(hashNodeId));
-	// call method
-	return node->m_hashCallbacks[hashNodeId](server, 
-		                                     sessionId, 
-		                                     sessionContext, 
-		                                     methodId, 
-		                                     methodContext, 
-		                                     objectId, 
-		                                     objectContext, 
-		                                     inputSize, 
-		                                     input, 
-		                                     outputSize, 
-		                                     output);
-}
-
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
 	m_qopcuaserver = parent->m_qopcuaserver;
@@ -228,33 +194,4 @@ QOpcUaFolderObject * QOpcUaServerNode::addFolderObject(const QString &strBrowseN
 	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this, strBrowseName);
 }
 
-UA_NodeId QOpcUaServerNode::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
-{
-    // add method node
-    UA_MethodAttributes methAttr = UA_MethodAttributes_default;
-    methAttr.executable     = true;
-    methAttr.userExecutable = true;
-    methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
-                                               byteMethodName.data());
-    methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
-                                               byteMethodName.data());
-    // create callback
-    UA_NodeId methNodeId;
-    auto st = UA_Server_addMethodNode(m_qopcuaserver->m_server,
-                                      UA_NODEID_NULL,
-                                      m_nodeId,
-                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                                      UA_QUALIFIEDNAME (1, byteMethodName.data()),
-                                      methAttr,
-                                      &QOpcUaServerNode::methodCallback,
-                                      nArgs,
-                                      inputArguments,
-		                              outputArgument ? 1 : 0,
-                                      outputArgument,
-                                      this,
-                                      &methNodeId);
-    Q_ASSERT(st == UA_STATUSCODE_GOOD);
-    Q_UNUSED(st);
-    // return new methos node id
-    return methNodeId;
-}
+

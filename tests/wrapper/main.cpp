@@ -64,9 +64,14 @@ int main(int argc, char *argv[])
 	auto folder3 = varBase2->addFolderObject("NestedFolder");
 	folder3->set_displayName("My Nested Folder");
 
-	objsFolder->addMethod<int(double, QString, int, bool)>("DoAll", [](double i, QString str, int x, bool b) {
+	objsFolder->addMethod<int(double, QString, int, bool)>("DoAll1", [](double i, QString str, int x, bool b) {
 		qDebug() << "Actual method called with" << i << str << x << b;
 		return 10 + x;
+	});
+
+	objsFolder->addMethod<int(double, QString, int, bool)>("DoAll2", [](double i, QString str, int x, bool b) {
+		qDebug() << "Actual method called with" << i << str << x << b;
+		return 20 + x;
 	});
 
 	objsFolder->addMethod<QString(void)>("DoSomething", []() {

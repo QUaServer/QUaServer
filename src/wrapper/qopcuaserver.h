@@ -14,6 +14,7 @@ class QOpcUaServer : public QObject
 
 friend class QOpcUaServerNode;
 friend class QOpcUaBaseVariable;
+friend class QOpcUaBaseObject;
 
 public:
     explicit QOpcUaServer(QObject *parent = 0);
