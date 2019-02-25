@@ -19,7 +19,7 @@ UA_StatusCode QOpcUaServerNode::methodCallback(UA_Server        * server,
 	                                           UA_Variant       * output)
 {
 	// get node from context object
-	auto node = static_cast<QOpcUaServerNode*>(objectContext);
+	auto node = static_cast<QOpcUaServerNode*>(methodContext);
 	Q_CHECK_PTR(node);
 	// get method hash
 	UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
@@ -249,7 +249,7 @@ UA_NodeId QOpcUaServerNode::addMethodNodeInternal(QByteArray &byteMethodName, co
                                       &QOpcUaServerNode::methodCallback,
                                       nArgs,
                                       inputArguments,
-                                      1,
+		                              outputArgument ? 1 : 0,
                                       outputArgument,
                                       this,
                                       &methNodeId);

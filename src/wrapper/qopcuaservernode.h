@@ -98,10 +98,11 @@ public:
 
 	template<typename RA, typename T>
 	void addMethod(const QString &strMethodName, const T &methodCallback);
-
+	// specialization std::function
 	template<typename R, typename ...A>
 	void addMethod(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
-
+	// specialization, no args no return
+	void addMethod(const QString &strMethodName, const std::function<void(void)> &methodCallback);
 
 
 	// private?
@@ -123,6 +124,14 @@ private:
 
 	template<typename R, typename ...A>
 	void addMethodInternal(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
+	// specialization no args
+	template<typename R>
+	void addMethodInternal(const QString &strMethodName, const std::function<R(void)> &methodCallback);
+	// specialization no return
+	template<typename ...A>
+	void addMethodInternal(const QString &strMethodName, const std::function<void(A...)> &methodCallback);
+	// specialization no args and no return
+	void addMethodInternal(const QString &strMethodName, const std::function<void(void)> &methodCallback);
 
 	template<typename A>
 	UA_Argument processArgType(const int &iArg);
@@ -165,9 +174,14 @@ inline void QOpcUaServerNode::addMethod(const QString & strMethodName, const T &
 {
 	return this->addMethodInternal(strMethodName, (std::function<RA>)methodCallback);
 }
-
+// specialization std::function
 template<typename R, typename ...A>
 inline void QOpcUaServerNode::addMethod(const QString & strMethodName, const std::function<R(A...)> &methodCallback)
+{
+	return this->addMethodInternal(strMethodName, methodCallback);
+}
+// specialization, no args no return
+inline void QOpcUaServerNode::addMethod(const QString &strMethodName, const std::function<void(void)> &methodCallback)
 {
 	return this->addMethodInternal(strMethodName, methodCallback);
 }
@@ -190,8 +204,7 @@ inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, c
 	UA_Argument inputArguments[nArgs] = { this->processArgType<A>(iArg++)... };
 	// add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, &outputArgument);
-
-	// TODO : store method with node id as key (use UA_NodeId_hash)
+	// store method with node id hash as key
 	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
 	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
 	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
@@ -207,15 +220,109 @@ inline void QOpcUaServerNode::addMethodInternal(const QString & strMethodName, c
                                                    UA_Variant       * output) {
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
-		// TODO : case no args?
 		int iArg = sizeof...(A) -1;
 		QVariant varResult = methodCallback(QOpcUaServerNode::convertArgType<A>(input, iArg--)...);
 		// set result
 		*output = QOpcUaTypesConverter::uaVariantFromQVariant(varResult);
 		return UA_STATUSCODE_GOOD;
 	};
-
 }
+// specialization no args
+template<typename R>
+inline void QOpcUaServerNode::addMethodInternal(const QString &strMethodName, const std::function<R(void)> &methodCallback)
+{
+	QByteArray byteMethodName = strMethodName.toUtf8();
+	// create output argument
+	UA_Argument outputArgument;
+	UA_Argument_init(&outputArgument);
+	outputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US",
+		                                          (char *)"Result Value");
+	outputArgument.name        = QOpcUaTypesConverter::uaStringFromQString((char *)"Result");
+	outputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromCpp<R>();
+	outputArgument.valueRank   = UA_VALUERANK_SCALAR;
+	// add method node
+    UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, 0, nullptr, &outputArgument);
+	// store method with node id hash as key
+	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
+	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
+	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+                                                   const UA_NodeId  * sessionId,
+                                                   void             * sessionContext,
+                                                   const UA_NodeId  * methodId,
+                                                   void             * methodContext,
+                                                   const UA_NodeId  * objectId,
+                                                   void             * objectContext,
+                                                   size_t             inputSize,
+                                                   const UA_Variant * input,
+                                                   size_t             outputSize,
+                                                   UA_Variant       * output) {
+		// call method with no arguments
+		QVariant varResult = methodCallback();
+		// set result
+		*output = QOpcUaTypesConverter::uaVariantFromQVariant(varResult);
+		return UA_STATUSCODE_GOOD;
+	};
+}
+// specialization no return
+template<typename ...A>
+inline void QOpcUaServerNode::addMethodInternal(const QString &strMethodName, const std::function<void(A...)> &methodCallback)
+{
+	QByteArray byteMethodName = strMethodName.toUtf8();
+	// create input arguments
+	int iArg = 0;
+	const size_t nArgs = sizeof...(A);
+	UA_Argument inputArguments[nArgs] = { this->processArgType<A>(iArg++)... };
+	// add method node
+    UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, nullptr);
+	// store method with node id hash as key
+	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
+	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
+	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+                                                   const UA_NodeId  * sessionId,
+                                                   void             * sessionContext,
+                                                   const UA_NodeId  * methodId,
+                                                   void             * methodContext,
+                                                   const UA_NodeId  * objectId,
+                                                   void             * objectContext,
+                                                   size_t             inputSize,
+                                                   const UA_Variant * input,
+                                                   size_t             outputSize,
+                                                   UA_Variant       * output) {
+		// call method
+		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
+		int iArg = sizeof...(A) -1;
+		methodCallback(QOpcUaServerNode::convertArgType<A>(input, iArg--)...);
+		// no result
+		return UA_STATUSCODE_GOOD;
+	};
+}
+// specialization no args and no return
+inline void QOpcUaServerNode::addMethodInternal(const QString &strMethodName, const std::function<void(void)> &methodCallback)
+{
+	QByteArray byteMethodName = strMethodName.toUtf8();
+	// add method node
+    UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, 0, nullptr, nullptr);
+	// store method with node id hash as key
+	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
+	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
+	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+                                                   const UA_NodeId  * sessionId,
+                                                   void             * sessionContext,
+                                                   const UA_NodeId  * methodId,
+                                                   void             * methodContext,
+                                                   const UA_NodeId  * objectId,
+                                                   void             * objectContext,
+                                                   size_t             inputSize,
+                                                   const UA_Variant * input,
+                                                   size_t             outputSize,
+                                                   UA_Variant       * output) {
+		// call method
+		methodCallback();
+		// no result
+		return UA_STATUSCODE_GOOD;
+	};
+}
+
 
 template<typename A>
 inline UA_Argument QOpcUaServerNode::processArgType(const int &iArg)
