@@ -20,6 +20,8 @@ public:
     explicit QOpcUaServer(QObject *parent = 0);
 
 	void start();
+	void stop();
+	bool isRunning();
 
 	// register type in order to assign it a typeNodeId
 	template<typename T>
@@ -27,16 +29,20 @@ public:
 
 	// create instance of a given type
 	template<typename T>
-	T* createInstance(QOpcUaServerNode * parentNode, const QString &strBrowseName = "");
+	T* createInstance(QOpcUaServerNode * parentNode);
 
 	QOpcUaFolderObject * get_objectsFolder();
 	
 signals:
+	void iterateServer();
 
 public slots:
 
+
 private:
 	UA_Server * m_server;
+	UA_Boolean  m_running;
+	QMetaObject::Connection m_connection;
 
 	QOpcUaFolderObject * m_pobjectsFolder;
 
@@ -63,7 +69,7 @@ inline void QOpcUaServer::registerType()
 }
 
 template<typename T>
-inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode, const QString &strBrowseName/* = ""*/)
+inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 {
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 	// try to get typeNodeId, if null, then register it
@@ -84,9 +90,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode, const QSt
 	// set qualified name, default is class name
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
-	browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strBrowseName.isEmpty() ? 
-		                                                                  QString(T::staticMetaObject.className()) : 
-		                                                                  strBrowseName);
+	browseName.name           = QOpcUaTypesConverter::uaStringFromQString("");
 
 	// check if object or variable
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)

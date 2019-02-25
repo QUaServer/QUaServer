@@ -35,15 +35,6 @@ typedef struct {
 } UA_NodeAttributes;
 */
 
-//// TODO : try ?
-//// https://stackoverflow.com/questions/4642079/function-signature-like-expressions-as-c-template-arguments
-//template <typename T> class MyFunction;
-//template <typename Ret, typename ...Arg> class MyFunction<Ret(Arg...)> {
-//	/* ... */
-//};
-
-typedef QPair<quint16, QString> QBrowseName;
-
 class QOpcUaServerNode : public QObject
 {
     Q_OBJECT
@@ -53,9 +44,9 @@ class QOpcUaServerNode : public QObject
 	// N/A
 	//Q_PROPERTY(quint32 specifiedAttributes READ get_specifiedAttributes)
 
-	Q_PROPERTY(QString displayName READ get_displayName WRITE set_displayName)
-	Q_PROPERTY(QString description READ get_description WRITE set_description)
-	Q_PROPERTY(quint32 writeMask   READ get_writeMask   WRITE set_writeMask  )
+	Q_PROPERTY(QString displayName READ get_displayName WRITE set_displayName NOTIFY displayNameChanged)
+	Q_PROPERTY(QString description READ get_description WRITE set_description NOTIFY descriptionChanged)
+	Q_PROPERTY(quint32 writeMask   READ get_writeMask   WRITE set_writeMask   NOTIFY writeMaskChanged  )
 
 	// Cannot be read, since the local "admin" user always has full rights.
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback.
@@ -69,7 +60,7 @@ class QOpcUaServerNode : public QObject
 
 	// Other
 
-    Q_PROPERTY(QBrowseName browseName READ get_browseName WRITE set_browseName)
+    Q_PROPERTY(QString browseName READ get_browseName WRITE set_browseName NOTIFY browseNameChanged)
 
 public:
 	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
@@ -86,15 +77,15 @@ public:
 	QString get_nodeId     () const;
 	QString get_nodeClass  () const;
 	
-	QPair<quint16, QString> get_browseName() const;
-    void                    set_browseName(const QBrowseName &browseName);
+	QString get_browseName() const;
+    void    set_browseName(const QString &browseName);
 
 	// Instance Creation API
 
-	virtual QOpcUaProperty         * addProperty        (const QString &strBrowseName = "");
-	virtual QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "");
-	virtual QOpcUaBaseObject       * addBaseObject      (const QString &strBrowseName = "");
-	virtual QOpcUaFolderObject     * addFolderObject    (const QString &strBrowseName = "");
+	virtual QOpcUaProperty         * addProperty        ();
+	virtual QOpcUaBaseDataVariable * addBaseDataVariable();
+	virtual QOpcUaBaseObject       * addBaseObject      ();
+	virtual QOpcUaFolderObject     * addFolderObject    ();
 
 
 	// private?
@@ -107,6 +98,12 @@ public:
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
 
+signals:
+
+	void displayNameChanged(const QString &displayName);
+	void descriptionChanged(const QString &description);
+	void writeMaskChanged  (const quint32 &writeMask  );
+	void browseNameChanged (const QString &browseName );
 
 protected:
 	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance

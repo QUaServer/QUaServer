@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDateTime>
+#include <QTimer>
 
 #include <QOpcUaServer>
 
@@ -11,11 +12,17 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	auto objBase1   = objsFolder->addBaseObject("MyObject_QN");
+	auto objBase1   = objsFolder->addBaseObject();
+	objBase1->set_browseName ("MyObject_QN");
 	objBase1->set_displayName("MyObject");
 	objBase1->set_description("This is my first object");
 
 	auto varBase1 = objsFolder->addBaseDataVariable();
+
+	QObject::connect(varBase1, &QOpcUaBaseVariable::valueChanged, [varBase1](const QVariant &value) {
+		qDebug() << varBase1->get_displayName() << "Value changed programmatically" << value;
+	});
+
 	varBase1->set_displayName("MyDataVariable");
 	varBase1->set_description("This is my first data variable");
 	//varBase1->set_value(QVariant::fromValue(QList<int>({ 1, 2, 3 })));
@@ -35,7 +42,7 @@ int main(int argc, char *argv[])
 	auto objBaseNested1 = folder1->addBaseObject();
 	objBaseNested1->set_displayName("MyObject_Nested");
 	objBaseNested1->set_description("This is my first object nested within a folder");
-	objBaseNested1->set_browseName({ 1, "My Browse Name 1" });
+	objBaseNested1->set_browseName ("My Browse Name 1");
 
 	auto varProp = objBaseNested1->addProperty();
 	varProp->set_displayName("MyProp");
@@ -44,7 +51,7 @@ int main(int argc, char *argv[])
 	auto objBaseNested2 = objBaseNested1->addBaseObject();
 	objBaseNested2->set_displayName("MyObject_DoublyNested");
 	objBaseNested2->set_description("This is an object nested within another object");
-	objBaseNested2->set_browseName({ 1, "Browse Name 2" });
+	objBaseNested2->set_browseName ("Browse Name 2" );
 
 	auto varBase2 = objBaseNested1->addBaseDataVariable();
 	varBase2->set_displayName("DataVar2");
@@ -52,16 +59,20 @@ int main(int argc, char *argv[])
 	auto folder2 = objBaseNested1->addFolderObject();
 	folder2->set_displayName("MyFolder2");
 
-	auto varProp2 = varBase2->addProperty("NestedProp");
+	auto varProp2 = varBase2->addProperty();
+	varProp2->set_browseName("NestedProp");
 	varProp2->set_displayName("My Nested Prop");
 
-	auto varBase3 = varBase2->addBaseDataVariable("NestedBaseVar");
+	auto varBase3 = varBase2->addBaseDataVariable();
+	varBase3->set_browseName("NestedBaseVar");
 	varBase3->set_displayName("My Nested Base Var");
 
-	auto objBase3 = varBase2->addBaseObject("NestedBaseObj");
+	auto objBase3 = varBase2->addBaseObject();
+	objBase3->set_browseName("NestedBaseObj");
 	objBase3->set_displayName("My Nested Base Obj");
 
-	auto folder3 = varBase2->addFolderObject("NestedFolder");
+	auto folder3 = varBase2->addFolderObject();
+	folder3->set_browseName("NestedFolder");
 	folder3->set_displayName("My Nested Folder");
 
 	objsFolder->addMethod<int(double, QString, int, bool)>("DoAll1", [](double i, QString str, int x, bool b) {
@@ -87,14 +98,11 @@ int main(int argc, char *argv[])
 		qDebug() << "DoNothing";
 	});
 
-	// Produces error!
-	//server.createInstance<QOpcUaBaseVariable>(objBase1);
-	//varProp->addBaseDataVariable("XX");
-
-
-
-	// [NOTE] blocking, TODO : move to thread
 	server.start();
+
+	//QTimer::singleShot(10000, [&server]() {
+	//	server.stop();
+	//});
 
     return a.exec();
 }

@@ -4,6 +4,7 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
 	this->m_server = UA_Server_new(config);
+	m_running = false;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this);
@@ -17,8 +18,36 @@ void QOpcUaServer::start()
 {
 	// NOTE : we must define port and other server params upon instantiation, 
 	//        because rest of API assumes m_server is valid
-	UA_Boolean running = true;
-	UA_Server_run(this->m_server, &running);
+	if (m_running)
+	{
+		return;
+	}
+	auto st = UA_Server_run_startup(this->m_server);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st)
+	m_running = true;
+	m_connection = QObject::connect(this, &QOpcUaServer::iterateServer, this, [this]() {
+		if (m_running) 
+		{
+			UA_Server_run_iterate(this->m_server, true);
+			// iterate again
+			emit this->iterateServer();
+		}	
+	}, Qt::QueuedConnection);
+	// bootstrap iterations
+	emit this->iterateServer();
+}
+
+void QOpcUaServer::stop()
+{
+	m_running = false;
+	QObject::disconnect(m_connection);
+	UA_Server_run_shutdown(this->m_server);
+}
+
+bool QOpcUaServer::isRunning()
+{
+	return m_running;
 }
 
 QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()

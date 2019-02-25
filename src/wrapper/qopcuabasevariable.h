@@ -67,11 +67,11 @@ class QOpcUaBaseVariable : public QOpcUaServerNode
 
 	// Variable Attributes
 
-	Q_PROPERTY(QVariant          value               READ get_value               WRITE set_value)
-	Q_PROPERTY(QMetaType::Type   dataType            READ get_dataType            WRITE set_dataType)
-	Q_PROPERTY(qint32            valueRank           READ get_valueRank           WRITE set_valueRank)
-	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ get_arrayDimensions     WRITE set_arrayDimensions)
-	Q_PROPERTY(quint8            accessLevel         READ get_accessLevel         WRITE set_accessLevel)
+	Q_PROPERTY(QVariant          value               READ get_value               WRITE set_value           NOTIFY valueChanged          )
+	Q_PROPERTY(QMetaType::Type   dataType            READ get_dataType            WRITE set_dataType        NOTIFY dataTypeChanged       )
+	Q_PROPERTY(qint32            valueRank           READ get_valueRank           WRITE set_valueRank       NOTIFY valueRankChanged      )
+	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ get_arrayDimensions     WRITE set_arrayDimensions NOTIFY arrayDimensionsChanged)
+	Q_PROPERTY(quint8            accessLevel         READ get_accessLevel         WRITE set_accessLevel     NOTIFY accessLevelChanged    )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
 	// Q_PROPERTY(quint32 userAccessLevel READ get_userAccessLevel)	
@@ -115,6 +115,13 @@ public:
 	// 
 	bool              get_historizing() const;
 	
+signals:
+	void valueChanged          (const QVariant         &value          );
+	void dataTypeChanged       (const QMetaType::Type  &dataType       );
+	void valueRankChanged      (const qint32           &valueRank      );
+	void arrayDimensionsChanged(const QVector<quint32> &arrayDimensions);
+	void accessLevelChanged    (const quint8           &accessLevel    );
+
 };
 
 // [TRAITS] : specialization

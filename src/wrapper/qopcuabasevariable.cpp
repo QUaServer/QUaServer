@@ -98,6 +98,8 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 		QOpcUaTypesConverter::uaVariantFromQVariant(newValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// emit value changed
+	emit this->valueChanged(newValue);
 	// assign dataType, valueRank and arrayDimensions according to new value
 	if (qobject_cast<QOpcUaBaseDataVariable*>(this))
 	{
@@ -110,6 +112,8 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 				QOpcUaTypesConverter::uaTypeNodeIdFromQType(newType));
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
+			// emit dataType changed
+			emit this->dataTypeChanged(newType);
 		}
 		// set valueRank and arrayDimensions if necessary
 		if (newValue.canConvert<QVariantList>())
@@ -118,6 +122,8 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, UA_VALUERANK_ONE_DIMENSION);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
+			// emit valueRank changed
+			emit this->valueRankChanged(UA_VALUERANK_ONE_DIMENSION);
 			// set arrayDimensions (bug : https://github.com/open62541/open62541/issues/2455)
 			auto iter = newValue.value<QSequentialIterable>();
 			auto size = (quint32)iter.size();
@@ -130,6 +136,8 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
+			// emit arrayDimensions changed
+			emit this->arrayDimensionsChanged(QVector<quint32>() << size);
 		}
 	}
 }
@@ -211,6 +219,10 @@ void QOpcUaBaseVariable::set_dataType(const QMetaType::Type & dataType)
 		QOpcUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// emit dataType changed
+	emit this->dataTypeChanged(dataType);
+	// emit value changed
+	emit this->valueChanged(oldValue);
 }
 
 qint32 QOpcUaBaseVariable::get_valueRank() const
@@ -233,8 +245,15 @@ void QOpcUaBaseVariable::set_valueRank(const qint32 & valueRank)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+
+	// TODO : fix value accordingly
+
 	// set valueRank
-	UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, valueRank);
+	auto st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, valueRank);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// emit valueRank changed
+	emit this->valueRankChanged(UA_VALUERANK_ONE_DIMENSION);
 }
 
 QVector<quint32> QOpcUaBaseVariable::get_arrayDimensions() const
@@ -273,10 +292,15 @@ void QOpcUaBaseVariable::set_arrayDimensions(QVector<quint32>& arrayDimensions)
 		arrayDimensions.data(),
 		arrayDimensions.count(),
 		&UA_TYPES[UA_TYPES_UINT32]);
+
+	// TODO : fix value accordingly
+
 	// set arrayDimensions
 	auto st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// emit arrayDimensions changed
+	emit this->arrayDimensionsChanged(arrayDimensions);
 }
 
 quint8 QOpcUaBaseVariable::get_accessLevel() const
@@ -303,6 +327,7 @@ void QOpcUaBaseVariable::set_accessLevel(const quint8 & accessLevel)
 	auto st = UA_Server_writeAccessLevel(m_qopcuaserver->m_server, m_nodeId, accessLevel);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	emit this->accessLevelChanged(accessLevel);
 }
 
 double QOpcUaBaseVariable::get_minimumSamplingInterval() const
