@@ -291,7 +291,7 @@ namespace QOpcUaTypesConverter {
 		switch (qtType)
 		{
 		case QMetaType::UnknownType:   // 23 : UA_Variant   : QVariant(QMetaType::UnknownType)
-			return uaVariantFromQVariantScalar<UA_Variant   , QVariant  >(var, uaType);
+			return { NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL };
 		case QMetaType::Bool:          // 0  : UA_Boolean   : bool
 			return uaVariantFromQVariantScalar<UA_Boolean   , bool      >(var, uaType);
 		case QMetaType::Char:
@@ -386,14 +386,6 @@ namespace QOpcUaTypesConverter {
 		ptr->data2 = value.data2;
 		ptr->data3 = value.data3;
 		std::memcpy(ptr->data4, value.data4, sizeof(value.data4));
-	}
-	// specialization (QVariant)
-	template<>
-	void uaVariantFromQVariantScalar<UA_Variant, QVariant>(const QVariant &value, UA_Variant *ptr)
-	{
-        Q_UNUSED(value);
-		// TODO : this OK for QMetaType::UnknownType puposes?
-		UA_Variant_init(ptr);
 	}
 
 	UA_Variant uaVariantFromQVariantArray(const QVariant & var)
@@ -616,7 +608,7 @@ namespace QOpcUaTypesConverter {
 		// handle scalar
 		switch (uaVariant.type->typeIndex) {
 		case UA_TYPES_VARIANT:
-			return uaVariantToQVariantScalar<QVariant   , UA_Variant   >(uaVariant, QMetaType::UnknownType);
+			return QVariant((QVariant::Type)QMetaType::UnknownType);
 		case UA_TYPES_BOOLEAN:
 			return uaVariantToQVariantScalar<bool       , UA_Boolean   >(uaVariant, QMetaType::Bool);
 		case UA_TYPES_SBYTE:										   
@@ -773,15 +765,6 @@ namespace QOpcUaTypesConverter {
 		return QUuid(data->data1, data->data2, data->data3, data->data4[0], data->data4[1], data->data4[2],
 			data->data4[3], data->data4[4], data->data4[5], data->data4[6], data->data4[7]);
 	}
-	// specialization (QVariant)
-	template<>
-	QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant *data)
-	{
-		Q_UNUSED(data);
-		// TODO : this OK for QMetaType::UnknownType puposes?
-		return QVariant();
-	}
-
 
 }
 

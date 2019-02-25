@@ -126,6 +126,21 @@ struct QOpcUaNodeFactory<QOpcUaBaseObject>
 	{
 		Q_UNUSED(typeNodeId);
 	}
+
+	static QString GetDisplayName()
+	{
+		return QString();
+	}
+
+	static QString GetDescription()
+	{
+		return QString();
+	}
+
+	static quint32 GetWriteMask()
+	{
+		return 0;
+	}
 };
 
 template<typename RA, typename T>

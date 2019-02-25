@@ -114,6 +114,11 @@ public:
 	void              set_minimumSamplingInterval(const double &minimumSamplingInterval);
 	// 
 	bool              get_historizing() const;
+
+	// static helpers
+
+	static qint32            GetValueRankFromQVariant      (const QVariant &varValue);
+	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
 	
 signals:
 	void valueChanged          (const QVariant         &value          );
@@ -136,6 +141,21 @@ struct QOpcUaNodeFactory<QOpcUaBaseVariable>
 	static void SetTypeNodeId(const UA_NodeId & typeNodeId)
 	{
 		Q_UNUSED(typeNodeId);
+	}
+
+	static QString GetDisplayName()
+	{
+		return QString();
+	}
+
+	static QString GetDescription()
+	{
+		return QString();
+	}
+
+	static quint32 GetWriteMask()
+	{
+		return 0;
 	}
 };
 

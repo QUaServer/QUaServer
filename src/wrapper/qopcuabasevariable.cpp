@@ -139,6 +139,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			// emit arrayDimensions changed
 			emit this->arrayDimensionsChanged(QVector<quint32>() << size);
 		}
+		// TODO : what happens with rank and arrayDim after going from array to scalar value?
 	}
 }
 
@@ -371,4 +372,32 @@ bool QOpcUaBaseVariable::get_historizing() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return outHistorizing;
+}
+
+// [STATIC]
+qint32 QOpcUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
+{
+	if ((QMetaType::Type)varValue.type() == QMetaType::UnknownType)
+	{
+		return UA_VALUERANK_ANY;
+	}
+	else if (varValue.canConvert<QVariantList>())
+	{
+		return UA_VALUERANK_ONE_DIMENSION;
+	}
+	// scalar is default
+	return UA_VALUERANK_SCALAR;
+}
+
+// [STATIC]
+QVector<quint32> QOpcUaBaseVariable::GetArrayDimensionsFromQVariant(const QVariant & varValue)
+{
+	if (varValue.canConvert<QVariantList>())
+	{
+		auto iter = varValue.value<QSequentialIterable>();
+		auto size = (quint32)iter.size();
+		return QVector<quint32>() << size;
+	}
+	// default arrayDimensionsSize == 0
+	return QVector<quint32>();
 }

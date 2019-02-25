@@ -17,6 +17,21 @@ struct QOpcUaNodeFactory
 		m_typeNodeId = typeNodeId;
     }
 
+	static QString GetDisplayName()
+	{
+		return QString();
+	}
+
+	static QString GetDescription()
+	{
+		return QString();
+	}
+
+	static quint32 GetWriteMask()
+	{
+		return 0;
+	}
+
 	static UA_NodeId m_typeNodeId;
 };
 
@@ -25,20 +40,29 @@ UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
 
 /*
 template <typename T>
-class QOpcUaObjectFactory
+struct QOpcUaObjectFactory
 {
 public:
 
 
 };
+
+
+*/
 
 template <typename T>
-class QOpcUaVariableFactory
+struct QOpcUaVariableFactory
 {
-public:
+	static QVariant GetValue()
+	{
+		return QVariant((QVariant::Type)QMetaType::UnknownType);
+	}
 
+	static quint8   GetAccessLevel()
+	{
+		return UA_ACCESSLEVELMASK_READ;
+	}
 
 };
-*/
 
 #endif // QOPCUANODEFACTORY_H
