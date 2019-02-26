@@ -28,19 +28,19 @@ struct QOpcUaObjectTypeTraits
 {
 	static QString GetBrowseName()
 	{
-		return QString();
+		return QString(T::staticMetaObject.className());
 	}
 
 	// node attributes
 
 	static QString GetDisplayName()
 	{
-		return QString();
+		return QString(T::staticMetaObject.className());
 	}
 
 	static QString GetDescription()
 	{
-		return QString();
+		return T::staticMetaObject.superClass() ? QString("Derived from %1").arg(T::staticMetaObject.superClass()->className()) : "";
 	}
 
 	static quint32 GetWriteMask()
@@ -61,19 +61,19 @@ struct QOpcUaVariableTypeTraits
 {
 	static QString GetBrowseName()
 	{
-		return QString();
+		return QString(T::staticMetaObject.className());
 	}
 
 	// node attributes
 
 	static QString GetDisplayName()
 	{
-		return QString();
+		return QString(T::staticMetaObject.className());
 	}
 
 	static QString GetDescription()
 	{
-		return QString();
+		return T::staticMetaObject.superClass() ? QString("Derived from %1").arg(T::staticMetaObject.superClass()->className()) : "";
 	}
 
 	static quint32 GetWriteMask()

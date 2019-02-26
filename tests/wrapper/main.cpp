@@ -5,6 +5,9 @@
 
 #include <QOpcUaServer>
 
+#include "mynewobjecttype.h"
+#include "mynewvariabletype.h"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -28,18 +31,20 @@ int main(int argc, char *argv[])
 	objFolder->set_browseName("QOpcUaFolderObject");
 	objFolder->set_displayName("QOpcUaFolderObject");
 
-	auto child1 = varBaseData->addChild<QOpcUaProperty>();
-	child1->set_browseName ("Prop1");
-	child1->set_displayName("Prop1");
-	auto child2 = objBase    ->addChild<QOpcUaProperty>();
-	child2->set_browseName ("Prop2");
-	child2->set_displayName("Prop2");
-	auto child3 = objFolder  ->addChild<QOpcUaProperty>();
-	child3->set_browseName ("Prop3");
-	child3->set_displayName("Prop3");
+	// Add new object type
+
+	server.registerType<MyNewVariableType>();
+	server.registerType<MyOtherNewVariableType>();
+
+	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
+	newobjTypeInstance->set_browseName ("MyNewObjectType");
+	newobjTypeInstance->set_displayName("MyNewObjectType");
+
+	auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
+	otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
+	otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
+
 	
-
-
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();
