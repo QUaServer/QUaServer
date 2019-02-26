@@ -51,20 +51,5 @@ public:
 
 };
 
-// [TRAITS] : specialization
-template <>
-struct QOpcUaNodeFactory<QOpcUaProperty>
-{
-	static UA_NodeId GetTypeNodeId()
-	{
-		return UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE);
-	}
-
-	static void SetTypeNodeId(const UA_NodeId & typeNodeId)
-	{
-		Q_UNUSED(typeNodeId);
-	}
-};
-
 
 #endif // QOPCUAPROPERTY_H

@@ -9,11 +9,11 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this);
 	// register base types
-	this->registerType<QOpcUaBaseVariable>    ();
-	this->registerType<QOpcUaBaseDataVariable>();
-	this->registerType<QOpcUaProperty>        ();
-	this->registerType<QOpcUaBaseObject>      ();
-	this->registerType<QOpcUaFolderObject>    ();
+	m_mapTypes.insert(QString(QOpcUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
+	m_mapTypes.insert(QString(QOpcUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
+	m_mapTypes.insert(QString(QOpcUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        );
+	m_mapTypes.insert(QString(QOpcUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
+	m_mapTypes.insert(QString(QOpcUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
 }
 
 /* TODO : alternative constructor

@@ -24,21 +24,6 @@ public:
 
 };
 
-// [TRAITS] : specialization
-template <>
-struct QOpcUaNodeFactory<QOpcUaBaseDataVariable>
-{
-	static UA_NodeId GetTypeNodeId()
-	{
-		return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
-	}
-
-	static void SetTypeNodeId(const UA_NodeId & typeNodeId)
-	{
-		Q_UNUSED(typeNodeId);
-	}
-};
-
 template<typename T>
 inline T * QOpcUaBaseDataVariable::addChild()
 {

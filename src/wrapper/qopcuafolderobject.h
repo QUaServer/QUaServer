@@ -30,19 +30,4 @@ private:
 	explicit QOpcUaFolderObject(QOpcUaServer *server);
 };
 
-// [TRAITS] : specialization
-template <>
-struct QOpcUaNodeFactory<QOpcUaFolderObject>
-{
-	static UA_NodeId GetTypeNodeId()
-	{
-		return UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE);
-	}
-
-	static void SetTypeNodeId(const UA_NodeId & typeNodeId)
-	{
-		Q_UNUSED(typeNodeId);
-	}
-};
-
 #endif // QOPCUAFOLDEROBJECT_H

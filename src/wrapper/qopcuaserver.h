@@ -56,7 +56,7 @@ inline void QOpcUaServer::registerType()
 {
 	// check if already register
 	QString   strClassName  = QString(T::staticMetaObject.className());
-	UA_NodeId newTypeNodeId = QOpcUaNodeFactory<T>::GetTypeNodeId();
+	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (!UA_NodeId_isNull(&newTypeNodeId))
 	{
 		// add to map of not here yet
@@ -96,8 +96,6 @@ inline void QOpcUaServer::registerType()
 			                                  &newTypeNodeId);                           // new object type id
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
-		// set type node id in traits
-		QOpcUaNodeFactory<T>::SetTypeNodeId(newTypeNodeId);
 	}
 	else if (T::staticMetaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
 	{
@@ -136,18 +134,13 @@ inline void QOpcUaServer::registerType()
 			                                    &newTypeNodeId);                           // new variable type id
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
-		// set type node id in traits
-		QOpcUaNodeFactory<T>::SetTypeNodeId(newTypeNodeId);
 	}
 	else
 	{
 		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
 	}
-	// add to map of not here yet
-	if (!m_mapTypes.contains(strClassName))
-	{
-		m_mapTypes[strClassName] = newTypeNodeId;
-	}
+	// add to map
+	m_mapTypes.insert(strClassName, newTypeNodeId);
 }
 
 template<typename T>
@@ -155,11 +148,12 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 {
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 	// try to get typeNodeId, if null, then register it
-	UA_NodeId typeNodeId = QOpcUaNodeFactory<T>::GetTypeNodeId();
+	QString   strClassName = QString(T::staticMetaObject.className());
+	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
 		this->registerType<T>();
-		typeNodeId = QOpcUaNodeFactory<T>::GetTypeNodeId();
+		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// instantiate C++ object or variable
