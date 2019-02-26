@@ -17,6 +17,22 @@ struct QOpcUaNodeFactory
 		m_typeNodeId = typeNodeId;
     }
 
+	static UA_NodeId m_typeNodeId;
+};
+
+template <typename T>
+UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
+
+template <typename T>
+struct QOpcUaObjectTypeTraits
+{
+	static QString GetBrowseName()
+	{
+		return QString();
+	}
+
+	// node attributes
+
 	static QString GetDisplayName()
 	{
 		return QString();
@@ -32,40 +48,49 @@ struct QOpcUaNodeFactory
 		return 0;
 	}
 
-	static UA_NodeId m_typeNodeId;
+	// object type attributes
+
+	static bool GetIsAbstract()
+	{
+		return false;
+	}
 };
 
 template <typename T>
-UA_NodeId QOpcUaNodeFactory<T>::m_typeNodeId = UA_NODEID_NULL;
-
-/*
-template <typename T>
-struct QOpcUaObjectFactory
+struct QOpcUaVariableTypeTraits
 {
-public:
+	static QString GetBrowseName()
+	{
+		return QString();
+	}
 
+	// node attributes
 
-};
+	static QString GetDisplayName()
+	{
+		return QString();
+	}
 
+	static QString GetDescription()
+	{
+		return QString();
+	}
 
-*/
+	static quint32 GetWriteMask()
+	{
+		return 0;
+	}
 
-template <typename T>
-struct QOpcUaVariableFactory
-{
-	static QVariant GetValue()
+	// variable type attributes
+
+	static QVariant GetDefaultValue()
 	{
 		return QVariant((QVariant::Type)QMetaType::UnknownType);
 	}
 
-	static quint8   GetAccessLevel()
+	static bool GetIsAbstract()
 	{
-		return UA_ACCESSLEVELMASK_READ;
-	}
-
-	static double   GetMinimumSamplingInterval()
-	{
-		return 0.0;
+		return false;
 	}
 
 };

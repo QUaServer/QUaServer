@@ -27,6 +27,16 @@ int main(int argc, char *argv[])
 	auto objFolder = objsFolder->addFolderObject();
 	objFolder->set_browseName("QOpcUaFolderObject");
 	objFolder->set_displayName("QOpcUaFolderObject");
+
+	auto child1 = varBaseData->addChild<QOpcUaProperty>();
+	child1->set_browseName ("Prop1");
+	child1->set_displayName("Prop1");
+	auto child2 = objBase    ->addChild<QOpcUaProperty>();
+	child2->set_browseName ("Prop2");
+	child2->set_displayName("Prop2");
+	auto child3 = objFolder  ->addChild<QOpcUaProperty>();
+	child3->set_browseName ("Prop3");
+	child3->set_displayName("Prop3");
 	
 
 

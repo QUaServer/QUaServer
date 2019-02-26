@@ -133,7 +133,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			UA_Variant uaArrayDimensions;
 			UA_UInt32 arrayDims[1] = { size };
 			UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);
-			UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
+			st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			// emit arrayDimensions changed

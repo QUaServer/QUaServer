@@ -17,7 +17,11 @@ class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
 public:
     explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
-	
+	// Instance Creation API
+
+	template<typename T>
+	T* addChild();
+
 };
 
 // [TRAITS] : specialization
@@ -33,24 +37,14 @@ struct QOpcUaNodeFactory<QOpcUaBaseDataVariable>
 	{
 		Q_UNUSED(typeNodeId);
 	}
-
-	static QString GetDisplayName()
-	{
-		return QString();
-	}
-
-	static QString GetDescription()
-	{
-		return QString();
-	}
-
-	static quint32 GetWriteMask()
-	{
-		return 0;
-	}
 };
 
-
+template<typename T>
+inline T * QOpcUaBaseDataVariable::addChild()
+{
+	return m_qopcuaserver->createInstance<T>(this);
+}
 
 
 #endif // QOPCUABASEDATAVARIABLE_H
+

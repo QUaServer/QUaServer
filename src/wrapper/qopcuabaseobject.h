@@ -50,6 +50,11 @@ friend class QOpcUaServer;
 public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
+	// Instance Creation API
+
+	template<typename T>
+	T* addChild();
+
 	// Method Creation API
 
 	template<typename RA, typename T>
@@ -126,22 +131,13 @@ struct QOpcUaNodeFactory<QOpcUaBaseObject>
 	{
 		Q_UNUSED(typeNodeId);
 	}
-
-	static QString GetDisplayName()
-	{
-		return QString();
-	}
-
-	static QString GetDescription()
-	{
-		return QString();
-	}
-
-	static quint32 GetWriteMask()
-	{
-		return 0;
-	}
 };
+
+template<typename T>
+inline T * QOpcUaBaseObject::addChild()
+{
+	return m_qopcuaserver->createInstance<T>(this);
+}
 
 template<typename RA, typename T>
 inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const T &methodCallback)
