@@ -8,6 +8,12 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this);
+	// register base types
+	this->registerType<QOpcUaBaseVariable>    ();
+	this->registerType<QOpcUaBaseDataVariable>();
+	this->registerType<QOpcUaProperty>        ();
+	this->registerType<QOpcUaBaseObject>      ();
+	this->registerType<QOpcUaFolderObject>    ();
 }
 
 /* TODO : alternative constructor

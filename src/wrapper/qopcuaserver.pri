@@ -12,6 +12,7 @@ SOURCES += \
     $$PWD/qopcuafolderobject.cpp
 
 SOURCES += \   
+    $$PWD/qopcuanodefactory.cpp \
     $$PWD/qopcuatypesconverter.cpp
 
 HEADERS += \

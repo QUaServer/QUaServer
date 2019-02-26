@@ -27,6 +27,18 @@ private:
 
 };
 
+class MyNewVariableSubType : public MyNewVariableType
+{
+	Q_OBJECT
+
+public:
+	explicit MyNewVariableSubType(QOpcUaServerNode *parent);
+
+private:
+
+
+};
+
 
 #endif // MYNEWVARIABLETYPE_H
 

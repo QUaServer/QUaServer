@@ -9,3 +9,8 @@ MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServerNode *parent) : QOpcU
 {
 
 }
+
+MyNewVariableSubType::MyNewVariableSubType(QOpcUaServerNode *parent) : MyNewVariableType(parent)
+{
+
+}
