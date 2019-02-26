@@ -56,6 +56,82 @@ bool QOpcUaServer::isRunning()
 	return m_running;
 }
 
+void QOpcUaServer::registerType(const QMetaObject &metaObject)
+{
+	QString   strClassName  = QString(metaObject.className());
+	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (!UA_NodeId_isNull(&newTypeNodeId))
+	{
+		// add to map of not here yet
+		if (!m_mapTypes.contains(strClassName))
+		{
+			m_mapTypes[strClassName] = newTypeNodeId;
+		}
+		return;
+	}
+	// create new type browse name
+	UA_QualifiedName browseName;
+	browseName.namespaceIndex = 1;
+	browseName.name = QOpcUaTypesConverter::uaStringFromQString(strClassName);
+	// check if base class is registered
+	QString strBaseClassName = QString(metaObject.superClass()->className());
+	if (!m_mapTypes.contains(strBaseClassName))
+	{
+		// recursive
+		this->registerType(*metaObject.superClass());
+	}
+	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QOpcUaServer::registerType", "Base object type not registered.");
+	if (metaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
+	{
+		// create object type attributes
+		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
+		// set node attributes		  
+		QByteArray byteDisplayName     = strClassName.toUtf8();
+		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		QByteArray byteDescription     = QString("").toUtf8();
+		otAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		// add new object type
+		auto st = UA_Server_addObjectTypeNode(m_server,
+			                                  UA_NODEID_NULL,                            // requested nodeId
+			                                  m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)), // parent (object type)
+			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
+			                                  browseName,
+			                                  otAttr,
+			                                  nullptr,                                   // no context ?
+			                                  &newTypeNodeId);                           // new object type id
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	else if (metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
+	{
+		// create variable type attributes
+		UA_VariableTypeAttributes vtAttr = UA_VariableTypeAttributes_default;
+		// set node attributes		  
+		QByteArray byteDisplayName       = strClassName.toUtf8();
+		vtAttr.displayName               = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		QByteArray byteDescription       = QString("").toUtf8();
+		vtAttr.description               = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		// add new variable type
+		auto st = UA_Server_addVariableTypeNode(m_server,
+			                                    UA_NODEID_NULL,                            // requested nodeId
+			                                    m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE)), // parent (variable type)
+			                                    UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
+			                                    browseName,
+			                                    UA_NODEID_NULL,                            // typeDefinition ??
+			                                    vtAttr,
+			                                    nullptr,                                   // no context ?
+			                                    &newTypeNodeId);                           // new variable type id
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	else
+	{
+		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
+	}
+	// add to map
+	m_mapTypes.insert(strClassName, newTypeNodeId);
+}
+
 QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()
 {
 	return m_pobjectsFolder;

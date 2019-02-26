@@ -48,99 +48,16 @@ private:
 
 	QMap<QString, UA_NodeId> m_mapTypes;
 
+	void registerType(const QMetaObject &metaObject);
+
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 };
 
 template<typename T>
 inline void QOpcUaServer::registerType()
 {
-	// check if already register
-	QString   strClassName  = QString(T::staticMetaObject.className());
-	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	if (!UA_NodeId_isNull(&newTypeNodeId))
-	{
-		// add to map of not here yet
-		if (!m_mapTypes.contains(strClassName))
-		{
-			m_mapTypes[strClassName] = newTypeNodeId;
-		}
-		return;
-	}
-	// else register
-	if (T::staticMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
-	{
-		// create new object type browse name
-		UA_QualifiedName browseName;
-		browseName.namespaceIndex = 1;
-		browseName.name = QOpcUaTypesConverter::uaStringFromQString(QOpcUaObjectTypeTraits<T>::GetBrowseName());
-		// create object type attributes
-		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
-		// set node attributes		  
-		QByteArray byteDisplayName     = QOpcUaObjectTypeTraits<T>::GetDisplayName().toUtf8();
-		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
-		QByteArray byteDescription     = QOpcUaObjectTypeTraits<T>::GetDescription().toUtf8();
-		otAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
-		otAttr.writeMask               = QOpcUaObjectTypeTraits<T>::GetWriteMask();
-		// set object type attributes  
-		otAttr.isAbstract              = QOpcUaObjectTypeTraits<T>::GetIsAbstract();
-		// add new object type
-		QString strBaseClassName       = QString(T::staticMetaObject.superClass()->className());
-		Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QOpcUaServer::registerType", "Base object type not registered.");
-		auto st = UA_Server_addObjectTypeNode(m_server,
-			                                  UA_NODEID_NULL,                            // requested nodeId
-			                                  m_mapTypes[strBaseClassName],              // parent (type)
-			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
-			                                  browseName,
-			                                  otAttr,
-			                                  nullptr,                                   // no context ?
-			                                  &newTypeNodeId);                           // new object type id
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
-	}
-	else if (T::staticMetaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
-	{
-		// create new variable type browse name
-		UA_QualifiedName browseName;
-		browseName.namespaceIndex = 1;
-		browseName.name = QOpcUaTypesConverter::uaStringFromQString(QOpcUaVariableTypeTraits<T>::GetBrowseName());
-		// create variable type attributes
-		UA_VariableTypeAttributes vtAttr = UA_VariableTypeAttributes_default;
-		// set node attributes		  
-		QByteArray byteDisplayName       = QOpcUaVariableTypeTraits<T>::GetDisplayName().toUtf8();
-		vtAttr.displayName               = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
-		QByteArray byteDescription       = QOpcUaVariableTypeTraits<T>::GetDescription().toUtf8();
-		vtAttr.description               = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
-		vtAttr.writeMask                 = QOpcUaVariableTypeTraits<T>::GetWriteMask();
-		// set variable type attributes  
-		QVariant varDefaultValue         = QOpcUaVariableTypeTraits<T>::GetDefaultValue();
-		vtAttr.value                     = QOpcUaTypesConverter::uaVariantFromQVariant(varDefaultValue);
-		vtAttr.dataType                  = QOpcUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)varDefaultValue.type());
-		vtAttr.valueRank                 = QOpcUaBaseVariable::GetValueRankFromQVariant(varDefaultValue);
-		QVector<quint32> qtArrayDim      = QOpcUaBaseVariable::GetArrayDimensionsFromQVariant(varDefaultValue);
-		vtAttr.arrayDimensions           = qtArrayDim.count() > 0 ? qtArrayDim.data() : nullptr;
-		vtAttr.arrayDimensionsSize       = qtArrayDim.count();
-		vtAttr.isAbstract                = QOpcUaVariableTypeTraits<T>::GetIsAbstract();
-		// add new variable type
-		QString strBaseClassName         = QString(T::staticMetaObject.superClass()->className());
-		Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QOpcUaServer::registerType", "Base variable type not registered.");
-		auto st = UA_Server_addVariableTypeNode(m_server,
-			                                    UA_NODEID_NULL,                            // requested nodeId
-			                                    m_mapTypes[strBaseClassName],              // parent (type)
-			                                    UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
-			                                    browseName,
-			                                    UA_NODEID_NULL,                            // typeDefinition ??
-			                                    vtAttr,
-			                                    nullptr,                                   // no context ?
-			                                    &newTypeNodeId);                           // new variable type id
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
-	}
-	else
-	{
-		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
-	}
-	// add to map
-	m_mapTypes.insert(strClassName, newTypeNodeId);
+	// call internal method
+	this->registerType(T::staticMetaObject);
 }
 
 template<typename T>

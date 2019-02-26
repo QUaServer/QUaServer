@@ -33,28 +33,26 @@ int main(int argc, char *argv[])
 
 	// Add new object type
 
-	server.registerType<MyNewVariableType>();
-	server.registerType<MyNewVariableSubType>();
+	server.registerType<MyNewVariableSubSubType>();
+	server.registerType<MyOtherNewVariableType>();
 
-	//server.registerType<MyOtherNewVariableType>();
+	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
+	newobjTypeInstance->set_browseName ("MyNewObjectType");
+	newobjTypeInstance->set_displayName("MyNewObjectType");
 
-	//auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
-	//newobjTypeInstance->set_browseName ("MyNewObjectType");
-	//newobjTypeInstance->set_displayName("MyNewObjectType");
+	auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
+	otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
+	otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
 
-	//auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
-	//otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
-	//otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
-
-	//auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
-	//newVarTypeInstance->set_browseName("MyNewVariableType");
-	//newVarTypeInstance->set_displayName("MyNewVariableType");
-	//newVarTypeInstance->set_value(1.2345);
-	//
-	//auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
-	//newVarTypeInstance2->set_browseName("MyNewVariableType2");
-	//newVarTypeInstance2->set_displayName("MyNewVariableType2");
-	//newVarTypeInstance2->set_value("xxx");
+	auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
+	newVarTypeInstance->set_browseName("MyNewVariableType");
+	newVarTypeInstance->set_displayName("MyNewVariableType");
+	newVarTypeInstance->set_value(1.2345);
+	
+	auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
+	newVarTypeInstance2->set_browseName("MyNewVariableType2");
+	newVarTypeInstance2->set_displayName("MyNewVariableType2");
+	newVarTypeInstance2->set_value("xxx");
 	
 
 	// [NOTE] blocking, TODO : move to thread

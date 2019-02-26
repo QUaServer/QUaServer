@@ -1,7 +1,7 @@
 #ifndef QOPCUABASEOBJECT_H
 #define QOPCUABASEOBJECT_H
 
-#include <QOpcUaNodeFactory>
+#include <QOpcUaServerNode>
 
 /*
 typedef struct {                          // UA_ObjectTypeAttributes_default

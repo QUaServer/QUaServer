@@ -14,3 +14,8 @@ MyNewVariableSubType::MyNewVariableSubType(QOpcUaServerNode *parent) : MyNewVari
 {
 
 }
+
+MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServerNode *parent) : MyNewVariableSubType(parent)
+{
+
+}

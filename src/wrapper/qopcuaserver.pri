@@ -12,7 +12,6 @@ SOURCES += \
     $$PWD/qopcuafolderobject.cpp
 
 SOURCES += \   
-    $$PWD/qopcuanodefactory.cpp \
     $$PWD/qopcuatypesconverter.cpp
 
 HEADERS += \
@@ -25,7 +24,6 @@ HEADERS += \
     $$PWD/qopcuafolderobject.h
 
 HEADERS += \    
-    $$PWD/qopcuanodefactory.h \
     $$PWD/qopcuatypesconverter.h
 
 DISTFILES += \
@@ -38,5 +36,4 @@ DISTFILES += \
     $$PWD/QOpcUaFolderObject \
 
 DISTFILES += \    
-    $$PWD/QOpcUaNodeFactory \    
     $$PWD/QOpcUaTypesConverter
