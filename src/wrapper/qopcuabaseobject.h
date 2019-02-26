@@ -51,7 +51,7 @@ public:
 	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
 	// Instance Creation API
-
+    // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
 	T* addChild();
 
@@ -117,12 +117,6 @@ private:
 		                                         size_t, 
 		                                         UA_Variant*)>> m_hashCallbacks;
 };
-
-template<typename T>
-inline T * QOpcUaBaseObject::addChild()
-{
-	return m_qopcuaserver->createInstance<T>(this);
-}
 
 template<typename RA, typename T>
 inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const T &methodCallback)

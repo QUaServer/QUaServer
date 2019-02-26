@@ -133,5 +133,16 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	return childNode;
 }
 
+template<typename T>
+inline T * QOpcUaBaseObject::addChild()
+{
+    return m_qopcuaserver->createInstance<T>(this);
+}
+
+template<typename T>
+inline T * QOpcUaBaseDataVariable::addChild()
+{
+    return m_qopcuaserver->createInstance<T>(this);
+}
 
 #endif // QOPCUASERVER_H

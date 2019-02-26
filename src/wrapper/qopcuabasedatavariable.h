@@ -18,18 +18,11 @@ public:
     explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
 	// Instance Creation API
-
+    // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
 	T* addChild();
 
 };
-
-template<typename T>
-inline T * QOpcUaBaseDataVariable::addChild()
-{
-	return m_qopcuaserver->createInstance<T>(this);
-}
-
 
 #endif // QOPCUABASEDATAVARIABLE_H
 
