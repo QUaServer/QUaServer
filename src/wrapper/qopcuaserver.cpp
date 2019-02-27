@@ -1,5 +1,7 @@
 #include "qopcuaserver.h"
 
+#include <QMetaProperty>
+
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
@@ -58,6 +60,13 @@ bool QOpcUaServer::isRunning()
 
 void QOpcUaServer::registerType(const QMetaObject &metaObject)
 {
+	// check if OPC UA relevant
+	if (!metaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
+		return;
+	}
+	// check if already registered
 	QString   strClassName  = QString(metaObject.className());
 	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (!UA_NodeId_isNull(&newTypeNodeId))
@@ -81,28 +90,8 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 		this->registerType(*metaObject.superClass());
 	}
 	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QOpcUaServer::registerType", "Base object type not registered.");
-	if (metaObject.inherits(&QOpcUaBaseObject::staticMetaObject))
-	{
-		// create object type attributes
-		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
-		// set node attributes		  
-		QByteArray byteDisplayName     = strClassName.toUtf8();
-		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
-		QByteArray byteDescription     = QString("").toUtf8();
-		otAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
-		// add new object type
-		auto st = UA_Server_addObjectTypeNode(m_server,
-			                                  UA_NODEID_NULL,                            // requested nodeId
-			                                  m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)), // parent (object type)
-			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
-			                                  browseName,
-			                                  otAttr,
-			                                  nullptr,                                   // no context ?
-			                                  &newTypeNodeId);                           // new object type id
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
-	}
-	else if (metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
+	// check if variable or object
+	if (metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
 	{
 		// create variable type attributes
 		UA_VariableTypeAttributes vtAttr = UA_VariableTypeAttributes_default;
@@ -126,10 +115,194 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	}
 	else
 	{
-		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
+		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		// create object type attributes
+		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
+		// set node attributes		  
+		QByteArray byteDisplayName     = strClassName.toUtf8();
+		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		QByteArray byteDescription     = QString("").toUtf8();
+		otAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		// add new object type
+		auto st = UA_Server_addObjectTypeNode(m_server,
+			                                  UA_NODEID_NULL,                            // requested nodeId
+			                                  m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)), // parent (object type)
+			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
+			                                  browseName,
+			                                  otAttr,
+			                                  nullptr,                                   // no context ?
+			                                  &newTypeNodeId);                           // new object type id
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
 	}
 	// add to map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
+	// register meta-properties
+	this->addMetaProperties(metaObject);
+	// TODO : register meta-methods
+
+
+}
+
+void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
+{
+	QString   strParentClassName = QString(parentMetaObject.className());
+	UA_NodeId parentTypeNodeId   = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
+	Q_ASSERT(!UA_NodeId_isNull(&parentTypeNodeId));
+	// loop meta properties and find out which ones inherit from
+	int propCount = parentMetaObject.propertyCount();
+	for (int i = parentMetaObject.propertyOffset(); i < propCount; i++)
+	{
+		// check if available in meta-system
+		QMetaProperty metaproperty = parentMetaObject.property(i);
+		if (!QMetaType::metaObjectForType(metaproperty.userType()))
+		{
+			continue;
+		}
+		// check if OPC UA relevant type
+		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+		{
+			continue;
+		}
+		// check if prop inherits from parent
+		Q_ASSERT_X(!propMetaObject.inherits(&parentMetaObject), "QOpcUaServer::addMetaProperties", "Qt MetaProperty type cannot inherit from Class.");
+		if (propMetaObject.inherits(&parentMetaObject))
+		{
+			continue;
+		}
+		// check if prop type registered, register of not
+		QString   strPropName      = QString(metaproperty.name());
+		QString   strPropClassName = QString(propMetaObject.className());
+		UA_NodeId propTypeNodeId   = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
+		if (UA_NodeId_isNull(&propTypeNodeId))
+		{
+			this->registerType(propMetaObject);
+			propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
+		}
+		Q_ASSERT(!UA_NodeId_isNull(&propTypeNodeId));
+		// parent relation with child
+		UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+		// set qualified name, default is class name
+		UA_QualifiedName browseName;
+		browseName.namespaceIndex = 1;
+		browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strPropName);
+		// display name
+		QByteArray bytePropName = strPropName.toUtf8();
+		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
+		// check if variable or object
+		// NOTE : a type is considered to inherit itself sometimes does not work (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
+		UA_NodeId tempNodeId;
+		if (propMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+		{
+			if (propMetaObject.inherits(&QOpcUaProperty::staticMetaObject))
+			{
+				referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
+			}
+			UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+			vAttr.displayName = displayName;
+			// add variable
+			auto st = UA_Server_addVariableNode(m_server,
+												UA_NODEID_NULL,   // requested nodeId
+												parentTypeNodeId, // parent
+												referenceTypeId,  // parent relation with child
+												browseName,		  
+												propTypeNodeId,   
+												vAttr, 			  
+												nullptr,          // useless context?
+												&tempNodeId);     // output nodeId to make mandatory
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+		}
+		else
+		{
+			// NOTE : not working ! Q_ASSERT(propMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+			UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+			oAttr.displayName = displayName;
+			// add object
+			auto st = UA_Server_addObjectNode(m_server,
+											  UA_NODEID_NULL,   // requested nodeId
+											  parentTypeNodeId, // parent
+											  referenceTypeId,  // parent relation with child
+											  browseName,
+											  propTypeNodeId,
+											  oAttr, 
+											  nullptr,          // useless context?
+											  &tempNodeId);     // output nodeId to make mandatory
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+		}
+		// make mandatory
+		auto st = UA_Server_addReference(m_server,
+		                                 tempNodeId,
+		                                 UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+		                                 UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+		                                 true);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+}
+
+void QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNode * parentNode, QOpcUaServerNode * childNode)
+{
+	// check if OPC UA relevant
+	if (!metaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QOpcUaServer::createInstance", "Unsupported base class");
+		return;
+	}
+	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
+	// try to get typeNodeId, if null, then register it
+	QString   strClassName = QString(metaObject.className());
+	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (UA_NodeId_isNull(&typeNodeId))
+	{
+		this->registerType(metaObject);
+		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	}
+	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
+	// adapt parent relation with child according to parent type
+	UA_NodeId referenceTypeId = QOpcUaServer::getReferenceTypeId(parentNode->metaObject()->className(), 
+		                                                         metaObject.className());
+	// set qualified name, default is class name
+	UA_QualifiedName browseName;
+	browseName.namespaceIndex = 1;
+	browseName.name           = QOpcUaTypesConverter::uaStringFromQString(metaObject.className());
+	// check if variable or object
+	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
+	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+	{
+		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+		// add variable
+		auto st = UA_Server_addVariableNode(m_server,
+                                            UA_NODEID_NULL,       // requested nodeId
+                                            parentNode->m_nodeId, // parent
+                                            referenceTypeId,      // parent relation with child
+                                            browseName,
+                                            typeNodeId, 
+                                            vAttr, 
+                                            (void*)childNode,      // set new instance as context
+                                            &childNode->m_nodeId); // set new nodeId to new instance
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
+	else
+	{
+		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+		// add object
+		auto st = UA_Server_addObjectNode(m_server,
+                                          UA_NODEID_NULL,       // requested nodeId
+                                          parentNode->m_nodeId, // parent
+                                          referenceTypeId,      // parent relation with child
+                                          browseName,
+                                          typeNodeId,
+                                          oAttr, 
+                                          (void*)childNode,      // set new instance as context
+                                          &childNode->m_nodeId); // set new nodeId to new instance
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+	}
 }
 
 QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()
@@ -145,7 +318,8 @@ UA_NodeId QOpcUaServer::getReferenceTypeId(const QString & strParentClassName, c
 	{
 		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
 	}
-	else if (strParentClassName.compare(QOpcUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	else if (strParentClassName.compare(QOpcUaBaseObject      ::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
+		     strParentClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 	{
 		if (strChildClassName.compare(QOpcUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
 			strChildClassName.compare(QOpcUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
@@ -160,11 +334,6 @@ UA_NodeId QOpcUaServer::getReferenceTypeId(const QString & strParentClassName, c
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 		}
-	}
-	else if (strParentClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
-	{
-		// TODO
-		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 	}
 	else
 	{

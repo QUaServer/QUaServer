@@ -2,16 +2,21 @@
 #define MYNEWOBJECTTYPE_H
 
 #include <QOpcUaBaseObject>
+#include "mynewvariabletype.h"
 
 class MyNewObjectType : public QOpcUaBaseObject
 {
     Q_OBJECT
 
+	Q_PROPERTY(MyNewVariableSubSubType * myVarSubSub READ getMyVarSubSub)
+
 public:
 	explicit MyNewObjectType(QOpcUaServerNode *parent);
 
-private:
+	MyNewVariableSubSubType * getMyVarSubSub();
 
+private:
+	MyNewVariableSubSubType * m_myVarSubSub;
 	
 };
 

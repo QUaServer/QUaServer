@@ -69,7 +69,16 @@ int main(int argc, char *argv[])
 	newVarTypeInstance2->set_browseName("MyNewVariableType2");
 	newVarTypeInstance2->set_displayName("MyNewVariableType2");
 	newVarTypeInstance2->set_value("xxx");
-	
+
+	auto newVarSubTypeInstance = objsFolder->addChild<MyNewVariableSubType>();
+	newVarSubTypeInstance->set_browseName("MyNewVariableSubType");
+	newVarSubTypeInstance->set_displayName("MyNewVariableSubType");
+	newVarSubTypeInstance->set_value(666);
+
+	auto newVarSubSubTypeInstance = objsFolder->addChild<MyNewVariableSubSubType>();
+	newVarSubSubTypeInstance->set_browseName("MyNewVariableSubSubType");
+	newVarSubSubTypeInstance->set_displayName("MyNewVariableSubSubType");
+	newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();

@@ -15,7 +15,7 @@ class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
 {
     Q_OBJECT
 public:
-    explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
+	explicit QOpcUaBaseDataVariable(QOpcUaServerNode *parent);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
