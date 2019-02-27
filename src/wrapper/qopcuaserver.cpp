@@ -2,6 +2,34 @@
 
 #include <QMetaProperty>
 
+// [STATIC]
+UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server, 
+	                                      const UA_NodeId * sessionId, 
+	                                      void            * sessionContext, 
+	                                      const UA_NodeId * typeNodeId, 
+	                                      void            * typeNodeContext, 
+	                                      const UA_NodeId * nodeId, 
+	                                      void            ** nodeContext)
+{
+	// check if constructor from explicit instance creation or type registration
+	if (!*nodeContext)
+	{
+		return UA_StatusCode(); // TODO : what about network creation or component instantiation? (not exclicit instance creation)
+	}
+	// get server from context object
+	auto obj = static_cast<QOpcUaServer*>(typeNodeContext);
+	Q_CHECK_PTR(obj);
+	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
+	// get method from type constructors map and call it
+	return obj->m_hashConstructors[*typeNodeId](server,
+		                                        sessionId,
+		                                        sessionContext,
+		                                        typeNodeId,
+		                                        typeNodeContext,
+		                                        nodeId,
+		                                        nodeContext);
+}
+
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
@@ -108,7 +136,7 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 			                                    browseName,
 			                                    UA_NODEID_NULL,                            // typeDefinition ??
 			                                    vtAttr,
-			                                    nullptr,                                   // no context ?
+			                                    (void*)this,                               // context : server instance where type was registered
 			                                    &newTypeNodeId);                           // new variable type id
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
@@ -130,7 +158,7 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
 			                                  browseName,
 			                                  otAttr,
-			                                  nullptr,                                   // no context ?
+			                                  (void*)this,                               // context : server instance where type was registered
 			                                  &newTypeNodeId);                           // new object type id
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
@@ -141,6 +169,24 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	this->addMetaProperties(metaObject);
 	// TODO : register meta-methods
 
+	// add constructor
+	Q_ASSERT_X(!m_hashConstructors.contains(newTypeNodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
+	m_hashConstructors[newTypeNodeId] = [strClassName](
+	                                       UA_Server        *server,
+		                                   const UA_NodeId  *sessionId, 
+		                                   void             *sessionContext,
+		                                   const UA_NodeId  *typeNodeId, 
+		                                   void             *typeNodeContext,
+		                                   const UA_NodeId  *nodeId, 
+		                                   void            **nodeContext) {
+		qDebug() << "Called OPC UA constructor for" << strClassName;	
+		return UA_StatusCode();
+	};
+
+	UA_NodeTypeLifecycle lifecycle;
+	lifecycle.constructor = &QOpcUaServer::uaConstructor;
+	//lifecycle.destructor  = ;
+	UA_Server_setNodeTypeLifecycle(m_server, newTypeNodeId, lifecycle);
 
 }
 
@@ -209,7 +255,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 												browseName,		  
 												propTypeNodeId,   
 												vAttr, 			  
-												nullptr,          // useless context?
+												nullptr,          // context : null because we want to filter it when calling ua constructor
 												&tempNodeId);     // output nodeId to make mandatory
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
@@ -227,7 +273,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 											  browseName,
 											  propTypeNodeId,
 											  oAttr, 
-											  nullptr,          // useless context?
+											  nullptr,          // context : null because we want to filter it when calling ua constructor
 											  &tempNodeId);     // output nodeId to make mandatory
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
@@ -342,3 +388,5 @@ UA_NodeId QOpcUaServer::getReferenceTypeId(const QString & strParentClassName, c
 	
 	return referenceTypeId;
 }
+
+

@@ -54,7 +54,23 @@ private:
 
 	void createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode, QOpcUaServerNode * childNode);
 
+	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server       *server,
+                                                  const UA_NodeId *sessionId, 
+                                                  void            *sessionContext,
+                                                  const UA_NodeId *typeNodeId, 
+                                                  void            *typeNodeContext,
+                                                  const UA_NodeId *nodeId, 
+                                                  void           **nodeContext)>> m_hashConstructors;
+
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
+
+	static UA_StatusCode uaConstructor(UA_Server        *server,
+		                               const UA_NodeId  *sessionId, 
+		                               void             *sessionContext,
+		                               const UA_NodeId  *typeNodeId, 
+		                               void             *typeNodeContext,
+		                               const UA_NodeId  *nodeId, 
+		                               void            **nodeContext);
 };
 
 template<typename T>

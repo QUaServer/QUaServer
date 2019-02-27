@@ -49,36 +49,36 @@ int main(int argc, char *argv[])
 
 	// custom types
 
-	server.registerType<MyNewVariableSubSubType>();
-	server.registerType<MyOtherNewVariableType>();
+	//server.registerType<MyNewVariableSubSubType>();
+	//server.registerType<MyOtherNewVariableType>();
 
-	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
-	newobjTypeInstance->set_browseName ("MyNewObjectType");
-	newobjTypeInstance->set_displayName("MyNewObjectType");
+	//auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
+	//newobjTypeInstance->set_browseName ("MyNewObjectType");
+	//newobjTypeInstance->set_displayName("MyNewObjectType");
 
-	auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
-	otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
-	otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
+	//auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
+	//otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
+	//otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
 
 	auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
 	newVarTypeInstance->set_browseName("MyNewVariableType");
 	newVarTypeInstance->set_displayName("MyNewVariableType");
 	newVarTypeInstance->set_value(1.2345);
 	
-	auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
-	newVarTypeInstance2->set_browseName("MyNewVariableType2");
-	newVarTypeInstance2->set_displayName("MyNewVariableType2");
-	newVarTypeInstance2->set_value("xxx");
+	//auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
+	//newVarTypeInstance2->set_browseName("MyNewVariableType2");
+	//newVarTypeInstance2->set_displayName("MyNewVariableType2");
+	//newVarTypeInstance2->set_value("xxx");
 
-	auto newVarSubTypeInstance = objsFolder->addChild<MyNewVariableSubType>();
-	newVarSubTypeInstance->set_browseName("MyNewVariableSubType");
-	newVarSubTypeInstance->set_displayName("MyNewVariableSubType");
-	newVarSubTypeInstance->set_value(666);
+	//auto newVarSubTypeInstance = objsFolder->addChild<MyNewVariableSubType>();
+	//newVarSubTypeInstance->set_browseName("MyNewVariableSubType");
+	//newVarSubTypeInstance->set_displayName("MyNewVariableSubType");
+	//newVarSubTypeInstance->set_value(666);
 
-	auto newVarSubSubTypeInstance = objsFolder->addChild<MyNewVariableSubSubType>();
-	newVarSubSubTypeInstance->set_browseName("MyNewVariableSubSubType");
-	newVarSubSubTypeInstance->set_displayName("MyNewVariableSubSubType");
-	newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
+	//auto newVarSubSubTypeInstance = objsFolder->addChild<MyNewVariableSubSubType>();
+	//newVarSubSubTypeInstance->set_browseName("MyNewVariableSubSubType");
+	//newVarSubSubTypeInstance->set_displayName("MyNewVariableSubSubType");
+	//newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();

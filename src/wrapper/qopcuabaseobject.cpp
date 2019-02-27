@@ -18,11 +18,8 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	// get node from context object
 	auto obj = static_cast<QOpcUaBaseObject*>(methodContext);
 	Q_CHECK_PTR(obj);
-	// get method hash
-	//UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
-	// get method from node callbacks map
 	Q_ASSERT(obj->m_hashCallbacks.contains(*methodId));
-	// call method
+	// get method from node callbacks map and call it
 	return obj->m_hashCallbacks[*methodId](server,
 		                                   sessionId, 
 		                                   sessionContext, 

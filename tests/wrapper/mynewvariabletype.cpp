@@ -2,7 +2,7 @@
 
 MyNewVariableType::MyNewVariableType(QOpcUaServerNode *parent) : QOpcUaBaseDataVariable(parent)
 {
-
+	qDebug() << "MyNewVariableType C++ constructor.";
 }
 
 QOpcUaBaseDataVariable * MyNewVariableType::getMyVar()
@@ -21,17 +21,17 @@ MyOtherNewVariableType * MyNewVariableType::getMyOtherVar()
 }
 
 // NOTE : Forbidden Component
-MyNewVariableSubType * MyNewVariableType::getMyProhib()
-{
-	return m_myProhib;
-}
+//MyNewVariableSubType * MyNewVariableType::getMyProhib()
+//{
+//	return m_myProhib;
+//}
 
 
 // ---
 
 MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServerNode *parent) : QOpcUaBaseDataVariable(parent)
 {
-
+	qDebug() << "MyOtherNewVariableType C++ constructor.";
 }
 
 // ---
@@ -50,7 +50,7 @@ QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 
 MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServerNode *parent) : MyNewVariableSubType(parent)
 {
-
+	qDebug() << "MyNewVariableSubSubType C++ constructor.";
 }
 
 QOpcUaBaseObject * MyNewVariableSubSubType::getMyObjSubSub()

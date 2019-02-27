@@ -36,18 +36,6 @@ This ObjectType is the base ObjectType and all other ObjectTypes shall either
 directly or indirectly inherit from it.
 */
 
-inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
-{
-	return e1.namespaceIndex == e2.namespaceIndex
-		&& e1.identifierType == e2.identifierType
-		&& e1.identifier.numeric == e2.identifier.numeric;
-}
-
-inline uint qHash(const UA_NodeId &key, uint seed)
-{
-	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ qHash(key.identifier.numeric, seed);
-}
-
 class QOpcUaBaseObject : public QOpcUaServerNode
 {
     Q_OBJECT
