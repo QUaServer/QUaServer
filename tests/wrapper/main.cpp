@@ -15,6 +15,8 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
+	// instances
+
 	auto varBaseData = objsFolder->addBaseDataVariable();
 	varBaseData->set_browseName("QOpcUaBaseDataVariable");
 	varBaseData->set_displayName("QOpcUaBaseDataVariable");
@@ -31,7 +33,21 @@ int main(int argc, char *argv[])
 	objFolder->set_browseName("QOpcUaFolderObject");
 	objFolder->set_displayName("QOpcUaFolderObject");
 
-	// Add new object type
+	// methods
+
+	objsFolder->addMethod("method", []() {
+		qDebug() << "method1";
+	});
+	objsFolder->addMethod<QString()>("method", []() {
+		qDebug() << "method2";
+		return "method2";
+	});
+	objsFolder->addMethod<double(int, int)>("method", [](int x, int y) {
+		qDebug() << "method3";
+		return (double)x / (double)y;
+	});
+
+	// custom types
 
 	server.registerType<MyNewVariableSubSubType>();
 	server.registerType<MyOtherNewVariableType>();

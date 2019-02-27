@@ -19,21 +19,21 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	auto obj = static_cast<QOpcUaBaseObject*>(methodContext);
 	Q_CHECK_PTR(obj);
 	// get method hash
-	UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
+	//UA_UInt32 hashNodeId = UA_NodeId_hash(methodId);
 	// get method from node callbacks map
-	Q_ASSERT(obj->m_hashCallbacks.contains(hashNodeId));
+	Q_ASSERT(obj->m_hashCallbacks.contains(*methodId));
 	// call method
-	return obj->m_hashCallbacks[hashNodeId](server,
-		                                    sessionId, 
-		                                    sessionContext, 
-		                                    methodId, 
-		                                    methodContext, 
-		                                    objectId, 
-		                                    objectContext, 
-		                                    inputSize, 
-		                                    input, 
-		                                    outputSize, 
-		                                    output);
+	return obj->m_hashCallbacks[*methodId](server,
+		                                   sessionId, 
+		                                   sessionContext, 
+		                                   methodId, 
+		                                   methodContext, 
+		                                   objectId, 
+		                                   objectContext, 
+		                                   inputSize, 
+		                                   input, 
+		                                   outputSize, 
+		                                   output);
 }
 
 QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServerNode *parent) : QOpcUaServerNode(parent)

@@ -36,6 +36,18 @@ This ObjectType is the base ObjectType and all other ObjectTypes shall either
 directly or indirectly inherit from it.
 */
 
+inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
+{
+	return e1.namespaceIndex == e2.namespaceIndex
+		&& e1.identifierType == e2.identifierType
+		&& e1.identifier.numeric == e2.identifier.numeric;
+}
+
+inline uint qHash(const UA_NodeId &key, uint seed)
+{
+	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ qHash(key.identifier.numeric, seed);
+}
+
 class QOpcUaBaseObject : public QOpcUaServerNode
 {
     Q_OBJECT
@@ -59,9 +71,6 @@ public:
 
 	template<typename RA, typename T>
 	void addMethod(const QString &strMethodName, const T &methodCallback);
-	// specialization std::function
-	template<typename R, typename ...A>
-	void addMethod(const QString &strMethodName, const std::function<R(A...)> &methodCallback);
 	// specialization, no args no return
 	void addMethod(const QString &strMethodName, const std::function<void(void)> &methodCallback);
 
@@ -105,29 +114,23 @@ private:
 		                                size_t            outputSize,
 		                                UA_Variant       *output);
 
-	QHash<UA_UInt32, std::function<UA_StatusCode(UA_Server*, 
-		                                         const UA_NodeId*, 
-		                                         void*, 
-		                                         const 
-		                                         UA_NodeId*, 
-		                                         void*, 
-		                                         const UA_NodeId*, 
-		                                         void*, size_t, 
-		                                         const UA_Variant*, 
-		                                         size_t, 
-		                                         UA_Variant*)>> m_hashCallbacks;
+	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server*,
+		                                          const UA_NodeId*, 
+		                                          void*, 
+		                                          const 
+		                                          UA_NodeId*, 
+		                                          void*, 
+		                                          const UA_NodeId*, 
+		                                          void*, size_t, 
+		                                          const UA_Variant*, 
+		                                          size_t, 
+		                                          UA_Variant*)>> m_hashCallbacks;
 };
 
 template<typename RA, typename T>
 inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const T &methodCallback)
 {
 	return this->addMethodInternal(strMethodName, (std::function<RA>)methodCallback);
-}
-// specialization std::function
-template<typename R, typename ...A>
-inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const std::function<R(A...)> &methodCallback)
-{
-	return this->addMethodInternal(strMethodName, methodCallback);
 }
 // specialization, no args no return
 inline void QOpcUaBaseObject::addMethod(const QString &strMethodName, const std::function<void(void)> &methodCallback)
@@ -154,9 +157,8 @@ inline void QOpcUaBaseObject::addMethodInternal(const QString & strMethodName, c
 	// add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, &outputArgument);
 	// store method with node id hash as key
-	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
-	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
-	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+	Q_ASSERT_X(!m_hashCallbacks.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	m_hashCallbacks[methNodeId] = [methodCallback](UA_Server        * server,
                                                    const UA_NodeId  * sessionId,
                                                    void             * sessionContext,
                                                    const UA_NodeId  * methodId,
@@ -192,9 +194,8 @@ inline void QOpcUaBaseObject::addMethodInternal(const QString &strMethodName, co
 	// add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, 0, nullptr, &outputArgument);
 	// store method with node id hash as key
-	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
-	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
-	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+	Q_ASSERT_X(!m_hashCallbacks.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	m_hashCallbacks[methNodeId] = [methodCallback](UA_Server        * server,
                                                    const UA_NodeId  * sessionId,
                                                    void             * sessionContext,
                                                    const UA_NodeId  * methodId,
@@ -224,9 +225,8 @@ inline void QOpcUaBaseObject::addMethodInternal(const QString &strMethodName, co
 	// add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, nArgs, inputArguments, nullptr);
 	// store method with node id hash as key
-	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
-	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
-	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+	Q_ASSERT_X(!m_hashCallbacks.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	m_hashCallbacks[methNodeId] = [methodCallback](UA_Server        * server,
                                                    const UA_NodeId  * sessionId,
                                                    void             * sessionContext,
                                                    const UA_NodeId  * methodId,
@@ -252,9 +252,8 @@ inline void QOpcUaBaseObject::addMethodInternal(const QString &strMethodName, co
 	// add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, 0, nullptr, nullptr);
 	// store method with node id hash as key
-	UA_UInt32 hashNodeId = UA_NodeId_hash(&methNodeId);
-	Q_ASSERT(!m_hashCallbacks.contains(hashNodeId));
-	m_hashCallbacks[hashNodeId] = [methodCallback](UA_Server        * server,
+	Q_ASSERT_X(!m_hashCallbacks.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	m_hashCallbacks[methNodeId] = [methodCallback](UA_Server        * server,
                                                    const UA_NodeId  * sessionId,
                                                    void             * sessionContext,
                                                    const UA_NodeId  * methodId,
