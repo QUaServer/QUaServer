@@ -3,8 +3,6 @@
 MyNewVariableType::MyNewVariableType(QOpcUaServerNode *parent) : QOpcUaBaseDataVariable(parent)
 {
 	qDebug() << "MyNewVariableType C++ constructor.";
-	// NOTE : m_int value assigned in parent constructor QOpcUaServerNodeFactory<>
-	qDebug() << m_int;
 }
 
 QOpcUaBaseDataVariable * MyNewVariableType::getMyVar()
@@ -21,12 +19,6 @@ MyOtherNewVariableType * MyNewVariableType::getMyOtherVar()
 {
 	return m_myOtherVar;
 }
-
-// NOTE : Forbidden Component
-//MyNewVariableSubType * MyNewVariableType::getMyProhib()
-//{
-//	return m_myProhib;
-//}
 
 
 // ---

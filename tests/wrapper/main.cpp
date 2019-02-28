@@ -15,36 +15,36 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	// instances
-	auto varBaseData = objsFolder->addBaseDataVariable();
-	varBaseData->set_browseName("QOpcUaBaseDataVariable");
-	varBaseData->set_displayName("QOpcUaBaseDataVariable");
+	//// instances
+	//auto varBaseData = objsFolder->addBaseDataVariable();
+	//varBaseData->set_browseName("QOpcUaBaseDataVariable");
+	//varBaseData->set_displayName("QOpcUaBaseDataVariable");
 
-	auto varProp = objsFolder->addProperty();
-	varProp->set_browseName("QOpcUaProperty");
-	varProp->set_displayName("QOpcUaProperty");
+	//auto varProp = objsFolder->addProperty();
+	//varProp->set_browseName("QOpcUaProperty");
+	//varProp->set_displayName("QOpcUaProperty");
 
-	auto objBase = objsFolder->addBaseObject();
-	objBase->set_browseName("QOpcUaBaseObject");
-	objBase->set_displayName("QOpcUaBaseObject");
+	//auto objBase = objsFolder->addBaseObject();
+	//objBase->set_browseName("QOpcUaBaseObject");
+	//objBase->set_displayName("QOpcUaBaseObject");
 
-	auto objFolder = objsFolder->addFolderObject();
-	objFolder->set_browseName("QOpcUaFolderObject");
-	objFolder->set_displayName("QOpcUaFolderObject");
+	//auto objFolder = objsFolder->addFolderObject();
+	//objFolder->set_browseName("QOpcUaFolderObject");
+	//objFolder->set_displayName("QOpcUaFolderObject");
 
-	// methods
+	//// methods
 
-	objsFolder->addMethod("method", []() {
-		qDebug() << "method1";
-	});
-	objsFolder->addMethod<QString()>("method", []() {
-		qDebug() << "method2";
-		return "method2";
-	});
-	objsFolder->addMethod<double(int, int)>("method", [](int x, int y) {
-		qDebug() << "method3";
-		return (double)x / (double)y;
-	});
+	//objsFolder->addMethod("method", []() {
+	//	qDebug() << "method1";
+	//});
+	//objsFolder->addMethod<QString()>("method", []() {
+	//	qDebug() << "method2";
+	//	return "method2";
+	//});
+	//objsFolder->addMethod<double(int, int)>("method", [](int x, int y) {
+	//	qDebug() << "method3";
+	//	return (double)x / (double)y;
+	//});
 
 	// custom types
 

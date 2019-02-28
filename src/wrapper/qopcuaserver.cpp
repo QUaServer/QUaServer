@@ -11,11 +11,11 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	                                      const UA_NodeId * nodeId, 
 	                                      void            ** nodeContext)
 {
-	// check if constructor from explicit instance creation or type registration
-	if (!*nodeContext)
-	{
-		return UA_StatusCode(); // TODO : what about network creation or component instantiation? (not exclicit instance creation)
-	}
+	//// check if constructor from explicit instance creation or type registration
+	//if (!*nodeContext)
+	//{
+	//	return UA_StatusCode(); // TODO : what about network creation or component instantiation? (not exclicit instance creation)
+	//}
 	// get server from context object
 	auto obj = static_cast<QOpcUaServer*>(typeNodeContext);
 	Q_CHECK_PTR(obj);
@@ -167,6 +167,7 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	// register meta-properties
 	this->addMetaProperties(metaObject);
+
 	// TODO : register meta-methods
 
 	// add constructor

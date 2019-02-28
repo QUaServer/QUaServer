@@ -205,7 +205,7 @@ QOpcUaFolderObject * QOpcUaServerNode::addFolderObject()
 	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this);
 }
 
-UA_Server * QOpcUaServerNode::getMServer()
+UA_Server * QOpcUaServerNode::getUAServer()
 {
 	return m_qopcuaserver->m_server;
 }

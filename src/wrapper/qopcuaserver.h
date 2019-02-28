@@ -95,7 +95,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	}
 
 	// TODO : find a way to instantiate in UA constructor and then get the c++ ref with
-	//        UA_Server_getNodeContext
+	//        UA_Server_getNodeContext?
 
 	// create new c++ instance
 	T * childNode = new T(parentNode);

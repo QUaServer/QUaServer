@@ -61,7 +61,7 @@ The BaseVariableType is the abstract base type for all other VariableTypes.
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
 
-class QOpcUaBaseVariable : public QOpcUaServerNode, public QOpcUaServerNodeFactory<QOpcUaBaseVariable>
+class QOpcUaBaseVariable : public QOpcUaServerNode
 {
 	Q_OBJECT
 

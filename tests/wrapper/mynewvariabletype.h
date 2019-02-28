@@ -14,26 +14,18 @@ class MyNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNode
 	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ getMyVar     )
 	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ getMyObj     )
 	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
-	// NOTE : Forbidden Component
-	//Q_PROPERTY(MyNewVariableSubType   * myProhib   READ getMyProhib  )
 
 public:
-	explicit MyNewVariableType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServerNode *parent);
 
 	QOpcUaBaseDataVariable * getMyVar();
 	QOpcUaBaseObject       * getMyObj();
 	MyOtherNewVariableType * getMyOtherVar();
-	// NOTE : Forbidden Component
-	//MyNewVariableSubType   * getMyProhib();
-
-	int m_int;
 
 private:
 	QOpcUaBaseDataVariable * m_myVar;
 	QOpcUaBaseObject       * m_myObj;
 	MyOtherNewVariableType * m_myOtherVar;
-	// NOTE : Forbidden Component
-	//MyNewVariableSubType   * m_myProhib;
 	
 };
 
