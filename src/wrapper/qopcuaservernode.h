@@ -157,10 +157,10 @@ struct QOpcUaServerNodeFactory
 			  3) Other case is new instance has children. Children are already instantiated and half-bound with no C++ parent defined.
 			     The new instance parent has NOT been "bound", parent UA_Node has no C++ context.
 				 - Proposal  : TODO
-			  3) Final case is new instance has children. Children are already instantiated and half-bound with no C++ parent defined.
+			  4) Final case is new instance has children. Children are already instantiated and half-bound with no C++ parent defined.
 			     The new instance parent has been "bound", parent UA_Node has already a C++ context.
 				 - Proposal  : TODO
-			  2) For binding we would like that c++ children references are already asigned before the parent C++ constructor is called
+			  5) For binding we would like that c++ children references are already asigned before the parent C++ constructor is called
 			     Proposal : use QOpcUaServerNodeFactory as static polymorphism to execute code before calling the C++ constructor 
 				 Problem  : this would require the parent constructor to accept a mandatory UA_NodeId as argument to be passed to 
 				            QOpcUaServerNodeFactory in order to sort out c++ children references.	
@@ -174,6 +174,8 @@ struct QOpcUaServerNodeFactory
 		// before the child constructor is called
 		// NOTE : this is called for every base class that inherits it.
 		//        the most specific class calls is last (if inherits from it LAST)
+		// to differentiate we can set the constructor arg as /*const UA_NodeId &nodeId = UA_NODEID_NULL*/
+		// so only the most specific class will be non-null
 		auto ptr = static_cast<T*>(this);
 		//qDebug() << "PTR" << ptr->getUAServer();
 		qDebug() << T::staticMetaObject.className();
