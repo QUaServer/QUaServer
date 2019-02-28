@@ -36,7 +36,7 @@ This ObjectType is the base ObjectType and all other ObjectTypes shall either
 directly or indirectly inherit from it.
 */
 
-class QOpcUaBaseObject : public QOpcUaServerNode
+class QOpcUaBaseObject : public QOpcUaServerNode, public QOpcUaServerNodeFactory<QOpcUaBaseObject>
 {
     Q_OBJECT
 

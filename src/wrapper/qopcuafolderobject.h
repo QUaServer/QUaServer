@@ -14,7 +14,7 @@ instance of the FolderType, such as “ObjectTypes”, should imply the
 semantics associated with the use of it.
 */
 
-class QOpcUaFolderObject : public QOpcUaBaseObject
+class QOpcUaFolderObject : public QOpcUaBaseObject, public QOpcUaServerNodeFactory<QOpcUaFolderObject>
 {
     Q_OBJECT
 

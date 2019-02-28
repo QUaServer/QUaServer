@@ -289,13 +289,13 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 	}
 }
 
-void QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNode * parentNode, QOpcUaServerNode * childNode)
+UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNode * parentNode)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QOpcUaServerNode::staticMetaObject))
 	{
 		Q_ASSERT_X(false, "QOpcUaServer::createInstance", "Unsupported base class");
-		return;
+		return UA_NODEID_NULL;
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 	// try to get typeNodeId, if null, then register it
@@ -316,6 +316,7 @@ void QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNo
 	browseName.name           = QOpcUaTypesConverter::uaStringFromQString(metaObject.className());
 	// check if variable or object
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
+	UA_NodeId nodeIdNewInstance;
 	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
@@ -327,8 +328,8 @@ void QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNo
                                             browseName,
                                             typeNodeId, 
                                             vAttr, 
-                                            (void*)childNode,      // set new instance as context
-                                            &childNode->m_nodeId); // set new nodeId to new instance
+                                            nullptr,             // new instance as context (set LATER)
+                                            &nodeIdNewInstance); // set new nodeId to new instance
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
@@ -344,11 +345,23 @@ void QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNo
                                           browseName,
                                           typeNodeId,
                                           oAttr, 
-                                          (void*)childNode,      // set new instance as context
-                                          &childNode->m_nodeId); // set new nodeId to new instance
+                                          nullptr,             // new instance as context (set LATER)
+                                          &nodeIdNewInstance); // set new nodeId to new instance
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+	// return new instance node id
+	return nodeIdNewInstance;
+}
+
+void QOpcUaServer::bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId & nodeId)
+{
+	Q_CHECK_PTR(nodeInstance);
+	Q_ASSERT(!UA_NodeId_isNull(&nodeId));
+	// set c++ instance as context
+	UA_Server_setNodeContext(m_server, nodeId, (void**)(&nodeInstance));
+	// set node id to c++ instance
+	nodeInstance->m_nodeId = nodeId;
 }
 
 QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()

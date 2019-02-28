@@ -11,7 +11,7 @@ Properties are defined by their BrowseName and therefore they do not need
 a specialised type definition. It is not allowed to subtype this VariableType.
 */
 
-class QOpcUaProperty : public QOpcUaBaseVariable
+class QOpcUaProperty : public QOpcUaBaseVariable, public QOpcUaServerNodeFactory<QOpcUaProperty>
 {
     Q_OBJECT
 public:

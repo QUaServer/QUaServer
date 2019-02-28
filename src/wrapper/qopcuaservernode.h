@@ -6,6 +6,7 @@
 
 #include <QObject>
 #include <QVariant>
+#include <QMetaProperty>
 
 #include "open62541.h"
 
@@ -101,8 +102,6 @@ public:
 	virtual QOpcUaFolderObject     * addFolderObject    ();
 
 
-	// private?
-
 	// to be able to reuse methods in subclasses
 	QOpcUaServer * m_qopcuaserver;
 
@@ -110,6 +109,8 @@ public:
 
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
+
+	UA_Server * getMServer();
 
 signals:
 
@@ -123,6 +124,33 @@ protected:
 	explicit QOpcUaServerNode(QOpcUaServer *server);
 
 
+};
+
+template<typename T>
+struct QOpcUaServerNodeFactory
+{
+	inline QOpcUaServerNodeFactory()
+	{
+		// intialize member of child class, in parent class constructor
+		// VS2013 allows it unless an explicit value is assigned in the class definition
+		// in such case, the value is assigned after the parent constructor is called and
+		// before the child constructor is called
+		auto ptr = static_cast<T*>(this);
+		qDebug() << "PTR" << ptr->getMServer();
+
+		// list meta props
+		auto metaObj   = T::staticMetaObject;
+		int propCount  = metaObj.propertyCount();
+		int propOffset = metaObj.propertyOffset();
+		for (int i = propOffset; i < propCount; i++)
+		{
+			// check if available in meta-system
+			QMetaProperty metaproperty = metaObj.property(i);
+			// check if prop type registered, register of not
+			QString   strPropName = QString(metaproperty.name());
+			qDebug() << strPropName;
+		}
+	}
 };
 
 #endif // QOPCUASERVERNODE_H

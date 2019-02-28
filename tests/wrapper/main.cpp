@@ -16,7 +16,6 @@ int main(int argc, char *argv[])
 	auto objsFolder = server.get_objectsFolder();
 
 	// instances
-
 	auto varBaseData = objsFolder->addBaseDataVariable();
 	varBaseData->set_browseName("QOpcUaBaseDataVariable");
 	varBaseData->set_displayName("QOpcUaBaseDataVariable");

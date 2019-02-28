@@ -7,7 +7,7 @@
 class MyOtherNewVariableType;
 class MyNewVariableSubType;
 
-class MyNewVariableType : public QOpcUaBaseDataVariable
+class MyNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNodeFactory<MyNewVariableType>
 {
     Q_OBJECT
 
@@ -26,12 +26,15 @@ public:
 	// NOTE : Forbidden Component
 	//MyNewVariableSubType   * getMyProhib();
 
+	int m_int;
+
 private:
 	QOpcUaBaseDataVariable * m_myVar;
 	QOpcUaBaseObject       * m_myObj;
 	MyOtherNewVariableType * m_myOtherVar;
 	// NOTE : Forbidden Component
 	//MyNewVariableSubType   * m_myProhib;
+	
 };
 
 // ---

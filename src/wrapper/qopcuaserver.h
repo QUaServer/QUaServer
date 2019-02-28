@@ -15,6 +15,8 @@ class QOpcUaServer : public QObject
 friend class QOpcUaServerNode;
 friend class QOpcUaBaseVariable;
 friend class QOpcUaBaseObject;
+// NOTE : this is how we would declare a <template class> friend
+//template<typename T> friend class QOpcUaServerNodeFactory;
 
 public:
     explicit QOpcUaServer(QObject *parent = 0);
@@ -32,7 +34,7 @@ public:
 	T* createInstance(QOpcUaServerNode * parentNode);
 
 	QOpcUaFolderObject * get_objectsFolder();
-	
+
 signals:
 	void iterateServer();
 
@@ -52,7 +54,9 @@ private:
 
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 
-	void createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode, QOpcUaServerNode * childNode);
+	UA_NodeId createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode);
+
+	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server       *server,
                                                   const UA_NodeId *sessionId, 
@@ -83,14 +87,21 @@ inline void QOpcUaServer::registerType()
 template<typename T>
 inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 {
-	// instantiate C++ object or variable
-	T * childNode = new T(parentNode);
-	this->createInstance(T::staticMetaObject, parentNode, childNode);
-	if (UA_NodeId_isNull(&childNode->m_nodeId))
+	// instantiate first in OPC UA
+	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode);
+	if (newInstanceNodeId == UA_NODEID_NULL)
 	{
-		delete childNode;
 		return nullptr;
 	}
+
+	// TODO : find a way to instantiate in UA constructor and then get the c++ ref with
+	//        UA_Server_getNodeContext
+
+	// create new c++ instance
+	T * childNode = new T(parentNode);
+	// bind
+	this->bindCppInstanceWithUaNode(childNode, newInstanceNodeId);
+	// return c++ instance
 	return childNode;
 }
 

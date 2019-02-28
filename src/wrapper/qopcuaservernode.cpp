@@ -5,6 +5,8 @@
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaFolderObject>
 
+#include "mynewvariabletype.h"
+
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
 {
 	m_qopcuaserver = parent->m_qopcuaserver;
@@ -203,4 +205,7 @@ QOpcUaFolderObject * QOpcUaServerNode::addFolderObject()
 	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this);
 }
 
-
+UA_Server * QOpcUaServerNode::getMServer()
+{
+	return m_qopcuaserver->m_server;
+}
