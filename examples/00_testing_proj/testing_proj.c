@@ -22,11 +22,11 @@ int main(void)
 
 
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	bDesc->nodeId          = instanceId;
-	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE;
+	bDesc->nodeId          = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // instanceId;
+	bDesc->browseDirection = UA_BROWSEDIRECTION_BOTH; //  UA_BROWSEDIRECTION_FORWARD; // UA_BROWSEDIRECTION_INVERSE;
 	//bDesc->referenceTypeId = NONE!
 	bDesc->includeSubtypes = false;
-	bDesc->nodeClassMask   = UA_BROWSERESULTMASK_ALL;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; //UA_BROWSERESULTMASK_ALL;
 	bDesc->resultMask      = UA_BROWSERESULTMASK_ALL;
 
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);

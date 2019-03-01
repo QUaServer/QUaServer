@@ -48,7 +48,7 @@ class QOpcUaBaseObject : public QOpcUaServerNode, public QOpcUaServerNodeFactory
 friend class QOpcUaServer;
 
 public:
-	explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors

@@ -1,5 +1,8 @@
 include($$PWD/../open62541.pri)
 
+QT     += core
+CONFIG += c++11
+
 INCLUDEPATH += $$PWD/
 
 SOURCES += \

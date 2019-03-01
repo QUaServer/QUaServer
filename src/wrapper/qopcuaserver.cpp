@@ -11,23 +11,91 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	                                      const UA_NodeId * nodeId, 
 	                                      void            ** nodeContext)
 {
-	//// check if constructor from explicit instance creation or type registration
-	//if (!*nodeContext)
-	//{
-	//	return UA_StatusCode(); // TODO : what about network creation or component instantiation? (not exclicit instance creation)
-	//}
+	Q_UNUSED(sessionId); 
+	Q_UNUSED(sessionContext); 
+	Q_UNUSED(typeNodeId); 
+	Q_UNUSED(nodeContext);
 	// get server from context object
 	auto obj = static_cast<QOpcUaServer*>(typeNodeContext);
 	Q_CHECK_PTR(obj);
 	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
 	return obj->m_hashConstructors[*typeNodeId](server,
-		                                        sessionId,
-		                                        sessionContext,
-		                                        typeNodeId,
-		                                        typeNodeContext,
-		                                        nodeId,
-		                                        nodeContext);
+		                                        nodeId);
+}
+
+UA_StatusCode QOpcUaServer::uaConstructor(UA_Server         * server, 
+	                                      const UA_NodeId   * nodeId, 
+	                                      const QMetaObject & metaObject)
+{
+	// check if constructor from explicit instance creation or type registration
+	UA_NodeId parentNodeId = QOpcUaServer::getParentNodeId(*nodeId, server);
+	if (UA_NodeId_isNull(&parentNodeId))
+	{
+		// ignore if new instance is due to new type registration
+		return UA_STATUSCODE_GOOD;
+	}
+	// is parent bound
+	bool      parentBound = QOpcUaServer::isNodeBound(parentNodeId, server);
+	QString   strClassName = QString(metaObject.className());
+	qDebug() << "Called OPC UA constructor for" << strClassName << "Parent bound :" << parentBound;
+	return UA_STATUSCODE_GOOD;
+}
+
+UA_NodeId QOpcUaServer::getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server)
+{
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	bDesc->nodeId          = childNodeId; // from child
+	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
+	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	QList<UA_NodeId> listParents;
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			listParents.append(nodeId);
+		}
+		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	Q_ASSERT_X(listParents.count() <= 1, "QOpcUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
+	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
+}
+
+bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
+{
+	// gte void context
+	void * context;
+	auto st = UA_Server_getNodeContext(server, nodeId, &context);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return false;
+	}
+	// try to cast to C++ node
+	auto ptr = static_cast<QOpcUaServerNode*>(context);
+	if (!ptr)
+	{
+		return false;
+	}
+	// test if nodeId assigned to context
+	if (!UA_NodeId_equal(&nodeId, &ptr->m_nodeId))
+	{
+		return false;
+	}
+	// success
+	return true;
 }
 
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
@@ -38,12 +106,29 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this);
+	// [TEMP] bind objects folder
+	auto st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), (void*)m_pobjectsFolder);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	m_pobjectsFolder->m_nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+
 	// register base types
 	m_mapTypes.insert(QString(QOpcUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
 	m_mapTypes.insert(QString(QOpcUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
 	m_mapTypes.insert(QString(QOpcUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        );
 	m_mapTypes.insert(QString(QOpcUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
 	m_mapTypes.insert(QString(QOpcUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
+	// set context for base types
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// register constructors for instantiable types
+	this->registerTypeLifeCycle(&UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QOpcUaBaseDataVariable::staticMetaObject);
+	this->registerTypeLifeCycle(&UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QOpcUaProperty        ::staticMetaObject);
+	this->registerTypeLifeCycle(&UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QOpcUaBaseObject      ::staticMetaObject);
+	this->registerTypeLifeCycle(&UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QOpcUaFolderObject    ::staticMetaObject);
+	
+	
 }
 
 /* TODO : alternative constructor
@@ -163,32 +248,50 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-	// add to map
+	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
+
+	// register constructor/destructor
+	this->registerTypeLifeCycle(&newTypeNodeId, metaObject);
+
+
 	// register meta-properties
 	this->addMetaProperties(metaObject);
 
 	// TODO : register meta-methods
 
+	//
+
+
+}
+
+void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * nodeId, const QMetaObject & metaObject)
+{
+	Q_CHECK_PTR(nodeId);
+	Q_ASSERT(!UA_NodeId_isNull(nodeId));
+	if (UA_NodeId_isNull(nodeId))
+	{
+		return;
+	}
 	// add constructor
-	Q_ASSERT_X(!m_hashConstructors.contains(newTypeNodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
-	m_hashConstructors[newTypeNodeId] = [strClassName](
-	                                       UA_Server        *server,
-		                                   const UA_NodeId  *sessionId, 
-		                                   void             *sessionContext,
-		                                   const UA_NodeId  *typeNodeId, 
-		                                   void             *typeNodeContext,
-		                                   const UA_NodeId  *nodeId, 
-		                                   void            **nodeContext) {
-		qDebug() << "Called OPC UA constructor for" << strClassName;	
-		return UA_StatusCode();
+	Q_ASSERT_X(!m_hashConstructors.contains(*nodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
+	// NOTE : we need constructors to be lambdas in order to cachec metaobject in capture
+	//        because type context is already the server instance where type was registered
+	//        so we can differentiate the server instance in the static ::uaConstructor callback
+	//        TLDR; to support multiple server instance in an application
+	m_hashConstructors[*nodeId] = [metaObject](UA_Server        *server,
+		                                       const UA_NodeId  *nodeId) {
+		// call static method
+		return QOpcUaServer::uaConstructor(server, nodeId, metaObject);
 	};
 
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = &QOpcUaServer::uaConstructor;
+	
+	// TODO : destructor
 	//lifecycle.destructor  = ;
-	UA_Server_setNodeTypeLifecycle(m_server, newTypeNodeId, lifecycle);
-
+	
+	UA_Server_setNodeTypeLifecycle(m_server, *nodeId, lifecycle);
 }
 
 void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)

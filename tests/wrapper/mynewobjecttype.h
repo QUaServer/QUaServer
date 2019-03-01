@@ -11,7 +11,7 @@ class MyNewObjectType : public QOpcUaBaseObject
 	Q_PROPERTY(MyNewVariableSubSubType * myVarSubSub READ getMyVarSubSub)
 
 public:
-	explicit MyNewObjectType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyNewObjectType(QOpcUaServerNode *parent);
 
 	MyNewVariableSubSubType * getMyVarSubSub();
 
@@ -25,7 +25,7 @@ class MyOtherNewObjectType : public QOpcUaBaseObject
 	Q_OBJECT
 
 public:
-	explicit MyOtherNewObjectType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyOtherNewObjectType(QOpcUaServerNode *parent);
 
 private:
 

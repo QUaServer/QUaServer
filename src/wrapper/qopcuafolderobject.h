@@ -21,7 +21,7 @@ class QOpcUaFolderObject : public QOpcUaBaseObject, public QOpcUaServerNodeFacto
 friend class QOpcUaServer;
 
 public:
-    explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
 
 	
 

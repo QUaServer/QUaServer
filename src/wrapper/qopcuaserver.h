@@ -52,6 +52,8 @@ private:
 
 	void registerType(const QMetaObject &metaObject);
 
+	void registerTypeLifeCycle(const UA_NodeId *nodeId, const QMetaObject &metaObject);
+
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 
 	UA_NodeId createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode);
@@ -59,12 +61,7 @@ private:
 	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server       *server,
-                                                  const UA_NodeId *sessionId, 
-                                                  void            *sessionContext,
-                                                  const UA_NodeId *typeNodeId, 
-                                                  void            *typeNodeContext,
-                                                  const UA_NodeId *nodeId, 
-                                                  void           **nodeContext)>> m_hashConstructors;
+                                                  const UA_NodeId *nodeId)>> m_hashConstructors;
 
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 
@@ -75,6 +72,14 @@ private:
 		                               void             *typeNodeContext,
 		                               const UA_NodeId  *nodeId, 
 		                               void            **nodeContext);
+
+	static UA_StatusCode uaConstructor(UA_Server         *server,
+		                               const UA_NodeId   *nodeId, 
+		                               const QMetaObject &metaObject);
+
+	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server);
+
+	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 };
 
 template<typename T>

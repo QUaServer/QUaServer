@@ -15,7 +15,7 @@ class QOpcUaProperty : public QOpcUaBaseVariable, public QOpcUaServerNodeFactory
 {
     Q_OBJECT
 public:
-    explicit QOpcUaProperty(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaProperty(QOpcUaServerNode *parent);
 
 	// delete methods from derived class
 	// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class

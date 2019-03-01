@@ -8,6 +8,7 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -15,22 +16,22 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	//// instances
-	//auto varBaseData = objsFolder->addBaseDataVariable();
-	//varBaseData->set_browseName("QOpcUaBaseDataVariable");
-	//varBaseData->set_displayName("QOpcUaBaseDataVariable");
+	// instances
+	auto varBaseData = objsFolder->addBaseDataVariable();
+	varBaseData->set_browseName("QOpcUaBaseDataVariable");
+	varBaseData->set_displayName("QOpcUaBaseDataVariable");
 
-	//auto varProp = objsFolder->addProperty();
-	//varProp->set_browseName("QOpcUaProperty");
-	//varProp->set_displayName("QOpcUaProperty");
+	auto varProp = objsFolder->addProperty();
+	varProp->set_browseName("QOpcUaProperty");
+	varProp->set_displayName("QOpcUaProperty");
 
-	//auto objBase = objsFolder->addBaseObject();
-	//objBase->set_browseName("QOpcUaBaseObject");
-	//objBase->set_displayName("QOpcUaBaseObject");
+	auto objBase = objsFolder->addBaseObject();
+	objBase->set_browseName("QOpcUaBaseObject");
+	objBase->set_displayName("QOpcUaBaseObject");
 
-	//auto objFolder = objsFolder->addFolderObject();
-	//objFolder->set_browseName("QOpcUaFolderObject");
-	//objFolder->set_displayName("QOpcUaFolderObject");
+	auto objFolder = objsFolder->addFolderObject();
+	objFolder->set_browseName("QOpcUaFolderObject");
+	objFolder->set_displayName("QOpcUaFolderObject");
 
 	//// methods
 
@@ -78,6 +79,11 @@ int main(int argc, char *argv[])
 	//newVarSubSubTypeInstance->set_browseName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->set_displayName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
+
+
+	auto children = objsFolder->findChildren<QOpcUaBaseObject>();
+	qDebug() << "Children " << children.count();
+
 
 	// [NOTE] blocking, TODO : move to thread
 	server.start();
