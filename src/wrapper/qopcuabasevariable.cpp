@@ -3,11 +3,6 @@
 #include <QOpcUaServer>
 #include <QOpcUaBaseDataVariable>
 
-QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServerNode *parent) : QOpcUaServerNode(parent)
-{
-
-}
-
 QVariant QOpcUaBaseVariable::get_value() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);

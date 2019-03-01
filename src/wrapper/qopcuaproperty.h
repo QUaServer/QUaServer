@@ -11,11 +11,11 @@ Properties are defined by their BrowseName and therefore they do not need
 a specialised type definition. It is not allowed to subtype this VariableType.
 */
 
-class QOpcUaProperty : public QOpcUaBaseVariable, public QOpcUaServerNodeFactory<QOpcUaProperty>
+class QOpcUaProperty : public QOpcUaBaseVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QOpcUaProperty(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaProperty(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	// delete methods from derived class
 	// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class

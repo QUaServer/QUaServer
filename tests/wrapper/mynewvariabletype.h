@@ -16,7 +16,7 @@ class MyNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNode
 	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	QOpcUaBaseDataVariable * getMyVar();
 	QOpcUaBaseObject       * getMyObj();
@@ -31,12 +31,12 @@ private:
 
 // ---
 
-class MyOtherNewVariableType : public QOpcUaBaseDataVariable
+class MyOtherNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNodeFactory<MyOtherNewVariableType>
 {
 	Q_OBJECT
 
 public:
-	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 private:
 
@@ -44,14 +44,14 @@ private:
 
 // ---
 
-class MyNewVariableSubType : public MyNewVariableType
+class MyNewVariableSubType : public MyNewVariableType, public QOpcUaServerNodeFactory<MyNewVariableSubType>
 {
 	Q_OBJECT
 
 	Q_PROPERTY(QOpcUaBaseObject * myObjSub READ getMyObjSub)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	QOpcUaBaseObject * getMyObjSub();
 
@@ -62,14 +62,14 @@ private:
 
 // ---
 
-class MyNewVariableSubSubType : public MyNewVariableSubType
+class MyNewVariableSubSubType : public MyNewVariableSubType, public QOpcUaServerNodeFactory<MyNewVariableSubSubType>
 {
 	Q_OBJECT
 
 	Q_PROPERTY(QOpcUaBaseObject * myObjSubSub READ getMyObjSubSub)
 
 public:
-	explicit MyNewVariableSubSubType(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit MyNewVariableSubSubType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	QOpcUaBaseObject * getMyObjSubSub();
 

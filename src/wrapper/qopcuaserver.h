@@ -79,6 +79,8 @@ private:
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server);
 
+	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server *server);
+
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 };
 
@@ -99,15 +101,13 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		return nullptr;
 	}
 
-	// TODO : find a way to instantiate in UA constructor and then get the c++ ref with
-	//        UA_Server_getNodeContext?
-
-	// create new c++ instance
-	T * childNode = new T(parentNode);
-	// bind
-	this->bindCppInstanceWithUaNode(childNode, newInstanceNodeId);
+	// create new c++ instance (and bind to UA)
+	T * newInstance = new T(parentNode->m_qopcuaserver, newInstanceNodeId);
+	// set parent and pass on server instance
+	newInstance->setParent(parentNode);
+	
 	// return c++ instance
-	return childNode;
+	return newInstance;
 }
 
 template<typename T>

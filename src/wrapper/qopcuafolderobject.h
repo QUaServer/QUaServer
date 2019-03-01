@@ -14,20 +14,17 @@ instance of the FolderType, such as “ObjectTypes”, should imply the
 semantics associated with the use of it.
 */
 
-class QOpcUaFolderObject : public QOpcUaBaseObject, public QOpcUaServerNodeFactory<QOpcUaFolderObject>
+class QOpcUaFolderObject : public QOpcUaBaseObject
 {
     Q_OBJECT
 
 friend class QOpcUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	
 
-private:
-	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
-	explicit QOpcUaFolderObject(QOpcUaServer *server);
 };
 
 #endif // QOPCUAFOLDEROBJECT_H

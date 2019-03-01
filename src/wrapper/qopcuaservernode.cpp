@@ -7,25 +7,6 @@
 
 #include "mynewvariabletype.h"
 
-QOpcUaServerNode::QOpcUaServerNode(QOpcUaServerNode *parent) : QObject(parent)
-{
-	m_qopcuaserver = parent->m_qopcuaserver;
-	m_nodeId       = UA_NODEID_NULL;
-	// NOTE : type NodeId is null until class is registered in server
-	Q_CHECK_PTR(m_qopcuaserver);
-}
-
-// PROTECTED
-QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer * server) : QObject(server)
-{
-	// This is a private constructor meant to be called only by QOpcUaServerNode
-	// And its only purpose is to create the UA_NS0ID_OBJECTSFOLDER instance
-	m_qopcuaserver = server;
-	m_nodeId       = UA_NODEID_NULL;
-	// NOTE : type NodeId is null until class is registered in server
-	Q_CHECK_PTR(m_qopcuaserver);
-}
-
 QString QOpcUaServerNode::get_displayName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
@@ -208,4 +189,16 @@ QOpcUaFolderObject * QOpcUaServerNode::addFolderObject()
 UA_Server * QOpcUaServerNode::getUAServer()
 {
 	return m_qopcuaserver->m_server;
+}
+
+void QOpcUaServerNode::bindWithUaNode(QOpcUaServer *server, const UA_NodeId & nodeId)
+{
+	Q_ASSERT(!UA_NodeId_isNull(&nodeId));
+	// set server instance
+	this->m_qopcuaserver = server;
+	// set c++ instance as context
+	UA_Server_setNodeContext(server->m_server, nodeId, (void*)this);
+	// set node id to c++ instance
+	this->m_nodeId = nodeId;
+	
 }

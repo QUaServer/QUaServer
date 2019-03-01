@@ -60,10 +60,10 @@ int main(int argc, char *argv[])
 	//otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
 	//otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
 
-	auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
-	newVarTypeInstance->set_browseName("MyNewVariableType");
-	newVarTypeInstance->set_displayName("MyNewVariableType");
-	newVarTypeInstance->set_value(1.2345);
+	//auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
+	//newVarTypeInstance->set_browseName("MyNewVariableType");
+	//newVarTypeInstance->set_displayName("MyNewVariableType");
+	//newVarTypeInstance->set_value(1.2345);
 	
 	//auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
 	//newVarTypeInstance2->set_browseName("MyNewVariableType2");

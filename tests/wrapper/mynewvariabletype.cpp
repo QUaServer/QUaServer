@@ -1,6 +1,7 @@
 #include "mynewvariabletype.h"
 
-MyNewVariableType::MyNewVariableType(QOpcUaServerNode *parent) : QOpcUaBaseDataVariable(parent)
+MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId) 
+	: QOpcUaServerNodeFactory<MyNewVariableType>(server, nodeId)
 {
 	qDebug() << "MyNewVariableType C++ constructor.";
 }
@@ -23,14 +24,16 @@ MyOtherNewVariableType * MyNewVariableType::getMyOtherVar()
 
 // ---
 
-MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServerNode *parent) : QOpcUaBaseDataVariable(parent)
+MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId)
+	: QOpcUaServerNodeFactory<MyOtherNewVariableType>(server, nodeId)
 {
 	qDebug() << "MyOtherNewVariableType C++ constructor.";
 }
 
 // ---
 
-MyNewVariableSubType::MyNewVariableSubType(QOpcUaServerNode *parent) : MyNewVariableType(parent)
+MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
+	: QOpcUaServerNodeFactory<MyNewVariableSubType>(server, nodeId)
 {
 
 }
@@ -42,7 +45,8 @@ QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 
 // ---
 
-MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServerNode *parent) : MyNewVariableSubType(parent)
+MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
+	: QOpcUaServerNodeFactory<MyNewVariableSubSubType>(server, nodeId)
 {
 	qDebug() << "MyNewVariableSubSubType C++ constructor.";
 }

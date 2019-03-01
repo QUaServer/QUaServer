@@ -36,7 +36,7 @@ This ObjectType is the base ObjectType and all other ObjectTypes shall either
 directly or indirectly inherit from it.
 */
 
-class QOpcUaBaseObject : public QOpcUaServerNode, public QOpcUaServerNodeFactory<QOpcUaBaseObject>
+class QOpcUaBaseObject : public QOpcUaServerNode
 {
     Q_OBJECT
 
@@ -48,7 +48,7 @@ class QOpcUaBaseObject : public QOpcUaServerNode, public QOpcUaServerNodeFactory
 friend class QOpcUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServerNode *parent);
+	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
@@ -61,10 +61,6 @@ public:
 	void addMethod(const QString &strMethodName, const T &methodCallback);
 	// specialization, no args no return
 	void addMethod(const QString &strMethodName, const std::function<void(void)> &methodCallback);
-
-protected:
-	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
-	explicit QOpcUaBaseObject(QOpcUaServer *server);
 
 private:
 

@@ -77,7 +77,6 @@ class QOpcUaServerNode : public QObject
     Q_PROPERTY(QString browseName READ get_browseName WRITE set_browseName NOTIFY browseNameChanged)
 
 public:
-	explicit QOpcUaServerNode(QOpcUaServerNode *parent);
 
 	// OPC UA methods API
 
@@ -114,6 +113,7 @@ public:
 	// NOTE : this is how we would declare a <template class> friend
 	//template<typename T> friend class QOpcUaServerNodeFactory;
 	UA_Server * getUAServer();
+	void        bindWithUaNode(QOpcUaServer *server, const UA_NodeId &nodeId);
 
 signals:
 
@@ -121,10 +121,9 @@ signals:
 	void descriptionChanged(const QString &description);
 	void writeMaskChanged  (const quint32 &writeMask  );
 	void browseNameChanged (const QString &browseName );
+	
 
-protected:
-	// NOTE : this private method exists so QOpcUaServer can create the UA_NS0ID_OBJECTSFOLDER instance
-	explicit QOpcUaServerNode(QOpcUaServer *server);
+private:
 
 
 };
@@ -170,8 +169,14 @@ struct QOpcUaServerNodeFactory
 				            QOpcUaServerNodeFactory in order to sort out c++ children references.	
 	             - Status    : TODO
 	*/
-	inline QOpcUaServerNodeFactory(/*const UA_NodeId &nodeId*/)
+	inline QOpcUaServerNodeFactory(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL)
 	{
+		// check
+		if (!server || UA_NodeId_isNull(&nodeId))
+		{
+			return;
+		}
+
 		// intialize member of child class, in parent class constructor
 		// VS2013 allows it unless an explicit value is assigned in the class definition
 		// in such case, the value is assigned after the parent constructor is called and
@@ -190,20 +195,34 @@ struct QOpcUaServerNodeFactory
 		int propOffset = metaObj.propertyOffset();
 		for (int i = propOffset; i < propCount; i++)
 		{
-			// check if available in meta-system
-			QMetaProperty metaproperty = metaObj.property(i);
+			/// check if available in meta-system
+			QMetaProperty metaproperty = T::staticMetaObject.property(i);
+			if (!QMetaType::metaObjectForType(metaproperty.userType()))
+			{
+				continue;
+			}
+			// check if OPC UA relevant type
+			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+			{
+				continue;
+			}
+			// check if prop inherits from parent
+			Q_ASSERT_X(!propMetaObject.inherits(&T::staticMetaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
+			if (propMetaObject.inherits(&T::staticMetaObject))
+			{
+				continue;
+			}
 			// check if prop type registered, register of not
 			QString   strPropName = QString(metaproperty.name());
-			qDebug() << "MetaProp :" << strPropName;
+			//QString   strPropClassName = QString(propMetaObject.className());
+			qDebug() << strPropName;
+
+			// TODO : 
+
 		}
 
-		int constCount  = metaObj.constructorCount();
-		for (int i = 0; i < constCount; i++)
-		{
-			// print constructor signature
-			QMetaMethod constructor = metaObj.constructor(i);
-			qDebug() << "MetaMeth :" << constructor.methodSignature();
-		}
+		
 	}
 };
 

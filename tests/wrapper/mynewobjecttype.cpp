@@ -1,6 +1,7 @@
 #include "mynewobjecttype.h"
 
-MyNewObjectType::MyNewObjectType(QOpcUaServerNode *parent) : QOpcUaBaseObject(parent)
+MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId)
+	: QOpcUaServerNodeFactory<MyNewObjectType>(server, nodeId)
 {
 	
 }
@@ -12,7 +13,8 @@ MyNewVariableSubSubType * MyNewObjectType::getMyVarSubSub()
 
 // ---
 
-MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServerNode *parent) : QOpcUaBaseObject(parent)
+MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId)
+	: QOpcUaServerNodeFactory<MyOtherNewObjectType>(server, nodeId)
 {
 
 }
