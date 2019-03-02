@@ -115,6 +115,17 @@ public:
 	UA_Server * getUAServer();
 	void        bindWithUaNode(QOpcUaServer *server, const UA_NodeId &nodeId);
 
+	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QOpcUaServer *server);
+	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server    *server);
+
+	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId &parentNodeId, QOpcUaServer *server);
+	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId &parentNodeId, UA_Server    *server);
+
+	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, QOpcUaServer *server);
+	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server    *server);
+
+	static int getPropsOffsetHelper(const QMetaObject &metaObject);
+
 signals:
 
 	void displayNameChanged(const QString &displayName);
@@ -132,43 +143,6 @@ template<typename T>
 struct QOpcUaServerNodeFactory
 {
 	// For custom obj types with props
-	/*
-	Description : We can have instances been created programmatically (createInstance), through the network or when registering types
-	          We need to "bind" such new instances to their responding C++ objects to keep the desired tree-like API.
-			  To "bind" means that the UA_Node has the C++ instance reference as a context and the C++ instance has the node's UA_NodeId. 
-			  It also means the C++ instance is attached to a parent C++ instance (through Qt's object tree) which corresponds to the UA Parent.
-			  Note that when creating new instance through UA API, a UA constructor can be called. 
-			  For complex instances, the children constructors are called first and then upwards.
-			  In the children constructor it is possible to browse the parent NodeId and through it.
-			  Through the parent NodeId it is possible check if the parent is already bound (using UA_Server_getNodeContext)
-			  0) Instances created during type registration 
-			     - Proposal : can be ignored by checking their parent node class is a UA type (use UA_Server_readNodeClass).	
-				 - Status   : done
-			  1) One case is a new instance to be added that has no children and the parent has already been "bound".
-			     - Proposal : when UA constructor is called create new C++ instance, bind it to UA and set C++ parent.
-				              find a way to define UA constructor for built in basic types with known UA_NodeId (base object, etc)
-				 - Problem  : need C++ type to instantiate correctly, how to pass it to UA constructor?
-				              the main blocking issue is children types auto registration that relyies on QMetaObject and no types are available
-							  if we instantiate manually there is no issue because we just call the template version where we can access the type
-							  we could use QMetaObject::newInstance but would require the constructor to be Q_INVOKABLE 
-				 - Status    : TODO
-			  2) Other case is a new instance to be added that has no children and the parent has NOT been "bound", parent UA_Node has no C++ context.
-			     - Proposal  : TODO
-				 - Status    : TODO
-			  3) Other case is new instance has children. Children are already instantiated and half-bound with no C++ parent defined.
-			     The new instance parent has NOT been "bound", parent UA_Node has no C++ context.
-				 - Proposal  : TODO
-				 - Status    : TODO
-			  4) Final case is new instance has children. Children are already instantiated and half-bound with no C++ parent defined.
-			     The new instance parent has been "bound", parent UA_Node has already a C++ context.
-				 - Proposal  : TODO
-				 - Status    : TODO
-			  5) For binding we would like that c++ children references are already asigned before the parent C++ constructor is called
-			     - Proposal : use QOpcUaServerNodeFactory as static polymorphism to execute code before calling the C++ constructor 
-				 - Problem  : this would require the parent constructor to accept a mandatory UA_NodeId as argument to be passed to 
-				            QOpcUaServerNodeFactory in order to sort out c++ children references.	
-	             - Status    : TODO
-	*/
 	inline QOpcUaServerNodeFactory(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL)
 	{
 		// check
@@ -176,26 +150,39 @@ struct QOpcUaServerNodeFactory
 		{
 			return;
 		}
+		// get instance of type being instantiated
+		auto ptrThis = static_cast<T*>(this);
+		// bind itself
+		ptrThis->bindWithUaNode(server, nodeId);
 
-		// intialize member of child class, in parent class constructor
-		// VS2013 allows it unless an explicit value is assigned in the class definition
-		// in such case, the value is assigned after the parent constructor is called and
-		// before the child constructor is called
-		// NOTE : this is called for every base class that inherits it.
-		//        the most specific class calls is last (if inherits from it LAST)
-		// to differentiate we can set the constructor arg as /*const UA_NodeId &nodeId = UA_NODEID_NULL*/
-		// so only the most specific class will be non-null
-		auto ptr = static_cast<T*>(this);
-		//qDebug() << "PTR" << ptr->getUAServer();
+		// get all UA children in advance, because if none, then better early exit
+		auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
+		if (chidrenNodeIds.count() <= 0)
+		{
+			return;
+		}
+		// create map with nodeId's context which already must be valid QOpcUaServerNode instances
+		QHash<UA_NodeId, QOpcUaServerNode*> mapChildren;
+		for (int i = 0; i < chidrenNodeIds.count(); i++)
+		{
+			auto childNodeId = chidrenNodeIds[i];
+			Q_ASSERT(!mapChildren.contains(childNodeId));
+			mapChildren[childNodeId] = QOpcUaServerNode::getNodeContext(childNodeId, server);
+		}
+		
+		
+		// [DEBUG]
 		qDebug() << "QOpcUaServerNodeFactory<" << T::staticMetaObject.className() << ">";
 
 		// list meta props
 		auto metaObj   = T::staticMetaObject;
 		int propCount  = metaObj.propertyCount();
-		int propOffset = metaObj.propertyOffset();
+		int propOffset = QOpcUaServerNode::getPropsOffsetHelper(T::staticMetaObject);
+
+
 		for (int i = propOffset; i < propCount; i++)
 		{
-			/// check if available in meta-system
+			// check if available in meta-system
 			QMetaProperty metaproperty = T::staticMetaObject.property(i);
 			if (!QMetaType::metaObjectForType(metaproperty.userType()))
 			{
@@ -213,12 +200,20 @@ struct QOpcUaServerNodeFactory
 			{
 				continue;
 			}
-			// check if prop type registered, register of not
-			QString   strPropName = QString(metaproperty.name());
-			//QString   strPropClassName = QString(propMetaObject.className());
-			qDebug() << strPropName;
+
+			// [DEBUG]
+			qDebug() << QString(metaproperty.name());
+
+
+
+			// get pointer to node-derived instance, must be already instantiated
+			//metaproperty.write(ptrThis, );
 
 			// TODO : 
+
+			
+
+
 
 		}
 

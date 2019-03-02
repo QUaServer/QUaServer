@@ -194,6 +194,7 @@ UA_Server * QOpcUaServerNode::getUAServer()
 void QOpcUaServerNode::bindWithUaNode(QOpcUaServer *server, const UA_NodeId & nodeId)
 {
 	Q_ASSERT(!UA_NodeId_isNull(&nodeId));
+	Q_CHECK_PTR(server);
 	// set server instance
 	this->m_qopcuaserver = server;
 	// set c++ instance as context
@@ -201,4 +202,110 @@ void QOpcUaServerNode::bindWithUaNode(QOpcUaServer *server, const UA_NodeId & no
 	// set node id to c++ instance
 	this->m_nodeId = nodeId;
 	
+}
+
+UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, QOpcUaServer * server)
+{
+	return QOpcUaServerNode::getParentNodeId(childNodeId, server->m_server);
+}
+
+UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
+{
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	bDesc->nodeId          = childNodeId; // from child
+	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
+	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	QList<UA_NodeId> listParents;
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			listParents.append(nodeId);
+		}
+		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	Q_ASSERT_X(listParents.count() <= 1, "QOpcUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
+	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
+}
+
+QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, QOpcUaServer * server)
+{
+	return QOpcUaServerNode::getChildrenNodeIds(parentNodeId, server->m_server);
+}
+
+QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_Server * server)
+{
+	QList<UA_NodeId> retListChildren;
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	bDesc->nodeId          = parentNodeId; // from parent
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
+	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			retListChildren.append(nodeId);
+		}
+		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return retListChildren;
+}
+
+QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, QOpcUaServer * server)
+{
+	return QOpcUaServerNode::getNodeContext(nodeId, server->m_server);
+}
+
+QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
+{
+	// get void context
+	void * context;
+	auto st = UA_Server_getNodeContext(server, nodeId, &context);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return nullptr;
+	}
+	// try to cast to C++ node
+	return static_cast<QOpcUaServerNode*>(context);
+}
+
+int QOpcUaServerNode::getPropsOffsetHelper(const QMetaObject & metaObject)
+{
+	int propOffset;
+	// need to set props also inherited from base class
+	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+	{
+		propOffset = QOpcUaBaseVariable::staticMetaObject.propertyOffset();
+	}
+	else
+	{
+		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		propOffset = QOpcUaBaseObject::staticMetaObject.propertyOffset();
+	}
+	return propOffset;
 }

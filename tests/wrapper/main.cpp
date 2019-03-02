@@ -60,10 +60,10 @@ int main(int argc, char *argv[])
 	//otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
 	//otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
 
-	//auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
-	//newVarTypeInstance->set_browseName("MyNewVariableType");
-	//newVarTypeInstance->set_displayName("MyNewVariableType");
-	//newVarTypeInstance->set_value(1.2345);
+	auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
+	newVarTypeInstance->set_browseName("MyNewVariableType");
+	newVarTypeInstance->set_displayName("MyNewVariableType");
+	newVarTypeInstance->set_value(1.2345);
 	
 	//auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
 	//newVarTypeInstance2->set_browseName("MyNewVariableType2");
@@ -81,8 +81,8 @@ int main(int argc, char *argv[])
 	//newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
 
 
-	auto children = objsFolder->findChildren<QOpcUaBaseObject>();
-	qDebug() << "Children " << children.count();
+	//auto children = objsFolder->findChildren<QOpcUaBaseObject>();
+	//qDebug() << "Children " << children.count();
 
 
 	// [NOTE] blocking, TODO : move to thread

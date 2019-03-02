@@ -13,7 +13,7 @@ class MyNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNode
 
 	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ getMyVar     )
 	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ getMyObj     )
-	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
+	//Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
 
 public:
 	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);

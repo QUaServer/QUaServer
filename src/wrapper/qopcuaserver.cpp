@@ -11,6 +11,7 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	                                      const UA_NodeId * nodeId, 
 	                                      void            ** nodeContext)
 {
+	Q_UNUSED(server);
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	Q_UNUSED(typeNodeId); 
@@ -20,103 +21,53 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	Q_CHECK_PTR(obj);
 	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
-	return obj->m_hashConstructors[*typeNodeId](server,
-		                                        nodeId);
+	return obj->m_hashConstructors[*typeNodeId](nodeId);
 }
 
-UA_StatusCode QOpcUaServer::uaConstructor(UA_Server         * server, 
+UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	                                      const UA_NodeId   * nodeId, 
 	                                      const QMetaObject & metaObject)
 {
 	// check if constructor from explicit instance creation or type registration
-	UA_NodeId parentNodeId = QOpcUaServer::getParentNodeId(*nodeId, server);
+	UA_NodeId parentNodeId = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
 	if (UA_NodeId_isNull(&parentNodeId))
 	{
 		// ignore if new instance is due to new type registration
 		return UA_STATUSCODE_GOOD;
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
-	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Class does not have required Q_INVOKABLE constructor.");
-	/* [DEBUG]
-	int constCount = metaObject.constructorCount();
-	for (int i = 0; i < constCount; i++)
-	{
-		// print constructor signature
-		QMetaMethod constructor = metaObject.constructor(i);
-		qDebug() << "MetaMeth :" << constructor.methodSignature();
-	}
-	*/
-	auto parent = getNodeContext(parentNodeId, server);
-	Q_CHECK_PTR(parent);
-	QOpcUaServerNode * newInstance = static_cast<QOpcUaServerNode*>(metaObject.newInstance(Q_ARG(QOpcUaServer*, parent->m_qopcuaserver), Q_ARG(UA_NodeId, *nodeId)));
+	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
+	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId));
+	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
+	auto * newInstance = static_cast<QOpcUaServerNode*>(pQObject);
 	Q_CHECK_PTR(newInstance);
-	// if parent bound, set as parent and pass on server instance
-	// if parent not bound it means parent is a non-base type and its c++ instance
-	// has not been created, then the parent and server will be set in QOpcUaServerNodeFactory
-	newInstance->setParent(parent);
 
-	// TODO : handle case where parent is not bound yet, how to pass in QOpcUaServer reference ?
+	// TODO : need to FIX binding to use the official (void ** nodeContext) of the UA constructor
+	//        because we set context now, but later the library overwrites it after calling the constructor
 
-	//if (parent)
-	//{
-	//	Q_ASSERT(QOpcUaServer::isNodeBound(parentNodeId, server));
-	//	newInstance->setParent(parent);
-	//}
+	// if parent bound, set as parent 
+	auto parent = QOpcUaServerNode::getNodeContext(parentNodeId, server->m_server);
+	if (parent)
+	{
+		Q_ASSERT(QOpcUaServer::isNodeBound(parentNodeId, server->m_server));
+		newInstance->setParent(parent);
+		// TODO : emit event in parent, that new children added
+	}
+	// if parent not bound it means parent is a non-base type and its c++ instance has not been created.
+	// then the parent and server will be set later in QOpcUaServerNodeFactory when parent is instantiated.
+	// the parent in QOpcUaServerNodeFactory will assign itself as parent if its children.
+
 	// [DEBUG]
 	QString strClassName = QString(metaObject.className());
-	qDebug() << "Called OPC UA constructor for" << strClassName << "Parent bound :" << QOpcUaServer::isNodeBound(parentNodeId, server);
+	qDebug() << "Called OPC UA constructor for" << strClassName << "Parent bound :" << QOpcUaServer::isNodeBound(parentNodeId, server->m_server);
+
 	// success
 	return UA_STATUSCODE_GOOD;
 }
 
-UA_NodeId QOpcUaServer::getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server)
-{
-	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	bDesc->nodeId          = childNodeId; // from child
-	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
-	bDesc->includeSubtypes = false;
-	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
-	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
-	// browse
-	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
-	QList<UA_NodeId> listParents;
-	while (bRes.referencesSize > 0)
-	{
-		for (size_t i = 0; i < bRes.referencesSize; i++)
-		{
-			UA_ReferenceDescription rDesc = bRes.references[i];
-			UA_NodeId nodeId = rDesc.nodeId.nodeId;
-			listParents.append(nodeId);
-		}
-		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
-	}
-	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
-	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
-	// return
-	Q_ASSERT_X(listParents.count() <= 1, "QOpcUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
-	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
-}
-
-QOpcUaServerNode * QOpcUaServer::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
-{
-	// get void context
-	void * context;
-	auto st = UA_Server_getNodeContext(server, nodeId, &context);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	if (st != UA_STATUSCODE_GOOD)
-	{
-		return nullptr;
-	}
-	// try to cast to C++ node
-	return static_cast<QOpcUaServerNode*>(context);
-}
-
 bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 {
-	auto ptr = QOpcUaServer::getNodeContext(nodeId, server);
+	auto ptr = QOpcUaServerNode::getNodeContext(nodeId, server);
 	if (!ptr)
 	{
 		return false;
@@ -293,24 +244,23 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 
 }
 
-void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * nodeId, const QMetaObject & metaObject)
+void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMetaObject & metaObject)
 {
-	Q_CHECK_PTR(nodeId);
-	Q_ASSERT(!UA_NodeId_isNull(nodeId));
-	if (UA_NodeId_isNull(nodeId))
+	Q_CHECK_PTR(typeNodeId);
+	Q_ASSERT(!UA_NodeId_isNull(typeNodeId));
+	if (UA_NodeId_isNull(typeNodeId))
 	{
 		return;
 	}
 	// add constructor
-	Q_ASSERT_X(!m_hashConstructors.contains(*nodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
-	// NOTE : we need constructors to be lambdas in order to cachec metaobject in capture
+	Q_ASSERT_X(!m_hashConstructors.contains(*typeNodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
+	// NOTE : we need constructors to be lambdas in order to cache metaobject in capture
 	//        because type context is already the server instance where type was registered
 	//        so we can differentiate the server instance in the static ::uaConstructor callback
-	//        TLDR; to support multiple server instance in an application
-	m_hashConstructors[*nodeId] = [metaObject](UA_Server        *server,
-		                                       const UA_NodeId  *nodeId) {
+	//        TLDR; to support multiple server instances in an application
+	m_hashConstructors[*typeNodeId] = [metaObject, this](const UA_NodeId  *instanceNodeId) {
 		// call static method
-		return QOpcUaServer::uaConstructor(server, nodeId, metaObject);
+		return QOpcUaServer::uaConstructor(this, instanceNodeId, metaObject);
 	};
 
 	UA_NodeTypeLifecycle lifecycle;
@@ -319,7 +269,7 @@ void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * nodeId, const QMetaOb
 	// TODO : destructor
 	//lifecycle.destructor  = ;
 	
-	auto st = UA_Server_setNodeTypeLifecycle(m_server, *nodeId, lifecycle);
+	auto st = UA_Server_setNodeTypeLifecycle(m_server, *typeNodeId, lifecycle);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
 }

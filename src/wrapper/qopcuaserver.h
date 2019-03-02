@@ -52,7 +52,7 @@ private:
 
 	void registerType(const QMetaObject &metaObject);
 
-	void registerTypeLifeCycle(const UA_NodeId *nodeId, const QMetaObject &metaObject);
+	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
 
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 
@@ -60,8 +60,7 @@ private:
 
 	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
 
-	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server       *server,
-                                                  const UA_NodeId *nodeId)>> m_hashConstructors;
+	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId)>> m_hashConstructors;
 
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 
@@ -73,13 +72,9 @@ private:
 		                               const UA_NodeId  *nodeId, 
 		                               void            **nodeContext);
 
-	static UA_StatusCode uaConstructor(UA_Server         *server,
+	static UA_StatusCode uaConstructor(QOpcUaServer      *server,
 		                               const UA_NodeId   *nodeId, 
 		                               const QMetaObject &metaObject);
-
-	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server);
-
-	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server *server);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 };
@@ -101,11 +96,10 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		return nullptr;
 	}
 
-	// create new c++ instance (and bind to UA)
-	T * newInstance = new T(parentNode->m_qopcuaserver, newInstanceNodeId);
-	// set parent and pass on server instance
-	newInstance->setParent(parentNode);
-	
+	// create new c++ instance created in ua constructor
+	auto tmp = QOpcUaServerNode::getNodeContext(newInstanceNodeId, this);
+	T * newInstance = qobject_cast<T*>(tmp);
+	Q_CHECK_PTR(newInstance);
 	// return c++ instance
 	return newInstance;
 }
