@@ -13,6 +13,8 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
+	//qRegisterMetaType<QOpcUaBaseDataVariable*>("QOpcUaBaseDataVariable*");
+
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
@@ -64,7 +66,11 @@ int main(int argc, char *argv[])
 	newVarTypeInstance->set_browseName("MyNewVariableType");
 	newVarTypeInstance->set_displayName("MyNewVariableType");
 	newVarTypeInstance->set_value(1.2345);
-	
+
+	qDebug() << "MyNewVariableType->myVar::value =" << newVarTypeInstance->getMyVar()->get_value();
+	newVarTypeInstance->getMyOtherTwo()->getMyVarTwo()->set_value("foo");
+	newVarTypeInstance->getMyOtherVar()->getMyVarTwo()->set_value("bar");
+
 	//auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
 	//newVarTypeInstance2->set_browseName("MyNewVariableType2");
 	//newVarTypeInstance2->set_displayName("MyNewVariableType2");

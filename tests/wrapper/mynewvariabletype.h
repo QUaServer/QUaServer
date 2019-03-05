@@ -13,7 +13,8 @@ class MyNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServerNode
 
 	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ getMyVar     )
 	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ getMyObj     )
-	//Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
+	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
+	Q_PROPERTY(MyOtherNewVariableType * myOtherTwo READ getMyOtherTwo)
 
 public:
 	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
@@ -21,12 +22,8 @@ public:
 	QOpcUaBaseDataVariable * getMyVar();
 	QOpcUaBaseObject       * getMyObj();
 	MyOtherNewVariableType * getMyOtherVar();
+	MyOtherNewVariableType * getMyOtherTwo();
 
-private:
-	QOpcUaBaseDataVariable * m_myVar;
-	QOpcUaBaseObject       * m_myObj;
-	MyOtherNewVariableType * m_myOtherVar;
-	
 };
 
 // ---
@@ -35,8 +32,11 @@ class MyOtherNewVariableType : public QOpcUaBaseDataVariable, public QOpcUaServe
 {
 	Q_OBJECT
 
+	Q_PROPERTY(QOpcUaBaseDataVariable * myVarTwo READ getMyVarTwo)
 public:
 	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
+
+	QOpcUaBaseDataVariable * getMyVarTwo();
 
 private:
 
@@ -55,8 +55,6 @@ public:
 
 	QOpcUaBaseObject * getMyObjSub();
 
-private:
-	QOpcUaBaseObject * m_myObjSub;
 
 };
 
@@ -73,8 +71,6 @@ public:
 
 	QOpcUaBaseObject * getMyObjSubSub();
 
-private:
-	QOpcUaBaseObject * m_myObjSubSub;
 
 };
 

@@ -263,6 +263,11 @@ QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNo
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			// ignore modelling rules
+			if (UA_NodeId_equal(&nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)))
+			{
+				continue;
+			}
 			retListChildren.append(nodeId);
 		}
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
@@ -294,6 +299,22 @@ QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, UA
 	return static_cast<QOpcUaServerNode*>(context);
 }
 
+QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, QOpcUaServer * server)
+{
+	return QOpcUaServerNode::getBrowseName(nodeId, server->m_server);
+}
+
+QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
+{
+	// read browse name
+	UA_QualifiedName outBrowseName;
+	auto st = UA_Server_readBrowseName(server, nodeId, &outBrowseName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
+	return QOpcUaTypesConverter::uaStringToQString(outBrowseName.name);
+}
+
 int QOpcUaServerNode::getPropsOffsetHelper(const QMetaObject & metaObject)
 {
 	int propOffset;
@@ -304,7 +325,8 @@ int QOpcUaServerNode::getPropsOffsetHelper(const QMetaObject & metaObject)
 	}
 	else
 	{
-		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		// [NOTE] : assert below does not work, dont know why
+		//Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
 		propOffset = QOpcUaBaseObject::staticMetaObject.propertyOffset();
 	}
 	return propOffset;

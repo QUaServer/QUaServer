@@ -3,8 +3,6 @@
 
 #include <QOpcUaBaseObject>
 
-class QOpcUaBaseDataVariable;
-
 // Part 5 - 6.6 : FolderType
 /*
 Instances of this ObjectType are used to organise the AddressSpace into 

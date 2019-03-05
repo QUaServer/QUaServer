@@ -124,6 +124,9 @@ public:
 	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, QOpcUaServer *server);
 	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server    *server);
 
+	static QString getBrowseName (const UA_NodeId &nodeId, QOpcUaServer *server);
+	static QString getBrowseName (const UA_NodeId &nodeId, UA_Server    *server);
+
 	static int getPropsOffsetHelper(const QMetaObject &metaObject);
 
 signals:
@@ -152,34 +155,29 @@ struct QOpcUaServerNodeFactory
 		}
 		// get instance of type being instantiated
 		auto ptrThis = static_cast<T*>(this);
-		// bind itself
+		// bind itself, but only good for C++ constructor, because later UA constructor overwrites it
+		// so we need to also set the context again in QOpcUaServer::uaConstructor
 		ptrThis->bindWithUaNode(server, nodeId);
-
 		// get all UA children in advance, because if none, then better early exit
 		auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
 		if (chidrenNodeIds.count() <= 0)
 		{
 			return;
 		}
-		// create map with nodeId's context which already must be valid QOpcUaServerNode instances
-		QHash<UA_NodeId, QOpcUaServerNode*> mapChildren;
+		// create hash of nodeId's by browse name, which must match Qt's metaprops
+		QHash<QString, UA_NodeId> mapChildren;
 		for (int i = 0; i < chidrenNodeIds.count(); i++)
 		{
 			auto childNodeId = chidrenNodeIds[i];
-			Q_ASSERT(!mapChildren.contains(childNodeId));
-			mapChildren[childNodeId] = QOpcUaServerNode::getNodeContext(childNodeId, server);
+			// read browse name
+			QString strBrowseName = QOpcUaServerNode::getBrowseName(childNodeId, server);
+			Q_ASSERT(!mapChildren.contains(strBrowseName));
+			mapChildren[strBrowseName] = childNodeId;
 		}
-		
-		
-		// [DEBUG]
-		qDebug() << "QOpcUaServerNodeFactory<" << T::staticMetaObject.className() << ">";
-
 		// list meta props
 		auto metaObj   = T::staticMetaObject;
 		int propCount  = metaObj.propertyCount();
 		int propOffset = QOpcUaServerNode::getPropsOffsetHelper(T::staticMetaObject);
-
-
 		for (int i = propOffset; i < propCount; i++)
 		{
 			// check if available in meta-system
@@ -200,24 +198,23 @@ struct QOpcUaServerNodeFactory
 			{
 				continue;
 			}
+			// the Qt meta property name must match the UA browse name
+			QString strBrowseName = QString(metaproperty.name());
+			Q_ASSERT(mapChildren.contains(strBrowseName));
+			// get child nodeId for child
+			auto childNodeId = mapChildren.take(strBrowseName);
+			// get node context (C++ instance)
+			auto nodeInstance = QOpcUaServerNode::getNodeContext(childNodeId, server);
+			// assign C++ parent
+			nodeInstance->setParent(ptrThis);
+			nodeInstance->setObjectName(strBrowseName);
 
-			// [DEBUG]
-			qDebug() << QString(metaproperty.name());
-
-
-
-			// get pointer to node-derived instance, must be already instantiated
-			//metaproperty.write(ptrThis, );
-
-			// TODO : 
-
-			
-
-
-
+			// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
+			//        eventhough there appear to be some success cases on the internet
+			//        so in the end we have to wuery children by object name
 		}
-
-		
+		// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
+		Q_ASSERT(mapChildren.count() == 0);
 	}
 };
 

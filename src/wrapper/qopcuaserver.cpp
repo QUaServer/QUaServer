@@ -14,18 +14,17 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	Q_UNUSED(server);
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
-	Q_UNUSED(typeNodeId); 
-	Q_UNUSED(nodeContext);
 	// get server from context object
 	auto obj = static_cast<QOpcUaServer*>(typeNodeContext);
 	Q_CHECK_PTR(obj);
 	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
-	return obj->m_hashConstructors[*typeNodeId](nodeId);
+	return obj->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
 }
 
 UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	                                      const UA_NodeId   * nodeId, 
+	                                      void             ** nodeContext,
 	                                      const QMetaObject & metaObject)
 {
 	// check if constructor from explicit instance creation or type registration
@@ -41,10 +40,10 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * newInstance = static_cast<QOpcUaServerNode*>(pQObject);
 	Q_CHECK_PTR(newInstance);
-
-	// TODO : need to FIX binding to use the official (void ** nodeContext) of the UA constructor
-	//        because we set context now, but later the library overwrites it after calling the constructor
-
+	// need to bind again using the official (void ** nodeContext) of the UA constructor
+	// because we set context on C++ instantiation, but later the UA library overwrites it 
+	// after calling the UA constructor
+	*nodeContext = (void*)newInstance;
 	// if parent bound, set as parent 
 	auto parent = QOpcUaServerNode::getNodeContext(parentNodeId, server->m_server);
 	if (parent)
@@ -57,9 +56,41 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	// then the parent and server will be set later in QOpcUaServerNodeFactory when parent is instantiated.
 	// the parent in QOpcUaServerNodeFactory will assign itself as parent if its children.
 
-	// [DEBUG]
-	QString strClassName = QString(metaObject.className());
-	qDebug() << "Called OPC UA constructor for" << strClassName << "Parent bound :" << QOpcUaServer::isNodeBound(parentNodeId, server->m_server);
+	// children should be assigned already to new instance, if the user inherited from QOpcUaServerNodeFactory<> appropriately
+	// here we just verify
+	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(*nodeId, server);
+	int propCount  = metaObject.propertyCount();
+	int propOffset = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
+	int numProps   = 0;
+	for (int i = propOffset; i < propCount; i++)
+	{
+		// check if available in meta-system
+		QMetaProperty metaproperty = metaObject.property(i);
+		if (!QMetaType::metaObjectForType(metaproperty.userType()))
+		{
+			continue;
+		}
+		// check if OPC UA relevant type
+		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+		{
+			continue;
+		}
+		// check if prop inherits from parent
+		if (propMetaObject.inherits(&metaObject))
+		{
+			continue;
+		}
+		// inc number of valid props
+		numProps++;
+	}
+	bool bChildrenBound = (chidrenNodeIds.count() == numProps);
+	Q_ASSERT_X(bChildrenBound, "QOpcUaServer::uaConstructor", "Children not bound properly. Did you inherit from QOpcUaServerNodeFactory appropriately?");
+	if (!bChildrenBound)
+	{
+		// failed to bind children before constructor, at least bind after constructor
+		// TODO : reuse code from QOpcUaServerNodeFactory to bind children after constructor
+	}
 
 	// success
 	return UA_STATUSCODE_GOOD;
@@ -258,9 +289,9 @@ void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMe
 	//        because type context is already the server instance where type was registered
 	//        so we can differentiate the server instance in the static ::uaConstructor callback
 	//        TLDR; to support multiple server instances in an application
-	m_hashConstructors[*typeNodeId] = [metaObject, this](const UA_NodeId  *instanceNodeId) {
+	m_hashConstructors[*typeNodeId] = [metaObject, this](const UA_NodeId *instanceNodeId, void ** nodeContext) {
 		// call static method
-		return QOpcUaServer::uaConstructor(this, instanceNodeId, metaObject);
+		return QOpcUaServer::uaConstructor(this, instanceNodeId, nodeContext, metaObject);
 	};
 
 	UA_NodeTypeLifecycle lifecycle;

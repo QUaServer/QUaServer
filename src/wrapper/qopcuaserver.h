@@ -60,7 +60,7 @@ private:
 
 	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
 
-	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId)>> m_hashConstructors;
+	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
 
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 
@@ -74,6 +74,7 @@ private:
 
 	static UA_StatusCode uaConstructor(QOpcUaServer      *server,
 		                               const UA_NodeId   *nodeId, 
+		                               void             **nodeContext,
 		                               const QMetaObject &metaObject);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
@@ -95,8 +96,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 	{
 		return nullptr;
 	}
-
-	// create new c++ instance created in ua constructor
+	// get new c++ instance created in UA constructor
 	auto tmp = QOpcUaServerNode::getNodeContext(newInstanceNodeId, this);
 	T * newInstance = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);

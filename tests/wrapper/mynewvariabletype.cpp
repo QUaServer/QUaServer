@@ -3,31 +3,40 @@
 MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId) 
 	: QOpcUaServerNodeFactory<MyNewVariableType>(server, nodeId)
 {
-	qDebug() << "MyNewVariableType C++ constructor.";
+	this->getMyVar()->set_value(123);
 }
 
 QOpcUaBaseDataVariable * MyNewVariableType::getMyVar()
 {
-	return m_myVar;
+	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
 }
 
 QOpcUaBaseObject * MyNewVariableType::getMyObj()
 {
-	return m_myObj;
+	return this->findChild<QOpcUaBaseObject*>("myObj");
 }
 
 MyOtherNewVariableType * MyNewVariableType::getMyOtherVar()
 {
-	return m_myOtherVar;
+	return this->findChild<MyOtherNewVariableType*>("myOtherVar");
 }
 
+MyOtherNewVariableType * MyNewVariableType::getMyOtherTwo()
+{
+	return this->findChild<MyOtherNewVariableType*>("myOtherTwo");
+}
 
 // ---
 
 MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId)
 	: QOpcUaServerNodeFactory<MyOtherNewVariableType>(server, nodeId)
 {
-	qDebug() << "MyOtherNewVariableType C++ constructor.";
+	this->set_value("equis");
+}
+
+QOpcUaBaseDataVariable * MyOtherNewVariableType::getMyVarTwo()
+{
+	return this->findChild<QOpcUaBaseDataVariable*>("myVarTwo");
 }
 
 // ---
@@ -40,7 +49,7 @@ MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId
 
 QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 {
-	return m_myObjSub;
+	return this->findChild<QOpcUaBaseObject*>("myObjSub");
 }
 
 // ---
@@ -48,10 +57,12 @@ QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
 	: QOpcUaServerNodeFactory<MyNewVariableSubSubType>(server, nodeId)
 {
-	qDebug() << "MyNewVariableSubSubType C++ constructor.";
+
 }
 
 QOpcUaBaseObject * MyNewVariableSubSubType::getMyObjSubSub()
 {
-	return m_myObjSubSub;
+	return this->findChild<QOpcUaBaseObject*>("myObjSubSub");
 }
+
+
