@@ -44,7 +44,7 @@ QOpcUaBaseDataVariable * MyOtherNewVariableType::getMyVarTwo()
 MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
 	: QOpcUaServerNodeFactory<MyNewVariableSubType>(server, nodeId)
 {
-
+	qDebug() << "MyNewVariableSubType::MyNewVariableSubType";
 }
 
 QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
@@ -57,7 +57,7 @@ QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
 	: QOpcUaServerNodeFactory<MyNewVariableSubSubType>(server, nodeId)
 {
-
+	qDebug() << "MyNewVariableSubSubType::MyNewVariableSubSubType";
 }
 
 QOpcUaBaseObject * MyNewVariableSubSubType::getMyObjSubSub()

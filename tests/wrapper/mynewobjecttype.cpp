@@ -3,12 +3,12 @@
 MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId)
 	: QOpcUaServerNodeFactory<MyNewObjectType>(server, nodeId)
 {
-	
+	qDebug() << "MyNewObjectType::MyNewObjectType";
 }
 
 MyNewVariableSubSubType * MyNewObjectType::getMyVarSubSub()
 {
-	return m_myVarSubSub;
+	return this->findChild<MyNewVariableSubSubType*>("myVarSubSub");
 }
 
 // ---

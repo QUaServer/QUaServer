@@ -27,13 +27,28 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	                                      void             ** nodeContext,
 	                                      const QMetaObject & metaObject)
 {
-	// check if constructor from explicit instance creation or type registration
+	// get parent node id
 	UA_NodeId parentNodeId = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
+	// ignore if new instance is due to new type registration
 	if (UA_NodeId_isNull(&parentNodeId))
-	{
-		// ignore if new instance is due to new type registration
+	{		
 		return UA_STATUSCODE_GOOD;
 	}
+	// check if constructor from explicit instance creation or type registration
+	// this is done by checking that eventually going up we reach the objects folder
+	UA_NodeId objsFolderNodeId   = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+	UA_NodeId parentParentNodeId = parentNodeId;
+	while (!UA_NodeId_equal(&parentParentNodeId, &objsFolderNodeId))
+	{
+		parentParentNodeId = QOpcUaServerNode::getParentNodeId(parentParentNodeId, server->m_server);
+		// ignore if new instance is due to new type registration
+		if (UA_NodeId_isNull(&parentParentNodeId))
+		{
+			
+			return UA_STATUSCODE_GOOD;
+		}
+	}
+	qDebug() << metaObject.className();
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId));
@@ -44,6 +59,7 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	// because we set context on C++ instantiation, but later the UA library overwrites it 
 	// after calling the UA constructor
 	*nodeContext = (void*)newInstance;
+	newInstance->m_nodeId = *nodeId;
 	// if parent bound, set as parent 
 	auto parent = QOpcUaServerNode::getNodeContext(parentNodeId, server->m_server);
 	if (parent)

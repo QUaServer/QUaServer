@@ -15,8 +15,8 @@ public:
 
 	MyNewVariableSubSubType * getMyVarSubSub();
 
+
 private:
-	MyNewVariableSubSubType * m_myVarSubSub;
 	
 };
 

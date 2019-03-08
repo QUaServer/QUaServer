@@ -13,12 +13,11 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-	//qRegisterMetaType<QOpcUaBaseDataVariable*>("QOpcUaBaseDataVariable*");
-
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
-	//// instances
+	// instances
+
 	//auto varBaseData = objsFolder->addBaseDataVariable();
 	//varBaseData->set_browseName("QOpcUaBaseDataVariable");
 	//varBaseData->set_displayName("QOpcUaBaseDataVariable");
@@ -54,6 +53,9 @@ int main(int argc, char *argv[])
 	});
 
 	// custom types
+
+	auto newObjTypeInstance = objsFolder->addChild<MyNewObjectType>();
+	newObjTypeInstance->getMyVarSubSub()->set_value("");
 
 	//server.registerType<MyNewVariableSubSubType>();
 	//server.registerType<MyOtherNewVariableType>();
@@ -95,7 +97,7 @@ int main(int argc, char *argv[])
 	//qDebug() << "Children " << children.count();
 
 
-	// [NOTE] blocking, TODO : move to thread
+	// NOTE : runs in main thread within Qt's event loop
 	server.start();
 
     return a.exec();

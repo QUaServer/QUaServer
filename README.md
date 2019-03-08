@@ -29,7 +29,10 @@ https://stackoverflow.com/questions/9065081/how-do-i-get-the-argument-types-of-a
 
 ## TODO
 
-1. Create `QOpcUaObjectFactory` and `QOpcUaVariableFactory` inheriting from `QOpcUaNodeFactory` to implement *Static Polymorphism* for ObjectType node attributes and VariableType node attributes respectively. Refactor code to inherit from these instead of `QOpcUaNodeFactory` directly.
+1. Fix
+
+NOTE : need to fix, because when calling construtor of very derived class, we call de default
+constructors of all the base classes which receive null default arguments and everything gets fucked
 
 2. Find out how to use enums.
 
