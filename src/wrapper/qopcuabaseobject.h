@@ -80,8 +80,8 @@ struct QOpcUaMethodTraitsBase
 		return varQt.value<T>();
 	}
 
-	template<typename T>
-	inline static UA_Variant execCallback(T methodCallback, const UA_Variant * input)
+    template<typename M>
+    inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
 	{
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
@@ -108,14 +108,14 @@ struct QOpcUaMethodTraits< R(ClassType::*)(Args...) > : QOpcUaMethodTraitsBase<C
 template <typename ClassType, typename... Args>
 struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QOpcUaMethodTraitsBase<ClassType, void, false, Args...>
 {
-	template<typename T>
-	inline static UA_Variant execCallback(T methodCallback, const UA_Variant * input)
+    template<typename M>
+    inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
 	{
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
-		int iArg = getNumArgs() - 1;
+        int iArg = QOpcUaMethodTraits<M>::getNumArgs() - 1;
 		// call method
-		methodCallback(convertArgType<Args>(input, iArg--)...);
+        methodCallback(QOpcUaMethodTraits<M>::template convertArgType<Args>(input, iArg--)...);
 		// set result
 		return UA_Variant();
 	}
@@ -124,14 +124,14 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QOpcUaMethodTra
 template <typename ClassType, typename... Args>
 struct QOpcUaMethodTraits< void(ClassType::*)(Args...) > : QOpcUaMethodTraitsBase<ClassType, void, true, Args...>
 {
-	template<typename T>
-	inline static UA_Variant execCallback(T methodCallback, const UA_Variant * input)
+    template<typename M>
+    inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
 	{
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
-		int iArg = getNumArgs() - 1;
+        int iArg = QOpcUaMethodTraits<M>::getNumArgs() - 1;
 		// call method
-		methodCallback(convertArgType<Args>(input, iArg--)...);
+        methodCallback(QOpcUaMethodTraits<M>::template convertArgType<Args>(input, iArg--)...);
 		// set result
 		return UA_Variant();
 	}
@@ -260,7 +260,16 @@ inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const M &
                                                    const UA_Variant * input,
                                                    size_t             outputSize,
                                                    UA_Variant       * output) {
-		// call method
+        Q_UNUSED(server);
+        Q_UNUSED(sessionId);
+        Q_UNUSED(sessionContext);
+        Q_UNUSED(methodId);
+        Q_UNUSED(methodContext);
+        Q_UNUSED(objectId);
+        Q_UNUSED(objectContext);
+        Q_UNUSED(inputSize);
+        Q_UNUSED(outputSize);
+        // call method
 		if (QOpcUaMethodTraits<M>::isRetUaArgumentVoid())
 		{
 			QOpcUaMethodTraits<M>::execCallback(methodCallback, input);

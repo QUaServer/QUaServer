@@ -53,6 +53,7 @@ private:
 
 	void registerType(const QMetaObject &metaObject);
 
+    void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
 
 	void addMetaProperties(const QMetaObject &parentMetaObject);
