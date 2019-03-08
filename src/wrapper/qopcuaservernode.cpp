@@ -264,7 +264,8 @@ QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNo
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			UA_NodeId nodeId = rDesc.nodeId.nodeId;
 			// ignore modelling rules
-			if (UA_NodeId_equal(&nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)))
+            auto nodeIdMandatory = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY);
+            if (UA_NodeId_equal(&nodeId, &nodeIdMandatory))
 			{
 				continue;
 			}
