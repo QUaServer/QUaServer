@@ -121,7 +121,7 @@ namespace QOpcUaTypesConverter {
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE);
 		}
-		else if (std::is_same<T, QString>::value)
+		else if (std::is_same<T, QString>::value || std::is_same<T, const char *>::value)
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_STRING);
 		}

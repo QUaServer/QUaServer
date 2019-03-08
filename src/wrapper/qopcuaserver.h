@@ -7,6 +7,7 @@
 #include <QOpcUaFolderObject>
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaProperty>
+#include "qopcuabaseobject.h"
 
 class QOpcUaServer : public QObject
 {
