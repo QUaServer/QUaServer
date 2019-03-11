@@ -82,6 +82,7 @@ class QOpcUaBaseVariable : public QOpcUaServerNode
 	Q_PROPERTY(bool historizing READ get_historizing)
 
 public:
+	explicit QOpcUaBaseVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 	
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated

@@ -28,30 +28,66 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	                                      const QMetaObject & metaObject)
 {
 	// get parent node id
-	UA_NodeId parentNodeId = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
-	// ignore if new instance is due to new type registration
-	if (UA_NodeId_isNull(&parentNodeId))
-	{		
-		return UA_STATUSCODE_GOOD;
-	}
+	UA_NodeId parentNodeId       = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
+	UA_NodeId directParentNodeId = parentNodeId;
+	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId));
 	// check if constructor from explicit instance creation or type registration
-	// this is done by checking that eventually going up we reach the objects folder
-	UA_NodeId objsFolderNodeId   = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
-	UA_NodeId parentParentNodeId = parentNodeId;
-	while (!UA_NodeId_equal(&parentParentNodeId, &objsFolderNodeId))
+	// this is done by checking that parent is different from object ot variable instance
+	UA_NodeClass outNodeClass;
+	UA_NodeId lastParentNodeId;
+	QOpcUaServerNode * parentContext = nullptr;
+	while (true)
 	{
-		parentParentNodeId = QOpcUaServerNode::getParentNodeId(parentParentNodeId, server->m_server);
 		// ignore if new instance is due to new type registration
-		if (UA_NodeId_isNull(&parentParentNodeId))
+		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
+		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
-			
+			qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className();
+			qDebug() << "*" << nodeId->identifier.numeric << "->" << parentNodeId.identifier.numeric;
+			// TODO : remove from deferred constructors
+			server->m_hashDeferredConstructors.remove(*nodeId);
 			return UA_STATUSCODE_GOOD;
 		}
+		lastParentNodeId = parentNodeId;
+		parentContext = QOpcUaServerNode::getNodeContext(lastParentNodeId, server);
+		// check if parent node is bound
+		if (parentContext)
+		{
+			break;
+		}
+		parentNodeId = QOpcUaServerNode::getParentNodeId(parentNodeId, server->m_server);
+		// exit if null
+		if (UA_NodeId_isNull(&parentNodeId))
+		{
+			break;
+		}
 	}
-	qDebug() << metaObject.className();
+	// NOTE : at this point parentNodeId could be null, so we need lastParentNodeId which is guaranteed not to be null
+
+	// if parentContext is valid, then we can call deferred constructors waiting for *nodeId and continue with execution
+	if (!parentContext)
+	{
+		server->m_hashDeferredConstructors[lastParentNodeId].append([server, nodeId, nodeContext, metaObject]() {
+			QOpcUaServer::uaConstructor(server, nodeId, nodeContext, metaObject);
+		});
+		return UA_STATUSCODE_GOOD;
+	}
+	else
+	{
+		for (int i = 0; i < server->m_hashDeferredConstructors[*nodeId].count(); i++)
+		{
+			server->m_hashDeferredConstructors[*nodeId][i]();
+		}
+		server->m_hashDeferredConstructors.remove(*nodeId);
+	}
+	
+	// TODO : verify!
+	qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className() << ":" << (parentContext ? "*" : "");
+	qDebug() << nodeId->identifier.numeric << "->" << lastParentNodeId.identifier.numeric;
+
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
-	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId));
+	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId), Q_ARG(QMetaObject, metaObject));
 	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * newInstance = static_cast<QOpcUaServerNode*>(pQObject);
 	Q_CHECK_PTR(newInstance);
@@ -60,18 +96,9 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	// after calling the UA constructor
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
-	// if parent bound, set as parent 
-	auto parent = QOpcUaServerNode::getNodeContext(parentNodeId, server->m_server);
-	if (parent)
-	{
-		Q_ASSERT(QOpcUaServer::isNodeBound(parentNodeId, server->m_server));
-		newInstance->setParent(parent);
-		// TODO : emit event in parent, that new children added
-	}
 	// if parent not bound it means parent is a non-base type and its c++ instance has not been created.
 	// then the parent and server will be set later in QOpcUaServerNodeFactory when parent is instantiated.
 	// the parent in QOpcUaServerNodeFactory will assign itself as parent if its children.
-
 	// children should be assigned already to new instance, if the user inherited from QOpcUaServerNodeFactory<> appropriately
 	// here we just verify
 	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(*nodeId, server);
@@ -130,12 +157,13 @@ bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
+	UA_StatusCode st;
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
 	this->m_server = UA_Server_new(config);
 	m_running = false;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
-	m_pobjectsFolder = new QOpcUaFolderObject(this, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER));
+	m_pobjectsFolder = new QOpcUaFolderObject(this, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), QOpcUaFolderObject::staticMetaObject);
 	m_pobjectsFolder->setParent(this);
 	// register base types
 	m_mapTypes.insert(QString(QOpcUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
@@ -144,7 +172,6 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	m_mapTypes.insert(QString(QOpcUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
 	m_mapTypes.insert(QString(QOpcUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
 	// set context for base types
-	UA_StatusCode st;
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -371,6 +398,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
 		QByteArray bytePropName = strPropName.toUtf8();
+		//qDebug() << "Adding property" << strPropName << "to type" << strParentClassName;
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
 		// check if variable or object
 		// NOTE : a type is considered to inherit itself sometimes does not work (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
@@ -391,7 +419,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 												browseName,		  
 												propTypeNodeId,   
 												vAttr, 			  
-												nullptr,          // context : null because we want to filter it when calling ua constructor
+												nullptr,          // context
 												&tempNodeId);     // output nodeId to make mandatory
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
@@ -409,7 +437,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 											  browseName,
 											  propTypeNodeId,
 											  oAttr, 
-											  nullptr,          // context : null because we want to filter it when calling ua constructor
+											  nullptr,          // context
 											  &tempNodeId);     // output nodeId to make mandatory
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
@@ -464,7 +492,7 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
                                             browseName,
                                             typeNodeId, 
                                             vAttr, 
-                                            nullptr,             // new instance as context (set when c++ instance created)
+                                            nullptr,             // context
                                             &nodeIdNewInstance); // set new nodeId to new instance
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
@@ -481,7 +509,7 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
                                           browseName,
                                           typeNodeId,
                                           oAttr, 
-                                          nullptr,             // new instance as context (set when c++ instance created)
+                                          nullptr,             // context
                                           &nodeIdNewInstance); // set new nodeId to new instance
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);

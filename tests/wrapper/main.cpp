@@ -36,26 +36,26 @@ int main(int argc, char *argv[])
 
 	// methods
 
-	objsFolder->addMethod("method1", []() {
-		qDebug() << "method1";
-	});
-	objsFolder->addMethod("method2", []() {
-		qDebug() << "method2";
-		return "method2";
-	});
-	objsFolder->addMethod("method3", [](int x, int y) {
-		qDebug() << "method3";
-		return (double)x / (double)y;
-	});
-	objsFolder->addMethod("method4", [](int x, double y, QString str) {
-		qDebug() << "method4";
-		return QString("%1, %2, %3").arg(x).arg(y).arg(str);
-	});
+	//objsFolder->addMethod("method1", []() {
+	//	qDebug() << "method1";
+	//});
+	//objsFolder->addMethod("method2", []() {
+	//	qDebug() << "method2";
+	//	return "method2";
+	//});
+	//objsFolder->addMethod("method3", [](int x, int y) {
+	//	qDebug() << "method3";
+	//	return (double)x / (double)y;
+	//});
+	//objsFolder->addMethod("method4", [](int x, double y, QString str) {
+	//	qDebug() << "method4";
+	//	return QString("%1, %2, %3").arg(x).arg(y).arg(str);
+	//});
 
 	// custom types
 
 	auto newObjTypeInstance = objsFolder->addChild<MyNewObjectType>();
-	newObjTypeInstance->getMyVarSubSub()->set_value("");
+	newObjTypeInstance->set_displayName("Test");
 
 	//server.registerType<MyNewVariableSubSubType>();
 	//server.registerType<MyOtherNewVariableType>();

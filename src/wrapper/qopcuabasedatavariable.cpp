@@ -1,11 +1,7 @@
 #include "qopcuabasedatavariable.h"
 
-QOpcUaBaseDataVariable::QOpcUaBaseDataVariable(QOpcUaServer *server, const UA_NodeId &nodeId)
+QOpcUaBaseDataVariable::QOpcUaBaseDataVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseVariable(server, nodeId, metaObject)
 {
-	// check
-	if (!server || UA_NodeId_isNull(&nodeId))
-	{
-		return;
-	}
-	this->bindWithUaNode(server, nodeId);
+
 }

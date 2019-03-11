@@ -1,7 +1,7 @@
 #include "mynewvariabletype.h"
 
-MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId) 
-	: QOpcUaServerNodeFactory<MyNewVariableType>(server, nodeId)
+MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
 {
 	this->getMyVar()->set_value(123);
 }
@@ -28,8 +28,8 @@ MyOtherNewVariableType * MyNewVariableType::getMyOtherTwo()
 
 // ---
 
-MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId)
-	: QOpcUaServerNodeFactory<MyOtherNewVariableType>(server, nodeId)
+MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
 {
 	this->set_value("equis");
 }
@@ -41,10 +41,10 @@ QOpcUaBaseDataVariable * MyOtherNewVariableType::getMyVarTwo()
 
 // ---
 
-MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
-	: QOpcUaServerNodeFactory<MyNewVariableSubType>(server, nodeId)
+MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: MyNewVariableType(server, nodeId, metaObject)
 {
-	qDebug() << "MyNewVariableSubType::MyNewVariableSubType";
+	//qDebug() << "MyNewVariableSubType::MyNewVariableSubType";
 }
 
 QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
@@ -54,10 +54,10 @@ QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
 
 // ---
 
-MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId)
-	: QOpcUaServerNodeFactory<MyNewVariableSubSubType>(server, nodeId)
+MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: MyNewVariableSubType(server, nodeId, metaObject)
 {
-	qDebug() << "MyNewVariableSubSubType::MyNewVariableSubSubType";
+	//qDebug() << "MyNewVariableSubSubType::MyNewVariableSubSubType";
 }
 
 QOpcUaBaseObject * MyNewVariableSubSubType::getMyObjSubSub()

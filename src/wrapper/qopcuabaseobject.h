@@ -182,7 +182,7 @@ class QOpcUaBaseObject : public QOpcUaServerNode
 friend class QOpcUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
+	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors

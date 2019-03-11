@@ -11,11 +11,11 @@ This VariableType is the base VariableType for VariableTypes of DataVariables, a
 shall either directly or indirectly inherit from it.
 */
 
-class QOpcUaBaseDataVariable : public QOpcUaBaseVariable, public QOpcUaServerNodeFactory<QOpcUaBaseDataVariable>
+class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QOpcUaBaseDataVariable(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
+	Q_INVOKABLE explicit QOpcUaBaseDataVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors

@@ -1,11 +1,7 @@
 #include "qopcuafolderobject.h"
 
-QOpcUaFolderObject::QOpcUaFolderObject(QOpcUaServer *server, const UA_NodeId &nodeId)
+QOpcUaFolderObject::QOpcUaFolderObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseObject(server, nodeId, metaObject)
 {
-	// check
-	if (!server || UA_NodeId_isNull(&nodeId))
-	{
-		return;
-	}
-	this->bindWithUaNode(server, nodeId);
+
 }

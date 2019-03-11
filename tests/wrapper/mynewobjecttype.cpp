@@ -1,9 +1,9 @@
 #include "mynewobjecttype.h"
 
-MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId)
-	: QOpcUaServerNodeFactory<MyNewObjectType>(server, nodeId)
+MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseObject(server, nodeId, metaObject)
 {
-	qDebug() << "MyNewObjectType::MyNewObjectType";
+	//qDebug() << "MyNewObjectType::MyNewObjectType";
 }
 
 MyNewVariableSubSubType * MyNewObjectType::getMyVarSubSub()
@@ -13,8 +13,8 @@ MyNewVariableSubSubType * MyNewObjectType::getMyVarSubSub()
 
 // ---
 
-MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId)
-	: QOpcUaServerNodeFactory<MyOtherNewObjectType>(server, nodeId)
+MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaBaseObject(server, nodeId, metaObject)
 {
 
 }

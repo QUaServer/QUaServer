@@ -7,6 +7,79 @@
 
 #include "mynewvariabletype.h"
 
+QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+{
+	// check
+	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
+	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it
+	// so we need to also set the context again in QOpcUaServer::uaConstructor
+	// set server instance
+	this->m_qopcuaserver = server;
+	// set c++ instance as context
+	UA_Server_setNodeContext(server->m_server, nodeId, (void*)this);
+	// set node id to c++ instance
+	this->m_nodeId = nodeId;
+	// get all UA children in advance, because if none, then better early exit
+	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
+	if (chidrenNodeIds.count() <= 0)
+	{
+		return;
+	}
+	//qDebug() << "QOpcUaServerNode::QOpcUaServerNode :" << metaObject.className();
+	// create hash of nodeId's by browse name, which must match Qt's metaprops
+	QHash<QString, UA_NodeId> mapChildren;
+	for (int i = 0; i < chidrenNodeIds.count(); i++)
+	{
+		auto childNodeId = chidrenNodeIds[i];
+		// read browse name
+		QString strBrowseName = QOpcUaServerNode::getBrowseName(childNodeId, server);
+		Q_ASSERT(!mapChildren.contains(strBrowseName));
+		mapChildren[strBrowseName] = childNodeId;
+	}
+	// list meta props
+	int propCount  = metaObject.propertyCount();
+	int propOffset = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
+	for (int i = propOffset; i < propCount; i++)
+	{
+		// check if available in meta-system
+		QMetaProperty metaproperty = metaObject.property(i);
+		if (!QMetaType::metaObjectForType(metaproperty.userType()))
+		{
+			continue;
+		}
+		// check if OPC UA relevant type
+		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+		{
+			continue;
+		}
+		// check if prop inherits from parent
+		Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
+		if (propMetaObject.inherits(&metaObject))
+		{
+			continue;
+		}
+		// the Qt meta property name must match the UA browse name
+		QString strBrowseName = QString(metaproperty.name());
+		Q_ASSERT(mapChildren.contains(strBrowseName));
+		// get child nodeId for child
+		auto childNodeId = mapChildren.take(strBrowseName);
+		// get node context (C++ instance)
+		auto nodeInstance = QOpcUaServerNode::getNodeContext(childNodeId, server);
+		// assign C++ parent
+		nodeInstance->setParent(this);
+		nodeInstance->setObjectName(strBrowseName);
+
+		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
+		//        eventhough there appear to be some success cases on the internet
+		//        so in the end we have to wuery children by object name
+	}
+	// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
+	Q_ASSERT(mapChildren.count() == 0);
+
+	// TODO : emit event that new children added
+}
+
 QString QOpcUaServerNode::get_displayName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
@@ -191,19 +264,6 @@ UA_Server * QOpcUaServerNode::getUAServer()
 	return m_qopcuaserver->m_server;
 }
 
-void QOpcUaServerNode::bindWithUaNode(QOpcUaServer *server, const UA_NodeId & nodeId)
-{
-	Q_ASSERT(!UA_NodeId_isNull(&nodeId));
-	Q_CHECK_PTR(server);
-	// set server instance
-	this->m_qopcuaserver = server;
-	// set c++ instance as context
-	UA_Server_setNodeContext(server->m_server, nodeId, (void*)this);
-	// set node id to c++ instance
-	this->m_nodeId = nodeId;
-	
-}
-
 UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, QOpcUaServer * server)
 {
 	return QOpcUaServerNode::getParentNodeId(childNodeId, server->m_server);
@@ -214,8 +274,8 @@ UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Se
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	bDesc->nodeId          = childNodeId; // from child
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
-	bDesc->includeSubtypes = false;
-	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
+	bDesc->includeSubtypes = true;
+	//bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
 	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
@@ -288,6 +348,13 @@ QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, QO
 
 QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
 {
+	void * context = QOpcUaServerNode::getVoidContext(nodeId, server);
+	// try to cast to C++ node
+	return static_cast<QOpcUaServerNode*>(context);
+}
+
+void * QOpcUaServerNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
+{
 	// get void context
 	void * context;
 	auto st = UA_Server_getNodeContext(server, nodeId, &context);
@@ -297,7 +364,7 @@ QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, UA
 		return nullptr;
 	}
 	// try to cast to C++ node
-	return static_cast<QOpcUaServerNode*>(context);
+	return context;
 }
 
 QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, QOpcUaServer * server)

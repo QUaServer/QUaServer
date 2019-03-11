@@ -3,6 +3,12 @@
 #include <QOpcUaServer>
 #include <QOpcUaBaseDataVariable>
 
+QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaServerNode(server, nodeId, metaObject)
+{
+
+}
+
 QVariant QOpcUaBaseVariable::get_value() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);

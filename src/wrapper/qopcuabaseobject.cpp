@@ -33,14 +33,10 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 		                                   output);
 }
 
-QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server, const UA_NodeId &nodeId)
+QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: QOpcUaServerNode(server, nodeId, metaObject)
 {
-	// check
-	if (!server || UA_NodeId_isNull(&nodeId))
-	{
-		return;
-	}
-	this->bindWithUaNode(server, nodeId);
+
 }
 
 UA_NodeId QOpcUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)

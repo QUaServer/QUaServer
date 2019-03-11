@@ -77,6 +77,7 @@ class QOpcUaServerNode : public QObject
     Q_PROPERTY(QString browseName READ get_browseName WRITE set_browseName NOTIFY browseNameChanged)
 
 public:
+	explicit QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
 	// OPC UA methods API
 
@@ -113,7 +114,6 @@ public:
 	// NOTE : this is how we would declare a <template class> friend
 	//template<typename T> friend class QOpcUaServerNodeFactory;
 	UA_Server * getUAServer();
-	void        bindWithUaNode(QOpcUaServer *server, const UA_NodeId &nodeId);
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QOpcUaServer *server);
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server    *server);
@@ -123,6 +123,7 @@ public:
 
 	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, QOpcUaServer *server);
 	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server    *server);
+	static void             * getVoidContext(const UA_NodeId &nodeId, UA_Server    *server);
 
 	static QString getBrowseName (const UA_NodeId &nodeId, QOpcUaServer *server);
 	static QString getBrowseName (const UA_NodeId &nodeId, UA_Server    *server);
@@ -140,82 +141,6 @@ signals:
 private:
 
 
-};
-
-template<typename T>
-struct QOpcUaServerNodeFactory
-{
-	// For custom obj types with props
-	inline QOpcUaServerNodeFactory(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL)
-	{
-		// check
-		if (!server || UA_NodeId_isNull(&nodeId))
-		{
-			return;
-		}
-		// get instance of type being instantiated
-		auto ptrThis = static_cast<T*>(this);
-		// bind itself, but only good for C++ constructor, because later UA constructor overwrites it
-		// so we need to also set the context again in QOpcUaServer::uaConstructor
-		ptrThis->bindWithUaNode(server, nodeId);
-		// get all UA children in advance, because if none, then better early exit
-		auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
-		if (chidrenNodeIds.count() <= 0)
-		{
-			return;
-		}
-		// create hash of nodeId's by browse name, which must match Qt's metaprops
-		QHash<QString, UA_NodeId> mapChildren;
-		for (int i = 0; i < chidrenNodeIds.count(); i++)
-		{
-			auto childNodeId = chidrenNodeIds[i];
-			// read browse name
-			QString strBrowseName = QOpcUaServerNode::getBrowseName(childNodeId, server);
-			Q_ASSERT(!mapChildren.contains(strBrowseName));
-			mapChildren[strBrowseName] = childNodeId;
-		}
-		// list meta props
-		auto metaObj   = T::staticMetaObject;
-		int propCount  = metaObj.propertyCount();
-		int propOffset = QOpcUaServerNode::getPropsOffsetHelper(T::staticMetaObject);
-		for (int i = propOffset; i < propCount; i++)
-		{
-			// check if available in meta-system
-			QMetaProperty metaproperty = T::staticMetaObject.property(i);
-			if (!QMetaType::metaObjectForType(metaproperty.userType()))
-			{
-				continue;
-			}
-			// check if OPC UA relevant type
-			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
-			{
-				continue;
-			}
-			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&T::staticMetaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
-			if (propMetaObject.inherits(&T::staticMetaObject))
-			{
-				continue;
-			}
-			// the Qt meta property name must match the UA browse name
-			QString strBrowseName = QString(metaproperty.name());
-			Q_ASSERT(mapChildren.contains(strBrowseName));
-			// get child nodeId for child
-			auto childNodeId = mapChildren.take(strBrowseName);
-			// get node context (C++ instance)
-			auto nodeInstance = QOpcUaServerNode::getNodeContext(childNodeId, server);
-			// assign C++ parent
-			nodeInstance->setParent(ptrThis);
-			nodeInstance->setObjectName(strBrowseName);
-
-			// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
-			//        eventhough there appear to be some success cases on the internet
-			//        so in the end we have to wuery children by object name
-		}
-		// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
-		Q_ASSERT(mapChildren.count() == 0);
-	}
 };
 
 #endif // QOPCUASERVERNODE_H

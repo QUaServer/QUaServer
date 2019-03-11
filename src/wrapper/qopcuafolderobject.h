@@ -19,7 +19,7 @@ class QOpcUaFolderObject : public QOpcUaBaseObject
 friend class QOpcUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServer *server = nullptr, const UA_NodeId &nodeId = UA_NODEID_NULL);
+	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
 	
 
