@@ -15,22 +15,19 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	                                           size_t             outputSize, 
 	                                           UA_Variant       * output)
 {
+	Q_UNUSED(server        );
+	Q_UNUSED(sessionId     );
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(objectId      );
+	Q_UNUSED(objectContext );
+	Q_UNUSED(inputSize     );
+	Q_UNUSED(outputSize    );
 	// get node from context object
 	auto obj = static_cast<QOpcUaBaseObject*>(methodContext);
 	Q_CHECK_PTR(obj);
-	Q_ASSERT(obj->m_hashCallbacks.contains(*methodId));
+	Q_ASSERT(obj->m_hashMethods.contains(*methodId));
 	// get method from node callbacks map and call it
-	return obj->m_hashCallbacks[*methodId](server,
-		                                   sessionId, 
-		                                   sessionContext, 
-		                                   methodId, 
-		                                   methodContext, 
-		                                   objectId, 
-		                                   objectContext, 
-		                                   inputSize, 
-		                                   input, 
-		                                   outputSize, 
-		                                   output);
+	return obj->m_hashMethods[*methodId](input, output);
 }
 
 QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)

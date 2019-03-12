@@ -57,13 +57,15 @@ private:
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
 
 	void addMetaProperties(const QMetaObject &parentMetaObject);
+	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
 	UA_NodeId createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode);
 
 	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
-	QHash< UA_NodeId, QList<std::function<void(void)>>> m_hashDeferredConstructors;
+	QHash< UA_NodeId, QList<std::function<void(void)>>                                          > m_hashDeferredConstructors;
+	QHash< UA_NodeId, std::function<UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>      > m_hashMethods;
 
 	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
 
@@ -79,6 +81,18 @@ private:
 		                               const UA_NodeId   *nodeId, 
 		                               void             **nodeContext,
 		                               const QMetaObject &metaObject);
+
+	static UA_StatusCode methodCallback(UA_Server        *server,
+		                                const UA_NodeId  *sessionId,
+		                                void             *sessionContext,
+		                                const UA_NodeId  *methodId,
+		                                void             *methodContext,
+		                                const UA_NodeId  *objectId,
+		                                void             *objectContext,
+		                                size_t            inputSize,
+		                                const UA_Variant *input,
+		                                size_t            outputSize,
+		                                UA_Variant       *output);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 };

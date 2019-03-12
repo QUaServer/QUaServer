@@ -99,6 +99,33 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	return UA_STATUSCODE_GOOD;
 }
 
+// [STATIC]
+UA_StatusCode QOpcUaServer::methodCallback(UA_Server        * server,
+	                                       const UA_NodeId  * sessionId, 
+	                                       void             * sessionContext, 
+	                                       const UA_NodeId  * methodId, 
+	                                       void             * methodContext, 
+	                                       const UA_NodeId  * objectId, 
+	                                       void             * objectContext, 
+	                                       size_t             inputSize, 
+	                                       const UA_Variant * input, 
+	                                       size_t             outputSize, 
+	                                       UA_Variant       * output)
+{
+	Q_UNUSED(server        );
+	Q_UNUSED(sessionId     );
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(objectId      );
+	Q_UNUSED(inputSize     );
+	Q_UNUSED(outputSize    );
+	// get node from context object
+	auto srv = static_cast<QOpcUaServer*>(methodContext);
+	Q_CHECK_PTR(srv);
+	Q_ASSERT(srv->m_hashMethods.contains(*methodId));
+	// get method from node callbacks map and call it
+	return srv->m_hashMethods[*methodId](objectContext, input, output);
+}
+
 bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 {
 	auto ptr = QOpcUaServerNode::getNodeContext(nodeId, server);
@@ -264,19 +291,15 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	}
 	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
-
 	// register constructor/destructor
 	this->registerTypeLifeCycle(&newTypeNodeId, metaObject);
-
-
 	// register meta-properties
 	this->addMetaProperties(metaObject);
-
-	// TODO : register meta-methods
-
-	//
-
-
+	// register meta-methods (only if object class, or NOT variable class)
+	if (!metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
+	{
+		this->addMetaMethods(metaObject);
+	}
 }
 
 void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)
@@ -359,7 +382,6 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
 		QByteArray bytePropName = strPropName.toUtf8();
-		//qDebug() << "Adding property" << strPropName << "to type" << strParentClassName;
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
 		// check if variable or object
 		// NOTE : a type is considered to inherit itself sometimes does not work (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
@@ -411,6 +433,158 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		                                 true);
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
+	}
+}
+
+void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
+{
+	QString   strParentClassName = QString(parentMetaObject.className());
+	UA_NodeId parentTypeNodeId   = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
+	Q_ASSERT(!UA_NodeId_isNull(&parentTypeNodeId));
+	// loop meta methods and find out which ones inherit from
+	int methCount = parentMetaObject.methodCount();
+	for (int i = parentMetaObject.methodOffset(); i < methCount; i++)
+	{
+		QMetaMethod metamethod = parentMetaObject.method(i);
+		// validate return type
+		auto returnType  = (QMetaType::Type)metamethod.returnType();
+		bool isSupported = QOpcUaTypesConverter::isSupportedQType(returnType);
+		Q_ASSERT_X(isSupported, "QOpcUaServer::addMetaMethods", "Return type not supported in MetaMethod.");
+		if (!isSupported)
+		{
+			continue;
+		}
+		// create return type
+		UA_Argument   outputArgumentInstance;
+		UA_Argument * outputArgument = nullptr;
+		if (returnType != QMetaType::Void)
+		{
+			UA_Argument_init(&outputArgumentInstance);
+			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char *)"en-US",
+														  (char *)"Result Value");
+			outputArgumentInstance.name        = QOpcUaTypesConverter::uaStringFromQString((char *)"Result");
+			outputArgumentInstance.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromQType(returnType);
+			outputArgumentInstance.valueRank   = UA_VALUERANK_SCALAR;
+			outputArgument = &outputArgumentInstance;
+		}
+		// validate argument types and create them
+		Q_ASSERT_X(metamethod.parameterCount() <= 10, "QOpcUaServer::addMetaMethods", "No more than 10 arguments supported in MetaMethod.");
+		if (metamethod.parameterCount() > 10)
+		{
+			continue;
+		}
+		QVector<UA_Argument> vectArgs;
+		auto listArgNames = metamethod.parameterNames();
+		Q_ASSERT(listArgNames.count() == metamethod.parameterCount());
+		for (int k = 0; k < metamethod.parameterCount(); k++)
+		{
+			isSupported = QOpcUaTypesConverter::isSupportedQType((QMetaType::Type)metamethod.parameterType(k));
+			Q_ASSERT_X(isSupported, "QOpcUaServer::addMetaMethods", "Argument type not supported in MetaMethod.");
+			if (!isSupported)
+			{
+				break;
+			}
+			UA_Argument inputArgument;
+			UA_Argument_init(&inputArgument);
+			// create n-th argument
+			inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
+			inputArgument.name        = QOpcUaTypesConverter::uaStringFromQString(listArgNames.at(k));
+			inputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
+			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
+			vectArgs.append(inputArgument);
+		}
+		if (!isSupported)
+		{
+			continue;
+		}
+		// add method
+		auto strMethName = metamethod.name();
+		// add method node
+		UA_MethodAttributes methAttr = UA_MethodAttributes_default;
+		methAttr.executable     = true;
+		methAttr.userExecutable = true;
+		methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
+												   strMethName.data());
+		methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
+												   strMethName.data());
+		// create callback
+		UA_NodeId methNodeId;
+		auto st = UA_Server_addMethodNode(this->m_server,
+										  UA_NODEID_NULL,
+										  parentTypeNodeId,
+										  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+										  UA_QUALIFIEDNAME (1, strMethName.data()),
+										  methAttr,
+										  &QOpcUaServer::methodCallback,
+										  metamethod.parameterCount(),
+										  vectArgs.data(),
+										  outputArgument ? 1 : 0,
+										  outputArgument,
+										  this, // context is server instance that has m_hashMethods
+										  &methNodeId);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		// Define "StartPump" method mandatory
+		st = UA_Server_addReference(this->m_server,
+							        methNodeId,
+							        UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+							        UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+							        true);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		// store method with node id hash as key
+		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QOpcUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
+		m_hashMethods[methNodeId] = [metamethod](void * objectContext, const UA_Variant * input, UA_Variant * output) {
+			// get object instance that owns method
+			QOpcUaBaseObject * object = static_cast<QOpcUaBaseObject*>(objectContext);
+			Q_CHECK_PTR(object);
+			if (!object)
+			{
+				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+			}
+			// convert input arguments to QVariants
+			QVariantList varListArgs;
+			QList<QGenericArgument> genListArgs;
+			for (int k = 0; k < metamethod.parameterCount(); k++)
+			{
+				varListArgs.append(QOpcUaTypesConverter::uaVariantToQVariant(input[k]));
+				genListArgs.append(QGenericArgument(
+					QMetaType::typeName(varListArgs[k].userType()),
+					const_cast<void*>(varListArgs[k].constData())
+				));
+			}
+			// create return QVariant
+			QVariant returnValue(QMetaType::type(metamethod.typeName()), static_cast<void*>(NULL));
+			QGenericReturnArgument returnArgument(
+				metamethod.typeName(),
+				const_cast<void*>(returnValue.constData())
+			);
+			// call metamethod
+			bool ok = metamethod.invoke(
+				object,
+				Qt::DirectConnection,
+				returnArgument,
+				genListArgs.value(0),
+				genListArgs.value(1),
+				genListArgs.value(2),
+				genListArgs.value(3),
+				genListArgs.value(4),
+				genListArgs.value(5),
+				genListArgs.value(6),
+				genListArgs.value(7),
+				genListArgs.value(8),
+				genListArgs.value(9)
+			);
+			Q_ASSERT(ok);
+			Q_UNUSED(ok);
+			// set return value if any
+			if ((QMetaType::Type)metamethod.returnType() != QMetaType::Void)
+			{
+				*output = QOpcUaTypesConverter::uaVariantFromQVariant(returnValue);
+			}
+			// return success status
+			return (UA_StatusCode)UA_STATUSCODE_GOOD;
+		};
 	}
 }
 

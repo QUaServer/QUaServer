@@ -177,6 +177,37 @@ namespace QOpcUaTypesConverter {
 		return UA_STRING_ALLOC(uaString.toUtf8().constData());
 	}
 
+	bool isSupportedQType(const QMetaType::Type & type)
+	{
+		switch (type)
+		{
+		case QMetaType::UnknownType:
+		case QMetaType::Bool:
+		case QMetaType::Char:
+		case QMetaType::SChar:
+		case QMetaType::UChar:
+		case QMetaType::Short:
+		case QMetaType::UShort:
+		case QMetaType::Int:
+		case QMetaType::UInt:
+		case QMetaType::Long:
+		case QMetaType::LongLong:
+		case QMetaType::ULong:
+		case QMetaType::ULongLong:
+		case QMetaType::Float:
+		case QMetaType::Double:
+		case QMetaType::QString:
+		case QMetaType::QDateTime:
+		case QMetaType::QUuid:
+		case QMetaType::QByteArray:
+			return true;
+		// TODO : QMetaType::QVariantList ???
+		default:
+			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
+			return false;
+		}
+	}
+
 	UA_NodeId uaTypeNodeIdFromQType(const QMetaType::Type & type)
 	{
 		switch (type)

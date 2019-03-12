@@ -212,17 +212,7 @@ private:
 		                                size_t            outputSize,
 		                                UA_Variant       *output);
 
-	QHash< UA_NodeId, std::function<UA_StatusCode(UA_Server*,
-		                                          const UA_NodeId*, 
-		                                          void*, 
-		                                          const 
-		                                          UA_NodeId*, 
-		                                          void*, 
-		                                          const UA_NodeId*, 
-		                                          void*, size_t, 
-		                                          const UA_Variant*, 
-		                                          size_t, 
-		                                          UA_Variant*)>> m_hashCallbacks;
+	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_Variant*, UA_Variant*)>> m_hashMethods;
 };
 
 template<typename M>
@@ -248,27 +238,8 @@ inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const M &
 	QByteArray byteMethodName = strMethodName.toUtf8();
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, QOpcUaMethodTraits<M>::getNumArgs(), p_inputArguments, p_outputArgument);
 	// store method with node id hash as key
-	Q_ASSERT_X(!m_hashCallbacks.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
-	m_hashCallbacks[methNodeId] = [methodCallback](UA_Server        * server,
-                                                   const UA_NodeId  * sessionId,
-                                                   void             * sessionContext,
-                                                   const UA_NodeId  * methodId,
-                                                   void             * methodContext,
-                                                   const UA_NodeId  * objectId,
-                                                   void             * objectContext,
-                                                   size_t             inputSize,
-                                                   const UA_Variant * input,
-                                                   size_t             outputSize,
-                                                   UA_Variant       * output) {
-        Q_UNUSED(server);
-        Q_UNUSED(sessionId);
-        Q_UNUSED(sessionContext);
-        Q_UNUSED(methodId);
-        Q_UNUSED(methodContext);
-        Q_UNUSED(objectId);
-        Q_UNUSED(objectContext);
-        Q_UNUSED(inputSize);
-        Q_UNUSED(outputSize);
+	Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	m_hashMethods[methNodeId] = [methodCallback](const UA_Variant * input, UA_Variant * output) {
         // call method
 		if (QOpcUaMethodTraits<M>::isRetUaArgumentVoid())
 		{

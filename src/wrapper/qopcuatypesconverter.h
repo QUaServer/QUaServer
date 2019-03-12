@@ -24,6 +24,8 @@ namespace QOpcUaTypesConverter {
 	QString   uaStringToQString  (const UA_String &string);
 	UA_String uaStringFromQString(const QString &uaString);
 
+	// qt supported
+	bool isSupportedQType(const QMetaType::Type &type);
 	// ua from c++
 	template<typename T>
 	UA_NodeId uaTypeNodeIdFromCpp();

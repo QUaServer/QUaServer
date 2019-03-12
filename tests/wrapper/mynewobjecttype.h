@@ -17,6 +17,11 @@ public:
 	MyNewVariableSubSubType * myVarSubSub();
 	QOpcUaBaseDataVariable  * myVar();
 
+	Q_INVOKABLE bool    updateMyVar(quint32 newVarVal);
+
+	Q_INVOKABLE QString saluteName(QString strName);
+
+	Q_INVOKABLE double  divideNums(int intNum, int intDen);
 
 private:
 	
