@@ -11,18 +11,18 @@ class MyNewVariableType : public QOpcUaBaseDataVariable
 {
     Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ getMyVar     )
-	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ getMyObj     )
-	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ getMyOtherVar)
-	Q_PROPERTY(MyOtherNewVariableType * myOtherTwo READ getMyOtherTwo)
+	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ myVar     )
+	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ myObj     )
+	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ myOtherVar)
+	Q_PROPERTY(MyOtherNewVariableType * myOtherTwo READ myOtherTwo)
 
 public:
 	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
-	QOpcUaBaseDataVariable * getMyVar();
-	QOpcUaBaseObject       * getMyObj();
-	MyOtherNewVariableType * getMyOtherVar();
-	MyOtherNewVariableType * getMyOtherTwo();
+	QOpcUaBaseDataVariable * myVar();
+	QOpcUaBaseObject       * myObj();
+	MyOtherNewVariableType * myOtherVar();
+	MyOtherNewVariableType * myOtherTwo();
 
 };
 
@@ -32,11 +32,11 @@ class MyOtherNewVariableType : public QOpcUaBaseDataVariable
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseDataVariable * myVarTwo READ getMyVarTwo)
+	Q_PROPERTY(QOpcUaBaseDataVariable * myVarTwo READ myVarTwo)
 public:
 	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
-	QOpcUaBaseDataVariable * getMyVarTwo();
+	QOpcUaBaseDataVariable * myVarTwo();
 
 private:
 
@@ -48,12 +48,12 @@ class MyNewVariableSubType : public MyNewVariableType
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseObject * myObjSub READ getMyObjSub)
+	Q_PROPERTY(QOpcUaBaseObject * myObjSub READ myObjSub)
 
 public:
 	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
-	QOpcUaBaseObject * getMyObjSub();
+	QOpcUaBaseObject * myObjSub();
 
 
 };
@@ -64,12 +64,12 @@ class MyNewVariableSubSubType : public MyNewVariableSubType
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseObject * myObjSubSub READ getMyObjSubSub)
+	Q_PROPERTY(QOpcUaBaseObject * myObjSubSub READ myObjSubSub)
 
 public:
 	Q_INVOKABLE explicit MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
-	QOpcUaBaseObject * getMyObjSubSub();
+	QOpcUaBaseObject * myObjSubSub();
 
 
 };

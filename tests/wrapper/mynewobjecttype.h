@@ -8,12 +8,14 @@ class MyNewObjectType : public QOpcUaBaseObject
 {
     Q_OBJECT
 
-	Q_PROPERTY(MyNewVariableSubSubType * myVarSubSub READ getMyVarSubSub)
+	Q_PROPERTY(QOpcUaBaseDataVariable  * myVar       READ myVar      )
+	Q_PROPERTY(MyNewVariableSubSubType * myVarSubSub READ myVarSubSub)
 
 public:
 	Q_INVOKABLE explicit MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
 
-	MyNewVariableSubSubType * getMyVarSubSub();
+	MyNewVariableSubSubType * myVarSubSub();
+	QOpcUaBaseDataVariable  * myVar();
 
 
 private:

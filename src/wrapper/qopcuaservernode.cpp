@@ -44,6 +44,7 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 	// list meta props
 	int propCount  = metaObject.propertyCount();
 	int propOffset = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
+	int numProps   = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
 		// check if available in meta-system
@@ -64,6 +65,8 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 		{
 			continue;
 		}
+		// inc number of valid props
+		numProps++;
 		// the Qt meta property name must match the UA browse name
 		QString strBrowseName = QString(metaproperty.name());
 		Q_ASSERT(mapChildren.contains(strBrowseName));
@@ -79,10 +82,12 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 		//        so in the end we have to wuery children by object name
 	}
 	// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
-	Q_ASSERT(mapChildren.count() == 0);
+	Q_ASSERT_X(mapChildren.count()      == 0        &&
+		       chidrenNodeIds.count()   == numProps &&
+		       this->children().count() == numProps, "QOpcUaServerNode::QOpcUaServerNode", "Children not bound properly.");
 }
 
-QString QOpcUaServerNode::get_displayName() const
+QString QOpcUaServerNode::displayName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -100,7 +105,7 @@ QString QOpcUaServerNode::get_displayName() const
 	// TODO : handle outDisplayName.locale
 }
 
-void QOpcUaServerNode::set_displayName(const QString & displayName)
+void QOpcUaServerNode::setDisplayName(const QString & displayName)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -116,7 +121,7 @@ void QOpcUaServerNode::set_displayName(const QString & displayName)
 	// TODO : handle locale
 }
 
-QString QOpcUaServerNode::get_description() const
+QString QOpcUaServerNode::description() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -134,7 +139,7 @@ QString QOpcUaServerNode::get_description() const
 	// TODO : handle outDescription.locale
 }
 
-void QOpcUaServerNode::set_description(const QString & description)
+void QOpcUaServerNode::setDescription(const QString & description)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -150,7 +155,7 @@ void QOpcUaServerNode::set_description(const QString & description)
 	// TODO : handle locale
 }
 
-quint32 QOpcUaServerNode::get_writeMask() const
+quint32 QOpcUaServerNode::writeMask() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -167,7 +172,7 @@ quint32 QOpcUaServerNode::get_writeMask() const
 	return outWriteMask;
 }
 
-void QOpcUaServerNode::set_writeMask(const quint32 & writeMask)
+void QOpcUaServerNode::setWriteMask(const quint32 & writeMask)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -179,7 +184,7 @@ void QOpcUaServerNode::set_writeMask(const quint32 & writeMask)
 	emit this->writeMaskChanged(writeMask);
 }
 
-QString QOpcUaServerNode::get_nodeId() const
+QString QOpcUaServerNode::nodeId() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -190,7 +195,7 @@ QString QOpcUaServerNode::get_nodeId() const
 	return QOpcUaTypesConverter::nodeIdToQString(m_nodeId);
 }
 
-QString QOpcUaServerNode::get_nodeClass() const
+QString QOpcUaServerNode::nodeClass() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -207,7 +212,7 @@ QString QOpcUaServerNode::get_nodeClass() const
 	return QOpcUaTypesConverter::nodeClassToQString(outNodeClass);
 }
 
-QString QOpcUaServerNode::get_browseName() const
+QString QOpcUaServerNode::browseName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -225,7 +230,7 @@ QString QOpcUaServerNode::get_browseName() const
 	return QOpcUaTypesConverter::uaStringToQString(outBrowseName.name);
 }
 
-void QOpcUaServerNode::set_browseName(const QString & browseName)
+void QOpcUaServerNode::setBrowseName(const QString & browseName)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));

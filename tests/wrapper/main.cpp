@@ -11,7 +11,7 @@
 void printChildren(QOpcUaServerNode * child, const QString strSpacer)
 {
 	Q_CHECK_PTR(child);
-	qDebug() << strSpacer + "-->" << child->get_displayName();//child->objectName();
+	qDebug() << strSpacer + "-->" << child->displayName();//child->objectName();
 	for (int i = 0; i < child->children().count(); i++)
 	{
 		printChildren(static_cast<QOpcUaServerNode*>(child->children().at(i)), strSpacer + "--");
@@ -28,20 +28,20 @@ int main(int argc, char *argv[])
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
-	varBaseData->set_browseName("QOpcUaBaseDataVariable");
-	varBaseData->set_displayName("QOpcUaBaseDataVariable");
+	varBaseData->setBrowseName("QOpcUaBaseDataVariable");
+	varBaseData->setDisplayName("QOpcUaBaseDataVariable");
 
 	auto varProp = objsFolder->addProperty();
-	varProp->set_browseName("QOpcUaProperty");
-	varProp->set_displayName("QOpcUaProperty");
+	varProp->setBrowseName("QOpcUaProperty");
+	varProp->setDisplayName("QOpcUaProperty");
 
 	auto objBase = objsFolder->addBaseObject();
-	objBase->set_browseName("QOpcUaBaseObject");
-	objBase->set_displayName("QOpcUaBaseObject");
+	objBase->setBrowseName("QOpcUaBaseObject");
+	objBase->setDisplayName("QOpcUaBaseObject");
 
 	auto objFolder = objsFolder->addFolderObject();
-	objFolder->set_browseName("QOpcUaFolderObject");
-	objFolder->set_displayName("QOpcUaFolderObject");
+	objFolder->setBrowseName("QOpcUaFolderObject");
+	objFolder->setDisplayName("QOpcUaFolderObject");
 
 	// methods
 
@@ -63,45 +63,39 @@ int main(int argc, char *argv[])
 
 	// custom types
 
-	server.registerType<MyNewVariableSubSubType>();
-	server.registerType<MyOtherNewVariableType>();
+	//server.registerType<MyNewVariableSubSubType>();
+	//server.registerType<MyOtherNewVariableType>();
 
 	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
-	newobjTypeInstance->set_browseName ("MyNewObjectType");
-	newobjTypeInstance->set_displayName("MyNewObjectType");
+	newobjTypeInstance->setBrowseName ("MyNewObjectType");
+	newobjTypeInstance->setDisplayName("MyNewObjectType");
 
 	auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
-	otherNewobjTypeInstance->set_browseName("MyOtherNewObjectType");
-	otherNewobjTypeInstance->set_displayName("MyOtherNewObjectType");
+	otherNewobjTypeInstance->setBrowseName("MyOtherNewObjectType");
+	otherNewobjTypeInstance->setDisplayName("MyOtherNewObjectType");
 
 	auto newVarTypeInstance = objsFolder->addChild<MyNewVariableType>();
-	newVarTypeInstance->set_browseName("MyNewVariableType");
-	newVarTypeInstance->set_displayName("MyNewVariableType");
-	newVarTypeInstance->set_value(1.2345);
+	newVarTypeInstance->setBrowseName("MyNewVariableType");
+	newVarTypeInstance->setDisplayName("MyNewVariableType");
+	newVarTypeInstance->setValue(1.2345);
 
-	qDebug() << "MyNewVariableType->myVar::value =" << newVarTypeInstance->getMyVar()->get_value();
-	newVarTypeInstance->getMyOtherTwo()->getMyVarTwo()->set_value("foo");
-	newVarTypeInstance->getMyOtherVar()->getMyVarTwo()->set_value("bar");
+	newVarTypeInstance->myOtherTwo()->myVarTwo()->setValue("foo");
+	newVarTypeInstance->myOtherVar()->myVarTwo()->setValue("bar");
 
 	auto newVarTypeInstance2 = objsFolder->addChild<MyNewVariableType>();
-	newVarTypeInstance2->set_browseName("MyNewVariableType2");
-	newVarTypeInstance2->set_displayName("MyNewVariableType2");
-	newVarTypeInstance2->set_value("xxx");
+	newVarTypeInstance2->setBrowseName("MyNewVariableType2");
+	newVarTypeInstance2->setDisplayName("MyNewVariableType2");
+	newVarTypeInstance2->setValue("xxx");
 
 	auto newVarSubTypeInstance = objsFolder->addChild<MyNewVariableSubType>();
-	newVarSubTypeInstance->set_browseName("MyNewVariableSubType");
-	newVarSubTypeInstance->set_displayName("MyNewVariableSubType");
-	newVarSubTypeInstance->set_value(666);
+	newVarSubTypeInstance->setBrowseName("MyNewVariableSubType");
+	newVarSubTypeInstance->setDisplayName("MyNewVariableSubType");
+	newVarSubTypeInstance->setValue(666);
 
 	auto newVarSubSubTypeInstance = objsFolder->addChild<MyNewVariableSubSubType>();
-	newVarSubSubTypeInstance->set_browseName("MyNewVariableSubSubType");
-	newVarSubSubTypeInstance->set_displayName("MyNewVariableSubSubType");
-	newVarSubSubTypeInstance->set_value(QDateTime::currentDateTime());	
-
-	//auto children = objsFolder->findChildren<QOpcUaBaseObject>();
-	//qDebug() << "Children " << children.count();
-
-	printChildren(objsFolder, "");
+	newVarSubSubTypeInstance->setBrowseName("MyNewVariableSubSubType");
+	newVarSubSubTypeInstance->setDisplayName("MyNewVariableSubSubType");
+	newVarSubSubTypeInstance->setValue(QDateTime::currentDateTime());	
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

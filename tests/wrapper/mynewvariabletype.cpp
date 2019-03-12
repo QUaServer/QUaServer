@@ -3,25 +3,25 @@
 MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
 	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
 {
-	this->getMyVar()->set_value(123);
+	this->myVar()->setValue(123);
 }
 
-QOpcUaBaseDataVariable * MyNewVariableType::getMyVar()
+QOpcUaBaseDataVariable * MyNewVariableType::myVar()
 {
 	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
 }
 
-QOpcUaBaseObject * MyNewVariableType::getMyObj()
+QOpcUaBaseObject * MyNewVariableType::myObj()
 {
 	return this->findChild<QOpcUaBaseObject*>("myObj");
 }
 
-MyOtherNewVariableType * MyNewVariableType::getMyOtherVar()
+MyOtherNewVariableType * MyNewVariableType::myOtherVar()
 {
 	return this->findChild<MyOtherNewVariableType*>("myOtherVar");
 }
 
-MyOtherNewVariableType * MyNewVariableType::getMyOtherTwo()
+MyOtherNewVariableType * MyNewVariableType::myOtherTwo()
 {
 	return this->findChild<MyOtherNewVariableType*>("myOtherTwo");
 }
@@ -31,10 +31,10 @@ MyOtherNewVariableType * MyNewVariableType::getMyOtherTwo()
 MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
 	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
 {
-	this->set_value("equis");
+	this->setValue("equis");
 }
 
-QOpcUaBaseDataVariable * MyOtherNewVariableType::getMyVarTwo()
+QOpcUaBaseDataVariable * MyOtherNewVariableType::myVarTwo()
 {
 	return this->findChild<QOpcUaBaseDataVariable*>("myVarTwo");
 }
@@ -47,7 +47,7 @@ MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId
 	//qDebug() << "MyNewVariableSubType::MyNewVariableSubType";
 }
 
-QOpcUaBaseObject * MyNewVariableSubType::getMyObjSub()
+QOpcUaBaseObject * MyNewVariableSubType::myObjSub()
 {
 	return this->findChild<QOpcUaBaseObject*>("myObjSub");
 }
@@ -60,7 +60,7 @@ MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_
 	//qDebug() << "MyNewVariableSubSubType::MyNewVariableSubSubType";
 }
 
-QOpcUaBaseObject * MyNewVariableSubSubType::getMyObjSubSub()
+QOpcUaBaseObject * MyNewVariableSubSubType::myObjSubSub()
 {
 	return this->findChild<QOpcUaBaseObject*>("myObjSubSub");
 }

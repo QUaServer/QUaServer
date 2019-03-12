@@ -28,8 +28,8 @@ struct QOpcUaFail : std::false_type
 // to have UA_NodeId as a hash key
 inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
 {
-	return e1.namespaceIndex == e2.namespaceIndex
-		&& e1.identifierType == e2.identifierType
+	return e1.namespaceIndex     == e2.namespaceIndex
+		&& e1.identifierType     == e2.identifierType
 		&& e1.identifier.numeric == e2.identifier.numeric;
 }
 
@@ -58,9 +58,9 @@ class QOpcUaServerNode : public QObject
 	// N/A
 	//Q_PROPERTY(quint32 specifiedAttributes READ get_specifiedAttributes)
 
-	Q_PROPERTY(QString displayName READ get_displayName WRITE set_displayName NOTIFY displayNameChanged)
-	Q_PROPERTY(QString description READ get_description WRITE set_description NOTIFY descriptionChanged)
-	Q_PROPERTY(quint32 writeMask   READ get_writeMask   WRITE set_writeMask   NOTIFY writeMaskChanged  )
+	Q_PROPERTY(QString displayName READ displayName WRITE setDisplayName NOTIFY displayNameChanged)
+	Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+	Q_PROPERTY(quint32 writeMask   READ writeMask   WRITE setWriteMask   NOTIFY writeMaskChanged  )
 
 	// Cannot be read, since the local "admin" user always has full rights.
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback.
@@ -69,30 +69,35 @@ class QOpcUaServerNode : public QObject
 	// Node Specifics
 
 	// Cannot be changed once a node has been created.
-	Q_PROPERTY(QString nodeId     READ get_nodeId   )
-	Q_PROPERTY(QString nodeClass  READ get_nodeClass)
+	Q_PROPERTY(QString nodeId     READ nodeId   )
+	Q_PROPERTY(QString nodeClass  READ nodeClass)
 
 	// Other
 
-    Q_PROPERTY(QString browseName READ get_browseName WRITE set_browseName NOTIFY browseNameChanged)
+    Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
 
 public:
 	explicit QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	
+	// Virtual destructor is necessary to call derived class destructor when delete is called on pointer to base class
+	// https://stackoverflow.com/questions/294927/does-delete-work-with-pointers-to-base-class
+	// https://repl.it/repls/EachSpicyInternalcommand
+	inline virtual ~QOpcUaServerNode() { };
 
 	// OPC UA methods API
 
-	QString get_displayName() const;
-	void    set_displayName(const QString &displayName);
-	QString get_description() const;
-	void    set_description(const QString &description);
-	quint32 get_writeMask  () const;
-	void    set_writeMask  (const quint32 &writeMask);
+	QString displayName   () const;
+	void    setDisplayName(const QString &displayName);
+	QString description   () const;
+	void    setDescription(const QString &description);
+	quint32 writeMask     () const;
+	void    setWriteMask  (const quint32 &writeMask);
 
-	QString get_nodeId     () const;
-	QString get_nodeClass  () const;
+	QString nodeId        () const;
+	QString nodeClass     () const;
 	
-	QString get_browseName() const;
-    void    set_browseName(const QString &browseName);
+	QString browseName    () const;
+    void    setBrowseName (const QString &browseName);
 
 	// Instance Creation API
 
@@ -111,8 +116,6 @@ public:
 	UA_NodeId m_nodeId;
 
 	// private
-	// NOTE : this is how we would declare a <template class> friend
-	//template<typename T> friend class QOpcUaServerNodeFactory;
 	UA_Server * getUAServer();
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QOpcUaServer *server);

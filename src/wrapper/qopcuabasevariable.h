@@ -67,19 +67,19 @@ class QOpcUaBaseVariable : public QOpcUaServerNode
 
 	// Variable Attributes
 
-	Q_PROPERTY(QVariant          value               READ get_value               WRITE set_value           NOTIFY valueChanged          )
-	Q_PROPERTY(QMetaType::Type   dataType            READ get_dataType            WRITE set_dataType        NOTIFY dataTypeChanged       )
-	Q_PROPERTY(qint32            valueRank           READ get_valueRank          /*NOTE : Read-only*/       NOTIFY valueRankChanged      )
-	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ get_arrayDimensions    /*NOTE : Read-only*/       NOTIFY arrayDimensionsChanged)
-	Q_PROPERTY(quint8            accessLevel         READ get_accessLevel         WRITE set_accessLevel     NOTIFY accessLevelChanged    )
+	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
+	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType        NOTIFY dataTypeChanged       )
+	Q_PROPERTY(qint32            valueRank           READ valueRank          /*NOTE : Read-only*/      NOTIFY valueRankChanged      )
+	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only*/      NOTIFY arrayDimensionsChanged)
+	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel     NOTIFY accessLevelChanged    )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
 	// Q_PROPERTY(quint32 userAccessLevel READ get_userAccessLevel)	
 
-	Q_PROPERTY(double minimumSamplingInterval READ get_minimumSamplingInterval WRITE set_minimumSamplingInterval)
+	Q_PROPERTY(double minimumSamplingInterval READ minimumSamplingInterval WRITE setMinimumSamplingInterval)
 
 	// Historizing is currently unsupported
-	Q_PROPERTY(bool historizing READ get_historizing)
+	Q_PROPERTY(bool historizing READ historizing)
 
 public:
 	explicit QOpcUaBaseVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
@@ -87,24 +87,24 @@ public:
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
 	// Use QVariant::fromValue or use casting to force a dataType
-	QVariant          get_value() const;
-	void              set_value(const QVariant &value);
+	QVariant          value() const;
+	void              setValue(const QVariant &value);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost
-	QMetaType::Type   get_dataType() const;
-	void              set_dataType(const QMetaType::Type &dataType);
-	// Read-only, values set automatically when calling set_value
-	qint32            get_valueRank() const;
-	QVector<quint32>  get_arrayDimensions() const; // includes arrayDimensionsSize
+	QMetaType::Type   dataType() const;
+	void              setDataType(const QMetaType::Type &dataType);
+	// Read-only, values set automatically when calling setValue
+	qint32            valueRank() const;
+	QVector<quint32>  arrayDimensions() const; // includes arrayDimensionsSize
 	// 
-	quint8            get_accessLevel() const;
-	void              set_accessLevel(const quint8 &accessLevel);
+	quint8            accessLevel() const;
+	void              setAccessLevel(const quint8 &accessLevel);
 	// 
-	double            get_minimumSamplingInterval() const;
-	void              set_minimumSamplingInterval(const double &minimumSamplingInterval);
+	double            minimumSamplingInterval() const;
+	void              setMinimumSamplingInterval(const double &minimumSamplingInterval);
 	// 
-	bool              get_historizing() const;
+	bool              historizing() const;
 
 	// static helpers
 

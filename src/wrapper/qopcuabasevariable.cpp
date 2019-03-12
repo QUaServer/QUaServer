@@ -9,7 +9,7 @@ QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server, const UA_NodeId &no
 
 }
 
-QVariant QOpcUaBaseVariable::get_value() const
+QVariant QOpcUaBaseVariable::value() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -25,14 +25,14 @@ QVariant QOpcUaBaseVariable::get_value() const
 	return QOpcUaTypesConverter::uaVariantToQVariant(outValue);
 }
 
-void QOpcUaBaseVariable::set_value(const QVariant & value)
+void QOpcUaBaseVariable::setValue(const QVariant & value)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// got modifiable copy
 	auto newValue = value;
 	// get types
-	auto oldType = this->get_dataType();
+	auto oldType = this->dataType();
 	auto newType = (QMetaType::Type)newValue.type();
 	// if variant list we need to adjust newType
 	if (newValue.canConvert<QVariantList>())
@@ -47,7 +47,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 			for (int i = 0; i < iter.size(); i++)
 			{
 				auto tmpType = (QMetaType::Type)iter.at(i).type();
-				Q_ASSERT_X(type == tmpType, "QOpcUaBaseVariable::set_value", "QVariant arrays must have same types in all its items.");
+				Q_ASSERT_X(type == tmpType, "QOpcUaBaseVariable::setValue", "QVariant arrays must have same types in all its items.");
 				if (type != tmpType)
 				{
 					return;
@@ -144,7 +144,7 @@ void QOpcUaBaseVariable::set_value(const QVariant & value)
 	}
 }
 
-QMetaType::Type QOpcUaBaseVariable::get_dataType() const
+QMetaType::Type QOpcUaBaseVariable::dataType() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -160,7 +160,7 @@ QMetaType::Type QOpcUaBaseVariable::get_dataType() const
 	return QOpcUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 }
 
-void QOpcUaBaseVariable::set_dataType(const QMetaType::Type & dataType)
+void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -171,7 +171,7 @@ void QOpcUaBaseVariable::set_dataType(const QMetaType::Type & dataType)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// get old value
-	QVariant oldValue = this->get_value();
+	QVariant oldValue = this->value();
 	// handle array
 	if (oldValue.canConvert<QVariantList>())
 	{
@@ -227,7 +227,7 @@ void QOpcUaBaseVariable::set_dataType(const QMetaType::Type & dataType)
 	emit this->valueChanged(oldValue);
 }
 
-qint32 QOpcUaBaseVariable::get_valueRank() const
+qint32 QOpcUaBaseVariable::valueRank() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -243,7 +243,7 @@ qint32 QOpcUaBaseVariable::get_valueRank() const
 	return outValueRank;
 }
 
-QVector<quint32> QOpcUaBaseVariable::get_arrayDimensions() const
+QVector<quint32> QOpcUaBaseVariable::arrayDimensions() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -267,7 +267,7 @@ QVector<quint32> QOpcUaBaseVariable::get_arrayDimensions() const
 	return retArr;
 }
 
-quint8 QOpcUaBaseVariable::get_accessLevel() const
+quint8 QOpcUaBaseVariable::accessLevel() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -283,7 +283,7 @@ quint8 QOpcUaBaseVariable::get_accessLevel() const
 	return outAccessLevel;
 }
 
-void QOpcUaBaseVariable::set_accessLevel(const quint8 & accessLevel)
+void QOpcUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -294,7 +294,7 @@ void QOpcUaBaseVariable::set_accessLevel(const quint8 & accessLevel)
 	emit this->accessLevelChanged(accessLevel);
 }
 
-double QOpcUaBaseVariable::get_minimumSamplingInterval() const
+double QOpcUaBaseVariable::minimumSamplingInterval() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -311,7 +311,7 @@ double QOpcUaBaseVariable::get_minimumSamplingInterval() const
 	return outMinimumSamplingInterval;
 }
 
-void QOpcUaBaseVariable::set_minimumSamplingInterval(const double & minimumSamplingInterval)
+void QOpcUaBaseVariable::setMinimumSamplingInterval(const double & minimumSamplingInterval)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -321,7 +321,7 @@ void QOpcUaBaseVariable::set_minimumSamplingInterval(const double & minimumSampl
 	Q_UNUSED(st);
 }
 
-bool QOpcUaBaseVariable::get_historizing() const
+bool QOpcUaBaseVariable::historizing() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));

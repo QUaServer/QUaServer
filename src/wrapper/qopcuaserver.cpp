@@ -42,9 +42,6 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
-			////// [DEBUG]
-			////qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className();
-			////qDebug() << "*" << nodeId->identifier.numeric << "->" << parentNodeId.identifier.numeric << ":" << server->m_hashDeferredConstructors[*nodeId].count();
 			// remove from deferred constructors
 			server->m_hashDeferredConstructors.remove(*nodeId);
 			return UA_STATUSCODE_GOOD;
@@ -80,10 +77,6 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		}
 		server->m_hashDeferredConstructors.remove(*nodeId);
 	}
-	////// [DEBUG]
-	////qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className() << ":" << (parentContext ? "*" : "");
-	////qDebug() << nodeId->identifier.numeric << "->" << lastParentNodeId.identifier.numeric;
-
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId), Q_ARG(QMetaObject, metaObject));
@@ -102,35 +95,6 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(QOpcUaServerNode::getBrowseName(*nodeId, server));
 	}
-	// verify props and children of this object were bound correctly in QOpcUaServerNode::QOpcUaServerNode
-	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(*nodeId, server);
-	int  propCount      = metaObject.propertyCount();
-	int  propOffset     = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
-	int  numProps       = 0;
-	for (int i = propOffset; i < propCount; i++)
-	{
-		// check if available in meta-system
-		QMetaProperty metaproperty = metaObject.property(i);
-		if (!QMetaType::metaObjectForType(metaproperty.userType()))
-		{
-			continue;
-		}
-		// check if OPC UA relevant type
-		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
-		{
-			continue;
-		}
-		// check if prop inherits from parent
-		if (propMetaObject.inherits(&metaObject))
-		{
-			continue;
-		}
-		// inc number of valid props
-		numProps++;
-	}
-	Q_ASSERT_X(chidrenNodeIds.count() == numProps &&
-		newInstance->children().count() == numProps, "QOpcUaServer::uaConstructor", "Children not bound properly.");
 	// success
 	return UA_STATUSCODE_GOOD;
 }
