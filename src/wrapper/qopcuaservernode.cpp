@@ -19,13 +19,18 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 	UA_Server_setNodeContext(server->m_server, nodeId, (void*)this);
 	// set node id to c++ instance
 	this->m_nodeId = nodeId;
+	// ignore objects folder
+	UA_NodeId objectsFolderNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+	if (UA_NodeId_equal(&nodeId, &objectsFolderNodeId))
+	{
+		return;
+	}
 	// get all UA children in advance, because if none, then better early exit
 	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
 	if (chidrenNodeIds.count() <= 0)
 	{
 		return;
 	}
-	//qDebug() << "QOpcUaServerNode::QOpcUaServerNode :" << metaObject.className();
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
 	QHash<QString, UA_NodeId> mapChildren;
 	for (int i = 0; i < chidrenNodeIds.count(); i++)
@@ -69,15 +74,12 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 		// assign C++ parent
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(strBrowseName);
-
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to wuery children by object name
 	}
 	// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
 	Q_ASSERT(mapChildren.count() == 0);
-
-	// TODO : emit event that new children added
 }
 
 QString QOpcUaServerNode::get_displayName() const

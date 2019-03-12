@@ -42,9 +42,10 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
-			qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className();
-			qDebug() << "*" << nodeId->identifier.numeric << "->" << parentNodeId.identifier.numeric;
-			// TODO : remove from deferred constructors
+			////// [DEBUG]
+			////qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className();
+			////qDebug() << "*" << nodeId->identifier.numeric << "->" << parentNodeId.identifier.numeric << ":" << server->m_hashDeferredConstructors[*nodeId].count();
+			// remove from deferred constructors
 			server->m_hashDeferredConstructors.remove(*nodeId);
 			return UA_STATUSCODE_GOOD;
 		}
@@ -63,7 +64,6 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		}
 	}
 	// NOTE : at this point parentNodeId could be null, so we need lastParentNodeId which is guaranteed not to be null
-
 	// if parentContext is valid, then we can call deferred constructors waiting for *nodeId and continue with execution
 	if (!parentContext)
 	{
@@ -80,10 +80,9 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		}
 		server->m_hashDeferredConstructors.remove(*nodeId);
 	}
-	
-	// TODO : verify!
-	qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className() << ":" << (parentContext ? "*" : "");
-	qDebug() << nodeId->identifier.numeric << "->" << lastParentNodeId.identifier.numeric;
+	////// [DEBUG]
+	////qDebug() << "QOpcUaServer::uaConstructor :" << metaObject.className() << ":" << (parentContext ? "*" : "");
+	////qDebug() << nodeId->identifier.numeric << "->" << lastParentNodeId.identifier.numeric;
 
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
@@ -96,15 +95,18 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	// after calling the UA constructor
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
-	// if parent not bound it means parent is a non-base type and its c++ instance has not been created.
-	// then the parent and server will be set later in QOpcUaServerNodeFactory when parent is instantiated.
-	// the parent in QOpcUaServerNodeFactory will assign itself as parent if its children.
-	// children should be assigned already to new instance, if the user inherited from QOpcUaServerNodeFactory<> appropriately
-	// here we just verify
+	// need to set parent if direct parent is already bound bacaus eits constructor has already been called
+	parentNodeId = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
+	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId))
+	{
+		newInstance->setParent(parentContext);
+		newInstance->setObjectName(QOpcUaServerNode::getBrowseName(*nodeId, server));
+	}
+	// verify props and children of this object were bound correctly in QOpcUaServerNode::QOpcUaServerNode
 	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(*nodeId, server);
-	int propCount  = metaObject.propertyCount();
-	int propOffset = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
-	int numProps   = 0;
+	int  propCount      = metaObject.propertyCount();
+	int  propOffset     = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
+	int  numProps       = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
 		// check if available in meta-system
@@ -127,14 +129,8 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		// inc number of valid props
 		numProps++;
 	}
-	bool bChildrenBound = (chidrenNodeIds.count() == numProps);
-	Q_ASSERT_X(bChildrenBound, "QOpcUaServer::uaConstructor", "Children not bound properly. Did you inherit from QOpcUaServerNodeFactory appropriately?");
-	if (!bChildrenBound)
-	{
-		// failed to bind children before constructor, at least bind after constructor
-		// TODO : reuse code from QOpcUaServerNodeFactory to bind children after constructor
-	}
-
+	Q_ASSERT_X(chidrenNodeIds.count() == numProps &&
+		newInstance->children().count() == numProps, "QOpcUaServer::uaConstructor", "Children not bound properly.");
 	// success
 	return UA_STATUSCODE_GOOD;
 }
@@ -165,6 +161,7 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	// Part 5 - 8.2.4 : Objects
 	m_pobjectsFolder = new QOpcUaFolderObject(this, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), QOpcUaFolderObject::staticMetaObject);
 	m_pobjectsFolder->setParent(this);
+	m_pobjectsFolder->setObjectName("Objects");
 	// register base types
 	m_mapTypes.insert(QString(QOpcUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
 	m_mapTypes.insert(QString(QOpcUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
@@ -514,6 +511,8 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+	// check no pending constructors
+	Q_ASSERT(m_hashDeferredConstructors.count() == 0);
 	// return new instance node id
 	return nodeIdNewInstance;
 }
