@@ -23,8 +23,12 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
-	auto obj = static_cast<QOpcUaBaseObject*>(methodContext);
+	auto obj = dynamic_cast<QOpcUaBaseObject*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(obj);
+	if (!obj)
+	{
+		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+	}
 	Q_ASSERT(obj->m_hashMethods.contains(*methodId));
 	// get method from node callbacks map and call it
 	return obj->m_hashMethods[*methodId](input, output);

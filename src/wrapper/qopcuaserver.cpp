@@ -15,8 +15,12 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	// get server from context object
-	auto obj = static_cast<QOpcUaServer*>(typeNodeContext);
+	auto obj = dynamic_cast<QOpcUaServer*>(static_cast<QObject*>(typeNodeContext));
 	Q_CHECK_PTR(obj);
+	if (!obj)
+	{
+		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+	}
 	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
 	return obj->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
@@ -81,8 +85,12 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId), Q_ARG(QMetaObject, metaObject));
 	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
-	auto * newInstance = static_cast<QOpcUaServerNode*>(pQObject);
+	auto * newInstance = dynamic_cast<QOpcUaServerNode*>(static_cast<QObject*>(pQObject));
 	Q_CHECK_PTR(newInstance);
+	if (!newInstance)
+	{
+		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+	}
 	// need to bind again using the official (void ** nodeContext) of the UA constructor
 	// because we set context on C++ instantiation, but later the UA library overwrites it 
 	// after calling the UA constructor
@@ -119,8 +127,12 @@ UA_StatusCode QOpcUaServer::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
-	auto srv = static_cast<QOpcUaServer*>(methodContext);
+	auto srv = dynamic_cast<QOpcUaServer*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(srv);
+	if (!srv)
+	{
+		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+	}
 	Q_ASSERT(srv->m_hashMethods.contains(*methodId));
 	// get method from node callbacks map and call it
 	return srv->m_hashMethods[*methodId](objectContext, input, output);
@@ -536,8 +548,8 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QOpcUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
 		m_hashMethods[methNodeId] = [metamethod](void * objectContext, const UA_Variant * input, UA_Variant * output) {
 			// get object instance that owns method
-			QOpcUaBaseObject * object = static_cast<QOpcUaBaseObject*>(objectContext);
-			Q_CHECK_PTR(object);
+			QOpcUaBaseObject * object = dynamic_cast<QOpcUaBaseObject*>(static_cast<QObject*>(objectContext));
+			Q_ASSERT_X(object, "QOpcUaServer::addMetaMethods", "Cannot call method on invalid C++ object.");
 			if (!object)
 			{
 				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;

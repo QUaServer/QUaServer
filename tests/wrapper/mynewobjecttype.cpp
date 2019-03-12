@@ -44,3 +44,21 @@ MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId
 {
 
 }
+
+// ---
+
+MyNewObjectSubType::MyNewObjectSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+	: MyNewObjectType(server, nodeId, metaObject)
+{
+
+}
+
+QOpcUaProperty * MyNewObjectSubType::myProp()
+{
+	return this->findChild<QOpcUaProperty*>("myProp");
+}
+
+QString MyNewObjectSubType::concatArgs(int intNum, double dblNum, QString strName)
+{
+	return QString("%1, %2, %3").arg(intNum).arg(dblNum).arg(strName);
+}

@@ -66,8 +66,14 @@ int main(int argc, char *argv[])
 	//server.registerType<MyNewVariableSubSubType>();
 	//server.registerType<MyOtherNewVariableType>();
 
-	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectType>();
+	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectSubType>();
 	newobjTypeInstance->setDisplayName("Test");
+	newobjTypeInstance->addMethod("methodx", [](int x, double y, QString str) {
+		return QString("%1, %2, %3").arg(x).arg(y).arg(str).toUtf8();
+	});
+
+	auto newobjTypeInstance2 = objsFolder->addChild<MyNewObjectSubType>();
+	newobjTypeInstance2->setDisplayName("Test2");
 
 	//auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
 	//otherNewobjTypeInstance->setBrowseName("MyOtherNewObjectType");
