@@ -282,11 +282,10 @@ UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Se
 	bDesc->nodeId          = childNodeId; // from child
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
 	bDesc->includeSubtypes = true;
-	//bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
-	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME;
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
 	QList<UA_NodeId> listParents;
 	while (bRes.referencesSize > 0)
 	{
