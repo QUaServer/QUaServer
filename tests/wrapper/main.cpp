@@ -18,6 +18,8 @@
 //	}
 //}
 
+
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -25,11 +27,14 @@ int main(int argc, char *argv[])
 	QOpcUaServer server;
 	auto objsFolder = server.get_objectsFolder();
 
+	//server.registerEnum<MyNewObjectType::TestEnum>();
+
 	// instances
 
 	//auto varBaseData = objsFolder->addBaseDataVariable();
 	//varBaseData->setBrowseName("QOpcUaBaseDataVariable");
 	//varBaseData->setDisplayName("QOpcUaBaseDataVariable");
+	
 
 	//auto varProp = objsFolder->addProperty();
 	//varProp->setBrowseName("QOpcUaProperty");
@@ -43,6 +48,12 @@ int main(int argc, char *argv[])
 	//objFolder->setBrowseName("QOpcUaFolderObject");
 	//objFolder->setDisplayName("QOpcUaFolderObject");
 
+	auto varEnum = objsFolder->addBaseDataVariable();
+	varEnum->setBrowseName("VarEnum");
+	varEnum->setDisplayName("VarEnum");
+	varEnum->setValue(5);
+	varEnum->setDataTypeEnum<MyNewObjectType::TestEnum>();
+/*
 	// methods
 
 	//objsFolder->addMethod("method1", []() {
@@ -101,6 +112,8 @@ int main(int argc, char *argv[])
 	//newVarSubSubTypeInstance->setBrowseName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->setDisplayName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->setValue(QDateTime::currentDateTime());	
+
+*/
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

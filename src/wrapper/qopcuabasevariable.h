@@ -94,6 +94,9 @@ public:
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost
 	QMetaType::Type   dataType() const;
 	void              setDataType(const QMetaType::Type &dataType);
+	template<typename T>
+	void              setDataTypeEnum();
+	void              setDataTypeEnum(const QMetaEnum &metaEnum);
 	// Read-only, values set automatically when calling setValue
 	qint32            valueRank() const;
 	QVector<quint32>  arrayDimensions() const; // includes arrayDimensionsSize

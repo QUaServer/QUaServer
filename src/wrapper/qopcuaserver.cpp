@@ -154,6 +154,112 @@ bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 	return true;
 }
 
+extern "C" {
+	typedef UA_StatusCode(*UA_exchangeEncodeBuffer)(void *handle, UA_Byte **bufPos,
+		const UA_Byte **bufEnd);
+
+	UA_EXPORT extern UA_StatusCode
+		UA_encodeBinary(const void *src, const UA_DataType *type,
+			UA_Byte **bufPos, const UA_Byte **bufEnd,
+			UA_exchangeEncodeBuffer exchangeCallback,
+			void *exchangeHandle) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
+}
+
+UA_StatusCode QOpcUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj)
+{
+	if (!outExtObj)
+	{
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	}
+	outExtObj->encoding               = UA_EXTENSIONOBJECT_ENCODED_BYTESTRING;
+	outExtObj->content.encoded.typeId = UA_NODEID_NUMERIC(0, 8251); // Default Binary (in open62541 UA_NS0ID_DEFAULTBINARY == 3062)
+	UA_ByteString_allocBuffer(&outExtObj->content.encoded.body, 65000);
+	UA_Byte * p_posExtObj = outExtObj->content.encoded.body.data;
+	const UA_Byte * p_endExtObj = &outExtObj->content.encoded.body.data[65000];
+	// encode enum value
+	UA_StatusCode st = UA_STATUSCODE_GOOD;
+	st |= UA_encodeBinary(&enumVal->Value      , &UA_TYPES[UA_TYPES_INT64]        , &p_posExtObj, &p_endExtObj, NULL, NULL);
+	st |= UA_encodeBinary(&enumVal->DisplayName, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
+	st |= UA_encodeBinary(&enumVal->Description, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return st;
+	}
+	size_t p_extobj_encOffset = (uintptr_t)(p_posExtObj - outExtObj->content.encoded.body.data);
+	outExtObj->content.encoded.body.length = p_extobj_encOffset;
+	UA_Byte * p_extobj_newBody = (UA_Byte *)UA_malloc(p_extobj_encOffset);
+	if (!p_extobj_newBody)
+	{
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	}
+	memcpy(p_extobj_newBody, outExtObj->content.encoded.body.data, p_extobj_encOffset);
+	UA_Byte * p_extobj_madatory_oldBody  = outExtObj->content.encoded.body.data;
+	outExtObj->content.encoded.body.data = p_extobj_newBody;
+	UA_free(p_extobj_madatory_oldBody);
+	// success
+	return UA_STATUSCODE_GOOD;
+}
+
+UA_StatusCode QOpcUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues)
+{
+	// setup variable attrs
+	UA_StatusCode retVal         = UA_STATUSCODE_GOOD;
+	UA_VariableAttributes attr   = UA_VariableAttributes_default;
+	attr.minimumSamplingInterval = 0.000000;
+	attr.userAccessLevel         = 1;
+	attr.accessLevel             = 1;
+	attr.valueRank               = 1;
+	attr.arrayDimensionsSize     = 1;
+	attr.arrayDimensions         = (UA_UInt32 *)UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]);
+	if (!attr.arrayDimensions)
+	{
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	}
+	attr.arrayDimensions[0] = 0;
+	attr.dataType = UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMVALUETYPE);
+	// create array of enum values
+	UA_ExtensionObject * arr_extobjs = (UA_ExtensionObject *)UA_malloc(sizeof(UA_ExtensionObject) * numEnumValues);
+	for (size_t i = 0; i < numEnumValues; i++)
+	{
+		retVal |= createEnumValue(&enumValues[i], &arr_extobjs[i]);
+		Q_ASSERT(retVal == UA_STATUSCODE_GOOD);
+	}
+	// create variant with array of enum values
+	UA_Variant_setArray(&attr.value, arr_extobjs, (UA_Int32)numEnumValues, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+	attr.displayName   = UA_LOCALIZEDTEXT((char*)"", (char*)"EnumValues");
+	attr.description   = UA_LOCALIZEDTEXT((char*)"", (char*)"");
+	attr.writeMask     = 0;
+	attr.userWriteMask = 0;
+	// add variable with array of enum values
+	UA_NodeId enumValuesNodeId;
+	retVal |= UA_Server_addVariableNode(server,
+                                        UA_NODEID_NULL, 
+                                        *parent, 
+                                        UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                                        UA_QUALIFIEDNAME (0, (char*)"EnumValues"),
+                                        UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE), 
+                                        attr, 
+                                        NULL, 
+                                        &enumValuesNodeId);
+	Q_ASSERT(retVal == UA_STATUSCODE_GOOD);
+	// cleanup
+	UA_Array_delete(attr.arrayDimensions, 1, &UA_TYPES[UA_TYPES_UINT32]);
+	for (size_t i = 0; i < numEnumValues; i++)
+	{
+		UA_ExtensionObject_deleteMembers(&arr_extobjs[i]);
+	}
+	UA_free(arr_extobjs);
+	// make mandatory
+	retVal |= UA_Server_addReference(server,
+					                 enumValuesNodeId,
+					                 UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE),
+					                 UA_EXPANDEDNODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY), 
+					                 true);
+	Q_ASSERT(retVal == UA_STATUSCODE_GOOD);
+	// success
+	return retVal;
+}
+
 QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 {
 	UA_StatusCode st;
@@ -312,6 +418,59 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	{
 		this->addMetaMethods(metaObject);
 	}
+}
+
+void QOpcUaServer::registerEnum(const QMetaEnum & metaEnum)
+{
+	// compose enum name
+	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	// check if already exists
+	if (m_mapEnums.contains(strEnumName))
+	{
+		return;
+	}
+	// get c-compatible name
+	QByteArray byteEnumName = strEnumName.toUtf8();
+	char * charEnumName     = byteEnumName.data();
+	// register enum as new ua data type
+	UA_DataTypeAttributes ddaatt = UA_DataTypeAttributes_default;
+	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
+	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
+	UA_NodeId newEnumNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName); // [IMPORTANT] : _ALLOC version is necessary
+	UA_StatusCode st = UA_Server_addDataTypeNode(m_server,
+												newEnumNodeId,
+   												UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
+   												UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+   												UA_QUALIFIEDNAME (1, charEnumName),
+   												ddaatt,
+   												NULL,
+   												NULL);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// add new enum strings (enum options)
+	UA_VariableAttributes pattr = UA_VariableAttributes_default;
+	pattr.description = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
+	pattr.displayName = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
+	pattr.dataType    = UA_TYPES[UA_TYPES_LOCALIZEDTEXT].typeId;
+	UA_UInt32 arrayDimensions[1] = { 0 };
+	pattr.valueRank              = 1; 
+	pattr.arrayDimensionsSize    = 1;
+	pattr.arrayDimensions        = arrayDimensions;
+	// create vector of enum values
+	QVector<QByteArray> byteKeys;
+	QVector<QOpcUaEnumValue> vectEnumValues;
+	for (int i = 0; i < metaEnum.keyCount(); i++)
+	{
+		byteKeys.append(metaEnum.key(i));
+		vectEnumValues.append({
+			(UA_Int64)metaEnum.value(i),
+			UA_LOCALIZEDTEXT((char*)"", byteKeys[i].data()),
+			UA_LOCALIZEDTEXT((char*)"", (char*)"")
+		});
+	}
+	st = QOpcUaServer::addEnumValues(m_server, &newEnumNodeId, vectEnumValues.count(), vectEnumValues.data());
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// finally append to map
+	m_mapEnums.insert(strEnumName, newEnumNodeId);
 }
 
 void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)

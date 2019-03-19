@@ -22,6 +22,18 @@ public:
 	Q_INVOKABLE QString saluteName (QString strName);
 	Q_INVOKABLE double  divideNums (int intNum, int intDen);
 
+	enum TestEnum
+	{
+		NONE = 0,
+		ONE  = 1,
+		TWO  = 2,
+		TRES = 3,
+		FOUR = 4,
+		FIVE = 5,
+		SEIS = 6
+	};
+	Q_ENUM(TestEnum)
+
 private:
 	
 };

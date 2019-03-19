@@ -227,6 +227,56 @@ void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	emit this->valueChanged(oldValue);
 }
 
+void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
+{
+	Q_CHECK_PTR(m_qopcuaserver);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	// compose enum name
+	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	Q_ASSERT(m_qopcuaserver->m_mapEnums.contains(strEnumName));
+	// exit if not exists
+	if (!m_qopcuaserver->m_mapEnums.contains(strEnumName))
+	{
+		return;
+	}
+	// need to "reset" dataType before setting a new value
+	auto st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+		m_nodeId,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// get old value
+	QVariant oldValue = this->value();
+	if (oldValue.canConvert(QMetaType::Int))
+	{
+		// convert in place
+		oldValue.convert(QMetaType::Int);
+	}
+	else
+	{
+		// else set default value for type
+		oldValue = QVariant((QVariant::Type)QMetaType::Int);
+	}
+
+	// set converted or default value
+	st = UA_Server_writeValue(m_qopcuaserver->m_server,
+		m_nodeId,
+		QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// change data type
+	UA_NodeId enumTypeNodeId = m_qopcuaserver->m_mapEnums.value(strEnumName);
+	st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+		m_nodeId,
+		enumTypeNodeId);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// emit dataType changed
+	emit this->dataTypeChanged(QMetaType::Int);
+	// emit value changed
+	emit this->valueChanged(oldValue);
+}
+
 qint32 QOpcUaBaseVariable::valueRank() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);

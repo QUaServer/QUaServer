@@ -52,3 +52,5 @@ The first 32 bits (least significant bits) of the BitFieldMaskDataType represent
 # References
 
 * <https://blog.basyskom.com/2018/want-to-give-qt-opcua-a-try/>
+
+* <https://github.com/open62541/open62541/issues/2584>

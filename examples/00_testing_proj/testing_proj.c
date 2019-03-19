@@ -20,14 +20,18 @@ static UA_StatusCode createEnumValue(const EnumValue * enumVal, UA_ExtensionObje
 	outExtObj->encoding               = UA_EXTENSIONOBJECT_ENCODED_BYTESTRING;
 	outExtObj->content.encoded.typeId = UA_NODEID_NUMERIC(0, UA_NS0ID_DEFAULTBINARY);
 	UA_ByteString_allocBuffer(&outExtObj->content.encoded.body, 65000);
-	UA_Byte * p_posextobj = outExtObj->content.encoded.body.data;
-	const UA_Byte * p_endextobj = &outExtObj->content.encoded.body.data[65000];
+	UA_Byte * p_posExtObj = outExtObj->content.encoded.body.data;
+	const UA_Byte * p_endExtObj = &outExtObj->content.encoded.body.data[65000];
+	// encode enum value
+	UA_StatusCode st = UA_STATUSCODE_GOOD;
+	st |= UA_encodeBinary(&enumVal->Value      , &UA_TYPES[UA_TYPES_INT64]        , &p_posExtObj, &p_endExtObj, NULL, NULL);
+	st |= UA_encodeBinary(&enumVal->DisplayName, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
+	st |= UA_encodeBinary(&enumVal->Description, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
+	if (st != UA_STATUSCODE_GOOD)
 	{
-		UA_encodeBinary(&enumVal->Value      , &UA_TYPES[UA_TYPES_INT64]        , &p_posextobj, &p_endextobj, NULL, NULL);
-		UA_encodeBinary(&enumVal->DisplayName, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posextobj, &p_endextobj, NULL, NULL);
-		UA_encodeBinary(&enumVal->Description, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posextobj, &p_endextobj, NULL, NULL);
+		return st;
 	}
-	size_t p_extobj_encOffset = (uintptr_t)(p_posextobj - outExtObj->content.encoded.body.data);
+	size_t p_extobj_encOffset = (uintptr_t)(p_posExtObj - outExtObj->content.encoded.body.data);
 	outExtObj->content.encoded.body.length = p_extobj_encOffset;
 	UA_Byte * p_extobj_newBody = (UA_Byte *)UA_malloc(p_extobj_encOffset);
 	if (!p_extobj_newBody)
@@ -35,7 +39,7 @@ static UA_StatusCode createEnumValue(const EnumValue * enumVal, UA_ExtensionObje
 		return UA_STATUSCODE_BADOUTOFMEMORY;
 	}
 	memcpy(p_extobj_newBody, outExtObj->content.encoded.body.data, p_extobj_encOffset);
-	UA_Byte * p_extobj_madatory_oldBody          = outExtObj->content.encoded.body.data;
+	UA_Byte * p_extobj_madatory_oldBody  = outExtObj->content.encoded.body.data;
 	outExtObj->content.encoded.body.data = p_extobj_newBody;
 	UA_free(p_extobj_madatory_oldBody);
 	// success
@@ -112,7 +116,7 @@ static void addCustomEnumType(UA_Server* server, char * enumName)
 	// add new data type (enum)
 	UA_StatusCode st = UA_Server_addDataTypeNode(
 		server,
-		UA_NODEID_STRING (1, enumName), // [IMPORTANT] with UA_NODEID_NULL fails, must be a valid one
+		UA_NODEID_STRING (1, enumName), // [IMPORTANT] with UA_NODEID_NULL fails, must be a pre-defined unique/valid one
 		UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
 		UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
 		UA_QUALIFIEDNAME (0, enumName),
@@ -152,7 +156,7 @@ static void addCustomEnumType(UA_Server* server, char * enumName)
 	assert(st == UA_STATUSCODE_GOOD);
 }
 
-static void addVariable(UA_Server* server, char * varName) {
+static void addCustomEnumVariable(UA_Server* server, char * varName) {
 
 	UA_VariableAttributes vattr = UA_VariableAttributes_default;
 
@@ -190,8 +194,8 @@ int main(void) {
 
 	UA_Server* server = UA_Server_new(config);
 
-	addCustomEnumType(server, "ThreatLevels");
-	addVariable(server, "CurrentLevel");
+	addCustomEnumType    (server, "ThreatLevels");
+	addCustomEnumVariable(server, "CurrentThreatLevel");
 
 	UA_StatusCode retval = UA_Server_run(server, &running);
 	UA_Server_delete(server);
