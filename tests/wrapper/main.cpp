@@ -18,8 +18,6 @@
 //	}
 //}
 
-
-
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -51,7 +49,10 @@ int main(int argc, char *argv[])
 	auto varEnum = objsFolder->addBaseDataVariable();
 	varEnum->setBrowseName("VarEnum");
 	varEnum->setDisplayName("VarEnum");
-	varEnum->setValue(5);
+	varEnum->setValue(1);
+	varEnum->setValue(QVariant::fromValue(QList<int>() << 4 << 1 << 2 << 3));	
+	varEnum->setDataType(QMetaType::Double);
+	varEnum->setValue(3.1416);
 	varEnum->setDataTypeEnum<MyNewObjectType::TestEnum>();
 /*
 	// methods

@@ -790,6 +790,9 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
 	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+		// [NOTE] do not set rank or arrayDimensions because they are permanent
+		//        is better to just set array dimensions on Variant value and leave rank as ANY
+		vAttr.valueRank = UA_VALUERANK_ANY;
 		// add variable
 		auto st = UA_Server_addVariableNode(m_server,
                                             UA_NODEID_NULL,       // requested nodeId

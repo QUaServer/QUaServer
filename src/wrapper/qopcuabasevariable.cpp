@@ -116,31 +116,8 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 			// emit dataType changed
 			emit this->dataTypeChanged(newType);
 		}
-		// set valueRank and arrayDimensions if necessary
-		if (newValue.canConvert<QVariantList>())
-		{
-			// set valueRank
-			st = UA_Server_writeValueRank(m_qopcuaserver->m_server, m_nodeId, UA_VALUERANK_ONE_DIMENSION);
-			Q_ASSERT(st == UA_STATUSCODE_GOOD);
-			Q_UNUSED(st);
-			// emit valueRank changed
-			emit this->valueRankChanged(UA_VALUERANK_ONE_DIMENSION);
-			// set arrayDimensions (bug : https://github.com/open62541/open62541/issues/2455)
-			auto iter = newValue.value<QSequentialIterable>();
-			auto size = (quint32)iter.size();
-			// TODO : support multidimensional array (create custom Qt type compatible with QVariant)
-			//        (UA_UInt32 *)(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
-			// https://www.bogotobogo.com/Qt/Qt5_QVariant_meta_object_system_MetaType.php
-			UA_Variant uaArrayDimensions;
-			UA_UInt32 arrayDims[1] = { size };
-			UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);
-			st = UA_Server_writeArrayDimensions(m_qopcuaserver->m_server, m_nodeId, uaArrayDimensions);
-			Q_ASSERT(st == UA_STATUSCODE_GOOD);
-			Q_UNUSED(st);
-			// emit arrayDimensions changed
-			emit this->arrayDimensionsChanged(QVector<quint32>() << size);
-		}
-		// TODO : what happens with rank and arrayDim after going from array to scalar value?
+		// [NOTE] do not set rank or arrayDimensions because they are permanent
+		//        is better to just set array dimensions on Variant value and leave rank as ANY
 	}
 }
 
@@ -208,7 +185,6 @@ void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		// else set default value for type
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
-
 	// set converted or default value
 	st = UA_Server_writeValue(m_qopcuaserver->m_server,
 		m_nodeId,
@@ -247,6 +223,17 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_UNUSED(st);
 	// get old value
 	QVariant oldValue = this->value();
+	// handle array
+	if (oldValue.canConvert<QVariantList>())
+	{
+		QVariantList listConvValues;
+		auto iter = oldValue.value<QSequentialIterable>();
+		// get first value if any
+		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant((QVariant::Type)QMetaType::Int);
+		// overwrite old value
+		oldValue = varFirst;
+	}
+	// handle scalar
 	if (oldValue.canConvert(QMetaType::Int))
 	{
 		// convert in place
@@ -257,7 +244,6 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		// else set default value for type
 		oldValue = QVariant((QVariant::Type)QMetaType::Int);
 	}
-
 	// set converted or default value
 	st = UA_Server_writeValue(m_qopcuaserver->m_server,
 		m_nodeId,

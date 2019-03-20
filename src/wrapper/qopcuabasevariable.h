@@ -69,8 +69,8 @@ class QOpcUaBaseVariable : public QOpcUaServerNode
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
 	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType        NOTIFY dataTypeChanged       )
-	Q_PROPERTY(qint32            valueRank           READ valueRank          /*NOTE : Read-only*/      NOTIFY valueRankChanged      )
-	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only*/      NOTIFY arrayDimensionsChanged)
+	Q_PROPERTY(qint32            valueRank           READ valueRank          /*NOTE : Read-only      NOTIFY valueRankChanged      */)
+	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only      NOTIFY arrayDimensionsChanged*/)
 	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel     NOTIFY accessLevelChanged    )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
@@ -117,8 +117,6 @@ public:
 signals:
 	void valueChanged          (const QVariant         &value          );
 	void dataTypeChanged       (const QMetaType::Type  &dataType       );
-	void valueRankChanged      (const qint32           &valueRank      );
-	void arrayDimensionsChanged(const QVector<quint32> &arrayDimensions);
 	void accessLevelChanged    (const quint8           &accessLevel    );
 
 };
