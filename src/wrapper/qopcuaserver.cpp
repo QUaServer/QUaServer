@@ -411,6 +411,8 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	// register constructor/destructor
 	this->registerTypeLifeCycle(&newTypeNodeId, metaObject);
+	// register meta-enums
+	this->registerMetaEnums(metaObject);
 	// register meta-properties
 	this->addMetaProperties(metaObject);
 	// register meta-methods (only if object class, or NOT variable class)
@@ -425,7 +427,7 @@ void QOpcUaServer::registerEnum(const QMetaEnum & metaEnum)
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 	// check if already exists
-	if (m_mapEnums.contains(strEnumName))
+	if (m_hashEnums.contains(strEnumName))
 	{
 		return;
 	}
@@ -470,7 +472,7 @@ void QOpcUaServer::registerEnum(const QMetaEnum & metaEnum)
 	st = QOpcUaServer::addEnumValues(m_server, &newEnumNodeId, vectEnumValues.count(), vectEnumValues.data());
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// finally append to map
-	m_mapEnums.insert(strEnumName, newEnumNodeId);
+	m_hashEnums.insert(strEnumName, newEnumNodeId);
 }
 
 void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)
@@ -508,6 +510,16 @@ void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMe
 	Q_UNUSED(st)
 }
 
+void QOpcUaServer::registerMetaEnums(const QMetaObject & parentMetaObject)
+{
+	int enumCount = parentMetaObject.enumeratorCount();
+	for (int i = parentMetaObject.enumeratorOffset(); i < enumCount; i++)
+	{
+		QMetaEnum metaEnum = parentMetaObject.enumerator(i);
+		this->registerEnum(metaEnum);
+	}
+}
+
 void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 {
 	QString   strParentClassName = QString(parentMetaObject.className());
@@ -517,54 +529,90 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 	int propCount = parentMetaObject.propertyCount();
 	for (int i = parentMetaObject.propertyOffset(); i < propCount; i++)
 	{
-		// check if available in meta-system
 		QMetaProperty metaproperty = parentMetaObject.property(i);
-		if (!QMetaType::metaObjectForType(metaproperty.userType()))
+		// check if is meta enum
+		bool      isVariable     = false;
+		bool      isEnum         = false;
+		UA_NodeId enumTypeNodeId = UA_NODEID_NULL;
+		if (metaproperty.isEnumType())
 		{
-			continue;
+			QMetaEnum metaEnum = metaproperty.enumerator();
+			// compose enum name
+			QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+			// must already be registered by now
+			Q_ASSERT(m_hashEnums.contains(strEnumName));
+			// get enum data type
+			enumTypeNodeId = m_hashEnums.value(strEnumName);
+			// allow to continue
+			isEnum = true;
 		}
-		// check if OPC UA relevant type
-		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
-		{
-			continue;
-		}
-		// check if prop inherits from parent
-		Q_ASSERT_X(!propMetaObject.inherits(&parentMetaObject), "QOpcUaServer::addMetaProperties", "Qt MetaProperty type cannot inherit from Class.");
-		if (propMetaObject.inherits(&parentMetaObject))
-		{
-			continue;
-		}
-		// check if prop type registered, register of not
-		QString   strPropName      = QString(metaproperty.name());
-		QString   strPropClassName = QString(propMetaObject.className());
-		UA_NodeId propTypeNodeId   = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
-		if (UA_NodeId_isNull(&propTypeNodeId))
-		{
-			this->registerType(propMetaObject);
-			propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
-		}
-		Q_ASSERT(!UA_NodeId_isNull(&propTypeNodeId));
 		// parent relation with child
 		UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
+		// get property name
+		QString    strPropName  = QString(metaproperty.name());
+		QByteArray bytePropName = strPropName.toUtf8();
+		// get type node id
+		UA_NodeId propTypeNodeId;
+		if (!isEnum)
+		{
+			// check if available in meta-system
+			if (!QMetaType::metaObjectForType(metaproperty.userType()) && !isEnum)
+			{
+				continue;
+			}
+			// check if OPC UA relevant type
+			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+			{
+				continue;
+			}
+			// check if prop inherits from parent
+			Q_ASSERT_X(!propMetaObject.inherits(&parentMetaObject), "QOpcUaServer::addMetaProperties", "Qt MetaProperty type cannot inherit from Class.");
+			if (propMetaObject.inherits(&parentMetaObject) && !isEnum)
+			{
+				continue;
+			}
+			// check if prop type registered, register of not
+			QString strPropClassName = QString(propMetaObject.className());
+			propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
+			if (UA_NodeId_isNull(&propTypeNodeId))
+			{
+				this->registerType(propMetaObject);
+				propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
+			}
+			// set is variable
+			isVariable = propMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject);
+			// check if ua property, then set correct reference
+			if (propMetaObject.inherits(&QOpcUaProperty::staticMetaObject))
+			{
+				referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
+			}
+		}
+		else
+		{
+			propTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
+		}
+		Q_ASSERT(!UA_NodeId_isNull(&propTypeNodeId));
 		// set qualified name, default is class name
 		UA_QualifiedName browseName;
 		browseName.namespaceIndex = 1;
 		browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
-		QByteArray bytePropName = strPropName.toUtf8();
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
 		// check if variable or object
 		// NOTE : a type is considered to inherit itself sometimes does not work (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 		UA_NodeId tempNodeId;
-		if (propMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+		if (isVariable || isEnum)
 		{
-			if (propMetaObject.inherits(&QOpcUaProperty::staticMetaObject))
-			{
-				referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
-			}
+			
 			UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 			vAttr.displayName = displayName;
+			// if enum, set data type
+			if (isEnum)
+			{
+				Q_ASSERT(!UA_NodeId_isNull(&enumTypeNodeId));
+				vAttr.dataType = enumTypeNodeId;
+			}
 			// add variable
 			auto st = UA_Server_addVariableNode(m_server,
 												UA_NODEID_NULL,   // requested nodeId

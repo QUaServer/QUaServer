@@ -32,7 +32,6 @@ int main(int argc, char *argv[])
 	//auto varBaseData = objsFolder->addBaseDataVariable();
 	//varBaseData->setBrowseName("QOpcUaBaseDataVariable");
 	//varBaseData->setDisplayName("QOpcUaBaseDataVariable");
-	
 
 	//auto varProp = objsFolder->addProperty();
 	//varProp->setBrowseName("QOpcUaProperty");
@@ -46,15 +45,6 @@ int main(int argc, char *argv[])
 	//objFolder->setBrowseName("QOpcUaFolderObject");
 	//objFolder->setDisplayName("QOpcUaFolderObject");
 
-	auto varEnum = objsFolder->addBaseDataVariable();
-	varEnum->setBrowseName("VarEnum");
-	varEnum->setDisplayName("VarEnum");
-	varEnum->setValue(1);
-	varEnum->setValue(QVariant::fromValue(QList<int>() << 4 << 1 << 2 << 3));	
-	varEnum->setDataType(QMetaType::Double);
-	varEnum->setValue(3.1416);
-	varEnum->setDataTypeEnum<MyNewObjectType::TestEnum>();
-/*
 	// methods
 
 	//objsFolder->addMethod("method1", []() {
@@ -71,21 +61,13 @@ int main(int argc, char *argv[])
 	//objsFolder->addMethod("method4", [](int x, double y, QString str) {
 	//	qDebug() << "method4";
 	//	return QString("%1, %2, %3").arg(x).arg(y).arg(str);
-	//});
+	//});	
 
 	// custom types
 
-	//server.registerType<MyNewVariableSubSubType>();
-	//server.registerType<MyOtherNewVariableType>();
-
 	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectSubType>();
 	newobjTypeInstance->setDisplayName("Test");
-	newobjTypeInstance->addMethod("methodx", [](int x, double y, QString str) {
-		return QString("%1, %2, %3").arg(x).arg(y).arg(str).toUtf8();
-	});
-
-	auto newobjTypeInstance2 = objsFolder->addChild<MyNewObjectSubType>();
-	newobjTypeInstance2->setDisplayName("Test2");
+	qDebug() << "Enum value :" << newobjTypeInstance->myEnum();
 
 	//auto otherNewobjTypeInstance = objsFolder->addChild<MyOtherNewObjectType>();
 	//otherNewobjTypeInstance->setBrowseName("MyOtherNewObjectType");
@@ -113,8 +95,6 @@ int main(int argc, char *argv[])
 	//newVarSubSubTypeInstance->setBrowseName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->setDisplayName("MyNewVariableSubSubType");
 	//newVarSubSubTypeInstance->setValue(QDateTime::currentDateTime());	
-
-*/
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

@@ -47,23 +47,27 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId
 	int numProps   = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
-		// check if available in meta-system
 		QMetaProperty metaproperty = metaObject.property(i);
-		if (!QMetaType::metaObjectForType(metaproperty.userType()))
+		// check if not enum
+		if (!metaproperty.isEnumType())
 		{
-			continue;
-		}
-		// check if OPC UA relevant type
-		const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-		if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
-		{
-			continue;
-		}
-		// check if prop inherits from parent
-		Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
-		if (propMetaObject.inherits(&metaObject))
-		{
-			continue;
+			// check if available in meta-system
+			if (!QMetaType::metaObjectForType(metaproperty.userType()))
+			{
+				continue;
+			}
+			// check if OPC UA relevant type
+			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+			{
+				continue;
+			}
+			// check if prop inherits from parent
+			Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
+			if (propMetaObject.inherits(&metaObject))
+			{
+				continue;
+			}
 		}
 		// inc number of valid props
 		numProps++;

@@ -134,6 +134,12 @@ QMetaType::Type QOpcUaBaseVariable::dataType() const
 	auto st = UA_Server_readDataType(m_qopcuaserver->m_server, m_nodeId, &outDataType);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// check if type is enum, if so, return type int 32
+	if (!m_qopcuaserver->m_hashEnums.key(outDataType, "").isEmpty())
+	{
+		return QMetaType::Int;
+	}
+	// else return oncverted type
 	return QOpcUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 }
 
@@ -209,9 +215,9 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
-	Q_ASSERT(m_qopcuaserver->m_mapEnums.contains(strEnumName));
+	Q_ASSERT(m_qopcuaserver->m_hashEnums.contains(strEnumName));
 	// exit if not exists
-	if (!m_qopcuaserver->m_mapEnums.contains(strEnumName))
+	if (!m_qopcuaserver->m_hashEnums.contains(strEnumName))
 	{
 		return;
 	}
@@ -251,7 +257,7 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// change data type
-	UA_NodeId enumTypeNodeId = m_qopcuaserver->m_mapEnums.value(strEnumName);
+	UA_NodeId enumTypeNodeId = m_qopcuaserver->m_hashEnums.value(strEnumName);
 	st = UA_Server_writeDataType(m_qopcuaserver->m_server,
 		m_nodeId,
 		enumTypeNodeId);

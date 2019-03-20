@@ -5,6 +5,12 @@ MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, 
 {
 	this->myVar()->setDataType(QMetaType::UInt);
 	this->myVar()->setValue(0);
+	this->myEnumVariable()->setValue(TestEnum::TRES);
+}
+
+QOpcUaBaseDataVariable * MyNewObjectType::myVar()
+{
+	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
 }
 
 MyNewVariableSubSubType * MyNewObjectType::myVarSubSub()
@@ -12,9 +18,14 @@ MyNewVariableSubSubType * MyNewObjectType::myVarSubSub()
 	return this->findChild<MyNewVariableSubSubType*>("myVarSubSub");
 }
 
-QOpcUaBaseDataVariable * MyNewObjectType::myVar()
+QOpcUaBaseDataVariable * MyNewObjectType::myEnumVariable()
 {
-	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
+	return this->findChild<QOpcUaBaseDataVariable*>("myEnum");
+}
+
+MyNewObjectType::TestEnum MyNewObjectType::myEnum()
+{
+	return (MyNewObjectType::TestEnum)this->myEnumVariable()->value().toInt();
 }
 
 bool MyNewObjectType::updateMyVar(quint32 newVarVal)

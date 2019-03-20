@@ -53,16 +53,16 @@ private:
 
 	QOpcUaFolderObject * m_pobjectsFolder;
 
-	QMap<QString, UA_NodeId> m_mapTypes;
-	QMap<QString, UA_NodeId> m_mapEnums;
+	QMap <QString, UA_NodeId> m_mapTypes;
+	QHash<QString, UA_NodeId> m_hashEnums;
 
 	void registerType(const QMetaObject &metaObject);
-
 	void registerEnum(const QMetaEnum &metaEnum);
 
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
 
+	void registerMetaEnums(const QMetaObject &parentMetaObject);
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
