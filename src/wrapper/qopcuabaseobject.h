@@ -136,6 +136,26 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) > : QOpcUaMethodTraitsBas
 		return UA_Variant();
 	}
 };
+// specialization - function pointer
+template <typename R, typename... Args>
+struct QOpcUaMethodTraits< R(*)(Args...) > : QOpcUaMethodTraitsBase<void, R, true, Args...>
+{};
+// specialization - function pointer | no return value
+template <typename... Args>
+struct QOpcUaMethodTraits< void(*)(Args...) > : QOpcUaMethodTraitsBase<void, void, true, Args...>
+{
+	template<typename M>
+	inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
+	{
+		// call method
+		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
+		int iArg = QOpcUaMethodTraits<M>::getNumArgs() - 1;
+		// call method
+		methodCallback(QOpcUaMethodTraits<M>::template convertArgType<Args>(input, iArg--)...);
+		// set result
+		return UA_Variant();
+	}
+};
 
 /*
 typedef struct {                          // UA_ObjectTypeAttributes_default

@@ -18,6 +18,16 @@
 //	}
 //}
 
+int FunctionPointer(int x, int y)
+{
+	return x * y;
+}
+
+void FunctionPointerString(QString str)
+{
+	qDebug() << str;
+}
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -62,6 +72,9 @@ int main(int argc, char *argv[])
 	//	qDebug() << "method4";
 	//	return QString("%1, %2, %3").arg(x).arg(y).arg(str);
 	//});	
+
+	objsFolder->addMethod("functer", &FunctionPointer);
+	objsFolder->addMethod("functer_string", &FunctionPointerString);
 
 	// custom types
 
