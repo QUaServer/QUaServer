@@ -1,5 +1,5 @@
-#ifndef QOPCUABASEVARIABLE_H
-#define QOPCUABASEVARIABLE_H
+#ifndef QUABASEVARIABLE_H
+#define QUABASEVARIABLE_H
 
 #include <QUaNode>
 
@@ -61,7 +61,7 @@ The BaseVariableType is the abstract base type for all other VariableTypes.
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
 
-class QOpcUaBaseVariable : public QOpcUaServerNode
+class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
 
@@ -82,7 +82,7 @@ class QOpcUaBaseVariable : public QOpcUaServerNode
 	Q_PROPERTY(bool historizing READ historizing)
 
 public:
-	explicit QOpcUaBaseVariable(QOpcUaServer *server);
+	explicit QUaBaseVariable(QUaServer *server);
 	
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
@@ -121,4 +121,4 @@ signals:
 
 };
 
-#endif // QOPCUABASEVARIABLE_H
+#endif // QUABASEVARIABLE_H

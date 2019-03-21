@@ -8,13 +8,13 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
-void printChildren(QOpcUaServerNode * child, const QString strSpacer = "")
+void printChildren(QUaNode * child, const QString strSpacer = "")
 {
 	Q_CHECK_PTR(child);
 	qDebug() << strSpacer + "-->" << child->displayName();//child->objectName();
 	for (int i = 0; i < child->children().count(); i++)
 	{
-		printChildren(static_cast<QOpcUaServerNode*>(child->children().at(i)), strSpacer + "--");
+		printChildren(static_cast<QUaNode*>(child->children().at(i)), strSpacer + "--");
 	}
 }
 
@@ -22,26 +22,26 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-	QOpcUaServer server;
+	QUaServer server;
 	auto objsFolder = server.objectsFolder();
 
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
-	varBaseData->setBrowseName("QOpcUaBaseDataVariable");
-	varBaseData->setDisplayName("QOpcUaBaseDataVariable");
+	varBaseData->setBrowseName("QUaBaseDataVariable");
+	varBaseData->setDisplayName("QUaBaseDataVariable");
 
 	auto varProp = objsFolder->addProperty();
-	varProp->setBrowseName("QOpcUaProperty");
-	varProp->setDisplayName("QOpcUaProperty");
+	varProp->setBrowseName("QUaProperty");
+	varProp->setDisplayName("QUaProperty");
 
 	auto objBase = objsFolder->addBaseObject();
-	objBase->setBrowseName("QOpcUaBaseObject");
-	objBase->setDisplayName("QOpcUaBaseObject");
+	objBase->setBrowseName("QUaBaseObject");
+	objBase->setDisplayName("QUaBaseObject");
 
 	auto objFolder = objsFolder->addFolderObject();
-	objFolder->setBrowseName("QOpcUaFolderObject");
-	objFolder->setDisplayName("QOpcUaFolderObject");
+	objFolder->setBrowseName("QUaFolderObject");
+	objFolder->setDisplayName("QUaFolderObject");
 
 	// methods
 

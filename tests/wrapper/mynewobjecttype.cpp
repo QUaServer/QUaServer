@@ -1,16 +1,16 @@
 #include "mynewobjecttype.h"
 
-MyNewObjectType::MyNewObjectType(QOpcUaServer *server)
-	: QOpcUaBaseObject(server)
+MyNewObjectType::MyNewObjectType(QUaServer *server)
+	: QUaBaseObject(server)
 {
 	this->myVar()->setDataType(QMetaType::UInt);
 	this->myVar()->setValue(0);
 	this->myEnumVariable()->setValue(TestEnum::TRES);
 }
 
-QOpcUaBaseDataVariable * MyNewObjectType::myVar()
+QUaBaseDataVariable * MyNewObjectType::myVar()
 {
-	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
+	return this->findChild<QUaBaseDataVariable*>("myVar");
 }
 
 MyNewVariableSubSubType * MyNewObjectType::myVarSubSub()
@@ -18,9 +18,9 @@ MyNewVariableSubSubType * MyNewObjectType::myVarSubSub()
 	return this->findChild<MyNewVariableSubSubType*>("myVarSubSub");
 }
 
-QOpcUaBaseDataVariable * MyNewObjectType::myEnumVariable()
+QUaBaseDataVariable * MyNewObjectType::myEnumVariable()
 {
-	return this->findChild<QOpcUaBaseDataVariable*>("myEnum");
+	return this->findChild<QUaBaseDataVariable*>("myEnum");
 }
 
 MyNewObjectType::TestEnum MyNewObjectType::myEnum()
@@ -50,23 +50,23 @@ double MyNewObjectType::divideNums(int intNum, int intDen)
 
 // ---
 
-MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server)
-	: QOpcUaBaseObject(server)
+MyOtherNewObjectType::MyOtherNewObjectType(QUaServer *server)
+	: QUaBaseObject(server)
 {
 
 }
 
 // ---
 
-MyNewObjectSubType::MyNewObjectSubType(QOpcUaServer *server)
+MyNewObjectSubType::MyNewObjectSubType(QUaServer *server)
 	: MyNewObjectType(server)
 {
 
 }
 
-QOpcUaProperty * MyNewObjectSubType::myProp()
+QUaProperty * MyNewObjectSubType::myProp()
 {
-	return this->findChild<QOpcUaProperty*>("myProp");
+	return this->findChild<QUaProperty*>("myProp");
 }
 
 QString MyNewObjectSubType::concatArgs(int intNum, double dblNum, QString strName)

@@ -1,19 +1,19 @@
 #include "mynewvariabletype.h"
 
-MyNewVariableType::MyNewVariableType(QOpcUaServer *server)
-	: QOpcUaBaseDataVariable(server)
+MyNewVariableType::MyNewVariableType(QUaServer *server)
+	: QUaBaseDataVariable(server)
 {
 	this->myVar()->setValue(123);
 }
 
-QOpcUaBaseDataVariable * MyNewVariableType::myVar()
+QUaBaseDataVariable * MyNewVariableType::myVar()
 {
-	return this->findChild<QOpcUaBaseDataVariable*>("myVar");
+	return this->findChild<QUaBaseDataVariable*>("myVar");
 }
 
-QOpcUaBaseObject * MyNewVariableType::myObj()
+QUaBaseObject * MyNewVariableType::myObj()
 {
-	return this->findChild<QOpcUaBaseObject*>("myObj");
+	return this->findChild<QUaBaseObject*>("myObj");
 }
 
 MyOtherNewVariableType * MyNewVariableType::myOtherVar()
@@ -28,41 +28,41 @@ MyOtherNewVariableType * MyNewVariableType::myOtherTwo()
 
 // ---
 
-MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server)
-	: QOpcUaBaseDataVariable(server)
+MyOtherNewVariableType::MyOtherNewVariableType(QUaServer *server)
+	: QUaBaseDataVariable(server)
 {
 	this->setValue("equis");
 }
 
-QOpcUaBaseDataVariable * MyOtherNewVariableType::myVarTwo()
+QUaBaseDataVariable * MyOtherNewVariableType::myVarTwo()
 {
-	return this->findChild<QOpcUaBaseDataVariable*>("myVarTwo");
+	return this->findChild<QUaBaseDataVariable*>("myVarTwo");
 }
 
 // ---
 
-MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server)
+MyNewVariableSubType::MyNewVariableSubType(QUaServer *server)
 	: MyNewVariableType(server)
 {
 
 }
 
-QOpcUaBaseObject * MyNewVariableSubType::myObjSub()
+QUaBaseObject * MyNewVariableSubType::myObjSub()
 {
-	return this->findChild<QOpcUaBaseObject*>("myObjSub");
+	return this->findChild<QUaBaseObject*>("myObjSub");
 }
 
 // ---
 
-MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server)
+MyNewVariableSubSubType::MyNewVariableSubSubType(QUaServer *server)
 	: MyNewVariableSubType(server)
 {
 
 }
 
-QOpcUaBaseObject * MyNewVariableSubSubType::myObjSubSub()
+QUaBaseObject * MyNewVariableSubSubType::myObjSubSub()
 {
-	return this->findChild<QOpcUaBaseObject*>("myObjSubSub");
+	return this->findChild<QUaBaseObject*>("myObjSubSub");
 }
 
 

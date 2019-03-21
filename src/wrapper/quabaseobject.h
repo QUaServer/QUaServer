@@ -1,10 +1,10 @@
-#ifndef QOPCUABASEOBJECT_H
-#define QOPCUABASEOBJECT_H
+#ifndef QUABASEOBJECT_H
+#define QUABASEOBJECT_H
 
 #include <QUaNode>
 
 template <typename ClassType, typename R, bool IsMutable, typename... Args>
-struct QOpcUaMethodTraitsBase
+struct QUaMethodTraitsBase
 {
 	inline static bool getIsMutable()
 	{
@@ -39,8 +39,8 @@ struct QOpcUaMethodTraitsBase
 		UA_Argument_init(&inputArgument);
 		// create n-th argument with name "Arg" + number
 		inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
-		inputArgument.name        = QOpcUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
-		inputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromCpp<T>();
+		inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
+		inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
 		inputArgument.valueRank   = UA_VALUERANK_SCALAR;
 		// return
 		return inputArgument;
@@ -59,8 +59,8 @@ struct QOpcUaMethodTraitsBase
 		UA_Argument_init(&outputArgument);
 		outputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US",
 													  (char *)"Result Value");
-		outputArgument.name        = QOpcUaTypesConverter::uaStringFromQString((char *)"Result");
-		outputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromCpp<R>();
+		outputArgument.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
+		outputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<R>();
 		outputArgument.valueRank   = UA_VALUERANK_SCALAR;
 		return outputArgument;
 	}
@@ -76,7 +76,7 @@ struct QOpcUaMethodTraitsBase
 	template<typename T>
 	inline static T convertArgType(const UA_Variant * input, const int &iArg)
 	{
-		QVariant varQt = QOpcUaTypesConverter::uaVariantToQVariant(input[iArg]);
+		QVariant varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]);
 		return varQt.value<T>();
 	}
 
@@ -89,7 +89,7 @@ struct QOpcUaMethodTraitsBase
 		// call method
 		QVariant varResult = methodCallback(convertArgType<Args>(input, iArg--)...);
 		// set result
-		return QOpcUaTypesConverter::uaVariantFromQVariant(varResult);
+		return QUaTypesConverter::uaVariantFromQVariant(varResult);
 	}
 };
 // general case
@@ -98,15 +98,15 @@ struct QOpcUaMethodTraits : QOpcUaMethodTraits<decltype(&T::operator())>
 {};
 // specialization - const 
 template <typename ClassType, typename R, typename... Args>
-struct QOpcUaMethodTraits< R(ClassType::*)(Args...) const > : QOpcUaMethodTraitsBase<ClassType, R, false, Args...>
+struct QOpcUaMethodTraits< R(ClassType::*)(Args...) const > : QUaMethodTraitsBase<ClassType, R, false, Args...>
 {};
 // specialization - mutable 
 template <typename ClassType, typename R, typename... Args>
-struct QOpcUaMethodTraits< R(ClassType::*)(Args...) > : QOpcUaMethodTraitsBase<ClassType, R, true, Args...>
+struct QOpcUaMethodTraits< R(ClassType::*)(Args...) > : QUaMethodTraitsBase<ClassType, R, true, Args...>
 {};
 // specialization - const | no return value
 template <typename ClassType, typename... Args>
-struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QOpcUaMethodTraitsBase<ClassType, void, false, Args...>
+struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QUaMethodTraitsBase<ClassType, void, false, Args...>
 {
     template<typename M>
     inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
@@ -122,7 +122,7 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QOpcUaMethodTra
 };
 // specialization - mutable | no return value
 template <typename ClassType, typename... Args>
-struct QOpcUaMethodTraits< void(ClassType::*)(Args...) > : QOpcUaMethodTraitsBase<ClassType, void, true, Args...>
+struct QOpcUaMethodTraits< void(ClassType::*)(Args...) > : QUaMethodTraitsBase<ClassType, void, true, Args...>
 {
     template<typename M>
     inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
@@ -138,11 +138,11 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) > : QOpcUaMethodTraitsBas
 };
 // specialization - function pointer
 template <typename R, typename... Args>
-struct QOpcUaMethodTraits< R(*)(Args...) > : QOpcUaMethodTraitsBase<void, R, true, Args...>
+struct QOpcUaMethodTraits< R(*)(Args...) > : QUaMethodTraitsBase<void, R, true, Args...>
 {};
 // specialization - function pointer | no return value
 template <typename... Args>
-struct QOpcUaMethodTraits< void(*)(Args...) > : QOpcUaMethodTraitsBase<void, void, true, Args...>
+struct QOpcUaMethodTraits< void(*)(Args...) > : QUaMethodTraitsBase<void, void, true, Args...>
 {
 	template<typename M>
 	inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
@@ -190,7 +190,7 @@ This ObjectType is the base ObjectType and all other ObjectTypes shall either
 directly or indirectly inherit from it.
 */
 
-class QOpcUaBaseObject : public QOpcUaServerNode
+class QUaBaseObject : public QUaNode
 {
     Q_OBJECT
 
@@ -199,10 +199,10 @@ class QOpcUaBaseObject : public QOpcUaServerNode
 	// TODO
 	//Q_PROPERTY(UA_Byte eventNotifier READ get_eventNotifier)
 
-friend class QOpcUaServer;
+friend class QUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaBaseObject(QOpcUaServer *server);
+	Q_INVOKABLE explicit QUaBaseObject(QUaServer *server);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
@@ -236,7 +236,7 @@ private:
 };
 
 template<typename M>
-inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const M & methodCallback)
+inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & methodCallback)
 {
 	// create input arguments
 	UA_Argument * p_inputArguments = nullptr;
@@ -258,7 +258,7 @@ inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const M &
 	QByteArray byteMethodName = strMethodName.toUtf8();
     UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, QOpcUaMethodTraits<M>::getNumArgs(), p_inputArguments, p_outputArgument);
 	// store method with node id hash as key
-	Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QOpcUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
+	Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
 	m_hashMethods[methNodeId] = [methodCallback](const UA_Variant * input, UA_Variant * output) {
         // call method
 		if (QOpcUaMethodTraits<M>::isRetUaArgumentVoid())
@@ -274,5 +274,5 @@ inline void QOpcUaBaseObject::addMethod(const QString & strMethodName, const M &
 	};
 }
 
-#endif // QOPCUABASEOBJECT_H
+#endif // QUABASEOBJECT_H
 

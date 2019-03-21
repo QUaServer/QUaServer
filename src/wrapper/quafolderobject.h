@@ -1,5 +1,5 @@
-#ifndef QOPCUAFOLDEROBJECT_H
-#define QOPCUAFOLDEROBJECT_H
+#ifndef QUAFOLDEROBJECT_H
+#define QUAFOLDEROBJECT_H
 
 #include <QUaBaseObject>
 
@@ -12,17 +12,17 @@ instance of the FolderType, such as “ObjectTypes”, should imply the
 semantics associated with the use of it.
 */
 
-class QOpcUaFolderObject : public QOpcUaBaseObject
+class QUaFolderObject : public QUaBaseObject
 {
     Q_OBJECT
 
-friend class QOpcUaServer;
+friend class QUaServer;
 
 public:
-	Q_INVOKABLE explicit QOpcUaFolderObject(QOpcUaServer *server);
+	Q_INVOKABLE explicit QUaFolderObject(QUaServer *server);
 
 	
 
 };
 
-#endif // QOPCUAFOLDEROBJECT_H
+#endif // QUAFOLDEROBJECT_H

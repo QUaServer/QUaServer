@@ -1,7 +1,7 @@
 #include "quabasedatavariable.h"
 
-QOpcUaBaseDataVariable::QOpcUaBaseDataVariable(QOpcUaServer *server)
-	: QOpcUaBaseVariable(server)
+QUaBaseDataVariable::QUaBaseDataVariable(QUaServer *server)
+	: QUaBaseVariable(server)
 {
 
 }

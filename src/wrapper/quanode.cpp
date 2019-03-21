@@ -5,7 +5,7 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
-QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
+QUaNode::QUaNode(QUaServer *server)
 {
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newnodeNodeId);
@@ -15,7 +15,7 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 	// check
 	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
 	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it
-	// so we need to also set the context again in QOpcUaServer::uaConstructor
+	// so we need to also set the context again in QUaServer::uaConstructor
 	// set server instance
 	this->m_qopcuaserver = server;
 	// set c++ instance as context
@@ -29,7 +29,7 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 		return;
 	}
 	// get all UA children in advance, because if none, then better early exit
-	auto chidrenNodeIds = QOpcUaServerNode::getChildrenNodeIds(nodeId, server);
+	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(nodeId, server);
 	if (chidrenNodeIds.count() <= 0)
 	{
 		return;
@@ -40,13 +40,13 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 	{
 		auto childNodeId = chidrenNodeIds[i];
 		// read browse name
-		QString strBrowseName = QOpcUaServerNode::getBrowseName(childNodeId, server);
+		QString strBrowseName = QUaNode::getBrowseName(childNodeId, server);
 		Q_ASSERT(!mapChildren.contains(strBrowseName));
 		mapChildren[strBrowseName] = childNodeId;
 	}
 	// list meta props
 	int propCount  = metaObject.propertyCount();
-	int propOffset = QOpcUaServerNode::getPropsOffsetHelper(metaObject);
+	int propOffset = QUaNode::getPropsOffsetHelper(metaObject);
 	int numProps   = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
@@ -61,7 +61,7 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 			}
 			// check if OPC UA relevant type
 			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
 			{
 				continue;
 			}
@@ -80,7 +80,7 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 		// get child nodeId for child
 		auto childNodeId = mapChildren.take(strBrowseName);
 		// get node context (C++ instance)
-		auto nodeInstance = QOpcUaServerNode::getNodeContext(childNodeId, server);
+		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
 		// assign C++ parent
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(strBrowseName);
@@ -88,13 +88,13 @@ QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to wuery children by object name
 	}
-	// if assert below fails, review filter in QOpcUaServerNode::getChildrenNodeIds
+	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count()      == 0        &&
 		       chidrenNodeIds.count()   == numProps &&
-		       this->children().count() == numProps, "QOpcUaServerNode::QOpcUaServerNode", "Children not bound properly.");
+		       this->children().count() == numProps, "QUaNode::QUaNode", "Children not bound properly.");
 }
 
-QString QOpcUaServerNode::displayName() const
+QString QUaNode::displayName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -108,11 +108,11 @@ QString QOpcUaServerNode::displayName() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
-	return QOpcUaTypesConverter::uaStringToQString(outDisplayName.text);
+	return QUaTypesConverter::uaStringToQString(outDisplayName.text);
 	// TODO : handle outDisplayName.locale
 }
 
-void QOpcUaServerNode::setDisplayName(const QString & displayName)
+void QUaNode::setDisplayName(const QString & displayName)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -128,7 +128,7 @@ void QOpcUaServerNode::setDisplayName(const QString & displayName)
 	// TODO : handle locale
 }
 
-QString QOpcUaServerNode::description() const
+QString QUaNode::description() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -142,11 +142,11 @@ QString QOpcUaServerNode::description() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
-	return QOpcUaTypesConverter::uaStringToQString(outDescription.text);
+	return QUaTypesConverter::uaStringToQString(outDescription.text);
 	// TODO : handle outDescription.locale
 }
 
-void QOpcUaServerNode::setDescription(const QString & description)
+void QUaNode::setDescription(const QString & description)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -162,7 +162,7 @@ void QOpcUaServerNode::setDescription(const QString & description)
 	// TODO : handle locale
 }
 
-quint32 QOpcUaServerNode::writeMask() const
+quint32 QUaNode::writeMask() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -179,7 +179,7 @@ quint32 QOpcUaServerNode::writeMask() const
 	return outWriteMask;
 }
 
-void QOpcUaServerNode::setWriteMask(const quint32 & writeMask)
+void QUaNode::setWriteMask(const quint32 & writeMask)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -191,7 +191,7 @@ void QOpcUaServerNode::setWriteMask(const quint32 & writeMask)
 	emit this->writeMaskChanged(writeMask);
 }
 
-QString QOpcUaServerNode::nodeId() const
+QString QUaNode::nodeId() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -199,10 +199,10 @@ QString QOpcUaServerNode::nodeId() const
 	{
 		return QString();
 	}
-	return QOpcUaTypesConverter::nodeIdToQString(m_nodeId);
+	return QUaTypesConverter::nodeIdToQString(m_nodeId);
 }
 
-QString QOpcUaServerNode::nodeClass() const
+QString QUaNode::nodeClass() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -216,10 +216,10 @@ QString QOpcUaServerNode::nodeClass() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// convert to QString
-	return QOpcUaTypesConverter::nodeClassToQString(outNodeClass);
+	return QUaTypesConverter::nodeClassToQString(outNodeClass);
 }
 
-QString QOpcUaServerNode::browseName() const
+QString QUaNode::browseName() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -234,17 +234,17 @@ QString QOpcUaServerNode::browseName() const
 	Q_UNUSED(st);
 	// populate return value
 	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	return QOpcUaTypesConverter::uaStringToQString(outBrowseName.name);
+	return QUaTypesConverter::uaStringToQString(outBrowseName.name);
 }
 
-void QOpcUaServerNode::setBrowseName(const QString & browseName)
+void QUaNode::setBrowseName(const QString & browseName)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_QualifiedName
 	UA_QualifiedName bName;
 	bName.namespaceIndex = 1; // NOTE : force default namespace index 1
-	bName.name           = QOpcUaTypesConverter::uaStringFromQString(browseName);
+	bName.name           = QUaTypesConverter::uaStringFromQString(browseName);
 	// set value
 	auto st = UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -253,37 +253,37 @@ void QOpcUaServerNode::setBrowseName(const QString & browseName)
 	emit this->browseNameChanged(browseName);
 }
 
-QOpcUaProperty * QOpcUaServerNode::addProperty()
+QUaProperty * QUaNode::addProperty()
 {
-	return m_qopcuaserver->createInstance<QOpcUaProperty>(this);
+	return m_qopcuaserver->createInstance<QUaProperty>(this);
 }
 
-QOpcUaBaseDataVariable * QOpcUaServerNode::addBaseDataVariable()
+QUaBaseDataVariable * QUaNode::addBaseDataVariable()
 {
-	return m_qopcuaserver->createInstance<QOpcUaBaseDataVariable>(this);
+	return m_qopcuaserver->createInstance<QUaBaseDataVariable>(this);
 }
 
-QOpcUaBaseObject * QOpcUaServerNode::addBaseObject()
+QUaBaseObject * QUaNode::addBaseObject()
 {
-	return m_qopcuaserver->createInstance<QOpcUaBaseObject>(this);
+	return m_qopcuaserver->createInstance<QUaBaseObject>(this);
 }
 
-QOpcUaFolderObject * QOpcUaServerNode::addFolderObject()
+QUaFolderObject * QUaNode::addFolderObject()
 {
-	return m_qopcuaserver->createInstance<QOpcUaFolderObject>(this);
+	return m_qopcuaserver->createInstance<QUaFolderObject>(this);
 }
 
-UA_Server * QOpcUaServerNode::getUAServer()
+UA_Server * QUaNode::getUAServer()
 {
 	return m_qopcuaserver->m_server;
 }
 
-UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, QOpcUaServer * server)
+UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)
 {
-	return QOpcUaServerNode::getParentNodeId(childNodeId, server->m_server);
+	return QUaNode::getParentNodeId(childNodeId, server->m_server);
 }
 
-UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
+UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	bDesc->nodeId          = childNodeId; // from child
@@ -309,16 +309,16 @@ UA_NodeId QOpcUaServerNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Se
 	UA_BrowseDescription_delete(bDesc);
 	UA_BrowseResult_deleteMembers(&bRes);
 	// return
-	Q_ASSERT_X(listParents.count() <= 1, "QOpcUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
+	Q_ASSERT_X(listParents.count() <= 1, "QUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
 	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
 }
 
-QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, QOpcUaServer * server)
+QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, QUaServer * server)
 {
-	return QOpcUaServerNode::getChildrenNodeIds(parentNodeId, server->m_server);
+	return QUaNode::getChildrenNodeIds(parentNodeId, server->m_server);
 }
 
-QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_Server * server)
+QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_Server * server)
 {
 	QList<UA_NodeId> retListChildren;
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
@@ -354,19 +354,19 @@ QList<UA_NodeId> QOpcUaServerNode::getChildrenNodeIds(const UA_NodeId & parentNo
 	return retListChildren;
 }
 
-QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, QOpcUaServer * server)
+QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, QUaServer * server)
 {
-	return QOpcUaServerNode::getNodeContext(nodeId, server->m_server);
+	return QUaNode::getNodeContext(nodeId, server->m_server);
 }
 
-QOpcUaServerNode * QOpcUaServerNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
+QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
 {
-	void * context = QOpcUaServerNode::getVoidContext(nodeId, server);
+	void * context = QUaNode::getVoidContext(nodeId, server);
 	// try to cast to C++ node
-	return static_cast<QOpcUaServerNode*>(context);
+	return static_cast<QUaNode*>(context);
 }
 
-void * QOpcUaServerNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
+void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
 {
 	// get void context
 	void * context;
@@ -380,12 +380,12 @@ void * QOpcUaServerNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * se
 	return context;
 }
 
-QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, QOpcUaServer * server)
+QString QUaNode::getBrowseName(const UA_NodeId & nodeId, QUaServer * server)
 {
-	return QOpcUaServerNode::getBrowseName(nodeId, server->m_server);
+	return QUaNode::getBrowseName(nodeId, server->m_server);
 }
 
-QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
+QString QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
 {
 	// read browse name
 	UA_QualifiedName outBrowseName;
@@ -393,22 +393,22 @@ QString QOpcUaServerNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * se
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	return QOpcUaTypesConverter::uaStringToQString(outBrowseName.name);
+	return QUaTypesConverter::uaStringToQString(outBrowseName.name);
 }
 
-int QOpcUaServerNode::getPropsOffsetHelper(const QMetaObject & metaObject)
+int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)
 {
 	int propOffset;
 	// need to set props also inherited from base class
-	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
-		propOffset = QOpcUaBaseVariable::staticMetaObject.propertyOffset();
+		propOffset = QUaBaseVariable::staticMetaObject.propertyOffset();
 	}
 	else
 	{
 		// [NOTE] : assert below does not work, dont know why
-		//Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
-		propOffset = QOpcUaBaseObject::staticMetaObject.propertyOffset();
+		//Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject));
+		propOffset = QUaBaseObject::staticMetaObject.propertyOffset();
 	}
 	return propOffset;
 }

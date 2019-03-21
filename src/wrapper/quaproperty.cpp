@@ -4,8 +4,8 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
-QOpcUaProperty::QOpcUaProperty(QOpcUaServer *server)
-	: QOpcUaBaseVariable(server)
+QUaProperty::QUaProperty(QUaServer *server)
+	: QUaBaseVariable(server)
 {
 
 }

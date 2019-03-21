@@ -7,20 +7,20 @@
 class MyOtherNewVariableType;
 class MyNewVariableSubType;
 
-class MyNewVariableType : public QOpcUaBaseDataVariable
+class MyNewVariableType : public QUaBaseDataVariable
 {
     Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseDataVariable * myVar      READ myVar     )
-	Q_PROPERTY(QOpcUaBaseObject       * myObj      READ myObj     )
+	Q_PROPERTY(QUaBaseDataVariable    * myVar      READ myVar     )
+	Q_PROPERTY(QUaBaseObject          * myObj      READ myObj     )
 	Q_PROPERTY(MyOtherNewVariableType * myOtherVar READ myOtherVar)
 	Q_PROPERTY(MyOtherNewVariableType * myOtherTwo READ myOtherTwo)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyNewVariableType(QUaServer *server);
 
-	QOpcUaBaseDataVariable * myVar();
-	QOpcUaBaseObject       * myObj();
+	QUaBaseDataVariable * myVar();
+	QUaBaseObject       * myObj();
 	MyOtherNewVariableType * myOtherVar();
 	MyOtherNewVariableType * myOtherTwo();
 
@@ -28,15 +28,15 @@ public:
 
 // ---
 
-class MyOtherNewVariableType : public QOpcUaBaseDataVariable
+class MyOtherNewVariableType : public QUaBaseDataVariable
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseDataVariable * myVarTwo READ myVarTwo)
+	Q_PROPERTY(QUaBaseDataVariable * myVarTwo READ myVarTwo)
 public:
-	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyOtherNewVariableType(QUaServer *server);
 
-	QOpcUaBaseDataVariable * myVarTwo();
+	QUaBaseDataVariable * myVarTwo();
 
 private:
 
@@ -48,12 +48,12 @@ class MyNewVariableSubType : public MyNewVariableType
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseObject * myObjSub READ myObjSub)
+	Q_PROPERTY(QUaBaseObject * myObjSub READ myObjSub)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyNewVariableSubType(QUaServer *server);
 
-	QOpcUaBaseObject * myObjSub();
+	QUaBaseObject * myObjSub();
 
 
 };
@@ -64,12 +64,12 @@ class MyNewVariableSubSubType : public MyNewVariableSubType
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseObject * myObjSubSub READ myObjSubSub)
+	Q_PROPERTY(QUaBaseObject * myObjSubSub READ myObjSubSub)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableSubSubType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyNewVariableSubSubType(QUaServer *server);
 
-	QOpcUaBaseObject * myObjSubSub();
+	QUaBaseObject * myObjSubSub();
 
 
 };

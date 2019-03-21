@@ -5,16 +5,16 @@
 #include <QUaProperty>
 #include "mynewvariabletype.h"
 
-class MyNewObjectType : public QOpcUaBaseObject
+class MyNewObjectType : public QUaBaseObject
 {
     Q_OBJECT
 
-	Q_PROPERTY(QOpcUaBaseDataVariable  * myVar          READ myVar         )
+	Q_PROPERTY(QUaBaseDataVariable     * myVar          READ myVar         )
 	Q_PROPERTY(MyNewVariableSubSubType * myVarSubSub    READ myVarSubSub   )
 	Q_PROPERTY(TestEnum                  myEnum         READ myEnum        )
 
 public:
-	Q_INVOKABLE explicit MyNewObjectType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyNewObjectType(QUaServer *server);
 
 	enum TestEnum
 	{
@@ -28,9 +28,9 @@ public:
 	};
 	Q_ENUM(TestEnum)
 
-	QOpcUaBaseDataVariable  * myVar();
+	QUaBaseDataVariable  * myVar();
 	MyNewVariableSubSubType * myVarSubSub();
-	QOpcUaBaseDataVariable  * myEnumVariable();
+	QUaBaseDataVariable  * myEnumVariable();
 	TestEnum                  myEnum();
 
 	Q_INVOKABLE bool    updateMyVar(quint32 newVarVal);
@@ -42,12 +42,12 @@ private:
 	
 };
 
-class MyOtherNewObjectType : public QOpcUaBaseObject
+class MyOtherNewObjectType : public QUaBaseObject
 {
 	Q_OBJECT
 
 public:
-	Q_INVOKABLE explicit MyOtherNewObjectType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyOtherNewObjectType(QUaServer *server);
 
 private:
 
@@ -58,12 +58,12 @@ class MyNewObjectSubType : public MyNewObjectType
 {
 	Q_OBJECT
 
-	Q_PROPERTY(QOpcUaProperty * myProp READ myProp)
+	Q_PROPERTY(QUaProperty * myProp READ myProp)
 
 public:
-	Q_INVOKABLE explicit MyNewObjectSubType(QOpcUaServer *server);
+	Q_INVOKABLE explicit MyNewObjectSubType(QUaServer *server);
 
-	QOpcUaProperty * myProp();
+	QUaProperty * myProp();
 
 	Q_INVOKABLE QString concatArgs(int intNum, double dblNum, QString strName);
 

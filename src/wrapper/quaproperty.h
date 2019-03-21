@@ -1,5 +1,5 @@
-#ifndef QOPCUAPROPERTY_H
-#define QOPCUAPROPERTY_H
+#ifndef QUAPROPERTY_H
+#define QUAPROPERTY_H
 
 #include <QUaBaseVariable>
 
@@ -11,40 +11,40 @@ Properties are defined by their BrowseName and therefore they do not need
 a specialised type definition. It is not allowed to subtype this VariableType.
 */
 
-class QOpcUaProperty : public QOpcUaBaseVariable
+class QUaProperty : public QUaBaseVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QOpcUaProperty(QOpcUaServer *server);
+	Q_INVOKABLE explicit QUaProperty(QUaServer *server);
 
 	// delete methods from derived class
 	// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
 	template<typename T = bool>
-	QOpcUaProperty * addProperty(const QString &strBrowseName = "")
+	QUaProperty * addProperty(const QString &strBrowseName = "")
 	{
 		Q_UNUSED(strBrowseName);
-		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addProperty, properties cannot have children");
+		Q_STATIC_ASSERT_X(QUaFail<T>::value, "QUaProperty::addProperty, properties cannot have children");
 		return nullptr;
 	}
 	template<typename T = bool>
-	QOpcUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "")
+	QUaBaseDataVariable * addBaseDataVariable(const QString &strBrowseName = "")
 	{
 		Q_UNUSED(strBrowseName);
-		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addBaseDataVariable, properties cannot have children");
+		Q_STATIC_ASSERT_X(QUaFail<T>::value, "QUaProperty::addBaseDataVariable, properties cannot have children");
 		return nullptr;
 	}
 	template<typename T = bool>
-	QOpcUaBaseObject * addBaseObject(const QString &strBrowseName = "")
+	QUaBaseObject * addBaseObject(const QString &strBrowseName = "")
 	{
 		Q_UNUSED(strBrowseName);
-		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addBaseObject, properties cannot have children");
+		Q_STATIC_ASSERT_X(QUaFail<T>::value, "QUaProperty::addBaseObject, properties cannot have children");
 		return nullptr;
 	}
 	template<typename T = bool>
-	QOpcUaFolderObject * addFolderObject(const QString &strBrowseName = "")
+	QUaFolderObject * addFolderObject(const QString &strBrowseName = "")
 	{
 		Q_UNUSED(strBrowseName);
-		Q_STATIC_ASSERT_X(QOpcUaFail<T>::value, "QOpcUaProperty::addFolderObject, properties cannot have children");
+		Q_STATIC_ASSERT_X(QUaFail<T>::value, "QUaProperty::addFolderObject, properties cannot have children");
 		return nullptr;
 	}
 
@@ -52,4 +52,4 @@ public:
 };
 
 
-#endif // QOPCUAPROPERTY_H
+#endif // QUAPROPERTY_H

@@ -1,5 +1,5 @@
-#ifndef QOPCUATYPESCONVERTER_H
-#define QOPCUATYPESCONVERTER_H
+#ifndef QUATYPESCONVERTER_H
+#define QUATYPESCONVERTER_H
 
 #include <QObject>
 #include <QVariant>
@@ -12,7 +12,7 @@
 
 QT_BEGIN_NAMESPACE
 
-namespace QOpcUaTypesConverter {
+namespace QUaTypesConverter {
 
 	// common convertions
 	UA_NodeId nodeIdFromQString  (const QString &name);
@@ -231,4 +231,4 @@ namespace QOpcUaTypesConverter {
 
 QT_END_NAMESPACE
 
-#endif // QOPCUATYPESCONVERTER_H
+#endif // QUATYPESCONVERTER_H

@@ -1,5 +1,5 @@
-#ifndef QOPCUASERVERNODE_H
-#define QOPCUASERVERNODE_H
+#ifndef QUASERVERNODE_H
+#define QUASERVERNODE_H
 
 #include <functional>
 #include <typeinfo>
@@ -10,18 +10,18 @@
 
 #include "open62541.h"
 
-class QOpcUaServer;
-class QOpcUaProperty;
-class QOpcUaBaseDataVariable;
-class QOpcUaBaseObject;
-class QOpcUaFolderObject;
+class QUaServer;
+class QUaProperty;
+class QUaBaseDataVariable;
+class QUaBaseObject;
+class QUaFolderObject;
 
 #include <QUaTypesConverter>
 
 // traits used to static assert that a method is not used
 // https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
 template <typename T>
-struct QOpcUaFail : std::false_type
+struct QUaFail : std::false_type
 {
 };
 
@@ -49,7 +49,7 @@ typedef struct {
 } UA_NodeAttributes;
 */
 
-class QOpcUaServerNode : public QObject
+class QUaNode : public QObject
 {
     Q_OBJECT
 
@@ -77,12 +77,12 @@ class QOpcUaServerNode : public QObject
     Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
 
 public:
-	explicit QOpcUaServerNode(QOpcUaServer *server);
+	explicit QUaNode(QUaServer *server);
 	
 	// Virtual destructor is necessary to call derived class destructor when delete is called on pointer to base class
 	// https://stackoverflow.com/questions/294927/does-delete-work-with-pointers-to-base-class
 	// https://repl.it/repls/EachSpicyInternalcommand
-	inline virtual ~QOpcUaServerNode() { };
+	inline virtual ~QUaNode() { };
 
 	// OPC UA methods API
 
@@ -101,14 +101,14 @@ public:
 
 	// Instance Creation API
 
-	virtual QOpcUaProperty         * addProperty        ();
-	virtual QOpcUaBaseDataVariable * addBaseDataVariable();
-	virtual QOpcUaBaseObject       * addBaseObject      ();
-	virtual QOpcUaFolderObject     * addFolderObject    ();
+	virtual QUaProperty         * addProperty        ();
+	virtual QUaBaseDataVariable * addBaseDataVariable();
+	virtual QUaBaseObject       * addBaseObject      ();
+	virtual QUaFolderObject     * addFolderObject    ();
 
 
 	// to be able to reuse methods in subclasses
-	QOpcUaServer * m_qopcuaserver;
+	QUaServer * m_qopcuaserver;
 
 	// protected?
 
@@ -118,17 +118,17 @@ public:
 	// private
 	UA_Server * getUAServer();
 
-	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QOpcUaServer *server);
+	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QUaServer *server);
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server    *server);
 
-	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId &parentNodeId, QOpcUaServer *server);
+	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId &parentNodeId, QUaServer *server);
 	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId &parentNodeId, UA_Server    *server);
 
-	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, QOpcUaServer *server);
-	static QOpcUaServerNode * getNodeContext(const UA_NodeId &nodeId, UA_Server    *server);
+	static QUaNode * getNodeContext(const UA_NodeId &nodeId, QUaServer *server);
+	static QUaNode * getNodeContext(const UA_NodeId &nodeId, UA_Server    *server);
 	static void             * getVoidContext(const UA_NodeId &nodeId, UA_Server    *server);
 
-	static QString getBrowseName (const UA_NodeId &nodeId, QOpcUaServer *server);
+	static QString getBrowseName (const UA_NodeId &nodeId, QUaServer *server);
 	static QString getBrowseName (const UA_NodeId &nodeId, UA_Server    *server);
 
 	static int getPropsOffsetHelper(const QMetaObject &metaObject);
@@ -146,5 +146,5 @@ private:
 
 };
 
-#endif // QOPCUASERVERNODE_H
+#endif // QUASERVERNODE_H
 

@@ -3,7 +3,7 @@
 
 QT_BEGIN_NAMESPACE
 
-namespace QOpcUaTypesConverter {
+namespace QUaTypesConverter {
 
 
 	UA_NodeId nodeIdFromQString(const QString & name)

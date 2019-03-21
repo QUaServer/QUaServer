@@ -1,5 +1,5 @@
-#ifndef QOPCUASERVER_H
-#define QOPCUASERVER_H
+#ifndef QUASERVER_H
+#define QUASERVER_H
 
 #include <type_traits>
 
@@ -9,18 +9,18 @@
 #include <QUaProperty>
 #include <QUaBaseObject>
 
-class QOpcUaServer : public QObject
+class QUaServer : public QObject
 {
 	Q_OBJECT
 
-friend class QOpcUaServerNode;
-friend class QOpcUaBaseVariable;
-friend class QOpcUaBaseObject;
+friend class QUaNode;
+friend class QUaBaseVariable;
+friend class QUaBaseObject;
 // NOTE : this is how we would declare a <template class> friend
 //template<typename T> friend class QOpcUaServerNodeFactory;
 
 public:
-    explicit QOpcUaServer(QObject *parent = 0);
+    explicit QUaServer(QObject *parent = 0);
 
 	void start();
 	void stop();
@@ -36,9 +36,9 @@ public:
 
 	// create instance of a given type
 	template<typename T>
-	T* createInstance(QOpcUaServerNode * parentNode);
+	T* createInstance(QUaNode * parentNode);
 
-	QOpcUaFolderObject * objectsFolder();
+	QUaFolderObject * objectsFolder();
 
 signals:
 	void iterateServer();
@@ -51,7 +51,7 @@ private:
 	UA_Boolean  m_running;
 	QMetaObject::Connection m_connection;
 
-	QOpcUaFolderObject * m_pobjectsFolder;
+	QUaFolderObject * m_pobjectsFolder;
 
 	QMap <QString, UA_NodeId> m_mapTypes;
 	QHash<QString, UA_NodeId> m_hashEnums;
@@ -66,9 +66,9 @@ private:
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
-	UA_NodeId createInstance(const QMetaObject &metaObject, QOpcUaServerNode * parentNode);
+	UA_NodeId createInstance(const QMetaObject &metaObject, QUaNode * parentNode);
 
-	void bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId &nodeId);
+	void bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId &nodeId);
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
 	QHash< UA_NodeId, QList<std::function<void(void)>>                                          > m_hashDeferredConstructors;
@@ -84,7 +84,7 @@ private:
 		                               const UA_NodeId  *nodeId, 
 		                               void            **nodeContext);
 
-	static UA_StatusCode uaConstructor(QOpcUaServer      *server,
+	static UA_StatusCode uaConstructor(QUaServer      *server,
 		                               const UA_NodeId   *nodeId, 
 		                               void             **nodeContext,
 		                               const QMetaObject &metaObject);
@@ -115,28 +115,28 @@ private:
 	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
-	//        passed-in in QOpcUaServer::uaConstructor and used in QOpcUaServerNode::QOpcUaServerNode
+	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newnodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
 
 };
 
 template<typename T>
-inline void QOpcUaServer::registerType()
+inline void QUaServer::registerType()
 {
 	// call internal method
 	this->registerType(T::staticMetaObject);
 }
 
 template<typename T>
-inline void QOpcUaServer::registerEnum()
+inline void QUaServer::registerEnum()
 {
 	// call internal method
 	this->registerEnum(QMetaEnum::fromType<T>());
 }
 
 template<typename T>
-inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
+inline T * QUaServer::createInstance(QUaNode * parentNode)
 {
 	// instantiate first in OPC UA
 	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode);
@@ -145,7 +145,7 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 		return nullptr;
 	}
 	// get new c++ instance created in UA constructor
-	auto tmp = QOpcUaServerNode::getNodeContext(newInstanceNodeId, this);
+	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this);
 	T * newInstance = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
 	// return c++ instance
@@ -153,23 +153,23 @@ inline T * QOpcUaServer::createInstance(QOpcUaServerNode * parentNode)
 }
 
 template<typename T>
-inline T * QOpcUaBaseObject::addChild()
+inline T * QUaBaseObject::addChild()
 {
     return m_qopcuaserver->createInstance<T>(this);
 }
 
 template<typename T>
-inline T * QOpcUaBaseDataVariable::addChild()
+inline T * QUaBaseDataVariable::addChild()
 {
     return m_qopcuaserver->createInstance<T>(this);
 }
 
 template<typename T>
-inline void QOpcUaBaseVariable::setDataTypeEnum()
+inline void QUaBaseVariable::setDataTypeEnum()
 {
 	// register if not registered
 	m_qopcuaserver->registerEnum<T>();
 	this->setDataTypeEnum(QMetaEnum::fromType<T>());
 }
 
-#endif // QOPCUASERVER_H
+#endif // QUASERVER_H

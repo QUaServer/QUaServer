@@ -3,7 +3,7 @@
 #include <QMetaProperty>
 
 // [STATIC]
-UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server, 
+UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                      const UA_NodeId * sessionId, 
 	                                      void            * sessionContext, 
 	                                      const UA_NodeId * typeNodeId, 
@@ -15,7 +15,7 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	// get server from context object
-	auto obj = dynamic_cast<QOpcUaServer*>(static_cast<QObject*>(typeNodeContext));
+	auto obj = dynamic_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
 	Q_CHECK_PTR(obj);
 	if (!obj)
 	{
@@ -26,20 +26,20 @@ UA_StatusCode QOpcUaServer::uaConstructor(UA_Server       * server,
 	return obj->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
 }
 
-UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
+UA_StatusCode QUaServer::uaConstructor(QUaServer      * server,
 	                                      const UA_NodeId   * nodeId, 
 	                                      void             ** nodeContext,
 	                                      const QMetaObject & metaObject)
 {
 	// get parent node id
-	UA_NodeId parentNodeId       = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
+	UA_NodeId parentNodeId       = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	UA_NodeId directParentNodeId = parentNodeId;
 	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId));
 	// check if constructor from explicit instance creation or type registration
 	// this is done by checking that parent is different from object ot variable instance
 	UA_NodeClass outNodeClass;
 	UA_NodeId lastParentNodeId;
-	QOpcUaServerNode * parentContext = nullptr;
+	QUaNode * parentContext = nullptr;
 	while (true)
 	{
 		// ignore if new instance is due to new type registration
@@ -51,13 +51,13 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 			return UA_STATUSCODE_GOOD;
 		}
 		lastParentNodeId = parentNodeId;
-		parentContext = QOpcUaServerNode::getNodeContext(lastParentNodeId, server);
+		parentContext = QUaNode::getNodeContext(lastParentNodeId, server);
 		// check if parent node is bound
 		if (parentContext)
 		{
 			break;
 		}
-		parentNodeId = QOpcUaServerNode::getParentNodeId(parentNodeId, server->m_server);
+		parentNodeId = QUaNode::getParentNodeId(parentNodeId, server->m_server);
 		// exit if null
 		if (UA_NodeId_isNull(&parentNodeId))
 		{
@@ -69,7 +69,7 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	if (!parentContext)
 	{
 		server->m_hashDeferredConstructors[lastParentNodeId].append([server, nodeId, nodeContext, metaObject]() {
-			QOpcUaServer::uaConstructor(server, nodeId, nodeContext, metaObject);
+			QUaServer::uaConstructor(server, nodeId, nodeContext, metaObject);
 		});
 		return UA_STATUSCODE_GOOD;
 	}
@@ -82,16 +82,16 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 		server->m_hashDeferredConstructors.remove(*nodeId);
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
-	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
-	// NOTE : to simplify user API, we minimize QOpcUaServerNode arguments to just a QOpcUaServer reference
-	//        we temporarily store in the QOpcUaServer reference the UA_NodeId and QMetaObject values needed to
+	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
+	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
+	//        we temporarily store in the QUaServer reference the UA_NodeId and QMetaObject values needed to
 	//        instantiate the new node.
 	server->m_newnodeNodeId     = nodeId;
 	server->m_newNodeMetaObject = &metaObject;
 	// instantiate new C++ node, m_newnodeNodeId and m_newNodeMetaObject only meant to be used during this call
-	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server));
-	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
-	auto * newInstance = dynamic_cast<QOpcUaServerNode*>(static_cast<QObject*>(pQObject));
+	auto * pQObject    = metaObject.newInstance(Q_ARG(QUaServer*, server));
+	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
+	auto * newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(pQObject));
 	Q_CHECK_PTR(newInstance);
 	if (!newInstance)
 	{
@@ -103,18 +103,18 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
 	// need to set parent if direct parent is already bound bacaus eits constructor has already been called
-	parentNodeId = QOpcUaServerNode::getParentNodeId(*nodeId, server->m_server);
+	parentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId))
 	{
 		newInstance->setParent(parentContext);
-		newInstance->setObjectName(QOpcUaServerNode::getBrowseName(*nodeId, server));
+		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
 	}
 	// success
 	return UA_STATUSCODE_GOOD;
 }
 
 // [STATIC]
-UA_StatusCode QOpcUaServer::methodCallback(UA_Server        * server,
+UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 	                                       const UA_NodeId  * sessionId, 
 	                                       void             * sessionContext, 
 	                                       const UA_NodeId  * methodId, 
@@ -133,7 +133,7 @@ UA_StatusCode QOpcUaServer::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
-	auto srv = dynamic_cast<QOpcUaServer*>(static_cast<QObject*>(methodContext));
+	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(srv);
 	if (!srv)
 	{
@@ -144,9 +144,9 @@ UA_StatusCode QOpcUaServer::methodCallback(UA_Server        * server,
 	return srv->m_hashMethods[*methodId](objectContext, input, output);
 }
 
-bool QOpcUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
+bool QUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 {
-	auto ptr = QOpcUaServerNode::getNodeContext(nodeId, server);
+	auto ptr = QUaNode::getNodeContext(nodeId, server);
 	if (!ptr)
 	{
 		return false;
@@ -171,7 +171,7 @@ extern "C" {
 			void *exchangeHandle) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 }
 
-UA_StatusCode QOpcUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj)
+UA_StatusCode QUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj)
 {
 	if (!outExtObj)
 	{
@@ -206,7 +206,7 @@ UA_StatusCode QOpcUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_
 	return UA_STATUSCODE_GOOD;
 }
 
-UA_StatusCode QOpcUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues)
+UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues)
 {
 	// setup variable attrs
 	UA_StatusCode retVal         = UA_STATUSCODE_GOOD;
@@ -266,7 +266,7 @@ UA_StatusCode QOpcUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent
 	return retVal;
 }
 
-QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
+QUaServer::QUaServer(QObject *parent) : QObject(parent)
 {
 	UA_StatusCode st;
 	UA_ServerConfig *config  = UA_ServerConfig_new_default();
@@ -276,16 +276,16 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	// Part 5 - 8.2.4 : Objects
 	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
 	this->m_newnodeNodeId     = &objectsNodeId;
-	this->m_newNodeMetaObject = &QOpcUaFolderObject::staticMetaObject;
-	m_pobjectsFolder = new QOpcUaFolderObject(this);
+	this->m_newNodeMetaObject = &QUaFolderObject::staticMetaObject;
+	m_pobjectsFolder = new QUaFolderObject(this);
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types
-	m_mapTypes.insert(QString(QOpcUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
-	m_mapTypes.insert(QString(QOpcUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QOpcUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        );
-	m_mapTypes.insert(QString(QOpcUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
-	m_mapTypes.insert(QString(QOpcUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
+	m_mapTypes.insert(QString(QUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
+	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
+	m_mapTypes.insert(QString(QUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        );
+	m_mapTypes.insert(QString(QUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
+	m_mapTypes.insert(QString(QUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
 	// set context for base types
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -293,17 +293,17 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// register constructors for instantiable types
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QOpcUaBaseDataVariable::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QOpcUaProperty        ::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QOpcUaBaseObject      ::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QOpcUaFolderObject    ::staticMetaObject);
+    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
+    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty        ::staticMetaObject);
+    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject      ::staticMetaObject);
+    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject    ::staticMetaObject);
 }
 
 /* TODO : alternative constructor
 UA_EXPORT UA_ServerConfig * UA_ServerConfig_new_minimal(UA_UInt16 portNumber, const UA_ByteString *certificate);
 */
 
-void QOpcUaServer::start()
+void QUaServer::start()
 {
 	// NOTE : we must define port and other server params upon instantiation, 
 	//        because rest of API assumes m_server is valid
@@ -315,7 +315,7 @@ void QOpcUaServer::start()
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
 	m_running = true;
-	m_connection = QObject::connect(this, &QOpcUaServer::iterateServer, this, [this]() {
+	m_connection = QObject::connect(this, &QUaServer::iterateServer, this, [this]() {
 		if (m_running) 
 		{
 			UA_Server_run_iterate(this->m_server, true);
@@ -327,24 +327,24 @@ void QOpcUaServer::start()
 	emit this->iterateServer();
 }
 
-void QOpcUaServer::stop()
+void QUaServer::stop()
 {
 	m_running = false;
 	QObject::disconnect(m_connection);
 	UA_Server_run_shutdown(this->m_server);
 }
 
-bool QOpcUaServer::isRunning()
+bool QUaServer::isRunning()
 {
 	return m_running;
 }
 
-void QOpcUaServer::registerType(const QMetaObject &metaObject)
+void QUaServer::registerType(const QMetaObject &metaObject)
 {
 	// check if OPC UA relevant
-	if (!metaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+	if (!metaObject.inherits(&QUaNode::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QOpcUaServer::registerType", "Unsupported base class");
+		Q_ASSERT_X(false, "QUaServer::registerType", "Unsupported base class");
 		return;
 	}
 	// check if already registered
@@ -362,7 +362,7 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	// create new type browse name
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
-	browseName.name = QOpcUaTypesConverter::uaStringFromQString(strClassName);
+	browseName.name = QUaTypesConverter::uaStringFromQString(strClassName);
 	// check if base class is registered
 	QString strBaseClassName = QString(metaObject.superClass()->className());
 	if (!m_mapTypes.contains(strBaseClassName))
@@ -370,9 +370,9 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 		// recursive
 		this->registerType(*metaObject.superClass());
 	}
-	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QOpcUaServer::registerType", "Base object type not registered.");
+	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QUaServer::registerType", "Base object type not registered.");
 	// check if variable or object
-	if (metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
+	if (metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
 		// create variable type attributes
 		UA_VariableTypeAttributes vtAttr = UA_VariableTypeAttributes_default;
@@ -396,7 +396,7 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	}
 	else
 	{
-		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject));
 		// create object type attributes
 		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
 		// set node attributes		  
@@ -425,13 +425,13 @@ void QOpcUaServer::registerType(const QMetaObject &metaObject)
 	// register meta-properties
 	this->addMetaProperties(metaObject);
 	// register meta-methods (only if object class, or NOT variable class)
-	if (!metaObject.inherits(&QOpcUaBaseDataVariable::staticMetaObject))
+	if (!metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
 		this->addMetaMethods(metaObject);
 	}
 }
 
-void QOpcUaServer::registerEnum(const QMetaEnum & metaEnum)
+void QUaServer::registerEnum(const QMetaEnum & metaEnum)
 {
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
@@ -478,18 +478,18 @@ void QOpcUaServer::registerEnum(const QMetaEnum & metaEnum)
 			UA_LOCALIZEDTEXT((char*)"", (char*)"")
 		});
 	}
-	st = QOpcUaServer::addEnumValues(m_server, &newEnumNodeId, vectEnumValues.count(), vectEnumValues.data());
+	st = QUaServer::addEnumValues(m_server, &newEnumNodeId, vectEnumValues.count(), vectEnumValues.data());
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// finally append to map
 	m_hashEnums.insert(strEnumName, newEnumNodeId);
 }
 
-void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)
+void QUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)
 {
     this->registerTypeLifeCycle(&typeNodeId, metaObject);
 }
 
-void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMetaObject & metaObject)
+void QUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMetaObject & metaObject)
 {
 	Q_CHECK_PTR(typeNodeId);
 	Q_ASSERT(!UA_NodeId_isNull(typeNodeId));
@@ -498,18 +498,18 @@ void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMe
 		return;
 	}
 	// add constructor
-	Q_ASSERT_X(!m_hashConstructors.contains(*typeNodeId), "QOpcUaServer::registerType", "Constructor for type already exists.");
+	Q_ASSERT_X(!m_hashConstructors.contains(*typeNodeId), "QUaServer::registerType", "Constructor for type already exists.");
 	// NOTE : we need constructors to be lambdas in order to cache metaobject in capture
 	//        because type context is already the server instance where type was registered
 	//        so we can differentiate the server instance in the static ::uaConstructor callback
 	//        TLDR; to support multiple server instances in an application
 	m_hashConstructors[*typeNodeId] = [metaObject, this](const UA_NodeId *instanceNodeId, void ** nodeContext) {
 		// call static method
-		return QOpcUaServer::uaConstructor(this, instanceNodeId, nodeContext, metaObject);
+		return QUaServer::uaConstructor(this, instanceNodeId, nodeContext, metaObject);
 	};
 
 	UA_NodeTypeLifecycle lifecycle;
-	lifecycle.constructor = &QOpcUaServer::uaConstructor;
+	lifecycle.constructor = &QUaServer::uaConstructor;
 	
 	// TODO : destructor
 	//lifecycle.destructor  = ;
@@ -519,7 +519,7 @@ void QOpcUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMe
 	Q_UNUSED(st)
 }
 
-void QOpcUaServer::registerMetaEnums(const QMetaObject & parentMetaObject)
+void QUaServer::registerMetaEnums(const QMetaObject & parentMetaObject)
 {
 	int enumCount = parentMetaObject.enumeratorCount();
 	for (int i = parentMetaObject.enumeratorOffset(); i < enumCount; i++)
@@ -529,7 +529,7 @@ void QOpcUaServer::registerMetaEnums(const QMetaObject & parentMetaObject)
 	}
 }
 
-void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
+void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 {
 	QString   strParentClassName = QString(parentMetaObject.className());
 	UA_NodeId parentTypeNodeId   = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
@@ -571,12 +571,12 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 			}
 			// check if OPC UA relevant type
 			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
-			if (!propMetaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
 			{
 				continue;
 			}
 			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&parentMetaObject), "QOpcUaServer::addMetaProperties", "Qt MetaProperty type cannot inherit from Class.");
+			Q_ASSERT_X(!propMetaObject.inherits(&parentMetaObject), "QUaServer::addMetaProperties", "Qt MetaProperty type cannot inherit from Class.");
 			if (propMetaObject.inherits(&parentMetaObject) && !isEnum)
 			{
 				continue;
@@ -590,9 +590,9 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 				propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
 			}
 			// set is variable
-			isVariable = propMetaObject.inherits(&QOpcUaBaseVariable::staticMetaObject);
+			isVariable = propMetaObject.inherits(&QUaBaseVariable::staticMetaObject);
 			// check if ua property, then set correct reference
-			if (propMetaObject.inherits(&QOpcUaProperty::staticMetaObject))
+			if (propMetaObject.inherits(&QUaProperty::staticMetaObject))
 			{
 				referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 			}
@@ -605,7 +605,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		// set qualified name, default is class name
 		UA_QualifiedName browseName;
 		browseName.namespaceIndex = 1;
-		browseName.name           = QOpcUaTypesConverter::uaStringFromQString(strPropName);
+		browseName.name           = QUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
 		// check if variable or object
@@ -637,7 +637,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		}
 		else
 		{
-			// NOTE : not working ! Q_ASSERT(propMetaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+			// NOTE : not working ! Q_ASSERT(propMetaObject.inherits(&QUaBaseObject::staticMetaObject));
 			UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 			oAttr.displayName = displayName;
 			// add object
@@ -664,7 +664,7 @@ void QOpcUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 	}
 }
 
-void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
+void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 {
 	QString   strParentClassName = QString(parentMetaObject.className());
 	UA_NodeId parentTypeNodeId   = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
@@ -676,8 +676,8 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		QMetaMethod metamethod = parentMetaObject.method(i);
 		// validate return type
 		auto returnType  = (QMetaType::Type)metamethod.returnType();
-		bool isSupported = QOpcUaTypesConverter::isSupportedQType(returnType);
-		Q_ASSERT_X(isSupported, "QOpcUaServer::addMetaMethods", "Return type not supported in MetaMethod.");
+		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
+		Q_ASSERT_X(isSupported, "QUaServer::addMetaMethods", "Return type not supported in MetaMethod.");
 		if (!isSupported)
 		{
 			continue;
@@ -690,13 +690,13 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			UA_Argument_init(&outputArgumentInstance);
 			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char *)"en-US",
 														  (char *)"Result Value");
-			outputArgumentInstance.name        = QOpcUaTypesConverter::uaStringFromQString((char *)"Result");
-			outputArgumentInstance.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromQType(returnType);
+			outputArgumentInstance.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
+			outputArgumentInstance.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
 			outputArgumentInstance.valueRank   = UA_VALUERANK_SCALAR;
 			outputArgument = &outputArgumentInstance;
 		}
 		// validate argument types and create them
-		Q_ASSERT_X(metamethod.parameterCount() <= 10, "QOpcUaServer::addMetaMethods", "No more than 10 arguments supported in MetaMethod.");
+		Q_ASSERT_X(metamethod.parameterCount() <= 10, "QUaServer::addMetaMethods", "No more than 10 arguments supported in MetaMethod.");
 		if (metamethod.parameterCount() > 10)
 		{
 			continue;
@@ -706,8 +706,8 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		Q_ASSERT(listArgNames.count() == metamethod.parameterCount());
 		for (int k = 0; k < metamethod.parameterCount(); k++)
 		{
-			isSupported = QOpcUaTypesConverter::isSupportedQType((QMetaType::Type)metamethod.parameterType(k));
-			Q_ASSERT_X(isSupported, "QOpcUaServer::addMetaMethods", "Argument type not supported in MetaMethod.");
+			isSupported = QUaTypesConverter::isSupportedQType((QMetaType::Type)metamethod.parameterType(k));
+			Q_ASSERT_X(isSupported, "QUaServer::addMetaMethods", "Argument type not supported in MetaMethod.");
 			if (!isSupported)
 			{
 				break;
@@ -716,8 +716,8 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			UA_Argument_init(&inputArgument);
 			// create n-th argument
 			inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
-			inputArgument.name        = QOpcUaTypesConverter::uaStringFromQString(listArgNames.at(k));
-			inputArgument.dataType    = QOpcUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
+			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames.at(k));
+			inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
 			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
 			vectArgs.append(inputArgument);
 		}
@@ -743,7 +743,7 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 										  UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 										  UA_QUALIFIEDNAME (1, strMethName.data()),
 										  methAttr,
-										  &QOpcUaServer::methodCallback,
+										  &QUaServer::methodCallback,
 										  metamethod.parameterCount(),
 										  vectArgs.data(),
 										  outputArgument ? 1 : 0,
@@ -761,11 +761,11 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 		// store method with node id hash as key
-		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QOpcUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
+		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
 		m_hashMethods[methNodeId] = [metamethod](void * objectContext, const UA_Variant * input, UA_Variant * output) {
 			// get object instance that owns method
-			QOpcUaBaseObject * object = dynamic_cast<QOpcUaBaseObject*>(static_cast<QObject*>(objectContext));
-			Q_ASSERT_X(object, "QOpcUaServer::addMetaMethods", "Cannot call method on invalid C++ object.");
+			QUaBaseObject * object = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
+			Q_ASSERT_X(object, "QUaServer::addMetaMethods", "Cannot call method on invalid C++ object.");
 			if (!object)
 			{
 				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -775,7 +775,7 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			QList<QGenericArgument> genListArgs;
 			for (int k = 0; k < metamethod.parameterCount(); k++)
 			{
-				varListArgs.append(QOpcUaTypesConverter::uaVariantToQVariant(input[k]));
+				varListArgs.append(QUaTypesConverter::uaVariantToQVariant(input[k]));
 				genListArgs.append(QGenericArgument(
 					QMetaType::typeName(varListArgs[k].userType()),
 					const_cast<void*>(varListArgs[k].constData())
@@ -808,7 +808,7 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			// set return value if any
 			if ((QMetaType::Type)metamethod.returnType() != QMetaType::Void)
 			{
-				*output = QOpcUaTypesConverter::uaVariantFromQVariant(returnValue);
+				*output = QUaTypesConverter::uaVariantFromQVariant(returnValue);
 			}
 			// return success status
 			return (UA_StatusCode)UA_STATUSCODE_GOOD;
@@ -816,12 +816,12 @@ void QOpcUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 	}
 }
 
-UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaServerNode * parentNode)
+UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * parentNode)
 {
 	// check if OPC UA relevant
-	if (!metaObject.inherits(&QOpcUaServerNode::staticMetaObject))
+	if (!metaObject.inherits(&QUaNode::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QOpcUaServer::createInstance", "Unsupported base class");
+		Q_ASSERT_X(false, "QUaServer::createInstance", "Unsupported base class");
 		return UA_NODEID_NULL;
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
@@ -835,16 +835,16 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// adapt parent relation with child according to parent type
-	UA_NodeId referenceTypeId = QOpcUaServer::getReferenceTypeId(parentNode->metaObject()->className(), 
+	UA_NodeId referenceTypeId = QUaServer::getReferenceTypeId(parentNode->metaObject()->className(), 
 		                                                         metaObject.className());
 	// set qualified name, default is class name
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
-	browseName.name           = QOpcUaTypesConverter::uaStringFromQString(metaObject.className());
+	browseName.name           = QUaTypesConverter::uaStringFromQString(metaObject.className());
 	// check if variable or object
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	UA_NodeId nodeIdNewInstance;
-	if (metaObject.inherits(&QOpcUaBaseVariable::staticMetaObject))
+	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 		// [NOTE] do not set rank or arrayDimensions because they are permanent
@@ -865,7 +865,7 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
 	}
 	else
 	{
-		Q_ASSERT(metaObject.inherits(&QOpcUaBaseObject::staticMetaObject));
+		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject));
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
@@ -886,7 +886,7 @@ UA_NodeId QOpcUaServer::createInstance(const QMetaObject & metaObject, QOpcUaSer
 	return nodeIdNewInstance;
 }
 
-void QOpcUaServer::bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA_NodeId & nodeId)
+void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & nodeId)
 {
 	Q_CHECK_PTR(nodeInstance);
 	Q_ASSERT(!UA_NodeId_isNull(&nodeId));
@@ -896,39 +896,39 @@ void QOpcUaServer::bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA
 	nodeInstance->m_nodeId = nodeId;
 }
 
-QOpcUaFolderObject * QOpcUaServer::objectsFolder()
+QUaFolderObject * QUaServer::objectsFolder()
 {
 	return m_pobjectsFolder;
 }
 
-UA_NodeId QOpcUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
+UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
 {
 	UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 	// adapt parent relation with child according to parent type
-	if (strParentClassName.compare(QOpcUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	if (strParentClassName.compare(QUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 	{
 		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
 	}
-	else if (strParentClassName.compare(QOpcUaBaseObject      ::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
-		     strParentClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	else if (strParentClassName.compare(QUaBaseObject      ::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
+		     strParentClassName.compare(QUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 	{
-		if (strChildClassName.compare(QOpcUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
-			strChildClassName.compare(QOpcUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		if (strChildClassName.compare(QUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
+			strChildClassName.compare(QUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT);
 		}
-		else if (strChildClassName.compare(QOpcUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		else if (strChildClassName.compare(QUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 		}
-		else if (strChildClassName.compare(QOpcUaProperty::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		else if (strChildClassName.compare(QUaProperty::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 		}
 	}
 	else
 	{
-		Q_ASSERT_X(false, "QOpcUaServer::getReferenceTypeId", "Invalid parent type.");
+		Q_ASSERT_X(false, "QUaServer::getReferenceTypeId", "Invalid parent type.");
 	}
 	
 	return referenceTypeId;

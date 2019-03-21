@@ -3,7 +3,7 @@
 #include <QUaServer>
 
 // [STATIC]
-UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
+UA_StatusCode QUaBaseObject::methodCallback(UA_Server        * server,
 	                                           const UA_NodeId  * sessionId, 
 	                                           void             * sessionContext, 
 	                                           const UA_NodeId  * methodId, 
@@ -23,7 +23,7 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
-	auto obj = dynamic_cast<QOpcUaBaseObject*>(static_cast<QObject*>(methodContext));
+	auto obj = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(obj);
 	if (!obj)
 	{
@@ -34,13 +34,13 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	return obj->m_hashMethods[*methodId](input, output);
 }
 
-QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server)
-	: QOpcUaServerNode(server)
+QUaBaseObject::QUaBaseObject(QUaServer *server)
+	: QUaNode(server)
 {
 
 }
 
-UA_NodeId QOpcUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
+UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
 {
     // add method node
     UA_MethodAttributes methAttr = UA_MethodAttributes_default;
@@ -58,7 +58,7 @@ UA_NodeId QOpcUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, co
                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                       UA_QUALIFIEDNAME (1, byteMethodName.data()),
                                       methAttr,
-                                      &QOpcUaBaseObject::methodCallback,
+                                      &QUaBaseObject::methodCallback,
                                       nArgs,
                                       inputArguments,
 		                              outputArgument ? 1 : 0,

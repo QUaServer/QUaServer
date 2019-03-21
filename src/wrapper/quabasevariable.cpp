@@ -3,13 +3,13 @@
 #include <QUaServer>
 #include <QUaBaseDataVariable>
 
-QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server)
-	: QOpcUaServerNode(server)
+QUaBaseVariable::QUaBaseVariable(QUaServer *server)
+	: QUaNode(server)
 {
 
 }
 
-QVariant QOpcUaBaseVariable::value() const
+QVariant QUaBaseVariable::value() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -22,10 +22,10 @@ QVariant QOpcUaBaseVariable::value() const
 	auto st = UA_Server_readValue(m_qopcuaserver->m_server, m_nodeId, &outValue);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	return QOpcUaTypesConverter::uaVariantToQVariant(outValue);
+	return QUaTypesConverter::uaVariantToQVariant(outValue);
 }
 
-void QOpcUaBaseVariable::setValue(const QVariant & value)
+void QUaBaseVariable::setValue(const QVariant & value)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -47,7 +47,7 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 			for (int i = 0; i < iter.size(); i++)
 			{
 				auto tmpType = (QMetaType::Type)iter.at(i).type();
-				Q_ASSERT_X(type == tmpType, "QOpcUaBaseVariable::setValue", "QVariant arrays must have same types in all its items.");
+				Q_ASSERT_X(type == tmpType, "QUaBaseVariable::setValue", "QVariant arrays must have same types in all its items.");
 				if (type != tmpType)
 				{
 					return;
@@ -82,7 +82,7 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 	}
 	// if new value dataType does not match the old value dataType
 	// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"	
-	if (qobject_cast<QOpcUaBaseDataVariable*>(this) &&
+	if (qobject_cast<QUaBaseDataVariable*>(this) &&
 		newType != oldType &&
 		!newValue.canConvert(oldType))
 	{
@@ -96,13 +96,13 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 	// convert to UA_Variant and set new value
 	auto st = UA_Server_writeValue(m_qopcuaserver->m_server,
 		m_nodeId,
-		QOpcUaTypesConverter::uaVariantFromQVariant(newValue));
+		QUaTypesConverter::uaVariantFromQVariant(newValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit value changed
 	emit this->valueChanged(newValue);
 	// assign dataType, valueRank and arrayDimensions according to new value
-	if (qobject_cast<QOpcUaBaseDataVariable*>(this))
+	if (qobject_cast<QUaBaseDataVariable*>(this))
 	{
 		// set new dataType if necessary
 		if (newType != oldType &&
@@ -110,7 +110,7 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 		{
 			st = UA_Server_writeDataType(m_qopcuaserver->m_server,
 				m_nodeId,
-				QOpcUaTypesConverter::uaTypeNodeIdFromQType(newType));
+				QUaTypesConverter::uaTypeNodeIdFromQType(newType));
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			// emit dataType changed
@@ -121,7 +121,7 @@ void QOpcUaBaseVariable::setValue(const QVariant & value)
 	}
 }
 
-QMetaType::Type QOpcUaBaseVariable::dataType() const
+QMetaType::Type QUaBaseVariable::dataType() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -140,10 +140,10 @@ QMetaType::Type QOpcUaBaseVariable::dataType() const
 		return QMetaType::Int;
 	}
 	// else return oncverted type
-	return QOpcUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
+	return QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 }
 
-void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
+void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -194,13 +194,13 @@ void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	// set converted or default value
 	st = UA_Server_writeValue(m_qopcuaserver->m_server,
 		m_nodeId,
-		QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
+		QUaTypesConverter::uaVariantFromQVariant(oldValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// set new type
 	st = UA_Server_writeDataType(m_qopcuaserver->m_server,
 		m_nodeId,
-		QOpcUaTypesConverter::uaTypeNodeIdFromQType(dataType));
+		QUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit dataType changed
@@ -209,7 +209,7 @@ void QOpcUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	emit this->valueChanged(oldValue);
 }
 
-void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
+void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -253,7 +253,7 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	// set converted or default value
 	st = UA_Server_writeValue(m_qopcuaserver->m_server,
 		m_nodeId,
-		QOpcUaTypesConverter::uaVariantFromQVariant(oldValue));
+		QUaTypesConverter::uaVariantFromQVariant(oldValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// change data type
@@ -269,7 +269,7 @@ void QOpcUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	emit this->valueChanged(oldValue);
 }
 
-qint32 QOpcUaBaseVariable::valueRank() const
+qint32 QUaBaseVariable::valueRank() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -285,7 +285,7 @@ qint32 QOpcUaBaseVariable::valueRank() const
 	return outValueRank;
 }
 
-QVector<quint32> QOpcUaBaseVariable::arrayDimensions() const
+QVector<quint32> QUaBaseVariable::arrayDimensions() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -309,7 +309,7 @@ QVector<quint32> QOpcUaBaseVariable::arrayDimensions() const
 	return retArr;
 }
 
-quint8 QOpcUaBaseVariable::accessLevel() const
+quint8 QUaBaseVariable::accessLevel() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -325,7 +325,7 @@ quint8 QOpcUaBaseVariable::accessLevel() const
 	return outAccessLevel;
 }
 
-void QOpcUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
+void QUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -336,7 +336,7 @@ void QOpcUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 	emit this->accessLevelChanged(accessLevel);
 }
 
-double QOpcUaBaseVariable::minimumSamplingInterval() const
+double QUaBaseVariable::minimumSamplingInterval() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -353,7 +353,7 @@ double QOpcUaBaseVariable::minimumSamplingInterval() const
 	return outMinimumSamplingInterval;
 }
 
-void QOpcUaBaseVariable::setMinimumSamplingInterval(const double & minimumSamplingInterval)
+void QUaBaseVariable::setMinimumSamplingInterval(const double & minimumSamplingInterval)
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -363,7 +363,7 @@ void QOpcUaBaseVariable::setMinimumSamplingInterval(const double & minimumSampli
 	Q_UNUSED(st);
 }
 
-bool QOpcUaBaseVariable::historizing() const
+bool QUaBaseVariable::historizing() const
 {
 	Q_CHECK_PTR(m_qopcuaserver);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -380,7 +380,7 @@ bool QOpcUaBaseVariable::historizing() const
 }
 
 // [STATIC]
-qint32 QOpcUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
+qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 {
 	if ((QMetaType::Type)varValue.type() == QMetaType::UnknownType)
 	{
@@ -395,7 +395,7 @@ qint32 QOpcUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 }
 
 // [STATIC]
-QVector<quint32> QOpcUaBaseVariable::GetArrayDimensionsFromQVariant(const QVariant & varValue)
+QVector<quint32> QUaBaseVariable::GetArrayDimensionsFromQVariant(const QVariant & varValue)
 {
 	if (varValue.canConvert<QVariantList>())
 	{

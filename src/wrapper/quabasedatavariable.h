@@ -1,5 +1,5 @@
-#ifndef QOPCUABASEDATAVARIABLE_H
-#define QOPCUABASEDATAVARIABLE_H
+#ifndef QUABASEDATAVARIABLE_H
+#define QUABASEDATAVARIABLE_H
 
 #include <QUaBaseVariable>
 
@@ -11,11 +11,11 @@ This VariableType is the base VariableType for VariableTypes of DataVariables, a
 shall either directly or indirectly inherit from it.
 */
 
-class QOpcUaBaseDataVariable : public QOpcUaBaseVariable
+class QUaBaseDataVariable : public QUaBaseVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QOpcUaBaseDataVariable(QOpcUaServer *server);
+	Q_INVOKABLE explicit QUaBaseDataVariable(QUaServer *server);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
@@ -24,5 +24,5 @@ public:
 
 };
 
-#endif // QOPCUABASEDATAVARIABLE_H
+#endif // QUABASEDATAVARIABLE_H
 

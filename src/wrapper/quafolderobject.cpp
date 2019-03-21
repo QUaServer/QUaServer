@@ -1,7 +1,7 @@
 #include "quafolderobject.h"
 
-QOpcUaFolderObject::QOpcUaFolderObject(QOpcUaServer *server)
-	: QOpcUaBaseObject(server)
+QUaFolderObject::QUaFolderObject(QUaServer *server)
+	: QUaBaseObject(server)
 {
 
 }
