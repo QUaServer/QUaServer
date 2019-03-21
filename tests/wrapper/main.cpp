@@ -25,6 +25,10 @@ int main(int argc, char *argv[])
 	QUaServer server;
 	auto objsFolder = server.objectsFolder();
 
+	QObject::connect(objsFolder, &QUaNode::childAdded, [](QUaNode * childNode) {
+		qDebug() << "Child added or objects folder :" << childNode->nodeId();
+	});
+
 	auto var1 = objsFolder->addBaseDataVariable();
 	var1->setDisplayName("var1");
 	var1->setDataTypeEnum<MyNewObjectType::TestEnum>();

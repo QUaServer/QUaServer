@@ -385,7 +385,7 @@ QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
 {
 	void * context = QUaNode::getVoidContext(nodeId, server);
 	// try to cast to C++ node
-	return static_cast<QUaNode*>(context);
+	return dynamic_cast<QUaNode*>(static_cast<QObject*>(context));
 }
 
 void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)

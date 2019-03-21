@@ -152,6 +152,8 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	{
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
+		// emit child added to parent
+		emit parentContext->childAdded(newInstance);
 	}
 	// success
 	return UA_STATUSCODE_GOOD;

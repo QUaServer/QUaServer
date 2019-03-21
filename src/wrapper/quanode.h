@@ -138,6 +138,7 @@ signals:
 	void writeMaskChanged  (const quint32 &writeMask  );
 	void browseNameChanged (const QString &browseName );
 	
+	void childAdded(QUaNode * childNode);
 
 private:
 
