@@ -1,11 +1,9 @@
-#include "qopcuaservernode.h"
+#include "quanode.h"
 
-#include <QOpcUaServer>
-#include <QOpcUaProperty>
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaFolderObject>
-
-#include "mynewvariabletype.h"
+#include <QUaServer>
+#include <QUaProperty>
+#include <QUaBaseDataVariable>
+#include <QUaFolderObject>
 
 QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 {

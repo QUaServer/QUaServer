@@ -16,7 +16,7 @@ class QOpcUaBaseDataVariable;
 class QOpcUaBaseObject;
 class QOpcUaFolderObject;
 
-#include <QOpcUaTypesConverter>
+#include <QUaTypesConverter>
 
 // traits used to static assert that a method is not used
 // https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class

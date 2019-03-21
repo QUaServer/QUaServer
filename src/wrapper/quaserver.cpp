@@ -1,4 +1,4 @@
-#include "qopcuaserver.h"
+#include "quaserver.h"
 
 #include <QMetaProperty>
 

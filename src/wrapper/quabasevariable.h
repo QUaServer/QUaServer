@@ -1,7 +1,7 @@
 #ifndef QOPCUABASEVARIABLE_H
 #define QOPCUABASEVARIABLE_H
 
-#include <QOpcUaServerNode>
+#include <QUaNode>
 
 /*
 typedef struct {                          // UA_VariableTypeAttributes_default

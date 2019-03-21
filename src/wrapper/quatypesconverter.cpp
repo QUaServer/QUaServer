@@ -1,4 +1,4 @@
-#include "qopcuatypesconverter.h"
+#include "quatypesconverter.h"
 #include <cstring>
 
 QT_BEGIN_NAMESPACE

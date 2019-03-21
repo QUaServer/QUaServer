@@ -3,7 +3,7 @@
 #include <QDateTime>
 #include <QTimer>
 
-#include <QOpcUaServer>
+#include <QUaServer>
 
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"

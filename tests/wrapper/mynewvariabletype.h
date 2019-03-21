@@ -1,8 +1,8 @@
 #ifndef MYNEWVARIABLETYPE_H
 #define MYNEWVARIABLETYPE_H
 
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaBaseObject> // NOTE : if not included, meta-info does not work
+#include <QUaBaseDataVariable>
+#include <QUaBaseObject> // NOTE : if not included, meta-info does not work
 
 class MyOtherNewVariableType;
 class MyNewVariableSubType;

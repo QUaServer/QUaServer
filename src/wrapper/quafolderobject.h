@@ -1,7 +1,7 @@
 #ifndef QOPCUAFOLDEROBJECT_H
 #define QOPCUAFOLDEROBJECT_H
 
-#include <QOpcUaBaseObject>
+#include <QUaBaseObject>
 
 // Part 5 - 6.6 : FolderType
 /*

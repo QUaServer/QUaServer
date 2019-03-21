@@ -1,8 +1,8 @@
 #ifndef MYNEWOBJECTTYPE_H
 #define MYNEWOBJECTTYPE_H
 
-#include <QOpcUaBaseObject>
-#include <QOpcUaProperty>
+#include <QUaBaseObject>
+#include <QUaProperty>
 #include "mynewvariabletype.h"
 
 class MyNewObjectType : public QOpcUaBaseObject

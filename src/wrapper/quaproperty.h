@@ -1,7 +1,7 @@
 #ifndef QOPCUAPROPERTY_H
 #define QOPCUAPROPERTY_H
 
-#include <QOpcUaBaseVariable>
+#include <QUaBaseVariable>
 
 // Part 5 - 7.3 : PropertyType
 /*

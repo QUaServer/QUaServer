@@ -21,5 +21,5 @@ HEADERS += \
     $$PWD/mynewobjecttype.h \
     $$PWD/mynewvariabletype.h
 
-include($$PWD/../../src/wrapper/qopcuaserver.pri)
+include($$PWD/../../src/wrapper/quaserver.pri)
 include($$PWD/../../common/add_qt_path_win.pri)

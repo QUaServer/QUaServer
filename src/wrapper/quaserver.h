@@ -3,11 +3,11 @@
 
 #include <type_traits>
 
-#include <QOpcUaTypesConverter>
-#include <QOpcUaFolderObject>
-#include <QOpcUaBaseDataVariable>
-#include <QOpcUaProperty>
-#include "qopcuabaseobject.h"
+#include <QUaTypesConverter>
+#include <QUaFolderObject>
+#include <QUaBaseDataVariable>
+#include <QUaProperty>
+#include <QUaBaseObject>
 
 class QOpcUaServer : public QObject
 {

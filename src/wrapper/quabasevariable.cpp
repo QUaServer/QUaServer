@@ -1,7 +1,7 @@
-#include "qopcuabasevariable.h"
+#include "quabasevariable.h"
 
-#include <QOpcUaServer>
-#include <QOpcUaBaseDataVariable>
+#include <QUaServer>
+#include <QUaBaseDataVariable>
 
 QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server)
 	: QOpcUaServerNode(server)

@@ -1,7 +1,7 @@
 #ifndef QOPCUABASEOBJECT_H
 #define QOPCUABASEOBJECT_H
 
-#include <QOpcUaServerNode>
+#include <QUaNode>
 
 template <typename ClassType, typename R, bool IsMutable, typename... Args>
 struct QOpcUaMethodTraitsBase
@@ -85,7 +85,7 @@ struct QOpcUaMethodTraitsBase
 	{
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
-		int iArg = getNumArgs() - 1;
+		int iArg = (int)getNumArgs() - 1;
 		// call method
 		QVariant varResult = methodCallback(convertArgType<Args>(input, iArg--)...);
 		// set result
@@ -113,7 +113,7 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QOpcUaMethodTra
 	{
 		// call method
 		// NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
-        int iArg = QOpcUaMethodTraits<M>::getNumArgs() - 1;
+        int iArg = (int)QOpcUaMethodTraits<M>::getNumArgs() - 1;
 		// call method
         methodCallback(QOpcUaMethodTraits<M>::template convertArgType<Args>(input, iArg--)...);
 		// set result

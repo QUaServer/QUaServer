@@ -1,7 +1,7 @@
 #ifndef QOPCUABASEDATAVARIABLE_H
 #define QOPCUABASEDATAVARIABLE_H
 
-#include <QOpcUaBaseVariable>
+#include <QUaBaseVariable>
 
 // Part 5 - 7.4 : BaseDataVariableType
 /*

@@ -1,6 +1,6 @@
-#include "qopcuabaseobject.h"
+#include "quabaseobject.h"
 
-#include <QOpcUaServer>
+#include <QUaServer>
 
 // [STATIC]
 UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
