@@ -10,7 +10,7 @@ QUaNode::QUaNode(QUaServer *server)
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
 	//          the constructor is called automagically by this library, and m_newNodeNodeId and
 	//          m_newNodeMetaObject must be set in QUaServer before calling the constructor, as
-	//          is sued in QUaServer::uaConstructor
+	//          is used in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
 	Q_CHECK_PTR(server->m_newNodeMetaObject);

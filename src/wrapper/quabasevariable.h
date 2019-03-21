@@ -61,6 +61,31 @@ The BaseVariableType is the abstract base type for all other VariableTypes.
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
 
+union QUaAccessLevel
+{
+	QUaAccessLevel()
+	{
+		// read only by default
+		bits.bRead           = true;
+		bits.bWrite			 = false;
+		bits.bHistoryRead	 = false;
+		bits.bHistoryWrite	 = false;
+		bits.bSemanticChange = false;
+		bits.bStatusWrite	 = false;
+		bits.bTimestampWrite = false;
+	};
+	struct bit_map {
+		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
+		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
+		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
+		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
+		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
+		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
+		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
+	} bits;
+	quint8 intValue;
+};
+
 class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
@@ -109,6 +134,11 @@ public:
 	// 
 	bool              historizing() const;
 
+	// helpers
+
+	bool              isWritable() const;
+	void              setIsWritable(const bool &isWritable);
+
 	// static helpers
 
 	static qint32            GetValueRankFromQVariant      (const QVariant &varValue);
@@ -118,6 +148,15 @@ signals:
 	void valueChanged          (const QVariant         &value          );
 	void dataTypeChanged       (const QMetaType::Type  &dataType       );
 	void accessLevelChanged    (const quint8           &accessLevel    );
+
+private:
+	static void onWrite(UA_Server             *server, 
+		                const UA_NodeId       *sessionId,
+		                void                  *sessionContext, 
+		                const UA_NodeId       *nodeId,
+		                void                  *nodeContext, 
+		                const UA_NumericRange *range,
+		                const UA_DataValue    *data);
 
 };
 

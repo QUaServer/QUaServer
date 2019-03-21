@@ -3,10 +3,47 @@
 #include <QUaServer>
 #include <QUaBaseDataVariable>
 
+// [STATIC]
+void QUaBaseVariable::onWrite(UA_Server             *server, 
+		                      const UA_NodeId       *sessionId,
+		                      void                  *sessionContext, 
+		                      const UA_NodeId       *nodeId,
+		                      void                  *nodeContext, 
+		                      const UA_NumericRange *range,
+		                      const UA_DataValue    *data)
+{
+	Q_UNUSED(server);
+	Q_UNUSED(sessionId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(nodeId);
+	Q_UNUSED(range);
+	Q_UNUSED(data);
+	// get variable from context
+	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
+	Q_CHECK_PTR(var);
+	if (!var)
+	{
+		return;
+	}
+	// emit value changed
+	emit var->valueChanged(var->value());
+}
+
 QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	: QUaNode(server)
 {
-
+	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
+	//          the constructor is called automagically by this library, and m_newNodeNodeId and
+	//          m_newNodeMetaObject must be set in QUaServer before calling the constructor, as
+	//          is used in QUaServer::uaConstructor
+	Q_CHECK_PTR(server);
+	Q_CHECK_PTR(server->m_newNodeNodeId);
+	const UA_NodeId &nodeId = *server->m_newNodeNodeId;
+	// setup callbacks
+	UA_ValueCallback callback;
+	callback.onRead  = nullptr; // TODO : mplement?
+	callback.onWrite = &QUaBaseVariable::onWrite;
+	UA_Server_setVariableNode_valueCallback(server->m_server, nodeId, callback);
 }
 
 QVariant QUaBaseVariable::value() const
@@ -377,6 +414,21 @@ bool QUaBaseVariable::historizing() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return outHistorizing;
+}
+
+bool QUaBaseVariable::isWritable() const
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	return accessLevel.bits.bWrite;
+}
+
+void QUaBaseVariable::setIsWritable(const bool & isWritable)
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue    = this->accessLevel();
+	accessLevel.bits.bWrite = isWritable;
+	this->setAccessLevel(accessLevel.intValue);
 }
 
 // [STATIC]

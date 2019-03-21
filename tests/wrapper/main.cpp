@@ -8,15 +8,15 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
-void printChildren(QUaNode * child, const QString strSpacer = "")
-{
-	Q_CHECK_PTR(child);
-	qDebug() << strSpacer + "-->" << child->displayName();//child->objectName();
-	for (int i = 0; i < child->children().count(); i++)
-	{
-		printChildren(static_cast<QUaNode*>(child->children().at(i)), strSpacer + "--");
-	}
-}
+//void printChildren(QUaNode * child, const QString strSpacer = "")
+//{
+//	Q_CHECK_PTR(child);
+//	qDebug() << strSpacer + "-->" << child->displayName()/* << QString("(%1)").arg(child->objectName())*/;
+//	for (int i = 0; i < child->children().count(); i++)
+//	{
+//		printChildren(static_cast<QUaNode*>(child->children().at(i)), strSpacer + "--");
+//	}
+//}
 
 int main(int argc, char *argv[])
 {
@@ -25,6 +25,16 @@ int main(int argc, char *argv[])
 	QUaServer server;
 	auto objsFolder = server.objectsFolder();
 
+	auto var1 = objsFolder->addBaseDataVariable();
+	var1->setDisplayName("var1");
+	var1->setDataTypeEnum<MyNewObjectType::TestEnum>();
+	var1->setValue(MyNewObjectType::TestEnum::FOUR);
+	var1->setIsWritable(true);
+	QObject::connect(var1, &QUaBaseVariable::valueChanged, [](const QVariant &value) {
+		qDebug() << "var1 value changed to" << value;
+	});
+
+/*
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
@@ -107,6 +117,7 @@ int main(int argc, char *argv[])
 
 	//// print tree
 	//printChildren(objsFolder);
+*/
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();
