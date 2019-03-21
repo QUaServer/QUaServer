@@ -2,97 +2,91 @@
 #include <stdio.h>
 #include "open62541.h"
 
-static UA_NodeId addScalarVariable(UA_Server* server, char * varName) {
+static UA_StatusCode genericConstructor(UA_Server       * server, 
+	                                    const UA_NodeId * sessionId, 
+	                                    void            * sessionContext, 
+	                                    const UA_NodeId * typeNodeId, 
+	                                    void            * typeNodeContext, 
+	                                    const UA_NodeId * nodeId, 
+	                                    void            ** nodeContext)
+{
+	return UA_STATUSCODE_GOOD;
+}
 
-	UA_VariableAttributes vattr = UA_VariableAttributes_default;
+static void setBaseObjectTypeConstructor(UA_Server *server)
+{
+	// set context
+	UA_StatusCode st = UA_Server_setNodeContext(server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE), (void*)"BaseObjectType");
+	assert(st == UA_STATUSCODE_GOOD);
+	// set constructor
+	UA_NodeTypeLifecycle lifecycle;
+	lifecycle.constructor = &genericConstructor;
+	lifecycle.destructor = NULL;
+	st = UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE), lifecycle);
+	assert(st == UA_STATUSCODE_GOOD);
+}
 
-	vattr.description = UA_LOCALIZEDTEXT("", varName);
-	vattr.displayName = UA_LOCALIZEDTEXT("", varName);
-	vattr.dataType    = UA_NODEID_NUMERIC(0, UA_NS0ID_INT32);
-	vattr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-	vattr.valueRank   = UA_VALUERANK_ANY;
-	UA_Int32 test = 1;
-	UA_Variant_setScalar(&vattr.value, &test, &UA_TYPES[UA_TYPES_INT32]);
+static UA_NodeId objNodeId;
+static void addFooObject(UA_Server* server, char * varName) {
 
-	// [NOTE] : doing this makes variable a scalar PERMANENTLY
-	//vattr.valueRank = UA_VALUERANK_SCALAR;
+	UA_ObjectAttributes oattr = UA_ObjectAttributes_default;
 
-	UA_NodeId outNodeId;
-	UA_StatusCode st = UA_Server_addVariableNode(server,
+	oattr.description = UA_LOCALIZEDTEXT("", varName);
+	oattr.displayName = UA_LOCALIZEDTEXT("", varName);
+
+	UA_StatusCode st = UA_Server_addObjectNode(
+		server,
 		UA_NODEID_STRING (1, varName),
 		UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),       
-		UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),           
+		UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
 		UA_QUALIFIEDNAME (1, varName),
-		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-		vattr,                                              
+		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE),
+		oattr,                                              
 		NULL,                                               
-		&outNodeId);
+		&objNodeId
+	);
 	assert(st == UA_STATUSCODE_GOOD);
-
-	return outNodeId;
 }
 
-static UA_NodeId addArrayVariable(UA_Server* server, char * varName) {
+static UA_StatusCode methodCallback(UA_Server        * server,
+	                                const UA_NodeId  * sessionId,
+	                                void             * sessionContext,
+	                                const UA_NodeId  * methodId,
+	                                void             * methodContext,
+	                                const UA_NodeId  * objectId,
+	                                void             * objectContext,
+	                                size_t             inputSize,
+	                                const UA_Variant * input,
+	                                size_t             outputSize,
+	                                UA_Variant       * output)
+{
+	UA_StatusCode st = UA_Server_deleteNode(server, objNodeId, true);
+	return st;
+}
 
-	UA_VariableAttributes vattr = UA_VariableAttributes_default;
+static void addDeleteFooMethod(UA_Server* server, char * varName) {
 
-	vattr.description = UA_LOCALIZEDTEXT("", varName);
-	vattr.displayName = UA_LOCALIZEDTEXT("", varName);
-	vattr.dataType    = UA_NODEID_NUMERIC(0, UA_NS0ID_INT32);
-	vattr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-
-	// [NOTE] : doing this makes variable an array PERMANENTLY
-	//vattr.valueRank   = UA_VALUERANK_ONE_DIMENSION;
-	//UA_UInt32 arrayDims[1]    = { 3 };
-	//vattr.arrayDimensions     = arrayDims;
-	//vattr.arrayDimensionsSize = 1;
-	
-	UA_Int32 arrayVals[3] = { 1, 2, 3 };
-	UA_Variant_setArrayCopy(&vattr.value, arrayVals, 3, &UA_TYPES[UA_TYPES_INT32]);
-
-	UA_UInt32 arrayDims[1] = { 3 };
-	vattr.value.arrayDimensions     = arrayDims;
-	vattr.value.arrayDimensionsSize = 1;
-	vattr.valueRank                 = UA_VALUERANK_ANY;
-	
-	UA_NodeId outNodeId;
-	UA_StatusCode st = UA_Server_addVariableNode(server,
-		UA_NODEID_STRING (1, varName),
-		UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),       
-		UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),           
+	UA_MethodAttributes methAttr = UA_MethodAttributes_default;
+    methAttr.executable     = true;
+    methAttr.userExecutable = true;
+    methAttr.description    = UA_LOCALIZEDTEXT("", varName);
+    methAttr.displayName    = UA_LOCALIZEDTEXT("", varName);
+    // create callback
+	UA_StatusCode st = UA_Server_addMethodNode(
+		server,
+		UA_NODEID_NULL,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),    
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
 		UA_QUALIFIEDNAME (1, varName),
-		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-		vattr,                                              
-		NULL,                                               
-		&outNodeId);
-	assert(st == UA_STATUSCODE_GOOD);
-
-	return outNodeId;
-}
-
-// [NOTE] : only works if UA_VALUERANK_ANY
-static void scalarToArray(UA_Server* server, UA_NodeId * scalarNodeId)
-{
-	UA_Variant varArray;
-	UA_Int32 arrayVals[3] = { 4, 5, 6 };
-	UA_Variant_setArrayCopy(&varArray, arrayVals, 3, &UA_TYPES[UA_TYPES_INT32]);
-
-	UA_UInt32 arrayDims[1]       = { 3 };
-	varArray.arrayDimensions     = arrayDims;
-	varArray.arrayDimensionsSize = 1;
-
-	UA_StatusCode st = UA_Server_writeValue(server, *scalarNodeId, varArray);
-	assert(st == UA_STATUSCODE_GOOD);
-}
-
-// [NOTE] : only works if UA_VALUERANK_ANY
-static void arrayToScalar(UA_Server* server, UA_NodeId * arrayNodeId)
-{
-	UA_Variant varScalar;
-	UA_Int32 test = 9;
-	UA_Variant_setScalar(&varScalar, &test, &UA_TYPES[UA_TYPES_INT32]);
-
-	UA_StatusCode st = UA_Server_writeValue(server, *arrayNodeId, varScalar);
+		methAttr,
+		&methodCallback,
+		0,
+		NULL,
+		0,
+		NULL,
+		NULL,
+		NULL
+	);
 	assert(st == UA_STATUSCODE_GOOD);
 }
 
@@ -110,11 +104,9 @@ int main(void) {
 
 	UA_Server* server = UA_Server_new(config);
 
-	UA_NodeId scalarNodeId = addScalarVariable(server, "Foo");
-	UA_NodeId arrayNodeId  = addArrayVariable (server, "Bar");
-
-	scalarToArray(server, &scalarNodeId);
-	arrayToScalar(server, &arrayNodeId);
+	setBaseObjectTypeConstructor(server);
+	addFooObject(server, "Foo");
+	addDeleteFooMethod(server, "deleteFoo");
 
 	UA_StatusCode retval = UA_Server_run(server, &running);
 	UA_Server_delete(server);

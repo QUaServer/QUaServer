@@ -95,18 +95,18 @@ int main(int argc, char *argv[])
 
 	// delete
 
-	objsFolder->addMethod("delete_QUaBaseObject", [&objBase]() {
-		if (objBase)
+	objsFolder->addMethod("delete_node", [&newVarTypeInstance]() {
+		if (newVarTypeInstance)
 		{
-			delete objBase;
-			objBase = nullptr;
+			delete newVarTypeInstance;
+			newVarTypeInstance = nullptr;
 			return "Deleted";
 		}
 		return "Already Deleted";
 	});
 
-	// print tree
-	printChildren(objsFolder);
+	//// print tree
+	//printChildren(objsFolder);
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

@@ -100,9 +100,25 @@ QUaNode::QUaNode(QUaServer *server)
 
 inline QUaNode::~QUaNode()
 {
-	// delete also references to this node
+	
+	// check if node id has been already removed from node store
+	// i.e. child of deleted parent node, or ...
+	UA_NodeId outNodeId;
+	auto st = UA_Server_readNodeId(m_qUaServer->m_server, m_nodeId, &outNodeId);
+	if (st == UA_STATUSCODE_BADNODEIDUNKNOWN)
+	{
+		return;
+	}
+	Q_ASSERT(UA_NodeId_equal(&m_nodeId, &outNodeId));
+	// remove context, so we avoid double deleting in ua destructor when called
+	st = UA_Server_setNodeContext(m_qUaServer->m_server, m_nodeId, nullptr);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// delete node in ua (NOTE : also delete references)
+	st = UA_Server_deleteNode(m_qUaServer->m_server, m_nodeId, true);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+
 	// TODO : when supporting references, handle deleting them on ua destructor
-	m_qUaServer->deleteNodeLater(m_nodeId, true);
 }
 
 QString QUaNode::displayName() const

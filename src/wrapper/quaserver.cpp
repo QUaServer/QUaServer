@@ -5,32 +5,75 @@
 
 // [STATIC]
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
-	                                      const UA_NodeId * sessionId, 
-	                                      void            * sessionContext, 
-	                                      const UA_NodeId * typeNodeId, 
-	                                      void            * typeNodeContext, 
-	                                      const UA_NodeId * nodeId, 
-	                                      void            ** nodeContext)
+	                                   const UA_NodeId * sessionId, 
+	                                   void            * sessionContext, 
+	                                   const UA_NodeId * typeNodeId, 
+	                                   void            * typeNodeContext, 
+	                                   const UA_NodeId * nodeId, 
+	                                   void            ** nodeContext)
 {
 	Q_UNUSED(server);
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	// get server from context object
-	auto obj = dynamic_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
-	Q_CHECK_PTR(obj);
-	if (!obj)
+	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
+	Q_CHECK_PTR(srv);
+	if (!srv)
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
-	Q_ASSERT(obj->m_hashConstructors.contains(*typeNodeId));
+	Q_ASSERT(srv->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
-	return obj->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
+	return srv->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
 }
 
-UA_StatusCode QUaServer::uaConstructor(QUaServer      * server,
-	                                      const UA_NodeId   * nodeId, 
-	                                      void             ** nodeContext,
-	                                      const QMetaObject & metaObject)
+void QUaServer::uaDestructor(UA_Server       * server, 
+	                         const UA_NodeId * sessionId, 
+	                         void            * sessionContext, 
+	                         const UA_NodeId * typeNodeId, 
+	                         void            * typeNodeContext, 
+	                         const UA_NodeId * nodeId, 
+	                         void            ** nodeContext)
+{
+	void * context;
+	auto st = UA_Server_getNodeContext(server, *nodeId, &context);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// try to convert to node
+	auto node = dynamic_cast<QUaNode*>(static_cast<QObject*>(context));
+	// early exit if not convertible (this call was triggered by ~QUaNode)
+	if (!node)
+	{
+		return;
+	}
+	// if convertible could mean:
+	// 1) this is a child of a node being deleted programatically 
+	//    this one does not require to call C++ delete because Qt will take care of it
+	// 2) this is a node being deleted from the network
+	//    this one requires C++ delete
+	// we can differentiate them because parent of 1) would not have a context
+	// in which case we set current child context to nullptr to continue pattern and return
+	UA_NodeId parentNodeId = QUaNode::getParentNodeId(*nodeId, server);
+	Q_ASSERT(!UA_NodeId_equal(&parentNodeId, &UA_NODEID_NULL));
+	void * parentContext;
+	st = UA_Server_getNodeContext(server, parentNodeId, &parentContext);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	auto parentNode = dynamic_cast<QUaNode*>(static_cast<QObject*>(parentContext));
+	if (!parentNode)
+	{
+		st = UA_Server_setNodeContext(server, *nodeId, nullptr);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return;
+	}
+	// if we reach here it means case 2), so deleteLater (when nodeId not in store anymore)
+	// so we avoid calling UA_Server_deleteNode in ~QUaNode
+	node->deleteLater();
+	Q_UNUSED(st);
+}
+
+UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
+	                                   const UA_NodeId   * nodeId, 
+	                                   void             ** nodeContext,
+	                                   const QMetaObject & metaObject)
 {
 	// get parent node id
 	UA_NodeId parentNodeId       = QUaNode::getParentNodeId(*nodeId, server->m_server);
@@ -116,16 +159,16 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer      * server,
 
 // [STATIC]
 UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
-	                                       const UA_NodeId  * sessionId, 
-	                                       void             * sessionContext, 
-	                                       const UA_NodeId  * methodId, 
-	                                       void             * methodContext, 
-	                                       const UA_NodeId  * objectId, 
-	                                       void             * objectContext, 
-	                                       size_t             inputSize, 
-	                                       const UA_Variant * input, 
-	                                       size_t             outputSize, 
-	                                       UA_Variant       * output)
+	                                    const UA_NodeId  * sessionId, 
+	                                    void             * sessionContext, 
+	                                    const UA_NodeId  * methodId, 
+	                                    void             * methodContext, 
+	                                    const UA_NodeId  * objectId, 
+	                                    void             * objectContext, 
+	                                    size_t             inputSize, 
+	                                    const UA_Variant * input, 
+	                                    size_t             outputSize, 
+	                                    UA_Variant       * output)
 {
 	Q_UNUSED(server        );
 	Q_UNUSED(sessionId     );
@@ -340,15 +383,6 @@ bool QUaServer::isRunning()
 	return m_running;
 }
 
-void QUaServer::deleteNodeLater(const UA_NodeId nodeId, UA_Boolean deleteReferences)
-{
-	QTimer::singleShot(0, [this, nodeId, deleteReferences]() {
-		auto st = UA_Server_deleteNode(m_server, nodeId, deleteReferences);
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);	
-	});
-}
-
 void QUaServer::registerType(const QMetaObject &metaObject)
 {
 	// check if OPC UA relevant
@@ -520,9 +554,7 @@ void QUaServer::registerTypeLifeCycle(const UA_NodeId * typeNodeId, const QMetaO
 
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = &QUaServer::uaConstructor;
-	
-	// TODO : destructor
-	//lifecycle.destructor  = ;
+	lifecycle.destructor  = &QUaServer::uaDestructor;
 	
 	auto st = UA_Server_setNodeTypeLifecycle(m_server, *typeNodeId, lifecycle);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);

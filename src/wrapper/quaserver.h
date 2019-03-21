@@ -82,7 +82,15 @@ private:
 		                               const UA_NodeId  *nodeId, 
 		                               void            **nodeContext);
 
-	static UA_StatusCode uaConstructor(QUaServer      *server,
+	static void uaDestructor         (UA_Server        *server,
+		                              const UA_NodeId  *sessionId, 
+		                              void             *sessionContext,
+		                              const UA_NodeId  *typeNodeId, 
+		                              void             *typeNodeContext,
+		                              const UA_NodeId  *nodeId, 
+		                              void            **nodeContext);
+
+	static UA_StatusCode uaConstructor(QUaServer         *server,
 		                               const UA_NodeId   *nodeId, 
 		                               void             **nodeContext,
 		                               const QMetaObject &metaObject);
@@ -116,8 +124,6 @@ private:
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newNodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
-
-	void deleteNodeLater(const UA_NodeId nodeId, UA_Boolean deleteReferences);
 
 };
 
