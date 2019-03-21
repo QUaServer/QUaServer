@@ -38,7 +38,7 @@ public:
 	template<typename T>
 	T* createInstance(QOpcUaServerNode * parentNode);
 
-	QOpcUaFolderObject * get_objectsFolder();
+	QOpcUaFolderObject * objectsFolder();
 
 signals:
 	void iterateServer();
@@ -113,6 +113,11 @@ private:
 	static UA_StatusCode createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj);
 
 	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
+
+	// NOTE : temporary values needed to instantiate node, used to simplify user API
+	//        passed-in in QOpcUaServer::uaConstructor and used in QOpcUaServerNode::QOpcUaServerNode
+	const UA_NodeId   * m_newnodeNodeId;
+	const QMetaObject * m_newNodeMetaObject;
 
 };
 

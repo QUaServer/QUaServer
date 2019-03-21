@@ -1,7 +1,7 @@
 #include "mynewvariabletype.h"
 
-MyNewVariableType::MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
+MyNewVariableType::MyNewVariableType(QOpcUaServer *server)
+	: QOpcUaBaseDataVariable(server)
 {
 	this->myVar()->setValue(123);
 }
@@ -28,8 +28,8 @@ MyOtherNewVariableType * MyNewVariableType::myOtherTwo()
 
 // ---
 
-MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaBaseDataVariable(server, nodeId, metaObject)
+MyOtherNewVariableType::MyOtherNewVariableType(QOpcUaServer *server)
+	: QOpcUaBaseDataVariable(server)
 {
 	this->setValue("equis");
 }
@@ -41,10 +41,10 @@ QOpcUaBaseDataVariable * MyOtherNewVariableType::myVarTwo()
 
 // ---
 
-MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: MyNewVariableType(server, nodeId, metaObject)
+MyNewVariableSubType::MyNewVariableSubType(QOpcUaServer *server)
+	: MyNewVariableType(server)
 {
-	//qDebug() << "MyNewVariableSubType::MyNewVariableSubType";
+
 }
 
 QOpcUaBaseObject * MyNewVariableSubType::myObjSub()
@@ -54,10 +54,10 @@ QOpcUaBaseObject * MyNewVariableSubType::myObjSub()
 
 // ---
 
-MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: MyNewVariableSubType(server, nodeId, metaObject)
+MyNewVariableSubSubType::MyNewVariableSubSubType(QOpcUaServer *server)
+	: MyNewVariableSubType(server)
 {
-	//qDebug() << "MyNewVariableSubSubType::MyNewVariableSubSubType";
+
 }
 
 QOpcUaBaseObject * MyNewVariableSubSubType::myObjSubSub()

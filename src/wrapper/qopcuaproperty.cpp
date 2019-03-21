@@ -4,8 +4,8 @@
 #include <QOpcUaBaseDataVariable>
 #include <QOpcUaFolderObject>
 
-QOpcUaProperty::QOpcUaProperty(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaBaseVariable(server, nodeId, metaObject)
+QOpcUaProperty::QOpcUaProperty(QOpcUaServer *server)
+	: QOpcUaBaseVariable(server)
 {
 
 }

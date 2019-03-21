@@ -1,7 +1,7 @@
 #include "mynewobjecttype.h"
 
-MyNewObjectType::MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaBaseObject(server, nodeId, metaObject)
+MyNewObjectType::MyNewObjectType(QOpcUaServer *server)
+	: QOpcUaBaseObject(server)
 {
 	this->myVar()->setDataType(QMetaType::UInt);
 	this->myVar()->setValue(0);
@@ -50,16 +50,16 @@ double MyNewObjectType::divideNums(int intNum, int intDen)
 
 // ---
 
-MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaBaseObject(server, nodeId, metaObject)
+MyOtherNewObjectType::MyOtherNewObjectType(QOpcUaServer *server)
+	: QOpcUaBaseObject(server)
 {
 
 }
 
 // ---
 
-MyNewObjectSubType::MyNewObjectSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: MyNewObjectType(server, nodeId, metaObject)
+MyNewObjectSubType::MyNewObjectSubType(QOpcUaServer *server)
+	: MyNewObjectType(server)
 {
 
 }

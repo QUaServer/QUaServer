@@ -34,8 +34,8 @@ UA_StatusCode QOpcUaBaseObject::methodCallback(UA_Server        * server,
 	return obj->m_hashMethods[*methodId](input, output);
 }
 
-QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaServerNode(server, nodeId, metaObject)
+QOpcUaBaseObject::QOpcUaBaseObject(QOpcUaServer *server)
+	: QOpcUaServerNode(server)
 {
 
 }

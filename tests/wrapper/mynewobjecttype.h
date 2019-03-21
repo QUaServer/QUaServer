@@ -14,7 +14,7 @@ class MyNewObjectType : public QOpcUaBaseObject
 	Q_PROPERTY(TestEnum                  myEnum         READ myEnum        )
 
 public:
-	Q_INVOKABLE explicit MyNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyNewObjectType(QOpcUaServer *server);
 
 	enum TestEnum
 	{
@@ -47,7 +47,7 @@ class MyOtherNewObjectType : public QOpcUaBaseObject
 	Q_OBJECT
 
 public:
-	Q_INVOKABLE explicit MyOtherNewObjectType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyOtherNewObjectType(QOpcUaServer *server);
 
 private:
 
@@ -61,7 +61,7 @@ class MyNewObjectSubType : public MyNewObjectType
 	Q_PROPERTY(QOpcUaProperty * myProp READ myProp)
 
 public:
-	Q_INVOKABLE explicit MyNewObjectSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyNewObjectSubType(QOpcUaServer *server);
 
 	QOpcUaProperty * myProp();
 

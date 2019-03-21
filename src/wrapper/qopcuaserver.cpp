@@ -83,7 +83,13 @@ UA_StatusCode QOpcUaServer::uaConstructor(QOpcUaServer      * server,
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
-	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server), Q_ARG(UA_NodeId, *nodeId), Q_ARG(QMetaObject, metaObject));
+	// NOTE : to simplify user API, we minimize QOpcUaServerNode arguments to just a QOpcUaServer reference
+	//        we temporarily store in the QOpcUaServer reference the UA_NodeId and QMetaObject values needed to
+	//        instantiate the new node.
+	server->m_newnodeNodeId     = nodeId;
+	server->m_newNodeMetaObject = &metaObject;
+	// instantiate new C++ node, m_newnodeNodeId and m_newNodeMetaObject only meant to be used during this call
+	auto * pQObject    = metaObject.newInstance(Q_ARG(QOpcUaServer*, server));
 	Q_ASSERT_X(pQObject, "QOpcUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QOpcUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * newInstance = dynamic_cast<QOpcUaServerNode*>(static_cast<QObject*>(pQObject));
 	Q_CHECK_PTR(newInstance);
@@ -268,7 +274,10 @@ QOpcUaServer::QOpcUaServer(QObject *parent) : QObject(parent)
 	m_running = false;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
-	m_pobjectsFolder = new QOpcUaFolderObject(this, UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), QOpcUaFolderObject::staticMetaObject);
+	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+	this->m_newnodeNodeId     = &objectsNodeId;
+	this->m_newNodeMetaObject = &QOpcUaFolderObject::staticMetaObject;
+	m_pobjectsFolder = new QOpcUaFolderObject(this);
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types
@@ -887,7 +896,7 @@ void QOpcUaServer::bindCppInstanceWithUaNode(QOpcUaServerNode * nodeInstance, UA
 	nodeInstance->m_nodeId = nodeId;
 }
 
-QOpcUaFolderObject * QOpcUaServer::get_objectsFolder()
+QOpcUaFolderObject * QOpcUaServer::objectsFolder()
 {
 	return m_pobjectsFolder;
 }

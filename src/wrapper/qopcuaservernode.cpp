@@ -7,8 +7,13 @@
 
 #include "mynewvariabletype.h"
 
-QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
+QOpcUaServerNode::QOpcUaServerNode(QOpcUaServer *server)
 {
+	Q_CHECK_PTR(server);
+	Q_CHECK_PTR(server->m_newnodeNodeId);
+	Q_CHECK_PTR(server->m_newNodeMetaObject);
+	const UA_NodeId   &nodeId     = *server->m_newnodeNodeId;
+	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
 	// check
 	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
 	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it

@@ -17,7 +17,7 @@ class MyNewVariableType : public QOpcUaBaseDataVariable
 	Q_PROPERTY(MyOtherNewVariableType * myOtherTwo READ myOtherTwo)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyNewVariableType(QOpcUaServer *server);
 
 	QOpcUaBaseDataVariable * myVar();
 	QOpcUaBaseObject       * myObj();
@@ -34,7 +34,7 @@ class MyOtherNewVariableType : public QOpcUaBaseDataVariable
 
 	Q_PROPERTY(QOpcUaBaseDataVariable * myVarTwo READ myVarTwo)
 public:
-	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyOtherNewVariableType(QOpcUaServer *server);
 
 	QOpcUaBaseDataVariable * myVarTwo();
 
@@ -51,7 +51,7 @@ class MyNewVariableSubType : public MyNewVariableType
 	Q_PROPERTY(QOpcUaBaseObject * myObjSub READ myObjSub)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyNewVariableSubType(QOpcUaServer *server);
 
 	QOpcUaBaseObject * myObjSub();
 
@@ -67,7 +67,7 @@ class MyNewVariableSubSubType : public MyNewVariableSubType
 	Q_PROPERTY(QOpcUaBaseObject * myObjSubSub READ myObjSubSub)
 
 public:
-	Q_INVOKABLE explicit MyNewVariableSubSubType(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	Q_INVOKABLE explicit MyNewVariableSubSubType(QOpcUaServer *server);
 
 	QOpcUaBaseObject * myObjSubSub();
 

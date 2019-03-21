@@ -77,7 +77,7 @@ class QOpcUaServerNode : public QObject
     Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
 
 public:
-	explicit QOpcUaServerNode(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject);
+	explicit QOpcUaServerNode(QOpcUaServer *server);
 	
 	// Virtual destructor is necessary to call derived class destructor when delete is called on pointer to base class
 	// https://stackoverflow.com/questions/294927/does-delete-work-with-pointers-to-base-class

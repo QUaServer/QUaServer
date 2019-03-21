@@ -3,8 +3,8 @@
 #include <QOpcUaServer>
 #include <QOpcUaBaseDataVariable>
 
-QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server, const UA_NodeId &nodeId, const QMetaObject & metaObject)
-	: QOpcUaServerNode(server, nodeId, metaObject)
+QOpcUaBaseVariable::QOpcUaBaseVariable(QOpcUaServer *server)
+	: QOpcUaServerNode(server)
 {
 
 }
