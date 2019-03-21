@@ -93,6 +93,18 @@ int main(int argc, char *argv[])
 	newVarSubSubTypeInstance->setDisplayName("MyNewVariableSubSubType");
 	newVarSubSubTypeInstance->setValue(QDateTime::currentDateTime());	
 
+	// delete
+
+	objsFolder->addMethod("delete_QUaBaseObject", [&objBase]() {
+		if (objBase)
+		{
+			delete objBase;
+			objBase = nullptr;
+			return "Deleted";
+		}
+		return "Already Deleted";
+	});
+
 	// print tree
 	printChildren(objsFolder);
 

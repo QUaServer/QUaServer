@@ -11,7 +11,7 @@ QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 
 QVariant QUaBaseVariable::value() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -19,7 +19,7 @@ QVariant QUaBaseVariable::value() const
 	}
 	// read value
 	UA_Variant outValue;
-	auto st = UA_Server_readValue(m_qopcuaserver->m_server, m_nodeId, &outValue);
+	auto st = UA_Server_readValue(m_qUaServer->m_server, m_nodeId, &outValue);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return QUaTypesConverter::uaVariantToQVariant(outValue);
@@ -27,7 +27,7 @@ QVariant QUaBaseVariable::value() const
 
 void QUaBaseVariable::setValue(const QVariant & value)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// got modifiable copy
 	auto newValue = value;
@@ -86,7 +86,7 @@ void QUaBaseVariable::setValue(const QVariant & value)
 		newType != oldType &&
 		!newValue.canConvert(oldType))
 	{
-		auto st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+		auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 			m_nodeId,
 			UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -94,7 +94,7 @@ void QUaBaseVariable::setValue(const QVariant & value)
 	}
 
 	// convert to UA_Variant and set new value
-	auto st = UA_Server_writeValue(m_qopcuaserver->m_server,
+	auto st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		QUaTypesConverter::uaVariantFromQVariant(newValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -108,7 +108,7 @@ void QUaBaseVariable::setValue(const QVariant & value)
 		if (newType != oldType &&
 			!newValue.canConvert(oldType))
 		{
-			st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+			st = UA_Server_writeDataType(m_qUaServer->m_server,
 				m_nodeId,
 				QUaTypesConverter::uaTypeNodeIdFromQType(newType));
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -123,7 +123,7 @@ void QUaBaseVariable::setValue(const QVariant & value)
 
 QMetaType::Type QUaBaseVariable::dataType() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -131,11 +131,11 @@ QMetaType::Type QUaBaseVariable::dataType() const
 	}
 	// read type
 	UA_NodeId outDataType;
-	auto st = UA_Server_readDataType(m_qopcuaserver->m_server, m_nodeId, &outDataType);
+	auto st = UA_Server_readDataType(m_qUaServer->m_server, m_nodeId, &outDataType);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// check if type is enum, if so, return type int 32
-	if (!m_qopcuaserver->m_hashEnums.key(outDataType, "").isEmpty())
+	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
 	{
 		return QMetaType::Int;
 	}
@@ -145,10 +145,10 @@ QMetaType::Type QUaBaseVariable::dataType() const
 
 void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// need to "reset" dataType before setting a new value
-	auto st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -192,13 +192,13 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
 	// set converted or default value
-	st = UA_Server_writeValue(m_qopcuaserver->m_server,
+	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		QUaTypesConverter::uaVariantFromQVariant(oldValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// set new type
-	st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
 		QUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -211,18 +211,18 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
-	Q_ASSERT(m_qopcuaserver->m_hashEnums.contains(strEnumName));
+	Q_ASSERT(m_qUaServer->m_hashEnums.contains(strEnumName));
 	// exit if not exists
-	if (!m_qopcuaserver->m_hashEnums.contains(strEnumName))
+	if (!m_qUaServer->m_hashEnums.contains(strEnumName))
 	{
 		return;
 	}
 	// need to "reset" dataType before setting a new value
-	auto st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -251,14 +251,14 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		oldValue = QVariant((QVariant::Type)QMetaType::Int);
 	}
 	// set converted or default value
-	st = UA_Server_writeValue(m_qopcuaserver->m_server,
+	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		QUaTypesConverter::uaVariantFromQVariant(oldValue));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// change data type
-	UA_NodeId enumTypeNodeId = m_qopcuaserver->m_hashEnums.value(strEnumName);
-	st = UA_Server_writeDataType(m_qopcuaserver->m_server,
+	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
+	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
 		enumTypeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -271,7 +271,7 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 
 qint32 QUaBaseVariable::valueRank() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -279,7 +279,7 @@ qint32 QUaBaseVariable::valueRank() const
 	}
 	// read valueRank
 	qint32 outValueRank;
-	auto st = UA_Server_readValueRank(m_qopcuaserver->m_server, m_nodeId, &outValueRank);
+	auto st = UA_Server_readValueRank(m_qUaServer->m_server, m_nodeId, &outValueRank);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return outValueRank;
@@ -287,7 +287,7 @@ qint32 QUaBaseVariable::valueRank() const
 
 QVector<quint32> QUaBaseVariable::arrayDimensions() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -295,7 +295,7 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	}
 	// read arrayDimensionsSize
 	UA_Variant outArrayDimensions;
-	auto st = UA_Server_readArrayDimensions(m_qopcuaserver->m_server, m_nodeId, &outArrayDimensions);
+	auto st = UA_Server_readArrayDimensions(m_qUaServer->m_server, m_nodeId, &outArrayDimensions);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// convert UA_Variant to QList<quint32>
@@ -311,7 +311,7 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 
 quint8 QUaBaseVariable::accessLevel() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -319,7 +319,7 @@ quint8 QUaBaseVariable::accessLevel() const
 	}
 	// read accessLevel
 	UA_Byte outAccessLevel;
-	auto st = UA_Server_readAccessLevel(m_qopcuaserver->m_server, m_nodeId, &outAccessLevel);
+	auto st = UA_Server_readAccessLevel(m_qUaServer->m_server, m_nodeId, &outAccessLevel);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return outAccessLevel;
@@ -327,10 +327,10 @@ quint8 QUaBaseVariable::accessLevel() const
 
 void QUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// set accessLevel
-	auto st = UA_Server_writeAccessLevel(m_qopcuaserver->m_server, m_nodeId, accessLevel);
+	auto st = UA_Server_writeAccessLevel(m_qUaServer->m_server, m_nodeId, accessLevel);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	emit this->accessLevelChanged(accessLevel);
@@ -338,7 +338,7 @@ void QUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 
 double QUaBaseVariable::minimumSamplingInterval() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -346,7 +346,7 @@ double QUaBaseVariable::minimumSamplingInterval() const
 	}
 	// read minimumSamplingInterval
 	UA_Double outMinimumSamplingInterval;
-	auto st = UA_Server_readMinimumSamplingInterval(m_qopcuaserver->m_server, m_nodeId, &outMinimumSamplingInterval);
+	auto st = UA_Server_readMinimumSamplingInterval(m_qUaServer->m_server, m_nodeId, &outMinimumSamplingInterval);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
@@ -355,17 +355,17 @@ double QUaBaseVariable::minimumSamplingInterval() const
 
 void QUaBaseVariable::setMinimumSamplingInterval(const double & minimumSamplingInterval)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// set minimumSamplingInterval
-	auto st = UA_Server_writeMinimumSamplingInterval(m_qopcuaserver->m_server, m_nodeId, minimumSamplingInterval);
+	auto st = UA_Server_writeMinimumSamplingInterval(m_qUaServer->m_server, m_nodeId, minimumSamplingInterval);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 }
 
 bool QUaBaseVariable::historizing() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -373,7 +373,7 @@ bool QUaBaseVariable::historizing() const
 	}
 	// read historizing
 	UA_Boolean outHistorizing;
-	auto st = UA_Server_readHistorizing(m_qopcuaserver->m_server, m_nodeId, &outHistorizing);
+	auto st = UA_Server_readHistorizing(m_qUaServer->m_server, m_nodeId, &outHistorizing);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	return outHistorizing;

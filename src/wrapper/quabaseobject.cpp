@@ -52,7 +52,7 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const
                                                byteMethodName.data());
     // create callback
     UA_NodeId methNodeId;
-    auto st = UA_Server_addMethodNode(m_qopcuaserver->m_server,
+    auto st = UA_Server_addMethodNode(m_qUaServer->m_server,
                                       UA_NODEID_NULL,
                                       m_nodeId,
                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),

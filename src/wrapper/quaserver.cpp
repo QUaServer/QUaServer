@@ -1,6 +1,7 @@
 #include "quaserver.h"
 
 #include <QMetaProperty>
+#include <QTimer>
 
 // [STATIC]
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
@@ -86,9 +87,9 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer      * server,
 	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
 	//        we temporarily store in the QUaServer reference the UA_NodeId and QMetaObject values needed to
 	//        instantiate the new node.
-	server->m_newnodeNodeId     = nodeId;
+	server->m_newNodeNodeId     = nodeId;
 	server->m_newNodeMetaObject = &metaObject;
-	// instantiate new C++ node, m_newnodeNodeId and m_newNodeMetaObject only meant to be used during this call
+	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QUaServer*, server));
 	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
 	auto * newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(pQObject));
@@ -275,7 +276,7 @@ QUaServer::QUaServer(QObject *parent) : QObject(parent)
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
-	this->m_newnodeNodeId     = &objectsNodeId;
+	this->m_newNodeNodeId     = &objectsNodeId;
 	this->m_newNodeMetaObject = &QUaFolderObject::staticMetaObject;
 	m_pobjectsFolder = new QUaFolderObject(this);
 	m_pobjectsFolder->setParent(this);
@@ -337,6 +338,15 @@ void QUaServer::stop()
 bool QUaServer::isRunning()
 {
 	return m_running;
+}
+
+void QUaServer::deleteNodeLater(const UA_NodeId nodeId, UA_Boolean deleteReferences)
+{
+	QTimer::singleShot(0, [this, nodeId, deleteReferences]() {
+		auto st = UA_Server_deleteNode(m_server, nodeId, deleteReferences);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);	
+	});
 }
 
 void QUaServer::registerType(const QMetaObject &metaObject)
@@ -538,14 +548,14 @@ void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 	int propCount = parentMetaObject.propertyCount();
 	for (int i = parentMetaObject.propertyOffset(); i < propCount; i++)
 	{
-		QMetaProperty metaproperty = parentMetaObject.property(i);
+		QMetaProperty metaProperty = parentMetaObject.property(i);
 		// check if is meta enum
 		bool      isVariable     = false;
 		bool      isEnum         = false;
 		UA_NodeId enumTypeNodeId = UA_NODEID_NULL;
-		if (metaproperty.isEnumType())
+		if (metaProperty.isEnumType())
 		{
-			QMetaEnum metaEnum = metaproperty.enumerator();
+			QMetaEnum metaEnum = metaProperty.enumerator();
 			// compose enum name
 			QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 			// must already be registered by now
@@ -558,19 +568,19 @@ void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		// parent relation with child
 		UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 		// get property name
-		QString    strPropName  = QString(metaproperty.name());
+		QString    strPropName  = QString(metaProperty.name());
 		QByteArray bytePropName = strPropName.toUtf8();
 		// get type node id
 		UA_NodeId propTypeNodeId;
 		if (!isEnum)
 		{
 			// check if available in meta-system
-			if (!QMetaType::metaObjectForType(metaproperty.userType()) && !isEnum)
+			if (!QMetaType::metaObjectForType(metaProperty.userType()) && !isEnum)
 			{
 				continue;
 			}
 			// check if OPC UA relevant type
-			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaProperty.userType());
 			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
 			{
 				continue;

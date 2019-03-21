@@ -16,8 +16,6 @@ class QUaServer : public QObject
 friend class QUaNode;
 friend class QUaBaseVariable;
 friend class QUaBaseObject;
-// NOTE : this is how we would declare a <template class> friend
-//template<typename T> friend class QOpcUaServerNodeFactory;
 
 public:
     explicit QUaServer(QObject *parent = 0);
@@ -44,7 +42,7 @@ signals:
 	void iterateServer();
 
 public slots:
-
+	
 
 private:
 	UA_Server * m_server;
@@ -116,8 +114,10 @@ private:
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
-	const UA_NodeId   * m_newnodeNodeId;
+	const UA_NodeId   * m_newNodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
+
+	void deleteNodeLater(const UA_NodeId nodeId, UA_Boolean deleteReferences);
 
 };
 
@@ -155,20 +155,20 @@ inline T * QUaServer::createInstance(QUaNode * parentNode)
 template<typename T>
 inline T * QUaBaseObject::addChild()
 {
-    return m_qopcuaserver->createInstance<T>(this);
+    return m_qUaServer->createInstance<T>(this);
 }
 
 template<typename T>
 inline T * QUaBaseDataVariable::addChild()
 {
-    return m_qopcuaserver->createInstance<T>(this);
+    return m_qUaServer->createInstance<T>(this);
 }
 
 template<typename T>
 inline void QUaBaseVariable::setDataTypeEnum()
 {
 	// register if not registered
-	m_qopcuaserver->registerEnum<T>();
+	m_qUaServer->registerEnum<T>();
 	this->setDataTypeEnum(QMetaEnum::fromType<T>());
 }
 

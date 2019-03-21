@@ -7,17 +7,21 @@
 
 QUaNode::QUaNode(QUaServer *server)
 {
+	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
+	//          the constructor is called automagically by this library, and m_newNodeNodeId and
+	//          m_newNodeMetaObject must be set in QUaServer before calling the constructor, as
+	//          is sued in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
-	Q_CHECK_PTR(server->m_newnodeNodeId);
+	Q_CHECK_PTR(server->m_newNodeNodeId);
 	Q_CHECK_PTR(server->m_newNodeMetaObject);
-	const UA_NodeId   &nodeId     = *server->m_newnodeNodeId;
+	const UA_NodeId   &nodeId     = *server->m_newNodeNodeId;
 	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
 	// check
 	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
 	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it
 	// so we need to also set the context again in QUaServer::uaConstructor
 	// set server instance
-	this->m_qopcuaserver = server;
+	this->m_qUaServer = server;
 	// set c++ instance as context
 	UA_Server_setNodeContext(server->m_server, nodeId, (void*)this);
 	// set node id to c++ instance
@@ -50,17 +54,17 @@ QUaNode::QUaNode(QUaServer *server)
 	int numProps   = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
-		QMetaProperty metaproperty = metaObject.property(i);
+		QMetaProperty metaProperty = metaObject.property(i);
 		// check if not enum
-		if (!metaproperty.isEnumType())
+		if (!metaProperty.isEnumType())
 		{
 			// check if available in meta-system
-			if (!QMetaType::metaObjectForType(metaproperty.userType()))
+			if (!QMetaType::metaObjectForType(metaProperty.userType()))
 			{
 				continue;
 			}
 			// check if OPC UA relevant type
-			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaproperty.userType());
+			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaProperty.userType());
 			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
 			{
 				continue;
@@ -75,7 +79,7 @@ QUaNode::QUaNode(QUaServer *server)
 		// inc number of valid props
 		numProps++;
 		// the Qt meta property name must match the UA browse name
-		QString strBrowseName = QString(metaproperty.name());
+		QString strBrowseName = QString(metaProperty.name());
 		Q_ASSERT(mapChildren.contains(strBrowseName));
 		// get child nodeId for child
 		auto childNodeId = mapChildren.take(strBrowseName);
@@ -94,9 +98,16 @@ QUaNode::QUaNode(QUaServer *server)
 		       this->children().count() == numProps, "QUaNode::QUaNode", "Children not bound properly.");
 }
 
+inline QUaNode::~QUaNode()
+{
+	// delete also references to this node
+	// TODO : when supporting references, handle deleting them on ua destructor
+	m_qUaServer->deleteNodeLater(m_nodeId, true);
+}
+
 QString QUaNode::displayName() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -104,7 +115,7 @@ QString QUaNode::displayName() const
 	}
 	// read description
 	UA_LocalizedText outDisplayName;
-	auto st = UA_Server_readDisplayName(m_qopcuaserver->m_server, m_nodeId, &outDisplayName);
+	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, m_nodeId, &outDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
@@ -114,13 +125,13 @@ QString QUaNode::displayName() const
 
 void QUaNode::setDisplayName(const QString & displayName)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
     UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
 	// set value
-	auto st = UA_Server_writeDisplayName(m_qopcuaserver->m_server, m_nodeId, uaDisplayName);
+	auto st = UA_Server_writeDisplayName(m_qUaServer->m_server, m_nodeId, uaDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit displayName changed
@@ -130,7 +141,7 @@ void QUaNode::setDisplayName(const QString & displayName)
 
 QString QUaNode::description() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -138,7 +149,7 @@ QString QUaNode::description() const
 	}
 	// read description
 	UA_LocalizedText outDescription;
-	auto st = UA_Server_readDescription(m_qopcuaserver->m_server, m_nodeId, &outDescription);
+	auto st = UA_Server_readDescription(m_qUaServer->m_server, m_nodeId, &outDescription);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
@@ -148,13 +159,13 @@ QString QUaNode::description() const
 
 void QUaNode::setDescription(const QString & description)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDescription = description.toUtf8(); // NOTE : QByteArray must exist in stack
 	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
 	// set value
-	auto st = UA_Server_writeDescription(m_qopcuaserver->m_server, m_nodeId, uaDescription);
+	auto st = UA_Server_writeDescription(m_qUaServer->m_server, m_nodeId, uaDescription);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit description changed
@@ -164,7 +175,7 @@ void QUaNode::setDescription(const QString & description)
 
 quint32 QUaNode::writeMask() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -172,7 +183,7 @@ quint32 QUaNode::writeMask() const
 	}
 	// read writeMask
 	UA_UInt32 outWriteMask;
-	auto st = UA_Server_readWriteMask(m_qopcuaserver->m_server, m_nodeId, &outWriteMask);
+	auto st = UA_Server_readWriteMask(m_qUaServer->m_server, m_nodeId, &outWriteMask);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// return
@@ -181,10 +192,10 @@ quint32 QUaNode::writeMask() const
 
 void QUaNode::setWriteMask(const quint32 & writeMask)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// set value
-	auto st = UA_Server_writeWriteMask(m_qopcuaserver->m_server, m_nodeId, writeMask);
+	auto st = UA_Server_writeWriteMask(m_qUaServer->m_server, m_nodeId, writeMask);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit writeMask changed
@@ -193,7 +204,7 @@ void QUaNode::setWriteMask(const quint32 & writeMask)
 
 QString QUaNode::nodeId() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -204,7 +215,7 @@ QString QUaNode::nodeId() const
 
 QString QUaNode::nodeClass() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -212,7 +223,7 @@ QString QUaNode::nodeClass() const
 	}
 	// read nodeClass
 	UA_NodeClass outNodeClass;
-	auto st = UA_Server_readNodeClass(m_qopcuaserver->m_server, m_nodeId, &outNodeClass);
+	auto st = UA_Server_readNodeClass(m_qUaServer->m_server, m_nodeId, &outNodeClass);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// convert to QString
@@ -221,7 +232,7 @@ QString QUaNode::nodeClass() const
 
 QString QUaNode::browseName() const
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
@@ -229,7 +240,7 @@ QString QUaNode::browseName() const
 	}
 	// read browse name
 	UA_QualifiedName outBrowseName;
-	auto st = UA_Server_readBrowseName(m_qopcuaserver->m_server, m_nodeId, &outBrowseName);
+	auto st = UA_Server_readBrowseName(m_qUaServer->m_server, m_nodeId, &outBrowseName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// populate return value
@@ -239,14 +250,14 @@ QString QUaNode::browseName() const
 
 void QUaNode::setBrowseName(const QString & browseName)
 {
-	Q_CHECK_PTR(m_qopcuaserver);
+	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_QualifiedName
 	UA_QualifiedName bName;
 	bName.namespaceIndex = 1; // NOTE : force default namespace index 1
 	bName.name           = QUaTypesConverter::uaStringFromQString(browseName);
 	// set value
-	auto st = UA_Server_writeBrowseName(m_qopcuaserver->m_server, m_nodeId, bName);
+	auto st = UA_Server_writeBrowseName(m_qUaServer->m_server, m_nodeId, bName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit browseName changed
@@ -255,27 +266,22 @@ void QUaNode::setBrowseName(const QString & browseName)
 
 QUaProperty * QUaNode::addProperty()
 {
-	return m_qopcuaserver->createInstance<QUaProperty>(this);
+	return m_qUaServer->createInstance<QUaProperty>(this);
 }
 
 QUaBaseDataVariable * QUaNode::addBaseDataVariable()
 {
-	return m_qopcuaserver->createInstance<QUaBaseDataVariable>(this);
+	return m_qUaServer->createInstance<QUaBaseDataVariable>(this);
 }
 
 QUaBaseObject * QUaNode::addBaseObject()
 {
-	return m_qopcuaserver->createInstance<QUaBaseObject>(this);
+	return m_qUaServer->createInstance<QUaBaseObject>(this);
 }
 
 QUaFolderObject * QUaNode::addFolderObject()
 {
-	return m_qopcuaserver->createInstance<QUaFolderObject>(this);
-}
-
-UA_Server * QUaNode::getUAServer()
-{
-	return m_qopcuaserver->m_server;
+	return m_qUaServer->createInstance<QUaFolderObject>(this);
 }
 
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)
