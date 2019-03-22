@@ -98,7 +98,7 @@ QUaNode::QUaNode(QUaServer *server)
 		       this->children().count() == numProps, "QUaNode::QUaNode", "Children not bound properly.");
 }
 
-inline QUaNode::~QUaNode()
+QUaNode::~QUaNode()
 {
 	
 	// check if node id has been already removed from node store
