@@ -130,14 +130,17 @@ public:
 	virtual QUaFolderObject     * addFolderObject    ();
 
 	// Reference API
+
 	void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
 
-	template<typename T>
-	QList<T*> getReferences(const QUaReference &ref, const bool &isForward = true);
+	void removeReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
 
+	template<typename T>
+	QList<T*>       getReferences(const QUaReference &ref, const bool &isForward = true);
+	// specialization
 	QList<QUaNode*> getReferences(const QUaReference &ref, const bool &isForward = true);
 
-	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
+	
 
 	// helpers
 
@@ -174,6 +177,7 @@ signals:
 
 private:
 
+	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
 
 };
 

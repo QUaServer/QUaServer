@@ -8,16 +8,6 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
-//void printChildren(QUaNode * child, const QString strSpacer = "")
-//{
-//	Q_CHECK_PTR(child);
-//	qDebug() << strSpacer + "-->" << child->displayName()/* << QString("(%1)").arg(child->objectName())*/;
-//	for (int i = 0; i < child->children().count(); i++)
-//	{
-//		printChildren(static_cast<QUaNode*>(child->children().at(i)), strSpacer + "--");
-//	}
-//}
-
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -25,6 +15,7 @@ int main(int argc, char *argv[])
 	QUaServer server;
 	auto objsFolder = server.objectsFolder();
 
+/*
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
@@ -104,6 +95,7 @@ int main(int argc, char *argv[])
 		}
 		return "Already Deleted";
 	});
+*/
 
 	// references
 
@@ -118,11 +110,16 @@ int main(int argc, char *argv[])
 	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
 	Q_ASSERT(*var1 == *var1ref);
 
+	obj1->addMethod("addReference", [obj1, var1]() {
+		obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	});
+
+	obj1->addMethod("removeReference", [obj1, var1]() {
+		obj1->removeReference({ "hasVar", "isVarOf" }, var1);
+	});
+
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();
-
-	//// print tree
-	//printChildren(objsFolder);
 
     return a.exec();
 }

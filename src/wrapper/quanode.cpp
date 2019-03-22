@@ -314,7 +314,6 @@ void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget,
 	}
 	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
 	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
-	
 	// check if reference already exist
 	auto set = getRefsInternal(ref, isForward);
 	if (set.contains(nodeTarget->m_nodeId))
@@ -328,6 +327,32 @@ void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget,
 		refTypeId,
 		{ nodeTarget->m_nodeId, UA_STRING_NULL, 0 },
 		isForward
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+}
+
+void QUaNode::removeReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
+{
+	// first check if reference type is registered
+	if (!m_qUaServer->m_hashRefs.contains(ref))
+	{
+		return;
+	}
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	// check reference exists
+	auto set = getRefsInternal(ref, isForward);
+	if (!set.contains(nodeTarget->m_nodeId))
+	{
+		return;
+	}
+	// remove the reference
+	auto st = UA_Server_deleteReference(
+		m_qUaServer->m_server,
+		m_nodeId,
+		refTypeId,
+		isForward,
+		{ nodeTarget->m_nodeId, UA_STRING_NULL, 0 },
+		true
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 }
