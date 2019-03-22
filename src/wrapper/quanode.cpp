@@ -121,6 +121,11 @@ inline QUaNode::~QUaNode()
 	// TODO : when supporting references, handle deleting them on ua destructor
 }
 
+bool QUaNode::operator==(const QUaNode & other) const
+{
+	return UA_NodeId_equal(&this->m_nodeId, &other.m_nodeId);
+}
+
 QString QUaNode::displayName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
@@ -298,6 +303,95 @@ QUaBaseObject * QUaNode::addBaseObject()
 QUaFolderObject * QUaNode::addFolderObject()
 {
 	return m_qUaServer->createInstance<QUaFolderObject>(this);
+}
+
+void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
+{
+	// first check if reference type is registered
+	if (!m_qUaServer->m_hashRefs.contains(ref))
+	{
+		m_qUaServer->registerReference(ref);
+	}
+	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	
+	// check if reference already exist
+	auto set = getRefsInternal(ref, isForward);
+	if (set.contains(nodeTarget->m_nodeId))
+	{
+		return;
+	}
+	// add the reference
+	auto st = UA_Server_addReference(
+		m_qUaServer->m_server,
+		m_nodeId,
+		refTypeId,
+		{ nodeTarget->m_nodeId, UA_STRING_NULL, 0 },
+		isForward
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+}
+
+QList<QUaNode*> QUaNode::getReferences(const QUaReference & ref, const bool & isForward)
+{
+	QList<QUaNode*> retRefList;
+	// call internal method
+	auto set = getRefsInternal(ref, isForward);
+	// get contexts
+	QSetIterator<UA_NodeId> i(set);
+	while (i.hasNext())
+	{
+		QUaNode * node = QUaNode::getNodeContext(i.next(), m_qUaServer);
+		Q_CHECK_PTR(node);
+		if (node)
+		{
+			retRefList.append(node);
+		}
+	}	
+	// return
+	return retRefList;
+}
+
+QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & isForward)
+{
+	QSet<UA_NodeId> retRefSet;
+	// first check if reference type is registered
+	if (!m_qUaServer->m_hashRefs.contains(ref))
+	{
+		m_qUaServer->registerReference(ref);
+		// there cannot be any since it didnt even exist before
+		return retRefSet;
+	}
+	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	// make ua browse
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	bDesc->nodeId          = m_nodeId; // from child
+	bDesc->browseDirection = isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
+	bDesc->includeSubtypes = true;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(m_qUaServer->m_server, 0, bDesc);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
+			{
+				UA_NodeId nodeId = rDesc.nodeId.nodeId;
+				retRefSet.insert(nodeId);
+			}
+		}
+		bRes = UA_Server_browseNext(m_qUaServer->m_server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return retRefSet;
 }
 
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)

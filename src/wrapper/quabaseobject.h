@@ -198,6 +198,8 @@ class QUaBaseObject : public QUaNode
 
 	// TODO
 	//Q_PROPERTY(UA_Byte eventNotifier READ get_eventNotifier)
+	// UA_Server_readEventNotifier
+	// UA_Server_writeEventNotifier
 
 friend class QUaServer;
 

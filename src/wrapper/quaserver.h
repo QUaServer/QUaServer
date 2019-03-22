@@ -27,10 +27,11 @@ public:
 	// register type in order to assign it a typeNodeId
 	template<typename T>
 	void registerType();
-
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum();
+	// register reference to get a respective refTypeId
+	void registerReference(const QUaReference &ref);
 
 	// create instance of a given type
 	template<typename T>
@@ -51,8 +52,9 @@ private:
 
 	QUaFolderObject * m_pobjectsFolder;
 
-	QMap <QString, UA_NodeId> m_mapTypes;
-	QHash<QString, UA_NodeId> m_hashEnums;
+	QMap <QString     , UA_NodeId> m_mapTypes;
+	QHash<QString     , UA_NodeId> m_hashEnums;
+	QHash<QUaReference, UA_NodeId> m_hashRefs;
 
 	void registerType(const QMetaObject &metaObject);
 	void registerEnum(const QMetaEnum &metaEnum);

@@ -38,6 +38,24 @@ inline uint qHash(const UA_NodeId &key, uint seed)
 	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ qHash(key.identifier.numeric, seed);
 }
 
+struct QUaReference
+{
+	QString strForwardName;
+	QString strInverseName;
+};
+
+// to have QUaReference as a hash key
+inline bool operator==(const QUaReference &e1, const QUaReference &e2)
+{
+	return e1.strForwardName.compare(e2.strForwardName, Qt::CaseSensitive) == 0
+		&& e1.strInverseName.compare(e2.strInverseName, Qt::CaseSensitive) == 0;
+}
+
+inline uint qHash(const QUaReference &key, uint seed)
+{
+	return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
+}
+
 /*
 typedef struct {
 	// Node Attributes
@@ -87,6 +105,8 @@ public:
 	// https://repl.it/repls/EachSpicyInternalcommand
 	virtual ~QUaNode();
 
+	bool operator ==(const QUaNode &other) const;
+
 	// OPC UA methods API
 
 	QString displayName   () const;
@@ -108,6 +128,18 @@ public:
 	virtual QUaBaseDataVariable * addBaseDataVariable();
 	virtual QUaBaseObject       * addBaseObject      ();
 	virtual QUaFolderObject     * addFolderObject    ();
+
+	// Reference API
+	void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
+
+	template<typename T>
+	QList<T*> getReferences(const QUaReference &ref, const bool &isForward = true);
+
+	QList<QUaNode*> getReferences(const QUaReference &ref, const bool &isForward = true);
+
+	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
+
+	// helpers
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QUaServer *server);
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server);
@@ -144,6 +176,22 @@ private:
 
 
 };
+
+template<typename T>
+inline QList<T*> QUaNode::getReferences(const QUaReference &ref, const bool &isForward/* = true*/)
+{
+	QList<T*> retList;
+	QList<QUaNode*> nodeList = getReferences(ref, isForward);
+	for (int i = 0; i < nodeList.count(); i++)
+	{
+		T* ref = dynamic_cast<T*>(nodeList.at(i));
+		if (ref)
+		{
+			retList.append(ref);
+		}
+	}
+	return retList;
+}
 
 #endif // QUASERVERNODE_H
 

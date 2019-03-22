@@ -424,9 +424,9 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 		UA_VariableTypeAttributes vtAttr = UA_VariableTypeAttributes_default;
 		// set node attributes		  
 		QByteArray byteDisplayName       = strClassName.toUtf8();
-		vtAttr.displayName               = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		vtAttr.displayName               = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 		QByteArray byteDescription       = QString("").toUtf8();
-		vtAttr.description               = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		vtAttr.description               = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new variable type
 		auto st = UA_Server_addVariableTypeNode(m_server,
 			                                    UA_NODEID_NULL,                            // requested nodeId
@@ -447,9 +447,9 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 		UA_ObjectTypeAttributes otAttr = UA_ObjectTypeAttributes_default;
 		// set node attributes		  
 		QByteArray byteDisplayName     = strClassName.toUtf8();
-		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+		otAttr.displayName             = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 		QByteArray byteDescription     = QString("").toUtf8();
-		otAttr.description             = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+		otAttr.description             = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new object type
 		auto st = UA_Server_addObjectTypeNode(m_server,
 			                                  UA_NODEID_NULL,                            // requested nodeId
@@ -651,7 +651,7 @@ void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		browseName.namespaceIndex = 1;
 		browseName.name           = QUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
-		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"en-US", bytePropName.data());
+		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"", bytePropName.data());
 		// check if variable or object
 		// NOTE : a type is considered to inherit itself sometimes does not work (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 		UA_NodeId tempNodeId;
@@ -732,7 +732,7 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		if (returnType != QMetaType::Void)
 		{
 			UA_Argument_init(&outputArgumentInstance);
-			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char *)"en-US",
+			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char *)"",
 														  (char *)"Result Value");
 			outputArgumentInstance.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
 			outputArgumentInstance.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
@@ -759,7 +759,7 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			UA_Argument inputArgument;
 			UA_Argument_init(&inputArgument);
 			// create n-th argument
-			inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
+			inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
 			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames.at(k));
 			inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
 			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
@@ -775,9 +775,9 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		UA_MethodAttributes methAttr = UA_MethodAttributes_default;
 		methAttr.executable     = true;
 		methAttr.userExecutable = true;
-		methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
+		methAttr.description    = UA_LOCALIZEDTEXT((char *)"",
 												   strMethName.data());
-		methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
+		methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"",
 												   strMethName.data());
 		// create callback
 		UA_NodeId methNodeId;
@@ -938,6 +938,40 @@ void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & no
 	UA_Server_setNodeContext(m_server, nodeId, (void**)(&nodeInstance));
 	// set node id to c++ instance
 	nodeInstance->m_nodeId = nodeId;
+}
+
+void QUaServer::registerReference(const QUaReference & ref)
+{
+	// first check if already registered
+	if (m_hashRefs.contains(ref))
+	{
+		return;
+	}
+	// get namea and stuff
+	QByteArray byteForwardName = ref.strForwardName.toUtf8();
+	QByteArray byteInverseName = ref.strInverseName.toUtf8();
+	UA_QualifiedName browseName;
+	browseName.namespaceIndex = 1;
+	browseName.name = QUaTypesConverter::uaStringFromQString(ref.strForwardName);
+	// setup new ref type attributes
+	UA_ReferenceTypeAttributes refattr = UA_ReferenceTypeAttributes_default;
+	refattr.displayName = UA_LOCALIZEDTEXT((char*)(""), byteForwardName.data());
+	refattr.inverseName = UA_LOCALIZEDTEXT((char*)(""), byteInverseName.data());
+	UA_NodeId outNewNodeId;
+	auto st = UA_Server_addReferenceTypeNode(
+		m_server,
+		UA_NODEID_NULL,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_NONHIERARCHICALREFERENCES),
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+		browseName,
+		refattr,
+		nullptr,
+		&outNewNodeId
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// add to hash to complete registration
+	m_hashRefs.insert(ref, outNewNodeId);
 }
 
 QUaFolderObject * QUaServer::objectsFolder()

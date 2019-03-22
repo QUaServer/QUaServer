@@ -25,20 +25,6 @@ int main(int argc, char *argv[])
 	QUaServer server;
 	auto objsFolder = server.objectsFolder();
 
-	QObject::connect(objsFolder, &QUaNode::childAdded, [](QUaNode * childNode) {
-		qDebug() << "Child added or objects folder :" << childNode->nodeId();
-	});
-
-	auto var1 = objsFolder->addBaseDataVariable();
-	var1->setDisplayName("var1");
-	var1->setDataTypeEnum<MyNewObjectType::TestEnum>();
-	var1->setValue(MyNewObjectType::TestEnum::FOUR);
-	var1->setIsWritable(true);
-	QObject::connect(var1, &QUaBaseVariable::valueChanged, [](const QVariant &value) {
-		qDebug() << "var1 value changed to" << value;
-	});
-
-/*
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
@@ -119,12 +105,24 @@ int main(int argc, char *argv[])
 		return "Already Deleted";
 	});
 
-	//// print tree
-	//printChildren(objsFolder);
-*/
+	// references
+
+	auto var1 = objsFolder->addBaseDataVariable();
+	var1->setDisplayName("var1");
+	var1->setValue(1);
+	auto obj1 = objsFolder->addBaseObject();
+	obj1->setDisplayName("obj1");
+
+	obj1->addReference({ "hasVar", "isVarOf" }, var1);
+
+	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
+	Q_ASSERT(*var1 == *var1ref);
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();
+
+	//// print tree
+	//printChildren(objsFolder);
 
     return a.exec();
 }
