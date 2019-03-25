@@ -35,7 +35,7 @@ public:
 
 	// create instance of a given type
 	template<typename T>
-	T* createInstance(QUaNode * parentNode);
+	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
 
 	QUaFolderObject * objectsFolder();
 
@@ -66,7 +66,7 @@ private:
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
-	UA_NodeId createInstance(const QMetaObject &metaObject, QUaNode * parentNode);
+	UA_NodeId createInstance(const QMetaObject &metaObject, QUaNode * parentNode, const QString &strNodeId = "");
 
 	void bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId &nodeId);
 
@@ -144,11 +144,11 @@ inline void QUaServer::registerEnum()
 }
 
 template<typename T>
-inline T * QUaServer::createInstance(QUaNode * parentNode)
+inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNodeId/* = ""*/)
 {
 	// instantiate first in OPC UA
-	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode);
-	if (newInstanceNodeId == UA_NODEID_NULL)
+	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode, strNodeId);
+	if (UA_NodeId_isNull(&newInstanceNodeId))
 	{
 		return nullptr;
 	}
@@ -161,15 +161,15 @@ inline T * QUaServer::createInstance(QUaNode * parentNode)
 }
 
 template<typename T>
-inline T * QUaBaseObject::addChild()
+inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
 {
-    return m_qUaServer->createInstance<T>(this);
+    return m_qUaServer->createInstance<T>(this, strNodeId);
 }
 
 template<typename T>
-inline T * QUaBaseDataVariable::addChild()
+inline T * QUaBaseDataVariable::addChild(const QString &strNodeId/* = ""*/)
 {
-    return m_qUaServer->createInstance<T>(this);
+    return m_qUaServer->createInstance<T>(this, strNodeId);
 }
 
 template<typename T>

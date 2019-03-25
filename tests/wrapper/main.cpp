@@ -99,10 +99,10 @@ int main(int argc, char *argv[])
 
 	// references
 
-	auto var1 = objsFolder->addBaseDataVariable();
+	auto var1 = objsFolder->addBaseDataVariable("ns=1;s=var1");
 	var1->setDisplayName("var1");
 	var1->setValue(1);
-	auto obj1 = objsFolder->addBaseObject();
+	auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
 	obj1->setDisplayName("obj1");
 
 	obj1->addReference({ "hasVar", "isVarOf" }, var1);

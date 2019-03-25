@@ -124,10 +124,10 @@ public:
 
 	// Instance Creation API
 
-	virtual QUaProperty         * addProperty        ();
-	virtual QUaBaseDataVariable * addBaseDataVariable();
-	virtual QUaBaseObject       * addBaseObject      ();
-	virtual QUaFolderObject     * addFolderObject    ();
+	virtual QUaProperty         * addProperty        (const QString &strNodeId = "");
+	virtual QUaBaseDataVariable * addBaseDataVariable(const QString &strNodeId = "");
+	virtual QUaBaseObject       * addBaseObject      (const QString &strNodeId = "");
+	virtual QUaFolderObject     * addFolderObject    (const QString &strNodeId = "");
 
 	// Reference API
 

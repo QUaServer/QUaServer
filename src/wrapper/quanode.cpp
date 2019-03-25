@@ -285,24 +285,24 @@ void QUaNode::setBrowseName(const QString & browseName)
 	emit this->browseNameChanged(browseName);
 }
 
-QUaProperty * QUaNode::addProperty()
+QUaProperty * QUaNode::addProperty(const QString &strNodeId/* = ""*/)
 {
-	return m_qUaServer->createInstance<QUaProperty>(this);
+	return m_qUaServer->createInstance<QUaProperty>(this, strNodeId);
 }
 
-QUaBaseDataVariable * QUaNode::addBaseDataVariable()
+QUaBaseDataVariable * QUaNode::addBaseDataVariable(const QString &strNodeId/* = ""*/)
 {
-	return m_qUaServer->createInstance<QUaBaseDataVariable>(this);
+	return m_qUaServer->createInstance<QUaBaseDataVariable>(this, strNodeId);
 }
 
-QUaBaseObject * QUaNode::addBaseObject()
+QUaBaseObject * QUaNode::addBaseObject(const QString &strNodeId/* = ""*/)
 {
-	return m_qUaServer->createInstance<QUaBaseObject>(this);
+	return m_qUaServer->createInstance<QUaBaseObject>(this, strNodeId);
 }
 
-QUaFolderObject * QUaNode::addFolderObject()
+QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
 {
-	return m_qUaServer->createInstance<QUaFolderObject>(this);
+	return m_qUaServer->createInstance<QUaFolderObject>(this, strNodeId);
 }
 
 void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
@@ -391,7 +391,7 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	bDesc->nodeId          = m_nodeId; // from child
+	UA_NodeId_copy(&m_nodeId, &bDesc->nodeId); // from child
 	bDesc->browseDirection = isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
@@ -427,7 +427,7 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * se
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	bDesc->nodeId          = childNodeId; // from child
+	UA_NodeId_copy(&childNodeId, &bDesc->nodeId); // from child
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //  look upwards
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME;
@@ -463,7 +463,7 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 {
 	QList<UA_NodeId> retListChildren;
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
-	bDesc->nodeId          = parentNodeId; // from parent
+	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
 	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)

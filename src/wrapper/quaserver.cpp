@@ -860,7 +860,7 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 	}
 }
 
-UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * parentNode)
+UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * parentNode, const QString &strNodeId/* = ""*/)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
@@ -885,6 +885,18 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
 	browseName.name           = QUaTypesConverter::uaStringFromQString(metaObject.className());
+	// check if requested node id defined
+	QString strReqNodeId = strNodeId.trimmed();
+	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	// check if requested node id exists
+	UA_NodeId outNodeId;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
+	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::createInstance", "Requested NodeId already exists");
+	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	{
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return UA_NODEID_NULL;
+	}
 	// check if variable or object
 	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	UA_NodeId nodeIdNewInstance;
@@ -896,7 +908,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		vAttr.valueRank = UA_VALUERANK_ANY;
 		// add variable
 		auto st = UA_Server_addVariableNode(m_server,
-                                            UA_NODEID_NULL,       // requested nodeId
+                                            reqNodeId,            // requested nodeId
                                             parentNode->m_nodeId, // parent
                                             referenceTypeId,      // parent relation with child
                                             browseName,
@@ -913,7 +925,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
-                                          UA_NODEID_NULL,       // requested nodeId
+                                          reqNodeId,            // requested nodeId
                                           parentNode->m_nodeId, // parent
                                           referenceTypeId,      // parent relation with child
                                           browseName,
