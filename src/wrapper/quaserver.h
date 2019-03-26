@@ -36,8 +36,13 @@ public:
 	// create instance of a given type
 	template<typename T>
 	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
-
+	// get objects folder
 	QUaFolderObject * objectsFolder();
+	// get node reference by node id and cast to type (nullptr if node id does not exist)
+	template<typename T>
+	T* getNodebyId(const QString &strNodeId);
+	// get node reference by node id (nullptr if node id does not exist)
+	QUaNode * getNodebyId(const QString &strNodeId);
 
 signals:
 	void iterateServer();
@@ -154,10 +159,16 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	}
 	// get new c++ instance created in UA constructor
 	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this);
-	T * newInstance = qobject_cast<T*>(tmp);
+	T * newInstance = dynamic_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
 	// return c++ instance
 	return newInstance;
+}
+
+template<typename T>
+inline T * QUaServer::getNodebyId(const QString &strNodeId)
+{
+	return dynamic_cast<T*>(this->getNodebyId(strNodeId));
 }
 
 template<typename T>

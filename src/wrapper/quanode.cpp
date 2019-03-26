@@ -117,8 +117,6 @@ QUaNode::~QUaNode()
 	st = UA_Server_deleteNode(m_qUaServer->m_server, m_nodeId, true);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-
-	// TODO : when supporting references, handle deleting them on ua destructor
 }
 
 bool QUaNode::operator==(const QUaNode & other) const
@@ -141,7 +139,6 @@ QString QUaNode::displayName() const
 	Q_UNUSED(st);
 	// return
 	return QUaTypesConverter::uaStringToQString(outDisplayName.text);
-	// TODO : handle outDisplayName.locale
 }
 
 void QUaNode::setDisplayName(const QString & displayName)
@@ -150,14 +147,13 @@ void QUaNode::setDisplayName(const QString & displayName)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
-    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"en-US", byteDisplayName.data());
+    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 	// set value
 	auto st = UA_Server_writeDisplayName(m_qUaServer->m_server, m_nodeId, uaDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit displayName changed
 	emit this->displayNameChanged(displayName);
-	// TODO : handle locale
 }
 
 QString QUaNode::description() const
@@ -175,7 +171,6 @@ QString QUaNode::description() const
 	Q_UNUSED(st);
 	// return
 	return QUaTypesConverter::uaStringToQString(outDescription.text);
-	// TODO : handle outDescription.locale
 }
 
 void QUaNode::setDescription(const QString & description)
@@ -184,14 +179,13 @@ void QUaNode::setDescription(const QString & description)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_LocalizedText
 	QByteArray byteDescription = description.toUtf8(); // NOTE : QByteArray must exist in stack
-	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"en-US", byteDescription.data());
+	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 	// set value
 	auto st = UA_Server_writeDescription(m_qUaServer->m_server, m_nodeId, uaDescription);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit description changed
 	emit this->descriptionChanged(description);
-	// TODO : handle locale
 }
 
 quint32 QUaNode::writeMask() const

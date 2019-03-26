@@ -99,27 +99,44 @@ int main(int argc, char *argv[])
 
 	// references
 
-	auto var1 = objsFolder->addBaseDataVariable("ns=1;s=var1");
+	auto var1 = objsFolder->addBaseDataVariable("ns = 1 ; s = var1");
 	var1->setDisplayName("var1");
 	var1->setValue(1);
+	objsFolder->addMethod("deleteVar1", [&var1]() {
+		if (var1) { delete var1; var1 = nullptr; }
+	});
+	auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
+	var2->setDisplayName("var2");
+	var2->setValue(2);
+	objsFolder->addMethod("deleteVar2", [&var2]() {
+		if (var2) { delete var2; var2 = nullptr; }
+	});
 	auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
 	obj1->setDisplayName("obj1");
 
+	// obj1 "hasVar" var1
 	obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	// var2 "isVarOf" obj1
+	var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
 
 	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
 	Q_ASSERT(*var1 == *var1ref);
 
-	obj1->addMethod("addReference", [obj1, var1]() {
-		obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
+	Q_ASSERT(*obj1 == *obj1ref);
+
+	obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
+		if(var1) obj1->addReference({ "hasVar", "isVarOf" }, var1);
+		if(var2) var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
 	});
 
-	obj1->addMethod("removeReference", [obj1, var1]() {
-		obj1->removeReference({ "hasVar", "isVarOf" }, var1);
+	obj1->addMethod("removeReferences", [&obj1, &var1, &var2]() {
+		if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
+		if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
 	});
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();
 
-    return a.exec();
+    return a.exec(); 
 }

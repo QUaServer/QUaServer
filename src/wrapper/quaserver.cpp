@@ -991,6 +991,12 @@ QUaFolderObject * QUaServer::objectsFolder()
 	return m_pobjectsFolder;
 }
 
+QUaNode * QUaServer::getNodebyId(const QString & strNodeId)
+{
+	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
+	return QUaNode::getNodeContext(nodeId, m_server);
+}
+
 UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
 {
 	UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);

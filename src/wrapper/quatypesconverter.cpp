@@ -11,7 +11,7 @@ namespace QUaTypesConverter {
 		quint16 namespaceIndex;
 		QString identifierString;
 		char    identifierType;
-		bool success = nodeIdStringSplit(name, &namespaceIndex, &identifierString, &identifierType);
+		bool success = nodeIdStringSplit(name.simplified().remove(' '), &namespaceIndex, &identifierString, &identifierType);
 
 		if (!success) {
 			qWarning() << "Failed to split node id string:" << name;
