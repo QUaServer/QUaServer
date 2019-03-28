@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QDateTime>
 #include <QTimer>
+#include <QFile>
 
 #include <QUaServer>
 
@@ -12,8 +13,15 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-	QUaServer server;
+	QFile certServer;
+	certServer.setFileName("server.der");
+	Q_ASSERT(certServer.exists());
+	certServer.open(QIODevice::ReadOnly);
+
+	QUaServer server(4840, certServer.readAll());
 	auto objsFolder = server.objectsFolder();
+
+	certServer.close();
 
 /*
 	// instances

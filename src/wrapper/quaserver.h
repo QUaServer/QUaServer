@@ -18,7 +18,10 @@ friend class QUaBaseVariable;
 friend class QUaBaseObject;
 
 public:
-    explicit QUaServer(QObject *parent = 0);
+	explicit QUaServer(const quint16    &intPort         = 4840, 
+		               const QByteArray &byteCertificate = QByteArray(), 
+		               QObject          *parent          = 0);
+	~QUaServer();
 
 	void start();
 	void stop();
@@ -51,15 +54,18 @@ public slots:
 	
 
 private:
-	UA_Server * m_server;
-	UA_Boolean  m_running;
+	UA_Server             * m_server;
+	UA_ServerConfig       * m_config;
+	UA_Boolean              m_running;
+	QByteArray              m_byteCertificate;
 	QMetaObject::Connection m_connection;
-
-	QUaFolderObject * m_pobjectsFolder;
+	QUaFolderObject       * m_pobjectsFolder;
 
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
+
+	void setupServer(); // only call once on constructor
 
 	void registerType(const QMetaObject &metaObject);
 	void registerEnum(const QMetaEnum &metaEnum);

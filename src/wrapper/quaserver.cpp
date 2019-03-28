@@ -312,11 +312,62 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	return retVal;
 }
 
-QUaServer::QUaServer(QObject *parent) : QObject(parent)
+// TODO
+typedef struct {
+	UA_Boolean allowAnonymous;
+	size_t usernamePasswordLoginSize;
+	UA_UsernamePasswordLogin *usernamePasswordLogin;
+} AccessControlContext;
+
+// NOTE : cannot load cert later with UA_Server_updateCertificate because
+//        it requires oldCertificate != NULL
+QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/, 
+	                 const QByteArray &byteCertificate/* = QByteArray()*/, 
+	                 QObject          *parent         /* = 0*/) 
+	: QObject(parent)
+{
+	// convert cert if valid
+	UA_ByteString cert;
+	UA_ByteString *ptr = nullptr;
+	if (!byteCertificate.isEmpty())
+	{
+		m_byteCertificate = byteCertificate;
+		// convert QByteArray to UA_ByteString
+		size_t          cert_length = static_cast<size_t>(m_byteCertificate.length());
+		const UA_Byte * cert_data   = reinterpret_cast<const UA_Byte *>(m_byteCertificate.constData());
+		cert.length   = cert_length;
+		UA_StatusCode success = UA_Array_copy(
+			cert_data,                             // src
+			cert_length,                           // size
+			reinterpret_cast<void **>(&cert.data), // dst
+			&UA_TYPES[UA_TYPES_BYTE]               // type
+		);
+		// only set pointer if succeeds
+		if (success == UA_STATUSCODE_GOOD) 
+		{
+			ptr = &cert;
+		}
+	}
+	// create config with port and certificate
+	this->m_config = UA_ServerConfig_new_minimal(intPort, ptr);
+	this->m_server = UA_Server_new(m_config);
+	// setup server
+	this->setupServer();
+
+	// TODO : see if we can use defaults (see UA_UsernamePasswordLogin usernamePasswords)
+	/*
+	static const size_t usernamePasswordsSize = 2;
+	static UA_UsernamePasswordLogin usernamePasswords[2] = {
+    {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
+    {UA_STRING_STATIC("user2"), UA_STRING_STATIC("password1")}};
+	*/
+	//        see if we can modify!
+	//((AccessControlContext*)this->m_config->accessControl.context)->
+}
+
+void QUaServer::setupServer()
 {
 	UA_StatusCode st;
-	UA_ServerConfig *config  = UA_ServerConfig_new_default();
-	this->m_server = UA_Server_new(config);
 	m_running = false;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
@@ -345,9 +396,11 @@ QUaServer::QUaServer(QObject *parent) : QObject(parent)
     this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject    ::staticMetaObject);
 }
 
-/* TODO : alternative constructor
-UA_EXPORT UA_ServerConfig * UA_ServerConfig_new_minimal(UA_UInt16 portNumber, const UA_ByteString *certificate);
-*/
+QUaServer::~QUaServer()
+{
+	UA_Server_delete(this->m_server);
+	UA_ServerConfig_delete(this->m_config);
+}
 
 void QUaServer::start()
 {

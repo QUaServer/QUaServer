@@ -19,10 +19,74 @@ cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
 
 The library version of the `open62541` files used currently in this repo is `v0.3-rc4`.
 
-# WIP
+# Server Certificate
 
+Create self-signed certificate
 
+```bash
+# Create dirs somewhere
+#rm -rf ca;
+#rm -rf server;
+mkdir ca
+mkdir server
 
+# Create CA key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca/ca.key
+# Create self-signed CA cert
+openssl req -new -x509 -days 360 -key ca/ca.key -subj "/CN=juangburgos CA/O=juangburgos Organization" -out ca/ca.crt
+# Convert cert to der format
+openssl x509 -in ca/ca.crt -inform pem -out ca/ca.der -outform der
+# Create cert revocation list CRL file
+# NOTE : need to have in relative path
+#        - Empty file 'demoCA/index.txt'
+#        - File 'crlnumber' with contents '1000'
+openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl.txt
+# Convert CRL to der format
+openssl crl -in ca/ca.crl.txt -inform pem -out ca/ca.crl -outform der
+
+# Create server key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server/server.key
+# Create server cert sign request
+openssl req -new -sha256 \
+-key server/server.key \
+-subj "/C=ES/ST=MAD/O=MyServer/CN=localhost" \
+-out server/server.csr
+# Sign cert sign request (NOTE: must provide exts.txt)
+openssl x509 -days 700 -req \
+-in server/server.csr \
+-extensions v3_ca \
+-extfile server/exts.txt \
+-CAcreateserial -CA ca/ca.crt -CAkey ca/ca.key \
+-out server/server.crt
+# See all OPC UA extensions are present in cret contents
+openssl x509 -text -noout -in server/server.crt
+# Convert cert to der format
+openssl x509 -in server/server.crt -inform pem -out server/server.der -outform der
+```
+
+The `exts.txt` must look like:
+
+```
+[v3_ca]
+subjectAltName=DNS:localhost,DNS:ppic09,IP:127.0.0.1,URI:urn:unconfigured:application
+basicConstraints=CA:TRUE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+keyUsage=digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,clientAuth,codeSigning
+```
+
+* NOTE : in `subjectAltName` we put ip address, machine name in windows network, domain name, etc.
+
+* TODO : `URI:urn:unconfigured:application` is necesary as it is but I think is customizable in server library.
+
+* Load `server/server.der` to server library.
+
+To make it work with UA Expert client:
+
+* Copy `ca/ca.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\certs`.
+
+* Copy `ca/ca.crl` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\crl`. 
 
 ---
 
@@ -54,3 +118,11 @@ The first 32 bits (least significant bits) of the BitFieldMaskDataType represent
 * <https://blog.basyskom.com/2018/want-to-give-qt-opcua-a-try/>
 
 * <https://github.com/open62541/open62541/issues/2584>
+
+* <http://documentation.unified-automation.com/uasdkcpp/1.5.5/html/L2UaDiscoveryConnect.html#DiscoveryConnect_ConnectConfig>
+
+* <https://www.openssl.org/docs/man1.0.2/man5/x509v3_config.html>
+
+* <https://forum.unified-automation.com/topic1762.html#p3553>
+
+* <https://serverfault.com/questions/823679/openssl-error-while-loading-crlnumber>
