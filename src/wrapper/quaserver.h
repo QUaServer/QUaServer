@@ -18,9 +18,18 @@ friend class QUaBaseVariable;
 friend class QUaBaseObject;
 
 public:
+
+#ifndef UA_ENABLE_ENCRYPTION
 	explicit QUaServer(const quint16    &intPort         = 4840, 
 		               const QByteArray &byteCertificate = QByteArray(), 
 		               QObject          *parent          = 0);
+#else
+	explicit QUaServer(const quint16    &intPort         = 4840, 
+		               const QByteArray &byteCertificate = QByteArray(), 
+		               const QByteArray &bytePrivateKey  = QByteArray(), 
+		               QObject          *parent          = 0);
+#endif
+	
 	~QUaServer();
 
 	void start();
@@ -57,15 +66,23 @@ private:
 	UA_Server             * m_server;
 	UA_ServerConfig       * m_config;
 	UA_Boolean              m_running;
-	QByteArray              m_byteCertificate;
+	QByteArray              m_byteCertificate; // NOTE : needs to exists as long as server instance
 	QMetaObject::Connection m_connection;
 	QUaFolderObject       * m_pobjectsFolder;
+
+#ifdef UA_ENABLE_ENCRYPTION
+	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
+#endif
 
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
 
-	void setupServer(); // only call once on constructor
+	// only call once on constructor
+	UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
+		                             UA_ByteString    &outUaCert, 
+		                             QByteArray       &outByteCert);
+	void setupServer();
 
 	void registerType(const QMetaObject &metaObject);
 	void registerEnum(const QMetaEnum &metaEnum);

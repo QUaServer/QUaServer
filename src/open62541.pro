@@ -18,3 +18,6 @@ CONFIG(debug, debug|release) {
 INCLUDEPATH += $$PWD
 
 SOURCES += $$PWD/open62541.c
+
+# [ENCRYPTION]
+INCLUDEPATH += $$PWD/../../mbedtls.git/build/include

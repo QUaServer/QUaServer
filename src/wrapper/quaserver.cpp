@@ -319,6 +319,7 @@ typedef struct {
 	UA_UsernamePasswordLogin *usernamePasswordLogin;
 } AccessControlContext;
 
+#ifndef UA_ENABLE_ENCRYPTION
 // NOTE : cannot load cert later with UA_Server_updateCertificate because
 //        it requires oldCertificate != NULL
 QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/, 
@@ -328,28 +329,10 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 {
 	// convert cert if valid
 	UA_ByteString cert;
-	UA_ByteString *ptr = nullptr;
-	if (!byteCertificate.isEmpty())
-	{
-		m_byteCertificate = byteCertificate;
-		// convert QByteArray to UA_ByteString
-		size_t          cert_length = static_cast<size_t>(m_byteCertificate.length());
-		const UA_Byte * cert_data   = reinterpret_cast<const UA_Byte *>(m_byteCertificate.constData());
-		cert.length   = cert_length;
-		UA_StatusCode success = UA_Array_copy(
-			cert_data,                             // src
-			cert_length,                           // size
-			reinterpret_cast<void **>(&cert.data), // dst
-			&UA_TYPES[UA_TYPES_BYTE]               // type
-		);
-		// only set pointer if succeeds
-		if (success == UA_STATUSCODE_GOOD) 
-		{
-			ptr = &cert;
-		}
-	}
+	UA_ByteString * ptr = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
 	// create config with port and certificate
 	this->m_config = UA_ServerConfig_new_minimal(intPort, ptr);
+	Q_CHECK_PTR(this->m_config);
 	this->m_server = UA_Server_new(m_config);
 	// setup server
 	this->setupServer();
@@ -363,6 +346,63 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 	*/
 	//        see if we can modify!
 	//((AccessControlContext*)this->m_config->accessControl.context)->
+}
+#else
+QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
+	                 const QByteArray & byteCertificate/* = QByteArray()*/,
+	                 const QByteArray & bytePrivateKey /* = QByteArray()*/,
+	                 QObject          * parent         /* = 0*/)
+	: QObject(parent)
+{
+	// convert cert if valid (should contain public key)
+	UA_ByteString cert;
+	UA_ByteString * ptrCert = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
+	// convert private key if valid
+	UA_ByteString priv;
+	UA_ByteString * ptrPriv = this->parseCertificate(bytePrivateKey, priv, m_bytePrivateKey);
+	// check if valid private key
+	if (ptrPriv)
+	{
+		// create config with port, certificate and private key for encryption
+		this->m_config = UA_ServerConfig_new_basic256sha256(intPort, ptrCert, ptrPriv, nullptr, 0, nullptr, 0);
+	}
+	else
+	{
+		// create config with port and certificate only (no encryption)
+		this->m_config = UA_ServerConfig_new_minimal(intPort, ptrCert);
+	}
+	Q_CHECK_PTR(this->m_config);
+	this->m_server = UA_Server_new(m_config);
+	// setup server
+	this->setupServer();
+}
+#endif
+
+UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
+	                                        UA_ByteString    &outUaCert,
+	                                        QByteArray       &outByteCertt)
+{
+	UA_ByteString *ptr = nullptr;
+	if (!inByteCert.isEmpty())
+	{
+		outByteCertt = inByteCert;
+		// convert QByteArray to UA_ByteString
+		size_t          cert_length = static_cast<size_t>(outByteCertt.length());
+		const UA_Byte * cert_data = reinterpret_cast<const UA_Byte *>(outByteCertt.constData());
+		outUaCert.length = cert_length;
+		UA_StatusCode success = UA_Array_copy(
+			cert_data,                                  // src
+			cert_length,                                // size
+			reinterpret_cast<void **>(&outUaCert.data), // dst
+			&UA_TYPES[UA_TYPES_BYTE]                    // type
+		);
+		// only set pointer if succeeds
+		if (success == UA_STATUSCODE_GOOD)
+		{
+			ptr = &outUaCert;
+		}
+	}
+	return ptr;
 }
 
 void QUaServer::setupServer()

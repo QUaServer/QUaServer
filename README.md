@@ -19,6 +19,42 @@ cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
 
 The library version of the `open62541` files used currently in this repo is `v0.3-rc4`.
 
+---
+
+# Compile Encryption
+
+We need the `mbedtls` dependency:
+
+* Clone [this repo](https://github.com/ARMmbed/mbedtls).
+
+* Checkout a release tag (e.g. `mbedtls-2.17.0`).
+
+Generate Solution:
+
+```bash
+cd "C:\Users\User\Desktop\Repos\mbedtls.git"
+mkdir build; cd build
+cmake .. -G "Visual Studio 15 2017 Win64"
+```
+
+* Build Release and Debug
+
+You should have headers in `C:\Users\User\Desktop\Repos\mbedtls.git\build\include\mbedtls`.
+
+And libs in `C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug` and in `C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Release`.
+
+Now **Rebuild** the `open62541` with the following command:
+
+```bash
+cd "C:\Users\User\Desktop\Repos\open62541.git"
+mkdir build; cd build
+cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_ENABLE_ENCRYPTION=ON .. -G "Visual Studio 15 2017 Win64" -DMBEDTLS_INCLUDE_DIRS="C:\Users\User\Desktop\Repos\mbedtls.git\build\include" -DMBEDTLS_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug" -DMBEDX509_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug" -DMBEDCRYPTO_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug"
+```
+
+* Copy the amalgamated `open62541.h` and `open62541.c` to `./src` and enable the lines that mark `[ENCRYPTION]` in `open62541.pro` and `open62541.pri`.
+
+---
+
 # Server Certificate
 
 Create self-signed certificate
@@ -35,17 +71,19 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca/ca.key
 # Create self-signed CA cert
 openssl req -new -x509 -days 360 -key ca/ca.key -subj "/CN=juangburgos CA/O=juangburgos Organization" -out ca/ca.crt
 # Convert cert to der format
-openssl x509 -in ca/ca.crt -inform pem -out ca/ca.der -outform der
+openssl x509 -in ca/ca.crt -inform pem -out ca/ca.crt.der -outform der
 # Create cert revocation list CRL file
 # NOTE : need to have in relative path
 #        - Empty file 'demoCA/index.txt'
 #        - File 'crlnumber' with contents '1000'
-openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl.txt
+openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl
 # Convert CRL to der format
-openssl crl -in ca/ca.crl.txt -inform pem -out ca/ca.crl -outform der
+openssl crl -in ca/ca.crl -inform pem -out ca/ca.crl.der -outform der
 
 # Create server key
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server/server.key
+# Convert server key to der format
+openssl rsa -in server/server.key -inform pem -out server/server.key.der -outform der
 # Create server cert sign request
 openssl req -new -sha256 \
 -key server/server.key \
@@ -61,8 +99,10 @@ openssl x509 -days 700 -req \
 # See all OPC UA extensions are present in cret contents
 openssl x509 -text -noout -in server/server.crt
 # Convert cert to der format
-openssl x509 -in server/server.crt -inform pem -out server/server.der -outform der
+openssl x509 -in server/server.crt -inform pem -out server/server.crt.der -outform der
 ```
+
+NOTE : `*.key` contains both **private** and **pubic** keys.
 
 The `exts.txt` must look like:
 
@@ -80,13 +120,15 @@ extendedKeyUsage=serverAuth,clientAuth,codeSigning
 
 * TODO : `URI:urn:unconfigured:application` is necesary as it is but I think is customizable in server library.
 
-* Load `server/server.der` to server library.
+* Load `server/server.key.der` to server library as *server private key*.
+
+* Load `server/server.crt.der` to server library as *server certificate*.
 
 To make it work with UA Expert client:
 
-* Copy `ca/ca.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\certs`.
+* Copy `ca/ca.crt.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\certs`.
 
-* Copy `ca/ca.crl` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\crl`. 
+* Copy `ca/ca.crl.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\crl`. 
 
 ---
 

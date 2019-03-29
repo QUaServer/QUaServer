@@ -14,11 +14,21 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
 	QFile certServer;
-	certServer.setFileName("server.der");
+	certServer.setFileName("server.crt.der");
 	Q_ASSERT(certServer.exists());
 	certServer.open(QIODevice::ReadOnly);
 
+#ifdef UA_ENABLE_ENCRYPTION
+	QFile privServer;
+	privServer.setFileName("server.key.der");
+	Q_ASSERT(privServer.exists());
+	privServer.open(QIODevice::ReadOnly);
+
+	QUaServer server(4840, certServer.readAll(), privServer.readAll());
+#else
 	QUaServer server(4840, certServer.readAll());
+#endif
+
 	auto objsFolder = server.objectsFolder();
 
 	certServer.close();
