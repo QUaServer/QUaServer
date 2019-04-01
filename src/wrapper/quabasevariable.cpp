@@ -416,18 +416,33 @@ bool QUaBaseVariable::historizing() const
 	return outHistorizing;
 }
 
-bool QUaBaseVariable::isWritable() const
+bool QUaBaseVariable::readAccess() const
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	return accessLevel.bits.bRead;
+}
+
+void QUaBaseVariable::setReadAccess(const bool & readAccess)
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue   = this->accessLevel();
+	accessLevel.bits.bRead = readAccess;
+	this->setAccessLevel(accessLevel.intValue);
+}
+
+bool QUaBaseVariable::writeAccess() const
 {
 	QUaAccessLevel accessLevel;
 	accessLevel.intValue = this->accessLevel();
 	return accessLevel.bits.bWrite;
 }
 
-void QUaBaseVariable::setIsWritable(const bool & isWritable)
+void QUaBaseVariable::setWriteAccess(const bool & writeAccess)
 {
 	QUaAccessLevel accessLevel;
 	accessLevel.intValue    = this->accessLevel();
-	accessLevel.bits.bWrite = isWritable;
+	accessLevel.bits.bWrite = writeAccess;
 	this->setAccessLevel(accessLevel.intValue);
 }
 

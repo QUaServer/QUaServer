@@ -312,13 +312,6 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	return retVal;
 }
 
-// TODO
-typedef struct {
-	UA_Boolean allowAnonymous;
-	size_t usernamePasswordLoginSize;
-	UA_UsernamePasswordLogin *usernamePasswordLogin;
-} AccessControlContext;
-
 #ifndef UA_ENABLE_ENCRYPTION
 // NOTE : cannot load cert later with UA_Server_updateCertificate because
 //        it requires oldCertificate != NULL
@@ -434,6 +427,35 @@ void QUaServer::setupServer()
     this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty        ::staticMetaObject);
     this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject      ::staticMetaObject);
     this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject    ::staticMetaObject);
+	// setup access control
+	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
+	// delete default user pass list
+	if (context->usernamePasswordLoginSize > 0)
+	{
+		for (size_t i = 0; i < context->usernamePasswordLoginSize; i++)
+		{
+			UA_String_deleteMembers(&context->usernamePasswordLogin[i].username);
+			UA_String_deleteMembers(&context->usernamePasswordLogin[i].password);
+		}
+		UA_free(context->usernamePasswordLogin);
+		context->usernamePasswordLoginSize = 0;
+	}
+
+	// TODO : find a way to handle this with QString without duplicating data
+	m_vectUsers.append({UA_STRING_STATIC("juangburgos"), UA_STRING_STATIC("whatever")});
+
+	context->usernamePasswordLogin     = m_vectUsers.data();
+	context->usernamePasswordLoginSize = m_vectUsers.count();
+
+	// TODO : change for static method
+	m_config->accessControl.deleteMembers = [](UA_AccessControl *ac) {
+		UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
+			ac->userTokenPoliciesSize,
+			&UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+		// NOTE : compared to deleteMembers_default, we do not free usernamePasswordLogin here
+		UA_free(ac->context);
+	};
+
 }
 
 QUaServer::~QUaServer()
@@ -1088,6 +1110,18 @@ QUaNode * QUaServer::getNodebyId(const QString & strNodeId)
 {
 	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
 	return QUaNode::getNodeContext(nodeId, m_server);
+}
+
+bool QUaServer::anonymousLoginAllowed() const
+{
+	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
+	return context->allowAnonymous;
+}
+
+void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed) const
+{
+	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
+	context->allowAnonymous = anonymousLoginAllowed;
 }
 
 UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)

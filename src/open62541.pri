@@ -12,13 +12,17 @@ win32 {
 # include open62541 header directory
 INCLUDEPATH += $$PWD/
 
+include($$PWD/open62541opts.pri)
+
 # [ENCRYPTION]
-# include mbedtls header directory
-INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
-# include pre-compiled mbedtls library as a dependency
-CONFIG(debug, debug|release) {
-	LIBS += -L$$PWD/../../mbedtls.git/build/library/Debug
-} else {
-	LIBS += -L$$PWD/../../mbedtls.git/build/library/Release
-}	
-LIBS += -lmbedcrypto -lmbedtls -lmbedx509
+equals(USE_ENCRYPTION, true) {
+	# include mbedtls header directory
+	INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
+	# include pre-compiled mbedtls library as a dependency
+	CONFIG(debug, debug|release) {
+		LIBS += -L$$PWD/../../mbedtls.git/build/library/Debug
+	} else {
+		LIBS += -L$$PWD/../../mbedtls.git/build/library/Release
+	}	
+	LIBS += -lmbedcrypto -lmbedtls -lmbedx509
+}

@@ -99,6 +99,7 @@ class QUaBaseVariable : public QUaNode
 	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel     NOTIFY accessLevelChanged    )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
+	// It is defined by overwriting the server's config->accessControl.getUserAccessLevel (see getUserAccessLevel_default)
 	// Q_PROPERTY(quint32 userAccessLevel READ get_userAccessLevel)	
 
 	Q_PROPERTY(double minimumSamplingInterval READ minimumSamplingInterval WRITE setMinimumSamplingInterval)
@@ -123,21 +124,28 @@ public:
 	void              setDataTypeEnum();
 	void              setDataTypeEnum(const QMetaEnum &metaEnum);
 	// Read-only, values set automatically when calling setValue
+	// NOTE : includes arrayDimensionsSize
 	qint32            valueRank() const;
-	QVector<quint32>  arrayDimensions() const; // includes arrayDimensionsSize
-	// 
+	QVector<quint32>  arrayDimensions() const; 
+	// Indicates how the Value of a Variable can be accessed (read/write) and if it contains current and/or historic data.
 	quint8            accessLevel() const;
 	void              setAccessLevel(const quint8 &accessLevel);
-	// 
+	// The MinimumSamplingInterval Attribute indicates how “current” the Value of the Variable will be kept. 
+	// It specifies (in milliseconds) how fast the Server can reasonably sample the value for changes
 	double            minimumSamplingInterval() const;
 	void              setMinimumSamplingInterval(const double &minimumSamplingInterval);
-	// 
+	// Whether the Server is actively collecting data for the history of the Variable
+	// Currently unsupported by library (false)
 	bool              historizing() const;
 
-	// helpers
+	// Helpers
 
-	bool              isWritable() const;
-	void              setIsWritable(const bool &isWritable);
+	// Default : read access true
+	bool              readAccess() const;
+	void              setReadAccess(const bool &readAccess);
+	// Default : write access false
+	bool              writeAccess() const;
+	void              setWriteAccess(const bool &writeAccess);
 
 	// static helpers
 

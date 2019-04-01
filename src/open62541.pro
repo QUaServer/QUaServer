@@ -19,5 +19,9 @@ INCLUDEPATH += $$PWD
 
 SOURCES += $$PWD/open62541.c
 
+include($$PWD/open62541opts.pri)
+
 # [ENCRYPTION]
-INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
+equals(USE_ENCRYPTION, true) {
+  INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
+}

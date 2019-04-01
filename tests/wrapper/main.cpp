@@ -32,6 +32,9 @@ int main(int argc, char *argv[])
 	auto objsFolder = server.objectsFolder();
 
 	certServer.close();
+#ifdef UA_ENABLE_ENCRYPTION
+	privServer.close();
+#endif
 
 /*
 	// instances
@@ -117,15 +120,17 @@ int main(int argc, char *argv[])
 
 	// references
 
-	auto var1 = objsFolder->addBaseDataVariable("ns = 1 ; s = var1");
+	auto var1 = objsFolder->addBaseDataVariable("ns=1;s=var1");
 	var1->setDisplayName("var1");
 	var1->setValue(1);
+	var1->setWriteAccess(true);
 	objsFolder->addMethod("deleteVar1", [&var1]() {
 		if (var1) { delete var1; var1 = nullptr; }
 	});
 	auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
 	var2->setDisplayName("var2");
 	var2->setValue(2);
+	var2->setWriteAccess(false);
 	objsFolder->addMethod("deleteVar2", [&var2]() {
 		if (var2) { delete var2; var2 = nullptr; }
 	});
@@ -152,6 +157,10 @@ int main(int argc, char *argv[])
 		if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
 		if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
 	});
+
+	// access control
+	server.setAnonymousLoginAllowed(false);
+	
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

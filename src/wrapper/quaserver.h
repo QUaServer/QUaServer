@@ -9,6 +9,13 @@
 #include <QUaProperty>
 #include <QUaBaseObject>
 
+// Copied from open62541.c
+typedef struct {
+	UA_Boolean allowAnonymous;
+	size_t usernamePasswordLoginSize;
+	UA_UsernamePasswordLogin *usernamePasswordLogin;
+} AccessControlContext;
+
 class QUaServer : public QObject
 {
 	Q_OBJECT
@@ -56,6 +63,11 @@ public:
 	// get node reference by node id (nullptr if node id does not exist)
 	QUaNode * getNodebyId(const QString &strNodeId);
 
+	// access control
+
+	bool anonymousLoginAllowed() const;
+	void setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
+
 signals:
 	void iterateServer();
 
@@ -73,6 +85,8 @@ private:
 #ifdef UA_ENABLE_ENCRYPTION
 	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
 #endif
+
+	QVector<UA_UsernamePasswordLogin> m_vectUsers;
 
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;

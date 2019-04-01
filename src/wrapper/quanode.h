@@ -67,21 +67,78 @@ typedef struct {
 } UA_NodeAttributes;
 */
 
+union QUaWriteMask
+{
+	QUaWriteMask()
+	{
+		// all attributes writable by default (getUserRightsMask_default returns 0xFFFFFFFF)
+		bits.bAccessLevel             = true;
+		bits.bArrrayDimensions        = true;
+		bits.bBrowseName              = true;
+		bits.bContainsNoLoops         = true;
+		bits.bDataType                = true;
+		bits.bDescription             = true;
+		bits.bDisplayName             = true;
+		bits.bEventNotifier           = true;
+		bits.bExecutable              = true;
+		bits.bHistorizing             = true;
+		bits.bInverseName             = true;
+		bits.bIsAbstract              = true;
+		bits.bMinimumSamplingInterval = true;
+		bits.bNodeClass               = true;
+		bits.bNodeId                  = true;
+		bits.bSymmetric               = true;
+		bits.bUserAccessLevel         = true;
+		bits.bUserExecutable          = true;
+		bits.bUserWriteMask           = true;
+		bits.bValueRank               = true;
+		bits.bWriteMask               = true;
+		bits.bValueForVariableType    = true;
+	};
+	struct bit_map {
+		bool bAccessLevel             : 1; // UA_WRITEMASK_ACCESSLEVEL            
+		bool bArrrayDimensions        : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS       
+		bool bBrowseName              : 1; // UA_WRITEMASK_BROWSENAME             
+		bool bContainsNoLoops         : 1; // UA_WRITEMASK_CONTAINSNOLOOPS        
+		bool bDataType                : 1; // UA_WRITEMASK_DATATYPE               
+		bool bDescription             : 1; // UA_WRITEMASK_DESCRIPTION            
+		bool bDisplayName             : 1; // UA_WRITEMASK_DISPLAYNAME            
+		bool bEventNotifier           : 1; // UA_WRITEMASK_EVENTNOTIFIER          
+		bool bExecutable              : 1; // UA_WRITEMASK_EXECUTABLE             
+		bool bHistorizing             : 1; // UA_WRITEMASK_HISTORIZING            
+		bool bInverseName             : 1; // UA_WRITEMASK_INVERSENAME            
+		bool bIsAbstract              : 1; // UA_WRITEMASK_ISABSTRACT             
+		bool bMinimumSamplingInterval : 1; // UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL
+		bool bNodeClass               : 1; // UA_WRITEMASK_NODECLASS              
+		bool bNodeId                  : 1; // UA_WRITEMASK_NODEID                 
+		bool bSymmetric               : 1; // UA_WRITEMASK_SYMMETRIC              
+		bool bUserAccessLevel         : 1; // UA_WRITEMASK_USERACCESSLEVEL        
+		bool bUserExecutable          : 1; // UA_WRITEMASK_USEREXECUTABLE         
+		bool bUserWriteMask           : 1; // UA_WRITEMASK_USERWRITEMASK          
+		bool bValueRank               : 1; // UA_WRITEMASK_VALUERANK              
+		bool bWriteMask               : 1; // UA_WRITEMASK_WRITEMASK              
+		bool bValueForVariableType    : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE  
+	} bits;
+	quint32 intValue;
+};
+
 class QUaNode : public QObject
 {
     Q_OBJECT
 
 	// Node Attributes
 
-	// N/A
+	// N/A : not an OPC UA node attribute, is it a library helper?
 	//Q_PROPERTY(quint32 specifiedAttributes READ get_specifiedAttributes)
 
 	Q_PROPERTY(QString displayName READ displayName WRITE setDisplayName NOTIFY displayNameChanged)
 	Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+	// Exposes the possibilities of a client to write the Attributes of the Node.
 	Q_PROPERTY(quint32 writeMask   READ writeMask   WRITE setWriteMask   NOTIFY writeMaskChanged  )
 
-	// Cannot be read, since the local "admin" user always has full rights.
+	// Cannot be read, since the local API user always has full rights.
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback.
+	// It is defined by overwriting the server's config->accessControl.getUserRightsMask (see getUserRightsMask_default)
 	//Q_PROPERTY(quint32 userWriteMask READ get_userWriteMask)
 
 	// Node Specifics
