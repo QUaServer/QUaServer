@@ -160,6 +160,8 @@ int main(int argc, char *argv[])
 
 	// access control
 	server.setAnonymousLoginAllowed(false);
+
+	server.addUser("juangburgos", "password");
 	
 
 	// NOTE : runs in main thread within Qt's event loop

@@ -9,13 +9,6 @@
 #include <QUaProperty>
 #include <QUaBaseObject>
 
-// Copied from open62541.c
-typedef struct {
-	UA_Boolean allowAnonymous;
-	size_t usernamePasswordLoginSize;
-	UA_UsernamePasswordLogin *usernamePasswordLogin;
-} AccessControlContext;
-
 class QUaServer : public QObject
 {
 	Q_OBJECT
@@ -68,6 +61,11 @@ public:
 	bool anonymousLoginAllowed() const;
 	void setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
 
+	void        addUser(const QString &strUserName, const QString &strPassword);
+	void        removeUser(const QString &strUserName);
+	QStringList getUserNames() const;
+	bool        userExists(const QString &strUserName) const;
+
 signals:
 	void iterateServer();
 
@@ -76,7 +74,6 @@ public slots:
 
 private:
 	UA_Server             * m_server;
-	UA_ServerConfig       * m_config;
 	UA_Boolean              m_running;
 	QByteArray              m_byteCertificate; // NOTE : needs to exists as long as server instance
 	QMetaObject::Connection m_connection;
@@ -86,8 +83,7 @@ private:
 	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
 #endif
 
-	QVector<UA_UsernamePasswordLogin> m_vectUsers;
-
+	QMap <QString     , QString  > m_mapUsers;
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
@@ -163,6 +159,16 @@ private:
 	static UA_StatusCode createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj);
 
 	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
+
+	static QMap<UA_Server*, QUaServer*> m_mapServers;
+
+	static UA_StatusCode activateSession(UA_Server                    *server, 
+		                                 UA_AccessControl             *ac,
+		                                 const UA_EndpointDescription *endpointDescription,
+		                                 const UA_ByteString          *secureChannelRemoteCertificate,
+		                                 const UA_NodeId              *sessionId,
+		                                 const UA_ExtensionObject     *userIdentityToken,
+		                                 void                        **sessionContext);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode

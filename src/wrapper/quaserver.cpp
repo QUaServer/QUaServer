@@ -3,7 +3,20 @@
 #include <QMetaProperty>
 #include <QTimer>
 
+// Copied from open62541.c
+typedef struct {
+	UA_Boolean                allowAnonymous;
+	size_t                    usernamePasswordLoginSize;
+	UA_UsernamePasswordLogin *usernamePasswordLogin;
+} AccessControlContext;
+#define ANONYMOUS_POLICY "open62541-anonymous-policy"
+#define USERNAME_POLICY  "open62541-username-policy"
+const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
+const UA_String username_policy  = UA_STRING_STATIC(USERNAME_POLICY);
+
 // [STATIC]
+QMap<UA_Server*, QUaServer*> QUaServer::m_mapServers;
+
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
 	                                   void            * sessionContext, 
@@ -312,6 +325,98 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	return retVal;
 }
 
+// Copied from activateSession_default in open62541 and then modified to use custom stuff
+UA_StatusCode QUaServer::activateSession(UA_Server * server, UA_AccessControl * ac, const UA_EndpointDescription * endpointDescription, const UA_ByteString * secureChannelRemoteCertificate, const UA_NodeId * sessionId, const UA_ExtensionObject * userIdentityToken, void ** sessionContext)
+{
+	AccessControlContext *context = (AccessControlContext*)ac->context;
+
+	/* The empty token is interpreted as anonymous */
+	if (userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
+		if (!context->allowAnonymous)
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		/* No userdata atm */
+		*sessionContext = NULL;
+		return (UA_StatusCode)UA_STATUSCODE_GOOD;
+	}
+
+	/* Could the token be decoded? */
+	if (userIdentityToken->encoding < UA_EXTENSIONOBJECT_DECODED)
+		return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+	/* Anonymous login */
+	if (userIdentityToken->content.decoded.type == &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN]) {
+		if (!context->allowAnonymous)
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		const UA_AnonymousIdentityToken *token = (UA_AnonymousIdentityToken*)
+			userIdentityToken->content.decoded.data;
+
+		/* Compatibility notice: Siemens OPC Scout v10 provides an empty
+		 * policyId. This is not compliant. For compatibility, assume that empty
+		 * policyId == ANONYMOUS_POLICY */
+		if (token->policyId.data && !UA_String_equal(&token->policyId, &anonymous_policy))
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		/* No userdata atm */
+		*sessionContext = NULL;
+		return (UA_StatusCode)UA_STATUSCODE_GOOD;
+	}
+
+	/* Username and password */
+	if (userIdentityToken->content.decoded.type == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN]) {
+		const UA_UserNameIdentityToken *userToken =
+			(UA_UserNameIdentityToken*)userIdentityToken->content.decoded.data;
+
+		if (!UA_String_equal(&userToken->policyId, &username_policy))
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		/* TODO: Support encrypted username/password over unencrypted SecureChannels */
+		if (userToken->encryptionAlgorithm.length > 0)
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		/* Empty username and password */
+		if (userToken->userName.length == 0 && userToken->password.length == 0)
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		/* Try to match username/pw */
+		UA_Boolean match = false;
+
+		// NOTE : custom code
+		const QString userName = QString::fromUtf8((char*)userToken->userName.data, (int)userToken->userName.length);
+		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);
+		QUaServer *qServer = QUaServer::m_mapServers.value(server);
+		QMapIterator<QString, QString> i(qServer->m_mapUsers);
+		while (i.hasNext()) 
+		{
+			i.next();
+			auto user = i.key();
+			auto pass = i.value();
+			if (user.compare(userName, Qt::CaseInsensitive) == 0 &&
+				pass.compare(password, Qt::CaseInsensitive) == 0)
+			{
+				match = true;
+				break;
+			}
+		}
+		
+		if (!match)
+			return UA_STATUSCODE_BADUSERACCESSDENIED;
+
+		/* No userdata atm */
+		//*sessionContext = NULL;
+
+		// NOTE : custom code
+		//const auto &strAuthUser = i.key();
+		//*sessionContext = (void*)&strAuthUser;
+
+		return (UA_StatusCode)UA_STATUSCODE_GOOD;
+	}
+
+	/* Unsupported token type */
+	return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+}
+
 #ifndef UA_ENABLE_ENCRYPTION
 // NOTE : cannot load cert later with UA_Server_updateCertificate because
 //        it requires oldCertificate != NULL
@@ -324,21 +429,11 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 	UA_ByteString cert;
 	UA_ByteString * ptr = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
 	// create config with port and certificate
-	this->m_config = UA_ServerConfig_new_minimal(intPort, ptr);
-	Q_CHECK_PTR(this->m_config);
-	this->m_server = UA_Server_new(m_config);
+	UA_ServerConfig * config = UA_ServerConfig_new_minimal(intPort, ptr);
+	Q_CHECK_PTR(config);
+	this->m_server = UA_Server_new(config);
 	// setup server
 	this->setupServer();
-
-	// TODO : see if we can use defaults (see UA_UsernamePasswordLogin usernamePasswords)
-	/*
-	static const size_t usernamePasswordsSize = 2;
-	static UA_UsernamePasswordLogin usernamePasswords[2] = {
-    {UA_STRING_STATIC("user1"), UA_STRING_STATIC("password")},
-    {UA_STRING_STATIC("user2"), UA_STRING_STATIC("password1")}};
-	*/
-	//        see if we can modify!
-	//((AccessControlContext*)this->m_config->accessControl.context)->
 }
 #else
 QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
@@ -347,6 +442,7 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	                 QObject          * parent         /* = 0*/)
 	: QObject(parent)
 {
+	UA_ServerConfig * config;
 	// convert cert if valid (should contain public key)
 	UA_ByteString cert;
 	UA_ByteString * ptrCert = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
@@ -357,15 +453,15 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	if (ptrPriv)
 	{
 		// create config with port, certificate and private key for encryption
-		this->m_config = UA_ServerConfig_new_basic256sha256(intPort, ptrCert, ptrPriv, nullptr, 0, nullptr, 0);
+		config = UA_ServerConfig_new_basic256sha256(intPort, ptrCert, ptrPriv, nullptr, 0, nullptr, 0);
 	}
 	else
 	{
 		// create config with port and certificate only (no encryption)
-		this->m_config = UA_ServerConfig_new_minimal(intPort, ptrCert);
+		config = UA_ServerConfig_new_minimal(intPort, ptrCert);
 	}
-	Q_CHECK_PTR(this->m_config);
-	this->m_server = UA_Server_new(m_config);
+	Q_CHECK_PTR(config);
+	this->m_server = UA_Server_new(config);
 	// setup server
 	this->setupServer();
 }
@@ -402,6 +498,8 @@ void QUaServer::setupServer()
 {
 	UA_StatusCode st;
 	m_running = false;
+	// Add to hash of server pairs
+	QUaServer::m_mapServers[this->m_server] = this;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
@@ -411,11 +509,11 @@ void QUaServer::setupServer()
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types
-	m_mapTypes.insert(QString(QUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)    );
+	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
 	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        );
-	m_mapTypes.insert(QString(QUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      );
-	m_mapTypes.insert(QString(QUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          );
+	m_mapTypes.insert(QString(QUaProperty::staticMetaObject.className())        , UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
+	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject.className())      , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
+	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
 	// set context for base types
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -423,45 +521,27 @@ void QUaServer::setupServer()
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// register constructors for instantiable types
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty        ::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject      ::staticMetaObject);
-    this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject    ::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject::staticMetaObject);
 	// setup access control
-	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
-	// delete default user pass list
-	if (context->usernamePasswordLoginSize > 0)
-	{
-		for (size_t i = 0; i < context->usernamePasswordLoginSize; i++)
-		{
-			UA_String_deleteMembers(&context->usernamePasswordLogin[i].username);
-			UA_String_deleteMembers(&context->usernamePasswordLogin[i].password);
-		}
-		UA_free(context->usernamePasswordLogin);
-		context->usernamePasswordLoginSize = 0;
-	}
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	// static methods to reimplement custom behaviour
+	config->accessControl.activateSession = &QUaServer::activateSession;
 
-	// TODO : find a way to handle this with QString without duplicating data
-	m_vectUsers.append({UA_STRING_STATIC("juangburgos"), UA_STRING_STATIC("whatever")});
-
-	context->usernamePasswordLogin     = m_vectUsers.data();
-	context->usernamePasswordLoginSize = m_vectUsers.count();
-
-	// TODO : change for static method
-	m_config->accessControl.deleteMembers = [](UA_AccessControl *ac) {
-		UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
-			ac->userTokenPoliciesSize,
-			&UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
-		// NOTE : compared to deleteMembers_default, we do not free usernamePasswordLogin here
-		UA_free(ac->context);
-	};
-
+	// TODO : add virtual method to QUaNode to implement 'getUserAccessLevel' 
+	//        or any of the access control callbacks
 }
 
 QUaServer::~QUaServer()
 {
+	// Remove from servers map
+	m_mapServers.remove(this->m_server);
+	// Cleanup library objects
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	UA_ServerConfig_delete(config);
 	UA_Server_delete(this->m_server);
-	UA_ServerConfig_delete(this->m_config);
 }
 
 void QUaServer::start()
@@ -1114,14 +1194,36 @@ QUaNode * QUaServer::getNodebyId(const QString & strNodeId)
 
 bool QUaServer::anonymousLoginAllowed() const
 {
-	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	AccessControlContext *context = static_cast<AccessControlContext*>(config->accessControl.context);
 	return context->allowAnonymous;
 }
 
 void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed) const
 {
-	AccessControlContext *context = static_cast<AccessControlContext*>(m_config->accessControl.context);
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	AccessControlContext *context = static_cast<AccessControlContext*>(config->accessControl.context);
 	context->allowAnonymous = anonymousLoginAllowed;
+}
+
+void QUaServer::addUser(const QString & strUserName, const QString & strPassword)
+{
+	m_mapUsers[strUserName] = strPassword;
+}
+
+void QUaServer::removeUser(const QString & strUserName)
+{
+	m_mapUsers.remove(strUserName);
+}
+
+QStringList QUaServer::getUserNames() const
+{
+	return m_mapUsers.keys();
+}
+
+bool QUaServer::userExists(const QString & strUserName) const
+{
+	return m_mapUsers.contains(strUserName);
 }
 
 UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
