@@ -83,7 +83,8 @@ private:
 	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
 #endif
 
-	QMap <QString     , QString  > m_mapUsers;
+	QHash<QString     , QString  > m_hashUsers;
+	QHash<UA_NodeId   , QString  > m_hashSessions;
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
@@ -169,6 +170,11 @@ private:
 		                                 const UA_NodeId              *sessionId,
 		                                 const UA_ExtensionObject     *userIdentityToken,
 		                                 void                        **sessionContext);
+
+	static void closeSession(UA_Server        *server, 
+		                     UA_AccessControl *ac, 
+		                     const UA_NodeId  *sessionId, 
+		                     void             *sessionContext);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode

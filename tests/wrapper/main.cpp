@@ -124,45 +124,54 @@ int main(int argc, char *argv[])
 	var1->setDisplayName("var1");
 	var1->setValue(1);
 	var1->setWriteAccess(true);
-	objsFolder->addMethod("deleteVar1", [&var1]() {
-		if (var1) { delete var1; var1 = nullptr; }
-	});
-	auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
-	var2->setDisplayName("var2");
-	var2->setValue(2);
-	var2->setWriteAccess(false);
-	objsFolder->addMethod("deleteVar2", [&var2]() {
-		if (var2) { delete var2; var2 = nullptr; }
-	});
-	auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
-	obj1->setDisplayName("obj1");
+	//objsFolder->addMethod("deleteVar1", [&var1]() {
+	//	if (var1) { delete var1; var1 = nullptr; }
+	//});
+	//auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
+	//var2->setDisplayName("var2");
+	//var2->setValue(2);
+	//var2->setWriteAccess(false);
+	//objsFolder->addMethod("deleteVar2", [&var2]() {
+	//	if (var2) { delete var2; var2 = nullptr; }
+	//});
+	//auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
+	//obj1->setDisplayName("obj1");
 
-	// obj1 "hasVar" var1
-	obj1->addReference({ "hasVar", "isVarOf" }, var1);
-	// var2 "isVarOf" obj1
-	var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
+	//// obj1 "hasVar" var1
+	//obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	//// var2 "isVarOf" obj1
+	//var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
 
-	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
-	Q_ASSERT(*var1 == *var1ref);
+	//auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
+	//Q_ASSERT(*var1 == *var1ref);
 
-	auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
-	Q_ASSERT(*obj1 == *obj1ref);
+	//auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
+	//Q_ASSERT(*obj1 == *obj1ref);
 
-	obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
-		if(var1) obj1->addReference({ "hasVar", "isVarOf" }, var1);
-		if(var2) var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
-	});
+	//obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
+	//	if(var1) obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	//	if(var2) var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
+	//});
 
-	obj1->addMethod("removeReferences", [&obj1, &var1, &var2]() {
-		if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
-		if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
-	});
+	//obj1->addMethod("removeReferences", [&obj1, &var1, &var2]() {
+	//	if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
+	//	if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
+	//});
 
 	// access control
 	server.setAnonymousLoginAllowed(false);
 
-	server.addUser("juangburgos", "password");
+	server.addUser("juan"  , "1");
+	server.addUser("burgos", "1");
 	
+	objsFolder->addMethod("removeUser", [&server](QString userName) {
+		if (!server.userExists(userName))
+		{
+			return false;
+		}
+		server.removeUser(userName);
+		return true;
+	});
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

@@ -326,14 +326,28 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 }
 
 // Copied from activateSession_default in open62541 and then modified to use custom stuff
-UA_StatusCode QUaServer::activateSession(UA_Server * server, UA_AccessControl * ac, const UA_EndpointDescription * endpointDescription, const UA_ByteString * secureChannelRemoteCertificate, const UA_NodeId * sessionId, const UA_ExtensionObject * userIdentityToken, void ** sessionContext)
+UA_StatusCode QUaServer::activateSession(UA_Server                    * server, 
+	                                     UA_AccessControl             * ac, 
+	                                     const UA_EndpointDescription * endpointDescription, 
+	                                     const UA_ByteString          * secureChannelRemoteCertificate, 
+	                                     const UA_NodeId              * sessionId, 
+	                                     const UA_ExtensionObject     * userIdentityToken, 
+	                                     void                        ** sessionContext)
 {
 	AccessControlContext *context = (AccessControlContext*)ac->context;
+
+	// NOTE : custom code : get server instance
+	QUaServer *qServer = QUaServer::m_mapServers.value(server);
+	Q_CHECK_PTR(qServer);
 
 	/* The empty token is interpreted as anonymous */
 	if (userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
 		if (!context->allowAnonymous)
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		// NOTE : custom code : add session to hash
+		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+		qServer->m_hashSessions[*sessionId] = "";
 
 		/* No userdata atm */
 		*sessionContext = NULL;
@@ -357,6 +371,10 @@ UA_StatusCode QUaServer::activateSession(UA_Server * server, UA_AccessControl * 
 		 * policyId == ANONYMOUS_POLICY */
 		if (token->policyId.data && !UA_String_equal(&token->policyId, &anonymous_policy))
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		// NOTE : custom code : add session to hash
+		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+		qServer->m_hashSessions[*sessionId] = "";
 
 		/* No userdata atm */
 		*sessionContext = NULL;
@@ -382,11 +400,10 @@ UA_StatusCode QUaServer::activateSession(UA_Server * server, UA_AccessControl * 
 		/* Try to match username/pw */
 		UA_Boolean match = false;
 
-		// NOTE : custom code
+		// NOTE : custom code : check user and password
 		const QString userName = QString::fromUtf8((char*)userToken->userName.data, (int)userToken->userName.length);
-		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);
-		QUaServer *qServer = QUaServer::m_mapServers.value(server);
-		QMapIterator<QString, QString> i(qServer->m_mapUsers);
+		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);	
+		QHashIterator<QString, QString> i(qServer->m_hashUsers);
 		while (i.hasNext()) 
 		{
 			i.next();
@@ -403,18 +420,26 @@ UA_StatusCode QUaServer::activateSession(UA_Server * server, UA_AccessControl * 
 		if (!match)
 			return UA_STATUSCODE_BADUSERACCESSDENIED;
 
-		/* No userdata atm */
-		//*sessionContext = NULL;
+		// NOTE : custom code : add session to hash
+		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+		qServer->m_hashSessions[*sessionId] = userName;
 
-		// NOTE : custom code
-		//const auto &strAuthUser = i.key();
-		//*sessionContext = (void*)&strAuthUser;
+		/* No userdata atm */
+		*sessionContext = NULL;
 
 		return (UA_StatusCode)UA_STATUSCODE_GOOD;
 	}
 
 	/* Unsupported token type */
 	return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+}
+
+void QUaServer::closeSession(UA_Server * server, UA_AccessControl * ac, const UA_NodeId * sessionId, void * sessionContext)
+{
+	QUaServer *qServer = QUaServer::m_mapServers.value(server);
+	Q_CHECK_PTR(qServer);
+	// remove session form hash
+	qServer->m_hashSessions.remove(*sessionId);
 }
 
 #ifndef UA_ENABLE_ENCRYPTION
@@ -529,9 +554,31 @@ void QUaServer::setupServer()
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	// static methods to reimplement custom behaviour
 	config->accessControl.activateSession = &QUaServer::activateSession;
+	config->accessControl.closeSession    = &QUaServer::closeSession;
+
+	config->accessControl.getUserRightsMask = [](
+		                  UA_Server        *server, 
+		                  UA_AccessControl *ac,
+                          const UA_NodeId  *sessionId, 
+		                  void             *sessionContext,
+                          const UA_NodeId  *nodeId, 
+		                  void             *nodeContext) {
+		QUaServer *qServer = QUaServer::m_mapServers.value(server);
+		Q_CHECK_PTR(qServer);
+		Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+		// check if user still exists
+		QString strUserName = qServer->m_hashSessions.value(*sessionId);
+		if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+		{
+			// TODO : close session
+			return (UA_UInt32)0;
+		}
+		// TODO : handle premissions
+		return 0xFFFFFFFF;
+	};
 
 	// TODO : add virtual method to QUaNode to implement 'getUserAccessLevel' 
-	//        or any of the access control callbacks
+	//        or any of the other access control callbacks
 }
 
 QUaServer::~QUaServer()
@@ -1208,22 +1255,34 @@ void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed) con
 
 void QUaServer::addUser(const QString & strUserName, const QString & strPassword)
 {
-	m_mapUsers[strUserName] = strPassword;
+	if (strUserName.isEmpty())
+	{
+		return;
+	}
+	m_hashUsers[strUserName] = strPassword;
 }
 
 void QUaServer::removeUser(const QString & strUserName)
 {
-	m_mapUsers.remove(strUserName);
+	if (strUserName.isEmpty())
+	{
+		return;
+	}
+	m_hashUsers.remove(strUserName);
 }
 
 QStringList QUaServer::getUserNames() const
 {
-	return m_mapUsers.keys();
+	return m_hashUsers.keys();
 }
 
 bool QUaServer::userExists(const QString & strUserName) const
 {
-	return m_mapUsers.contains(strUserName);
+	if (strUserName.isEmpty())
+	{
+		return false;
+	}
+	return m_hashUsers.contains(strUserName);
 }
 
 UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
