@@ -307,8 +307,14 @@ void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget,
 		m_qUaServer->registerReference(ref);
 	}
 	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
+	// check valid node target
+	Q_ASSERT_X(nodeTarget, "QUaNode::addReference", "Invalid target node.");
+	if (!nodeTarget)
+	{
+		return;
+	}
 	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
-	// check if reference already exist
+	// check if reference already exists
 	auto set = getRefsInternal(ref, isForward);
 	if (set.contains(nodeTarget->m_nodeId))
 	{
@@ -327,8 +333,15 @@ void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget,
 
 void QUaNode::removeReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
 {
-	// first check if reference type is registered
+	// first check if reference type is removeReference
+	Q_ASSERT_X(m_qUaServer->m_hashRefs.contains(ref), "QUaNode::addReference", "Reference not registered.");
 	if (!m_qUaServer->m_hashRefs.contains(ref))
+	{
+		return;
+	}
+	// check valid node target
+	Q_ASSERT_X(nodeTarget, "QUaNode::removeReference", "Invalid target node.");
+	if (!nodeTarget)
 	{
 		return;
 	}
@@ -411,6 +424,15 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 	UA_BrowseResult_deleteMembers(&bRes);
 	// return
 	return retRefSet;
+}
+
+QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
+{
+	if (m_userWriteMaskCallback)
+	{
+		return m_userWriteMaskCallback(strUserName);
+	}
+	return 0xFFFFFFFF;
 }
 
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)

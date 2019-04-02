@@ -416,6 +416,15 @@ bool QUaBaseVariable::historizing() const
 	return outHistorizing;
 }
 
+QUaAccessLevel QUaBaseVariable::userAccessLevel(const QString & strUserName)
+{
+	if (m_userAccessLevelCallback)
+	{
+		return m_userAccessLevelCallback(strUserName);
+	}
+	return 0xFF;
+}
+
 bool QUaBaseVariable::readAccess() const
 {
 	QUaAccessLevel accessLevel;

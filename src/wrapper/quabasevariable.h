@@ -63,6 +63,17 @@ However, only the PropertyType and the BaseDataVariableType directly inherit fro
 
 union QUaAccessLevel
 {
+	struct bit_map {
+		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
+		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
+		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
+		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
+		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
+		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
+		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
+	} bits;
+	quint8 intValue;
+	// constructors
 	QUaAccessLevel()
 	{
 		// read only by default
@@ -74,16 +85,10 @@ union QUaAccessLevel
 		bits.bStatusWrite	 = false;
 		bits.bTimestampWrite = false;
 	};
-	struct bit_map {
-		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
-		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
-		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
-		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
-		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
-		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
-		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
-	} bits;
-	quint8 intValue;
+	QUaAccessLevel(const quint8 &value)
+	{
+		intValue = value;
+	};
 };
 
 class QUaBaseVariable : public QUaNode
@@ -138,6 +143,16 @@ public:
 	// Currently unsupported by library (false)
 	bool              historizing() const;
 
+	// Access Control API
+
+	// reimplement for custom access control for a given custom UA type (derived C++ class)
+	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
+
+	// provide specific implementation for individual variable nodes
+	// signature is <QUaAccessLevel(const QString &, QUaBaseVariable *)>
+	template<typename M>
+	void setUserAccessLevelCallback(const M &callback);
+
 	// Helpers
 
 	// Default : read access true
@@ -147,7 +162,7 @@ public:
 	bool              writeAccess() const;
 	void              setWriteAccess(const bool &writeAccess);
 
-	// static helpers
+	// Static Helpers
 
 	static qint32            GetValueRankFromQVariant      (const QVariant &varValue);
 	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
@@ -166,6 +181,15 @@ private:
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
 
+	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;
 };
+
+template<typename M>
+inline void QUaBaseVariable::setUserAccessLevelCallback(const M & callback)
+{
+	m_userAccessLevelCallback = [callback, this](const QString &strUserName) {
+		return callback(strUserName, this);
+	};
+}
 
 #endif // QUABASEVARIABLE_H

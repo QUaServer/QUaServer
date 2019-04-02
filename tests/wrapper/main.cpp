@@ -9,6 +9,20 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
+QUaAccessLevel my_callback(const QString &strUserName, QUaBaseVariable * var) {
+	QUaAccessLevel access = var->accessLevel();
+	// only juan can read
+	if (strUserName.compare("juan", Qt::CaseSensitive) == 0)
+	{
+		access.bits.bRead = true;
+	}
+	else
+	{
+		access.bits.bRead = false;
+	}
+	return access;
+}
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -36,7 +50,6 @@ int main(int argc, char *argv[])
 	privServer.close();
 #endif
 
-/*
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
@@ -116,7 +129,6 @@ int main(int argc, char *argv[])
 		}
 		return "Already Deleted";
 	});
-*/
 
 	// references
 
@@ -124,39 +136,39 @@ int main(int argc, char *argv[])
 	var1->setDisplayName("var1");
 	var1->setValue(1);
 	var1->setWriteAccess(true);
-	//objsFolder->addMethod("deleteVar1", [&var1]() {
-	//	if (var1) { delete var1; var1 = nullptr; }
-	//});
-	//auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
-	//var2->setDisplayName("var2");
-	//var2->setValue(2);
-	//var2->setWriteAccess(false);
-	//objsFolder->addMethod("deleteVar2", [&var2]() {
-	//	if (var2) { delete var2; var2 = nullptr; }
-	//});
-	//auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
-	//obj1->setDisplayName("obj1");
+	objsFolder->addMethod("deleteVar1", [&var1]() {
+		if (var1) { delete var1; var1 = nullptr; }
+	});
+	auto var2 = objsFolder->addBaseDataVariable("ns=1;s=var2");
+	var2->setDisplayName("var2");
+	var2->setValue(2);
+	var2->setWriteAccess(true);
+	objsFolder->addMethod("deleteVar2", [&var2]() {
+		if (var2) { delete var2; var2 = nullptr; }
+	});
+	auto obj1 = objsFolder->addBaseObject("ns=1;s=obj1");
+	obj1->setDisplayName("obj1");
 
-	//// obj1 "hasVar" var1
-	//obj1->addReference({ "hasVar", "isVarOf" }, var1);
-	//// var2 "isVarOf" obj1
-	//var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
+	// obj1 "hasVar" var1
+	obj1->addReference({ "hasVar", "isVarOf" }, var1);
+	// var2 "isVarOf" obj1
+	var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
 
-	//auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
-	//Q_ASSERT(*var1 == *var1ref);
+	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
+	Q_ASSERT(*var1 == *var1ref);
 
-	//auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
-	//Q_ASSERT(*obj1 == *obj1ref);
+	auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
+	Q_ASSERT(*obj1 == *obj1ref);
 
-	//obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
-	//	if(var1) obj1->addReference({ "hasVar", "isVarOf" }, var1);
-	//	if(var2) var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
-	//});
+	obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
+		if(var1) obj1->addReference({ "hasVar", "isVarOf" }, var1);
+		if(var2) var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
+	});
 
-	//obj1->addMethod("removeReferences", [&obj1, &var1, &var2]() {
-	//	if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
-	//	if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
-	//});
+	obj1->addMethod("removeReferences", [&obj1, &var1, &var2]() {
+		if (var1) obj1->removeReference({ "hasVar", "isVarOf" }, var1);
+		if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
+	});
 
 	// access control
 	server.setAnonymousLoginAllowed(false);
@@ -164,14 +176,21 @@ int main(int argc, char *argv[])
 	server.addUser("juan"  , "1");
 	server.addUser("burgos", "1");
 	
-	objsFolder->addMethod("removeUser", [&server](QString userName) {
-		if (!server.userExists(userName))
+	var1->setUserAccessLevelCallback([](const QString &strUserName, QUaBaseVariable * var) {
+		QUaAccessLevel access = var->accessLevel();
+		// only juan can write
+		if (strUserName.compare("juan", Qt::CaseSensitive) == 0)
 		{
-			return false;
+			access.bits.bWrite = true;
 		}
-		server.removeUser(userName);
-		return true;
+		else
+		{
+			access.bits.bWrite = false;
+		}
+		return access;
 	});
+
+	var2->setUserAccessLevelCallback(&my_callback);
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();

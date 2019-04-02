@@ -207,11 +207,13 @@ public:
 	Q_INVOKABLE explicit QUaBaseObject(QUaServer *server);
 
 	// Instance Creation API
+
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
 	T* addChild(const QString &strNodeId = "");
 
 	// Method Creation API
+
 	template<typename M>
 	void addMethod(const QString &strMethodName, const M &methodCallback);
 

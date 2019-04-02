@@ -69,6 +69,32 @@ typedef struct {
 
 union QUaWriteMask
 {
+	struct bit_map {
+		bool bAccessLevel             : 1; // UA_WRITEMASK_ACCESSLEVEL            
+		bool bArrrayDimensions        : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS       
+		bool bBrowseName              : 1; // UA_WRITEMASK_BROWSENAME             
+		bool bContainsNoLoops         : 1; // UA_WRITEMASK_CONTAINSNOLOOPS        
+		bool bDataType                : 1; // UA_WRITEMASK_DATATYPE               
+		bool bDescription             : 1; // UA_WRITEMASK_DESCRIPTION            
+		bool bDisplayName             : 1; // UA_WRITEMASK_DISPLAYNAME            
+		bool bEventNotifier           : 1; // UA_WRITEMASK_EVENTNOTIFIER          
+		bool bExecutable              : 1; // UA_WRITEMASK_EXECUTABLE             
+		bool bHistorizing             : 1; // UA_WRITEMASK_HISTORIZING            
+		bool bInverseName             : 1; // UA_WRITEMASK_INVERSENAME            
+		bool bIsAbstract              : 1; // UA_WRITEMASK_ISABSTRACT             
+		bool bMinimumSamplingInterval : 1; // UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL
+		bool bNodeClass               : 1; // UA_WRITEMASK_NODECLASS              
+		bool bNodeId                  : 1; // UA_WRITEMASK_NODEID                 
+		bool bSymmetric               : 1; // UA_WRITEMASK_SYMMETRIC              
+		bool bUserAccessLevel         : 1; // UA_WRITEMASK_USERACCESSLEVEL        
+		bool bUserExecutable          : 1; // UA_WRITEMASK_USEREXECUTABLE         
+		bool bUserWriteMask           : 1; // UA_WRITEMASK_USERWRITEMASK          
+		bool bValueRank               : 1; // UA_WRITEMASK_VALUERANK              
+		bool bWriteMask               : 1; // UA_WRITEMASK_WRITEMASK              
+		bool bValueForVariableType    : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE  
+	} bits;
+	quint32 intValue;
+	// constructors
 	QUaWriteMask()
 	{
 		// all attributes writable by default (getUserRightsMask_default returns 0xFFFFFFFF)
@@ -95,31 +121,10 @@ union QUaWriteMask
 		bits.bWriteMask               = true;
 		bits.bValueForVariableType    = true;
 	};
-	struct bit_map {
-		bool bAccessLevel             : 1; // UA_WRITEMASK_ACCESSLEVEL            
-		bool bArrrayDimensions        : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS       
-		bool bBrowseName              : 1; // UA_WRITEMASK_BROWSENAME             
-		bool bContainsNoLoops         : 1; // UA_WRITEMASK_CONTAINSNOLOOPS        
-		bool bDataType                : 1; // UA_WRITEMASK_DATATYPE               
-		bool bDescription             : 1; // UA_WRITEMASK_DESCRIPTION            
-		bool bDisplayName             : 1; // UA_WRITEMASK_DISPLAYNAME            
-		bool bEventNotifier           : 1; // UA_WRITEMASK_EVENTNOTIFIER          
-		bool bExecutable              : 1; // UA_WRITEMASK_EXECUTABLE             
-		bool bHistorizing             : 1; // UA_WRITEMASK_HISTORIZING            
-		bool bInverseName             : 1; // UA_WRITEMASK_INVERSENAME            
-		bool bIsAbstract              : 1; // UA_WRITEMASK_ISABSTRACT             
-		bool bMinimumSamplingInterval : 1; // UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL
-		bool bNodeClass               : 1; // UA_WRITEMASK_NODECLASS              
-		bool bNodeId                  : 1; // UA_WRITEMASK_NODEID                 
-		bool bSymmetric               : 1; // UA_WRITEMASK_SYMMETRIC              
-		bool bUserAccessLevel         : 1; // UA_WRITEMASK_USERACCESSLEVEL        
-		bool bUserExecutable          : 1; // UA_WRITEMASK_USEREXECUTABLE         
-		bool bUserWriteMask           : 1; // UA_WRITEMASK_USERWRITEMASK          
-		bool bValueRank               : 1; // UA_WRITEMASK_VALUERANK              
-		bool bWriteMask               : 1; // UA_WRITEMASK_WRITEMASK              
-		bool bValueForVariableType    : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE  
-	} bits;
-	quint32 intValue;
+	QUaWriteMask(const quint32 &value)
+	{
+		intValue = value;
+	};
 };
 
 class QUaNode : public QObject
@@ -197,9 +202,21 @@ public:
 	// specialization
 	QList<QUaNode*> getReferences(const QUaReference &ref, const bool &isForward = true);
 
-	
+	// Access Control API
 
-	// helpers
+	// reimplement for custom access control for a given custom UA type (derived C++ class)
+	virtual QUaWriteMask userWriteMask(const QString &strUserName);
+
+	// provide specific implementation for individual nodes
+	// signature is <QUaWriteMask(const QString &, QUaNode *)>
+	template<typename M>
+	void setUserWriteMaskCallback(const M &callback);
+
+	// Helpers
+
+
+
+	// Static Helpers
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QUaServer *server);
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, UA_Server *server);
@@ -236,6 +253,8 @@ private:
 
 	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
 
+	std::function<QUaWriteMask(const QString &)> m_userWriteMaskCallback;
+
 };
 
 template<typename T>
@@ -252,6 +271,14 @@ inline QList<T*> QUaNode::getReferences(const QUaReference &ref, const bool &isF
 		}
 	}
 	return retList;
+}
+
+template<typename M>
+inline void QUaNode::setUserWriteMaskCallback(const M & callback)
+{
+	m_userWriteMaskCallback = [callback, this](const QString &strUserName) {
+		return callback(strUserName, this);
+	};
 }
 
 #endif // QUASERVERNODE_H

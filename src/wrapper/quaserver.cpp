@@ -436,10 +436,77 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 
 void QUaServer::closeSession(UA_Server * server, UA_AccessControl * ac, const UA_NodeId * sessionId, void * sessionContext)
 {
+	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
 	Q_CHECK_PTR(qServer);
 	// remove session form hash
 	qServer->m_hashSessions.remove(*sessionId);
+}
+
+UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
+	                                   UA_AccessControl *ac,
+	                                   const UA_NodeId  *sessionId,
+	                                   void             *sessionContext,
+	                                   const UA_NodeId  *nodeId,
+	                                   void             *nodeContext) {
+	// get server
+	QUaServer *qServer = QUaServer::m_mapServers.value(server);
+	Q_CHECK_PTR(qServer);
+	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	// get user
+	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	// if is empty, is anon
+	if (strUserName.isEmpty())
+	{
+		return 0xFFFFFFFF;
+	}
+	// check if user still exists
+	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	{
+		// TODO : find a way to close session for non-existing user
+		return (UA_UInt32)0;
+	}
+	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
+	if (node)
+	{
+		return node->userWriteMask(strUserName).intValue;
+	}
+	// TODO : handle children?
+	return 0xFFFFFFFF;
+}
+
+UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
+	                                  UA_AccessControl *ac,
+	                                  const UA_NodeId  *sessionId,
+	                                  void             *sessionContext,
+	                                  const UA_NodeId  *nodeId,
+	                                  void             *nodeContext)
+{
+	// get server
+	QUaServer *qServer = QUaServer::m_mapServers.value(server);
+	Q_CHECK_PTR(qServer);
+	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	// get user
+	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	// if is empty, is anon
+	if (strUserName.isEmpty())
+	{
+		return 0xFF;
+	}
+	// check if user still exists
+	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	{
+		// TODO : find a way to close session for non-existing user
+		return (UA_UInt32)0;
+	}
+	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
+	QUaBaseVariable * variable = dynamic_cast<QUaBaseVariable *>(node);
+	if (variable)
+	{
+		return variable->userAccessLevel(strUserName).intValue;
+	}
+	// TODO : handle children?
+	return 0xFF;
 }
 
 #ifndef UA_ENABLE_ENCRYPTION
@@ -553,32 +620,12 @@ void QUaServer::setupServer()
 	// setup access control
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	// static methods to reimplement custom behaviour
-	config->accessControl.activateSession = &QUaServer::activateSession;
-	config->accessControl.closeSession    = &QUaServer::closeSession;
+	config->accessControl.activateSession    = &QUaServer::activateSession;
+	config->accessControl.closeSession       = &QUaServer::closeSession;
+	config->accessControl.getUserRightsMask  = &QUaServer::getUserRightsMask;
+	config->accessControl.getUserAccessLevel = &QUaServer::getUserAccessLevel;
 
-	config->accessControl.getUserRightsMask = [](
-		                  UA_Server        *server, 
-		                  UA_AccessControl *ac,
-                          const UA_NodeId  *sessionId, 
-		                  void             *sessionContext,
-                          const UA_NodeId  *nodeId, 
-		                  void             *nodeContext) {
-		QUaServer *qServer = QUaServer::m_mapServers.value(server);
-		Q_CHECK_PTR(qServer);
-		Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
-		// check if user still exists
-		QString strUserName = qServer->m_hashSessions.value(*sessionId);
-		if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
-		{
-			// TODO : close session
-			return (UA_UInt32)0;
-		}
-		// TODO : handle premissions
-		return 0xFFFFFFFF;
-	};
-
-	// TODO : add virtual method to QUaNode to implement 'getUserAccessLevel' 
-	//        or any of the other access control callbacks
+	// TODO : implement rest of callbacks
 }
 
 QUaServer::~QUaServer()

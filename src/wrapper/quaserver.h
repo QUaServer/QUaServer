@@ -32,9 +32,13 @@ public:
 	
 	~QUaServer();
 
+	// Server LifeCycle API
+
 	void start();
 	void stop();
 	bool isRunning();
+
+	// Instance Creation API
 
 	// register type in order to assign it a typeNodeId
 	template<typename T>
@@ -56,14 +60,18 @@ public:
 	// get node reference by node id (nullptr if node id does not exist)
 	QUaNode * getNodebyId(const QString &strNodeId);
 
-	// access control
+	// Access Control API
 
+	// anonymous login is enabled by default
 	bool anonymousLoginAllowed() const;
 	void setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
-
+	// if user already exists, it updates password
 	void        addUser(const QString &strUserName, const QString &strPassword);
+	// if user does not exist, it does nothing
 	void        removeUser(const QString &strUserName);
+	// get all user names
 	QStringList getUserNames() const;
+	// check if user already exists
 	bool        userExists(const QString &strUserName) const;
 
 signals:
@@ -175,6 +183,20 @@ private:
 		                     UA_AccessControl *ac, 
 		                     const UA_NodeId  *sessionId, 
 		                     void             *sessionContext);
+
+	static UA_UInt32 getUserRightsMask(UA_Server        *server,
+		                               UA_AccessControl *ac,
+		                               const UA_NodeId  *sessionId,
+		                               void             *sessionContext,
+		                               const UA_NodeId  *nodeId,
+		                               void             *nodeContext);
+
+	static UA_Byte getUserAccessLevel(UA_Server        *server, 
+		                              UA_AccessControl *ac,
+		                              const UA_NodeId  *sessionId, 
+		                              void             *sessionContext,
+		                              const UA_NodeId  *nodeId, 
+		                              void             *nodeContext);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
