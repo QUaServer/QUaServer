@@ -39,20 +39,6 @@ typedef struct {                              // UA_VariableAttributes_default
 	UA_Boolean       historizing;             // false
 } UA_VariableAttributes;
 
-
- * Access Level Masks
- * ------------------
- * The access level to a node is given by the following constants that are ANDed
- * with the overall access level.
-
-#define UA_ACCESSLEVELMASK_READ           (0x01<<0)
-#define UA_ACCESSLEVELMASK_WRITE          (0x01<<1)
-#define UA_ACCESSLEVELMASK_HISTORYREAD    (0x01<<2)
-#define UA_ACCESSLEVELMASK_HISTORYWRITE   (0x01<<3)
-#define UA_ACCESSLEVELMASK_SEMANTICCHANGE (0x01<<4)
-#define UA_ACCESSLEVELMASK_STATUSWRITE    (0x01<<5)
-#define UA_ACCESSLEVELMASK_TIMESTAMPWRITE (0x01<<6)
-
 */
 
 // Part 5 - 7.2 : BaseVariableType
@@ -60,36 +46,6 @@ typedef struct {                              // UA_VariableAttributes_default
 The BaseVariableType is the abstract base type for all other VariableTypes. 
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
-
-union QUaAccessLevel
-{
-	struct bit_map {
-		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
-		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
-		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
-		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
-		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
-		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
-		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
-	} bits;
-	quint8 intValue;
-	// constructors
-	QUaAccessLevel()
-	{
-		// read only by default
-		bits.bRead           = true;
-		bits.bWrite			 = false;
-		bits.bHistoryRead	 = false;
-		bits.bHistoryWrite	 = false;
-		bits.bSemanticChange = false;
-		bits.bStatusWrite	 = false;
-		bits.bTimestampWrite = false;
-	};
-	QUaAccessLevel(const quint8 &value)
-	{
-		intValue = value;
-	};
-};
 
 class QUaBaseVariable : public QUaNode
 {
@@ -115,6 +71,8 @@ class QUaBaseVariable : public QUaNode
 public:
 	explicit QUaBaseVariable(QUaServer *server);
 	
+	// Attributes API
+
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
 	// Use QVariant::fromValue or use casting to force a dataType
@@ -143,16 +101,6 @@ public:
 	// Currently unsupported by library (false)
 	bool              historizing() const;
 
-	// Access Control API
-
-	// reimplement for custom access control for a given custom UA type (derived C++ class)
-	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
-
-	// provide specific implementation for individual variable nodes
-	// signature is <QUaAccessLevel(const QString &, QUaBaseVariable *)>
-	template<typename M>
-	void setUserAccessLevelCallback(const M &callback);
-
 	// Helpers
 
 	// Default : read access true
@@ -180,16 +128,6 @@ private:
 		                void                  *nodeContext, 
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
-
-	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;
 };
-
-template<typename M>
-inline void QUaBaseVariable::setUserAccessLevelCallback(const M & callback)
-{
-	m_userAccessLevelCallback = [callback, this](const QString &strUserName) {
-		return callback(strUserName, this);
-	};
-}
 
 #endif // QUABASEVARIABLE_H

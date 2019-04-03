@@ -56,9 +56,9 @@ public:
 	QUaFolderObject * objectsFolder();
 	// get node reference by node id and cast to type (nullptr if node id does not exist)
 	template<typename T>
-	T* getNodebyId(const QString &strNodeId);
+	T* nodeById(const QString &strNodeId);
 	// get node reference by node id (nullptr if node id does not exist)
-	QUaNode * getNodebyId(const QString &strNodeId);
+	QUaNode * nodeById(const QString &strNodeId);
 
 	// Access Control API
 
@@ -69,8 +69,10 @@ public:
 	void        addUser(const QString &strUserName, const QString &strPassword);
 	// if user does not exist, it does nothing
 	void        removeUser(const QString &strUserName);
+	// number of users
+	int         userCount();
 	// get all user names
-	QStringList getUserNames() const;
+	QStringList userNames() const;
 	// check if user already exists
 	bool        userExists(const QString &strUserName) const;
 
@@ -237,9 +239,9 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 }
 
 template<typename T>
-inline T * QUaServer::getNodebyId(const QString &strNodeId)
+inline T * QUaServer::nodeById(const QString &strNodeId)
 {
-	return dynamic_cast<T*>(this->getNodebyId(strNodeId));
+	return dynamic_cast<T*>(this->nodeById(strNodeId));
 }
 
 template<typename T>

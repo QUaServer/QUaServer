@@ -455,11 +455,6 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
 	// get user
 	QString strUserName = qServer->m_hashSessions.value(*sessionId);
-	// if is empty, is anon
-	if (strUserName.isEmpty())
-	{
-		return 0xFFFFFFFF;
-	}
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
@@ -488,11 +483,6 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
 	// get user
 	QString strUserName = qServer->m_hashSessions.value(*sessionId);
-	// if is empty, is anon
-	if (strUserName.isEmpty())
-	{
-		return 0xFF;
-	}
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
@@ -1280,7 +1270,7 @@ QUaFolderObject * QUaServer::objectsFolder()
 	return m_pobjectsFolder;
 }
 
-QUaNode * QUaServer::getNodebyId(const QString & strNodeId)
+QUaNode * QUaServer::nodeById(const QString & strNodeId)
 {
 	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
 	return QUaNode::getNodeContext(nodeId, m_server);
@@ -1318,7 +1308,12 @@ void QUaServer::removeUser(const QString & strUserName)
 	m_hashUsers.remove(strUserName);
 }
 
-QStringList QUaServer::getUserNames() const
+int QUaServer::userCount()
+{
+	return m_hashUsers.count();
+}
+
+QStringList QUaServer::userNames() const
 {
 	return m_hashUsers.keys();
 }

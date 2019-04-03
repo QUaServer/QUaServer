@@ -127,6 +127,36 @@ union QUaWriteMask
 	};
 };
 
+union QUaAccessLevel
+{
+	struct bit_map {
+		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
+		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
+		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
+		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
+		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
+		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
+		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
+	} bits;
+	quint8 intValue;
+	// constructors
+	QUaAccessLevel()
+	{
+		// read only by default
+		bits.bRead           = true;
+		bits.bWrite			 = false;
+		bits.bHistoryRead	 = false;
+		bits.bHistoryWrite	 = false;
+		bits.bSemanticChange = false;
+		bits.bStatusWrite	 = false;
+		bits.bTimestampWrite = false;
+	};
+	QUaAccessLevel(const quint8 &value)
+	{
+		intValue = value;
+	};
+};
+
 class QUaNode : public QObject
 {
     Q_OBJECT
@@ -169,7 +199,7 @@ public:
 
 	bool operator ==(const QUaNode &other) const;
 
-	// OPC UA methods API
+	// Attributes API
 
 	QString displayName   () const;
 	void    setDisplayName(const QString &displayName);
@@ -198,9 +228,9 @@ public:
 	void removeReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
 
 	template<typename T>
-	QList<T*>       getReferences(const QUaReference &ref, const bool &isForward = true);
+	QList<T*>       findReferences(const QUaReference &ref, const bool &isForward = true);
 	// specialization
-	QList<QUaNode*> getReferences(const QUaReference &ref, const bool &isForward = true);
+	QList<QUaNode*> findReferences(const QUaReference &ref, const bool &isForward = true);
 
 	// Access Control API
 
@@ -212,9 +242,17 @@ public:
 	template<typename M>
 	void setUserWriteMaskCallback(const M &callback);
 
+	// reimplement for custom access control for a given custom UA type (derived C++ class)
+	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
+
+	// provide specific implementation for individual variable nodes
+	// signature is <QUaAccessLevel(const QString &, QUaBaseVariable *)>
+	template<typename M>
+	void setUserAccessLevelCallback(const M &callback);
+
 	// Helpers
 
-
+	// TODO : helpers for write mask using QUaWriteMask
 
 	// Static Helpers
 
@@ -253,15 +291,15 @@ private:
 
 	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
 
-	std::function<QUaWriteMask(const QString &)> m_userWriteMaskCallback;
-
+	std::function<QUaWriteMask  (const QString &)> m_userWriteMaskCallback;
+	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;
 };
 
 template<typename T>
-inline QList<T*> QUaNode::getReferences(const QUaReference &ref, const bool &isForward/* = true*/)
+inline QList<T*> QUaNode::findReferences(const QUaReference &ref, const bool &isForward/* = true*/)
 {
 	QList<T*> retList;
-	QList<QUaNode*> nodeList = getReferences(ref, isForward);
+	QList<QUaNode*> nodeList = findReferences(ref, isForward);
 	for (int i = 0; i < nodeList.count(); i++)
 	{
 		T* ref = dynamic_cast<T*>(nodeList.at(i));
@@ -277,6 +315,14 @@ template<typename M>
 inline void QUaNode::setUserWriteMaskCallback(const M & callback)
 {
 	m_userWriteMaskCallback = [callback, this](const QString &strUserName) {
+		return callback(strUserName, this);
+	};
+}
+
+template<typename M>
+inline void QUaNode::setUserAccessLevelCallback(const M & callback)
+{
+	m_userAccessLevelCallback = [callback, this](const QString &strUserName) {
 		return callback(strUserName, this);
 	};
 }

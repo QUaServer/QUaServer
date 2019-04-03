@@ -364,7 +364,7 @@ void QUaNode::removeReference(const QUaReference & ref, const QUaNode * nodeTarg
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 }
 
-QList<QUaNode*> QUaNode::getReferences(const QUaReference & ref, const bool & isForward)
+QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & isForward)
 {
 	QList<QUaNode*> retRefList;
 	// call internal method
@@ -428,11 +428,36 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 
 QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
 {
+	// if has specific callback, use that one
 	if (m_userWriteMaskCallback)
 	{
 		return m_userWriteMaskCallback(strUserName);
 	}
+	// if has a node parent, use parent's callback
+	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	if (parent)
+	{
+		return parent->userWriteMask(strUserName);
+	}
+	// else all permissions
 	return 0xFFFFFFFF;
+}
+
+QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
+{
+	// if has specific callback, use that one
+	if (m_userAccessLevelCallback)
+	{
+		return m_userAccessLevelCallback(strUserName);
+	}
+	// if has a node parent, use parent's callback
+	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	if (parent)
+	{
+		return parent->userAccessLevel(strUserName);
+	}
+	// else all permissions
+	return 0xFF;
 }
 
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)

@@ -38,7 +38,7 @@ struct QUaMethodTraitsBase
 		UA_Argument inputArgument;
 		UA_Argument_init(&inputArgument);
 		// create n-th argument with name "Arg" + number
-		inputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US", (char *)"Method Argument");
+		inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
 		inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
 		inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
 		inputArgument.valueRank   = UA_VALUERANK_SCALAR;
@@ -57,7 +57,7 @@ struct QUaMethodTraitsBase
 		// create output argument
 		UA_Argument outputArgument;
 		UA_Argument_init(&outputArgument);
-		outputArgument.description = UA_LOCALIZEDTEXT((char *)"en-US",
+		outputArgument.description = UA_LOCALIZEDTEXT((char *)"",
 													  (char *)"Result Value");
 		outputArgument.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
 		outputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<R>();
@@ -197,7 +197,7 @@ class QUaBaseObject : public QUaNode
 	// Object Attributes
 
 	// TODO
-	//Q_PROPERTY(UA_Byte eventNotifier READ get_eventNotifier)
+	//Q_PROPERTY(UA_Byte eventNotifier READ eventNotifier)
 	// UA_Server_readEventNotifier
 	// UA_Server_writeEventNotifier
 
@@ -205,6 +205,10 @@ friend class QUaServer;
 
 public:
 	Q_INVOKABLE explicit QUaBaseObject(QUaServer *server);
+
+	// Attributes API
+
+	// TODO : 
 
 	// Instance Creation API
 

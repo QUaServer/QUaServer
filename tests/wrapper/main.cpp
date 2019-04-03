@@ -9,7 +9,9 @@
 #include "mynewobjecttype.h"
 #include "mynewvariabletype.h"
 
-QUaAccessLevel my_callback(const QString &strUserName, QUaBaseVariable * var) {
+QUaAccessLevel access_callback(const QString &strUserName, QUaNode * node) {
+	QUaBaseVariable * var = dynamic_cast<QUaBaseVariable*>(node);
+	Q_CHECK_PTR(var);
 	QUaAccessLevel access = var->accessLevel();
 	// only juan can read
 	if (strUserName.compare("juan", Qt::CaseSensitive) == 0)
@@ -50,6 +52,7 @@ int main(int argc, char *argv[])
 	privServer.close();
 #endif
 
+	// -----------------------------------------------------------
 	// instances
 
 	auto varBaseData = objsFolder->addBaseDataVariable();
@@ -68,6 +71,7 @@ int main(int argc, char *argv[])
 	objFolder->setBrowseName("QUaFolderObject");
 	objFolder->setDisplayName("QUaFolderObject");
 
+	// -----------------------------------------------------------
 	// methods
 
 	objsFolder->addMethod("method1", []() {
@@ -86,6 +90,7 @@ int main(int argc, char *argv[])
 		return QString("%1, %2, %3").arg(x).arg(y).arg(str);
 	});	
 
+	// -----------------------------------------------------------
 	// custom types
 
 	auto newobjTypeInstance = objsFolder->addChild<MyNewObjectSubType>();
@@ -130,6 +135,7 @@ int main(int argc, char *argv[])
 		return "Already Deleted";
 	});
 
+	// -----------------------------------------------------------
 	// references
 
 	auto var1 = objsFolder->addBaseDataVariable("ns=1;s=var1");
@@ -154,10 +160,10 @@ int main(int argc, char *argv[])
 	// var2 "isVarOf" obj1
 	var2->addReference({ "hasVar", "isVarOf" }, obj1, false);
 
-	auto var1ref = obj1->getReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
+	auto var1ref = obj1->findReferences<QUaBaseDataVariable>({ "hasVar", "isVarOf" }).first();
 	Q_ASSERT(*var1 == *var1ref);
 
-	auto obj1ref = server.getNodebyId<QUaBaseObject>("ns=1;s=obj1");
+	auto obj1ref = server.nodeById<QUaBaseObject>("ns=1;s=obj1");
 	Q_ASSERT(*obj1 == *obj1ref);
 
 	obj1->addMethod("addReferences", [&obj1, &var1, &var2]() {
@@ -170,13 +176,17 @@ int main(int argc, char *argv[])
 		if (var2) var2->removeReference({ "hasVar", "isVarOf" }, obj1, false);
 	});
 
+	// -----------------------------------------------------------
 	// access control
-	server.setAnonymousLoginAllowed(false);
+
+	//server.setAnonymousLoginAllowed(false);
 
 	server.addUser("juan"  , "1");
 	server.addUser("burgos", "1");
 	
-	var1->setUserAccessLevelCallback([](const QString &strUserName, QUaBaseVariable * var) {
+	var1->setUserAccessLevelCallback([](const QString &strUserName, QUaNode * node) {
+		QUaBaseVariable * var = dynamic_cast<QUaBaseVariable*>(node);
+		Q_CHECK_PTR(var);
 		QUaAccessLevel access = var->accessLevel();
 		// only juan can write
 		if (strUserName.compare("juan", Qt::CaseSensitive) == 0)
@@ -190,7 +200,20 @@ int main(int argc, char *argv[])
 		return access;
 	});
 
-	var2->setUserAccessLevelCallback(&my_callback);
+	var2->setUserAccessLevelCallback(&access_callback);
+
+	newVarSubTypeInstance->setUserAccessLevelCallback(&access_callback);
+	newVarSubTypeInstance->myOtherTwo()->myVarTwo()->setUserAccessLevelCallback([](const QString &strUserName, QUaNode * node) {
+		QUaBaseVariable * var = dynamic_cast<QUaBaseVariable*>(node);
+		Q_CHECK_PTR(var);
+		QUaAccessLevel access = var->accessLevel();
+		// allow full access only to this child variable
+		access.bits.bRead  = true;
+		access.bits.bWrite = true;
+		return access;
+	});
+	newVarSubTypeInstance->myOtherTwo()->myVarTwo()->setWriteAccess(true);
+	newVarSubTypeInstance->myOtherTwo()->myVarTwo()->setValue("test");
 
 	// NOTE : runs in main thread within Qt's event loop
 	server.start();
