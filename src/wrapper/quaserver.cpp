@@ -420,8 +420,10 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		if (!match)
 			return UA_STATUSCODE_BADUSERACCESSDENIED;
 
+		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
+		//Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+
 		// NOTE : custom code : add session to hash
-		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
 		qServer->m_hashSessions[*sessionId] = userName;
 
 		/* No userdata atm */
@@ -434,7 +436,10 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 	return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 }
 
-void QUaServer::closeSession(UA_Server * server, UA_AccessControl * ac, const UA_NodeId * sessionId, void * sessionContext)
+void QUaServer::closeSession(UA_Server        * server, 
+	                         UA_AccessControl * ac, 
+	                         const UA_NodeId  * sessionId, 
+	                         void             * sessionContext)
 {
 	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
@@ -458,15 +463,19 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		// TODO : find a way to close session for non-existing user
+		// TODO : waint until officially supported
+		// https://github.com/open62541/open62541/issues/2617
+		//auto st = UA_Server_closeSession(server, sessionId);
+		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		return (UA_UInt32)0;
 	}
+	// if node from user tree then call user implementation
 	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
 	if (node)
 	{
 		return node->userWriteMask(strUserName).intValue;
 	}
-	// TODO : handle children?
+	// else default
 	return 0xFFFFFFFF;
 }
 
@@ -486,16 +495,20 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		// TODO : find a way to close session for non-existing user
+		// TODO : waint until officially supported
+		// https://github.com/open62541/open62541/issues/2617
+		//auto st = UA_Server_closeSession(server, sessionId);
+		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		return (UA_UInt32)0;
 	}
+	// if node from user tree then call user implementation
 	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
 	QUaBaseVariable * variable = dynamic_cast<QUaBaseVariable *>(node);
 	if (variable)
 	{
 		return variable->userAccessLevel(strUserName).intValue;
 	}
-	// TODO : handle children?
+	// else default
 	return 0xFF;
 }
 

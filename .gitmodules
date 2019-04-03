@@ -1,6 +1,0 @@
-[submodule "common/QConsoleListener.git"]
-	path = common/QConsoleListener.git
-	url = https://git.grupoproinelca.com/jgonzalez/QConsoleListener.git
-[submodule "common/QDeferred.git"]
-	path = common/QDeferred.git
-	url = https://git.grupoproinelca.com/jgonzalez/QDeferred.git

@@ -23124,6 +23124,9 @@ UA_Server_processBinaryMessage(UA_Server *server, UA_Connection *connection,
 void UA_EXPORT
 UA_Server_removeConnection(UA_Server *server, UA_Connection *connection);
 
+UA_StatusCode UA_EXPORT
+UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId);
+
 struct UA_ServerNetworkLayer {
     void *handle; /* Internal data */
 

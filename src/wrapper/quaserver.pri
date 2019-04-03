@@ -1,4 +1,4 @@
-include($$PWD/../open62541.pri)
+include($$PWD/../amalgamation/open62541.pri)
 
 QT     += core
 CONFIG += c++11

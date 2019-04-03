@@ -17,12 +17,12 @@ include($$PWD/open62541opts.pri)
 # [ENCRYPTION]
 equals(USE_ENCRYPTION, true) {
 	# include mbedtls header directory
-	INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
+	INCLUDEPATH += $$MBEDTLS_PATH/build/include
 	# include pre-compiled mbedtls library as a dependency
 	CONFIG(debug, debug|release) {
-		LIBS += -L$$PWD/../../mbedtls.git/build/library/Debug
+		LIBS += -L$$MBEDTLS_PATH/build/library/Debug
 	} else {
-		LIBS += -L$$PWD/../../mbedtls.git/build/library/Release
+		LIBS += -L$$MBEDTLS_PATH/build/library/Release
 	}	
 	LIBS += -lmbedcrypto -lmbedtls -lmbedx509
 }

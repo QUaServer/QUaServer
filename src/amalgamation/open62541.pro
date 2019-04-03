@@ -23,5 +23,5 @@ include($$PWD/open62541opts.pri)
 
 # [ENCRYPTION]
 equals(USE_ENCRYPTION, true) {
-  INCLUDEPATH += $$PWD/../../mbedtls.git/build/include
+  INCLUDEPATH += $$MBEDTLS_PATH/build/include
 }

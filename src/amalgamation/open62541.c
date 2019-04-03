@@ -23304,6 +23304,18 @@ UA_Server_removeConnection(UA_Server *server, UA_Connection *connection) {
 #endif
 }
 
+UA_StatusCode
+UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId)
+{
+	UA_Session *session = UA_SessionManager_getSessionById(&server->sessionManager, sessionId);
+	UA_SecureChannel *channel = session->header.channel;
+
+	UA_SecureChannel_close(channel);
+	UA_StatusCode retval = UA_SessionManager_removeSession(&server->sessionManager, &session->header.authenticationToken);
+
+	return retval;
+}
+
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/src/server/ua_server_utils.c" ***********************************/
 
 /* This Source Code Form is subject to the terms of the Mozilla Public

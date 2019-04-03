@@ -1,1 +1,0 @@
-USE_ENCRYPTION = false
