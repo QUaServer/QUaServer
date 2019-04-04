@@ -512,6 +512,20 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	return 0xFF;
 }
 
+void QUaServer::writeBuildInfo(UA_Server         *server, 
+	                           const UA_NodeId    nodeId, 
+	                           void *UA_RESTRICT  p,
+	                           const UA_DataType *type)
+{
+	UA_ServerConfig * config = UA_Server_getConfig(server);
+	UA_Variant var;
+	UA_Variant_init(&var);
+	UA_Variant_setScalar(&var, p, type);
+	auto st = UA_Server_writeValue(server, nodeId, var);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+}
+
 #ifndef UA_ENABLE_ENCRYPTION
 // NOTE : cannot load cert later with UA_Server_updateCertificate because
 //        it requires oldCertificate != NULL
@@ -629,6 +643,43 @@ void QUaServer::setupServer()
 	config->accessControl.getUserAccessLevel = &QUaServer::getUserAccessLevel;
 
 	// TODO : implement rest of callbacks
+
+	// get server app name
+	m_byteApplicationName = QByteArray::fromRawData(
+		(char*)config->applicationDescription.applicationName.text.data,
+		config->applicationDescription.applicationName.text.length
+	);
+	// get server app uri
+	m_byteApplicationUri = QByteArray::fromRawData(
+		(char*)config->applicationDescription.applicationUri.data,
+		config->applicationDescription.applicationUri.length
+	);
+
+	// get server product name
+	m_byteProductName = QByteArray::fromRawData(
+		(char*)config->buildInfo.productName.data,
+		config->buildInfo.productName.length
+	);
+	// get server product uri
+	m_byteProductUri = QByteArray::fromRawData(
+		(char*)config->buildInfo.productUri.data,
+		config->buildInfo.productUri.length
+	);
+	// get server manufacturer name
+	m_byteManufacturerName = QByteArray::fromRawData(
+		(char*)config->buildInfo.manufacturerName.data,
+		config->buildInfo.manufacturerName.length
+	);
+	// get server software version
+	m_byteSoftwareVersion = QByteArray::fromRawData(
+		(char*)config->buildInfo.softwareVersion.data,
+		config->buildInfo.softwareVersion.length
+	);
+	// get server software version
+	m_byteBuildNumber = QByteArray::fromRawData(
+		(char*)config->buildInfo.buildNumber.data,
+		config->buildInfo.buildNumber.length
+	);
 }
 
 QUaServer::~QUaServer()
@@ -639,6 +690,186 @@ QUaServer::~QUaServer()
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	UA_ServerConfig_delete(config);
 	UA_Server_delete(this->m_server);
+}
+
+QString QUaServer::applicationName() const
+{
+	return QString(m_byteApplicationName);
+}
+
+/*
+// NOTE : not use about updating config->applicationDescription. 
+//        In UA_ServerConfig_new_customBuffer we have
+
+conf->endpointsSize = 1;
+
+// which seems to point that there will only be one endpoint
+// so maybe we can do the same as in createEndpoint and just copy 
+// the applicationDescription from config to endpoint
+*/
+
+void QUaServer::setApplicationName(const QString & strApplicationName)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteApplicationName = strApplicationName.toUtf8();
+	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT((char*)"", m_byteApplicationName.data());
+	// update endpoints
+	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+}
+
+QString QUaServer::applicationUri() const
+{
+	return QString(m_byteApplicationUri);
+}
+
+void QUaServer::setApplicationUri(const QString & strApplicationUri)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteApplicationUri = strApplicationUri.toUtf8();
+	config->applicationDescription.applicationUri = UA_STRING(m_byteApplicationUri.data());
+	// update endpoints
+	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+}
+
+QString QUaServer::productName() const
+{
+	return QString(m_byteProductName);
+}
+
+void QUaServer::setProductName(const QString & strProductName)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteProductName = strProductName.toUtf8();
+	config->buildInfo.productName = UA_STRING(m_byteProductName.data());
+	// write parent node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
+		(void*)&config->buildInfo,
+		&UA_TYPES[UA_TYPES_BUILDINFO]
+	);
+	// write specific node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME),
+		(void*)&config->buildInfo.productName,
+		&UA_TYPES[UA_TYPES_STRING]
+	);
+}
+
+QString QUaServer::productUri() const
+{
+	return QString(m_byteProductUri);
+}
+
+void QUaServer::setProductUri(const QString & strProductUri)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteProductUri = strProductUri.toUtf8();
+	config->buildInfo.productUri = UA_STRING(m_byteProductUri.data());
+	// write parent node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
+		(void*)&config->buildInfo,
+		&UA_TYPES[UA_TYPES_BUILDINFO]
+	);
+	// write specific node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI),
+		(void*)&config->buildInfo.productUri,
+		&UA_TYPES[UA_TYPES_STRING]
+	);
+	// NOTE : update application description productUri as well
+	config->applicationDescription.productUri = UA_STRING(m_byteProductUri.data());
+	// update endpoints
+	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+}
+
+QString QUaServer::manufacturerName() const
+{
+	return QString(m_byteManufacturerName);
+}
+
+void QUaServer::setManufacturerName(const QString & strManufacturerName)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteManufacturerName = strManufacturerName.toUtf8();
+	config->buildInfo.manufacturerName = UA_STRING(m_byteManufacturerName.data());
+	// write parent node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
+		(void*)&config->buildInfo,
+		&UA_TYPES[UA_TYPES_BUILDINFO]
+	);
+	// write specific node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME),
+		(void*)&config->buildInfo.manufacturerName,
+		&UA_TYPES[UA_TYPES_STRING]
+	);
+}
+
+QString QUaServer::softwareVersion() const
+{
+	return QString(m_byteSoftwareVersion);
+}
+
+void QUaServer::setSoftwareVersion(const QString & strSoftwareVersion)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteSoftwareVersion = strSoftwareVersion.toUtf8();
+	config->buildInfo.softwareVersion = UA_STRING(m_byteSoftwareVersion.data());
+	// write parent node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
+		(void*)&config->buildInfo,
+		&UA_TYPES[UA_TYPES_BUILDINFO]
+	);
+	// write specific node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION),
+		(void*)&config->buildInfo.softwareVersion,
+		&UA_TYPES[UA_TYPES_STRING]
+	);
+}
+
+QString QUaServer::buildNumber() const
+{
+	return QString(m_byteBuildNumber);
+}
+
+void QUaServer::setBuildNumber(const QString & strBuildNumber)
+{
+	// update config
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	m_byteBuildNumber = strBuildNumber.toUtf8();
+	config->buildInfo.buildNumber = UA_STRING(m_byteBuildNumber.data());
+	// write parent node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
+		(void*)&config->buildInfo,
+		&UA_TYPES[UA_TYPES_BUILDINFO]
+	);
+	// write specific node
+	QUaServer::writeBuildInfo(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER),
+		(void*)&config->buildInfo.buildNumber,
+		&UA_TYPES[UA_TYPES_STRING]
+	);
 }
 
 void QUaServer::start()

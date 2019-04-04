@@ -32,6 +32,29 @@ public:
 	
 	~QUaServer();
 
+	// Server Description API
+
+	QString applicationName() const;
+	void    setApplicationName(const QString &strApplicationName);
+
+	QString applicationUri() const;
+	void    setApplicationUri(const QString &strApplicationUri);
+
+	QString productName() const;
+	void    setProductName(const QString &strProductName);
+
+	QString productUri() const;
+	void    setProductUri(const QString &strProductUri);
+
+	QString manufacturerName() const;
+	void    setManufacturerName(const QString &strManufacturerName);
+
+	QString softwareVersion() const;
+	void    setSoftwareVersion(const QString &strSoftwareVersion);
+
+	QString buildNumber() const;
+	void    setBuildNumber(const QString &strBuildNumber);
+
 	// Server LifeCycle API
 
 	void start();
@@ -92,6 +115,15 @@ private:
 #ifdef UA_ENABLE_ENCRYPTION
 	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
 #endif
+
+	QByteArray m_byteApplicationName;
+	QByteArray m_byteApplicationUri;
+
+	QByteArray m_byteProductName;
+	QByteArray m_byteProductUri;
+	QByteArray m_byteManufacturerName;
+	QByteArray m_byteSoftwareVersion;
+	QByteArray m_byteBuildNumber;
 
 	QHash<QString     , QString  > m_hashUsers;
 	QHash<UA_NodeId   , QString  > m_hashSessions;
@@ -199,6 +231,11 @@ private:
 		                              void             *sessionContext,
 		                              const UA_NodeId  *nodeId, 
 		                              void             *nodeContext);
+
+	static void writeBuildInfo(UA_Server         *server, 
+		                       const UA_NodeId    nodeId, 
+		                       void * UA_RESTRICT p, 
+		                       const UA_DataType *type);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode

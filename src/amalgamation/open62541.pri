@@ -1,5 +1,5 @@
 # include pre-compiled open62541 library as a dependency
-LIBS += -L$$PWD/../build/
+LIBS += -L$$PWD/../../build/
 CONFIG(debug, debug|release) {
 	LIBS += -lopen62541d
 } else {
