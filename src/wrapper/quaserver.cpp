@@ -48,6 +48,11 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	                         const UA_NodeId * nodeId, 
 	                         void            ** nodeContext)
 {
+	Q_UNUSED(nodeContext);
+	Q_UNUSED(typeNodeContext);
+	Q_UNUSED(typeNodeId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(sessionId);
 	void * context;
 	auto st = UA_Server_getNodeContext(server, *nodeId, &context);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -334,6 +339,8 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 	                                     const UA_ExtensionObject     * userIdentityToken, 
 	                                     void                        ** sessionContext)
 {
+	Q_UNUSED(secureChannelRemoteCertificate);
+	Q_UNUSED(endpointDescription);
 	AccessControlContext *context = (AccessControlContext*)ac->context;
 
 	// NOTE : custom code : get server instance
@@ -441,6 +448,8 @@ void QUaServer::closeSession(UA_Server        * server,
 	                         const UA_NodeId  * sessionId, 
 	                         void             * sessionContext)
 {
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(ac);
 	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
 	Q_CHECK_PTR(qServer);
@@ -453,7 +462,11 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	                                   const UA_NodeId  *sessionId,
 	                                   void             *sessionContext,
 	                                   const UA_NodeId  *nodeId,
-	                                   void             *nodeContext) {
+	                                   void             *nodeContext) 
+{
+	Q_UNUSED(nodeContext);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(ac);
 	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
 	Q_CHECK_PTR(qServer);
@@ -486,6 +499,9 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	                                  const UA_NodeId  *nodeId,
 	                                  void             *nodeContext)
 {
+	Q_UNUSED(nodeContext);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(ac);
 	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
 	Q_CHECK_PTR(qServer);
@@ -549,6 +565,11 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 		                                        const UA_NodeId  *objectId, 
 		                                        void             *objectContext)
 {
+	Q_UNUSED(objectContext);
+	Q_UNUSED(methodContext);
+	Q_UNUSED(methodId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(ac);
 	// get server
 	QUaServer *qServer = QUaServer::m_mapServers.value(server);
 	Q_CHECK_PTR(qServer);
@@ -577,15 +598,22 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 }
 
 void QUaServer::writeBuildInfo(UA_Server         *server, 
-	                           const UA_NodeId    nodeId, 
-	                           void *UA_RESTRICT  p,
-	                           const UA_DataType *type)
+		                       const UA_NodeId    nodeId, 
+		                       void * UA_RESTRICT pField, 
+		                       void * UA_RESTRICT pBuild)
 {
-	UA_ServerConfig * config = UA_Server_getConfig(server);
-	UA_Variant var;
-	UA_Variant_init(&var);
-	UA_Variant_setScalar(&var, p, type);
-	auto st = UA_Server_writeValue(server, nodeId, var);
+	// update field
+	UA_Variant varField;
+	UA_Variant_init(&varField);
+	UA_Variant_setScalar(&varField, pField, &UA_TYPES[UA_TYPES_STRING]);
+	auto st = UA_Server_writeValue(server, nodeId, varField);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// update full structure
+	UA_Variant varBuild;
+	UA_Variant_init(&varBuild);
+	UA_Variant_setScalar(&varBuild, pBuild, &UA_TYPES[UA_TYPES_BUILDINFO]);
+	st = UA_Server_writeValue(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO), varBuild);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 }
@@ -600,7 +628,7 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 {
 	// convert cert if valid
 	UA_ByteString cert;
-	UA_ByteString * ptr = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
+	UA_ByteString * ptr = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
 	// create config with port and certificate
 	UA_ServerConfig * config = UA_ServerConfig_new_minimal(intPort, ptr);
 	Q_CHECK_PTR(config);
@@ -618,10 +646,10 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	UA_ServerConfig * config;
 	// convert cert if valid (should contain public key)
 	UA_ByteString cert;
-	UA_ByteString * ptrCert = this->parseCertificate(byteCertificate, cert, m_byteCertificate);
+	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
 	// convert private key if valid
 	UA_ByteString priv;
-	UA_ByteString * ptrPriv = this->parseCertificate(bytePrivateKey, priv, m_bytePrivateKey);
+	UA_ByteString * ptrPriv = QUaServer::parseCertificate(bytePrivateKey, priv, m_bytePrivateKey);
 	// check if valid private key
 	if (ptrPriv)
 	{
@@ -717,38 +745,38 @@ void QUaServer::setupServer()
 	// get server app name
 	m_byteApplicationName = QByteArray::fromRawData(
 		(char*)config->applicationDescription.applicationName.text.data,
-		config->applicationDescription.applicationName.text.length
+		(int)config->applicationDescription.applicationName.text.length
 	);
 	// get server app uri
 	m_byteApplicationUri = QByteArray::fromRawData(
 		(char*)config->applicationDescription.applicationUri.data,
-		config->applicationDescription.applicationUri.length
+		(int)config->applicationDescription.applicationUri.length
 	);
 
 	// get server product name
 	m_byteProductName = QByteArray::fromRawData(
 		(char*)config->buildInfo.productName.data,
-		config->buildInfo.productName.length
+		(int)config->buildInfo.productName.length
 	);
 	// get server product uri
 	m_byteProductUri = QByteArray::fromRawData(
 		(char*)config->buildInfo.productUri.data,
-		config->buildInfo.productUri.length
+		(int)config->buildInfo.productUri.length
 	);
 	// get server manufacturer name
 	m_byteManufacturerName = QByteArray::fromRawData(
 		(char*)config->buildInfo.manufacturerName.data,
-		config->buildInfo.manufacturerName.length
+		(int)config->buildInfo.manufacturerName.length
 	);
 	// get server software version
 	m_byteSoftwareVersion = QByteArray::fromRawData(
 		(char*)config->buildInfo.softwareVersion.data,
-		config->buildInfo.softwareVersion.length
+		(int)config->buildInfo.softwareVersion.length
 	);
 	// get server software version
 	m_byteBuildNumber = QByteArray::fromRawData(
 		(char*)config->buildInfo.buildNumber.data,
-		config->buildInfo.buildNumber.length
+		(int)config->buildInfo.buildNumber.length
 	);
 }
 
@@ -814,19 +842,12 @@ void QUaServer::setProductName(const QString & strProductName)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductName = strProductName.toUtf8();
 	config->buildInfo.productName = UA_STRING(m_byteProductName.data());
-	// write parent node
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
-		(void*)&config->buildInfo,
-		&UA_TYPES[UA_TYPES_BUILDINFO]
-	);
-	// write specific node
+	// write nodes
 	QUaServer::writeBuildInfo(
 		m_server,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME),
 		(void*)&config->buildInfo.productName,
-		&UA_TYPES[UA_TYPES_STRING]
+		(void*)&config->buildInfo
 	);
 }
 
@@ -841,19 +862,12 @@ void QUaServer::setProductUri(const QString & strProductUri)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductUri = strProductUri.toUtf8();
 	config->buildInfo.productUri = UA_STRING(m_byteProductUri.data());
-	// write parent node
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
-		(void*)&config->buildInfo,
-		&UA_TYPES[UA_TYPES_BUILDINFO]
-	);
-	// write specific node
+	// write nodes
 	QUaServer::writeBuildInfo(
 		m_server,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI),
 		(void*)&config->buildInfo.productUri,
-		&UA_TYPES[UA_TYPES_STRING]
+		(void*)&config->buildInfo
 	);
 	// NOTE : update application description productUri as well
 	config->applicationDescription.productUri = UA_STRING(m_byteProductUri.data());
@@ -872,19 +886,12 @@ void QUaServer::setManufacturerName(const QString & strManufacturerName)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteManufacturerName = strManufacturerName.toUtf8();
 	config->buildInfo.manufacturerName = UA_STRING(m_byteManufacturerName.data());
-	// write parent node
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
-		(void*)&config->buildInfo,
-		&UA_TYPES[UA_TYPES_BUILDINFO]
-	);
-	// write specific node
+	// write nodes
 	QUaServer::writeBuildInfo(
 		m_server,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME),
 		(void*)&config->buildInfo.manufacturerName,
-		&UA_TYPES[UA_TYPES_STRING]
+		(void*)&config->buildInfo
 	);
 }
 
@@ -899,19 +906,12 @@ void QUaServer::setSoftwareVersion(const QString & strSoftwareVersion)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteSoftwareVersion = strSoftwareVersion.toUtf8();
 	config->buildInfo.softwareVersion = UA_STRING(m_byteSoftwareVersion.data());
-	// write parent node
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
-		(void*)&config->buildInfo,
-		&UA_TYPES[UA_TYPES_BUILDINFO]
-	);
-	// write specific node
+	// write nodes
 	QUaServer::writeBuildInfo(
 		m_server,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION),
 		(void*)&config->buildInfo.softwareVersion,
-		&UA_TYPES[UA_TYPES_STRING]
+		(void*)&config->buildInfo
 	);
 }
 
@@ -926,19 +926,12 @@ void QUaServer::setBuildNumber(const QString & strBuildNumber)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteBuildNumber = strBuildNumber.toUtf8();
 	config->buildInfo.buildNumber = UA_STRING(m_byteBuildNumber.data());
-	// write parent node
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO),
-		(void*)&config->buildInfo,
-		&UA_TYPES[UA_TYPES_BUILDINFO]
-	);
-	// write specific node
+	// write nodes
 	QUaServer::writeBuildInfo(
 		m_server,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER),
 		(void*)&config->buildInfo.buildNumber,
-		&UA_TYPES[UA_TYPES_STRING]
+		(void*)&config->buildInfo
 	);
 }
 
@@ -978,7 +971,31 @@ bool QUaServer::isRunning()
 	return m_running;
 }
 
-void QUaServer::registerType(const QMetaObject &metaObject)
+quint16 QUaServer::maxSecureChannels() const
+{
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	return config->maxSecureChannels;
+}
+
+void QUaServer::setMaxSecureChannels(const quint16 & maxSecureChannels)
+{
+	UA_ServerConfig * config  = UA_Server_getConfig(m_server);
+	config->maxSecureChannels = maxSecureChannels;
+}
+
+quint16 QUaServer::maxSessions() const
+{
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	return config->maxSessions;
+}
+
+void QUaServer::setMaxSessions(const quint16 & maxSessions)
+{
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	config->maxSessions = maxSessions;
+}
+
+void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNodeId/* = ""*/)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
@@ -1010,6 +1027,18 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 		this->registerType(*metaObject.superClass());
 	}
 	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QUaServer::registerType", "Base object type not registered.");
+	// check if requested node id defined
+	QString strReqNodeId = strNodeId.trimmed();
+	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	// check if requested node id exists
+	UA_NodeId outNodeId;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
+	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerType", "Requested NodeId already exists");
+	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	{
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return;
+	}
 	// check if variable or object
 	if (metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
@@ -1022,7 +1051,7 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 		vtAttr.description               = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new variable type
 		auto st = UA_Server_addVariableTypeNode(m_server,
-			                                    UA_NODEID_NULL,                            // requested nodeId
+			                                    reqNodeId,                                 // requested nodeId
 			                                    m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE)), // parent (variable type)
 			                                    UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
 			                                    browseName,
@@ -1045,7 +1074,7 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 		otAttr.description             = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new object type
 		auto st = UA_Server_addObjectTypeNode(m_server,
-			                                  UA_NODEID_NULL,                            // requested nodeId
+			                                  reqNodeId,                                 // requested nodeId
 			                                  m_mapTypes.value(strBaseClassName, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)), // parent (object type)
 			                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), // parent relation with child
 			                                  browseName,
@@ -1070,7 +1099,7 @@ void QUaServer::registerType(const QMetaObject &metaObject)
 	}
 }
 
-void QUaServer::registerEnum(const QMetaEnum & metaEnum)
+void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeId/* = ""*/)
 {
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
@@ -1086,15 +1115,34 @@ void QUaServer::registerEnum(const QMetaEnum & metaEnum)
 	UA_DataTypeAttributes ddaatt = UA_DataTypeAttributes_default;
 	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
 	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
-	UA_NodeId newEnumNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName); // [IMPORTANT] : _ALLOC version is necessary
-	UA_StatusCode st = UA_Server_addDataTypeNode(m_server,
-												newEnumNodeId,
-   												UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
-   												UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-   												UA_QUALIFIEDNAME (1, charEnumName),
-   												ddaatt,
-   												NULL,
-   												NULL);
+
+	// check if requested node id defined
+	QString strReqNodeId = strNodeId.trimmed();
+	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	// check if requested node id exists
+	UA_NodeId outNodeId;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
+	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerEnum", "Requested NodeId already exists");
+	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	{
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return;
+	}
+	// if null, then assign one because is feaking necessary
+	// https://github.com/open62541/open62541/issues/2584
+	if (UA_NodeId_isNull(&reqNodeId))
+	{
+		// [IMPORTANT] : _ALLOC version is necessary
+		reqNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName); 
+	}	
+	st = UA_Server_addDataTypeNode(m_server,
+								   reqNodeId,
+   								   UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
+   								   UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+   								   UA_QUALIFIEDNAME (1, charEnumName),
+   								   ddaatt,
+   								   NULL,
+                                   NULL);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// add new enum strings (enum options)
 	UA_VariableAttributes pattr = UA_VariableAttributes_default;
@@ -1117,10 +1165,10 @@ void QUaServer::registerEnum(const QMetaEnum & metaEnum)
 			UA_LOCALIZEDTEXT((char*)"", (char*)"")
 		});
 	}
-	st = QUaServer::addEnumValues(m_server, &newEnumNodeId, vectEnumValues.count(), vectEnumValues.data());
+	st = QUaServer::addEnumValues(m_server, &reqNodeId, vectEnumValues.count(), vectEnumValues.data());
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// finally append to map
-	m_hashEnums.insert(strEnumName, newEnumNodeId);
+	m_hashEnums.insert(strEnumName, reqNodeId);
 }
 
 void QUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)

@@ -36,22 +36,16 @@ public:
 
 	QString applicationName() const;
 	void    setApplicationName(const QString &strApplicationName);
-
 	QString applicationUri() const;
 	void    setApplicationUri(const QString &strApplicationUri);
-
 	QString productName() const;
 	void    setProductName(const QString &strProductName);
-
 	QString productUri() const;
 	void    setProductUri(const QString &strProductUri);
-
 	QString manufacturerName() const;
 	void    setManufacturerName(const QString &strManufacturerName);
-
 	QString softwareVersion() const;
 	void    setSoftwareVersion(const QString &strSoftwareVersion);
-
 	QString buildNumber() const;
 	void    setBuildNumber(const QString &strBuildNumber);
 
@@ -61,14 +55,22 @@ public:
 	void stop();
 	bool isRunning();
 
+	// Server Limits API
+
+	quint16 maxSecureChannels() const;
+	void    setMaxSecureChannels(const quint16 &maxSecureChannels);
+
+	quint16 maxSessions() const;
+	void    setMaxSessions(const quint16 &maxSessions);
+
 	// Instance Creation API
 
 	// register type in order to assign it a typeNodeId
 	template<typename T>
-	void registerType();
+	void registerType(const QString &strNodeId = "");
 	// register enum in order to use it as data type
 	template<typename T>
-	void registerEnum();
+	void registerEnum(const QString &strNodeId = "");
 	// register reference to get a respective refTypeId
 	void registerReference(const QUaReference &ref);
 
@@ -86,8 +88,8 @@ public:
 	// Access Control API
 
 	// anonymous login is enabled by default
-	bool anonymousLoginAllowed() const;
-	void setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
+	bool        anonymousLoginAllowed() const;
+	void        setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
 	// if user already exists, it updates password
 	void        addUser(const QString &strUserName, const QString &strPassword);
 	// if user does not exist, it does nothing
@@ -132,13 +134,13 @@ private:
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
 
 	// only call once on constructor
-	UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
-		                             UA_ByteString    &outUaCert, 
-		                             QByteArray       &outByteCert);
+	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
+		                                    UA_ByteString    &outUaCert, 
+		                                    QByteArray       &outByteCert);
 	void setupServer();
 
-	void registerType(const QMetaObject &metaObject);
-	void registerEnum(const QMetaEnum &metaEnum);
+	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
+	void registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
 
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
@@ -250,8 +252,8 @@ private:
 
 	static void writeBuildInfo(UA_Server         *server, 
 		                       const UA_NodeId    nodeId, 
-		                       void * UA_RESTRICT p, 
-		                       const UA_DataType *type);
+		                       void * UA_RESTRICT pField, 
+		                       void * UA_RESTRICT pBuild);
 
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
@@ -261,17 +263,17 @@ private:
 };
 
 template<typename T>
-inline void QUaServer::registerType()
+inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)
 {
 	// call internal method
-	this->registerType(T::staticMetaObject);
+	this->registerType(T::staticMetaObject, strNodeId);
 }
 
 template<typename T>
-inline void QUaServer::registerEnum()
+inline void QUaServer::registerEnum(const QString &strNodeId/* = ""*/)
 {
 	// call internal method
-	this->registerEnum(QMetaEnum::fromType<T>());
+	this->registerEnum(QMetaEnum::fromType<T>(), strNodeId);
 }
 
 template<typename T>

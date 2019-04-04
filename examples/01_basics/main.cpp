@@ -27,15 +27,6 @@ int main(int argc, char *argv[])
 	QUaFolderObject * objFolder = objsFolder->addFolderObject();
 	objFolder->setDisplayName("my_folder");
 
-	// user executable
-
-	objsFolder->addMethod("method", [](QString strName) {
-		return "Hola " + strName;
-	});
-
-	objsFolder->setUserExecutableCallback([](const QString &strUserName, QUaNode *node) {
-		return false;
-	});
 
 	// start server
 
