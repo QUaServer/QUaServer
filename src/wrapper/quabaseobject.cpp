@@ -46,9 +46,9 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const
     UA_MethodAttributes methAttr = UA_MethodAttributes_default;
     methAttr.executable     = true;
     methAttr.userExecutable = true;
-    methAttr.description    = UA_LOCALIZEDTEXT((char *)"en-US",
+    methAttr.description    = UA_LOCALIZEDTEXT((char *)"",
                                                byteMethodName.data());
-    methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"en-US",
+    methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"",
                                                byteMethodName.data());
     // create callback
     UA_NodeId methNodeId;

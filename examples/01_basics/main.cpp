@@ -11,22 +11,6 @@ int main(int argc, char *argv[])
 
 	QUaServer server;
 
-	server.setApplicationName ("my_app");
-	server.setApplicationUri  ("urn:my_product:my_app");
-	server.setProductName     ("my_product");
-	server.setProductUri      ("my_company.com");
-	server.setManufacturerName("My Company Inc.");
-	server.setSoftwareVersion ("6.6.6-master");
-	server.setBuildNumber     ("gvfsed43fs");
-
-	qDebug() << "applicationName"  << server.applicationName();
-	qDebug() << "applicationUri"   << server.applicationUri();
-	qDebug() << "productName"      << server.productName();
-	qDebug() << "productUri"       << server.productUri();
-	qDebug() << "manufacturerName" << server.manufacturerName();
-	qDebug() << "softwareVersion"  << server.softwareVersion();
-	qDebug() << "buildNumber"      << server.buildNumber();
-
 	// add some nodes to the objects folder
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
@@ -42,6 +26,16 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objFolder = objsFolder->addFolderObject();
 	objFolder->setDisplayName("my_folder");
+
+	// user executable
+
+	objsFolder->addMethod("method", [](QString strName) {
+		return "Hola " + strName;
+	});
+
+	objsFolder->setUserExecutableCallback([](const QString &strUserName, QUaNode *node) {
+		return false;
+	});
 
 	// start server
 

@@ -460,6 +460,23 @@ QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
 	return 0xFF;
 }
 
+bool QUaNode::userExecutable(const QString & strUserName)
+{
+	// if has specific callback, use that one
+	if (m_userExecutableCallback)
+	{
+		return m_userExecutableCallback(strUserName);
+	}
+	// if has a node parent, use parent's callback
+	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	if (parent)
+	{
+		return parent->userExecutable(strUserName);
+	}
+	// else allow
+	return true;
+}
+
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)
 {
 	return QUaNode::getParentNodeId(childNodeId, server->m_server);

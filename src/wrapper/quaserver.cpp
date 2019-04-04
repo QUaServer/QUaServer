@@ -512,6 +512,70 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	return 0xFF;
 }
 
+UA_Boolean QUaServer::getUserExecutable(UA_Server        *server, 
+		                                UA_AccessControl *ac,
+		                                const UA_NodeId  *sessionId, 
+		                                void             *sessionContext,
+		                                const UA_NodeId  *methodId, 
+		                                void             *methodContext)
+{
+	UA_NodeId parentNodeId = QUaNode::getParentNodeId(*methodId, server);
+	if (!UA_NodeId_isNull(&parentNodeId))
+	{
+		void * context = QUaNode::getVoidContext(parentNodeId, server);
+		if (context)
+		{
+			return QUaServer::getUserExecutableOnObject(
+				server, 
+				ac,
+				sessionId, 
+				sessionContext,
+				methodId, 
+				methodContext,
+				&parentNodeId,
+				context
+			);
+		}
+	}
+	return true;
+}
+
+UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server, 
+		                                        UA_AccessControl *ac,
+		                                        const UA_NodeId  *sessionId, 
+		                                        void             *sessionContext,
+		                                        const UA_NodeId  *methodId, 
+		                                        void             *methodContext,
+		                                        const UA_NodeId  *objectId, 
+		                                        void             *objectContext)
+{
+	// get server
+	QUaServer *qServer = QUaServer::m_mapServers.value(server);
+	Q_CHECK_PTR(qServer);
+	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	// get user
+	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	// check if user still exists
+	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	{
+		// TODO : waint until officially supported
+		// https://github.com/open62541/open62541/issues/2617
+		//auto st = UA_Server_closeSession(server, sessionId);
+		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return false;
+	}
+	// if node from user tree then call user implementation
+	QUaNode * node = QUaNode::getNodeContext(*objectId, server);
+	QUaBaseObject * object = dynamic_cast<QUaBaseObject *>(node);
+	if (object)
+	{
+		// NOTE : could not diff by method name because name multiples are possible
+		return object->userExecutable(strUserName);
+	}
+	// else default
+	return true;
+}
+
 void QUaServer::writeBuildInfo(UA_Server         *server, 
 	                           const UA_NodeId    nodeId, 
 	                           void *UA_RESTRICT  p,
@@ -637,12 +701,18 @@ void QUaServer::setupServer()
 	// setup access control
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	// static methods to reimplement custom behaviour
-	config->accessControl.activateSession    = &QUaServer::activateSession;
-	config->accessControl.closeSession       = &QUaServer::closeSession;
-	config->accessControl.getUserRightsMask  = &QUaServer::getUserRightsMask;
-	config->accessControl.getUserAccessLevel = &QUaServer::getUserAccessLevel;
+	config->accessControl.activateSession           = &QUaServer::activateSession;
+	config->accessControl.closeSession              = &QUaServer::closeSession;
+	config->accessControl.getUserRightsMask         = &QUaServer::getUserRightsMask;
+	config->accessControl.getUserAccessLevel        = &QUaServer::getUserAccessLevel;
+	config->accessControl.getUserExecutable         = &QUaServer::getUserExecutable;
+	config->accessControl.getUserExecutableOnObject = &QUaServer::getUserExecutableOnObject;
 
 	// TODO : implement rest of callbacks
+	//        allowAddNode_default
+	//        allowAddReference_default
+	//        allowDeleteNode_default
+	//        allowDeleteReference_default
 
 	// get server app name
 	m_byteApplicationName = QByteArray::fromRawData(

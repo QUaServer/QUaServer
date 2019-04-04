@@ -196,7 +196,6 @@ class QUaBaseObject : public QUaNode
 
 	// Object Attributes
 
-	// TODO
 	//Q_PROPERTY(UA_Byte eventNotifier READ eventNotifier)
 	// UA_Server_readEventNotifier
 	// UA_Server_writeEventNotifier
@@ -208,7 +207,7 @@ public:
 
 	// Attributes API
 
-	// TODO : 
+	// TODO : eventNotifier
 
 	// Instance Creation API
 
@@ -225,8 +224,8 @@ private:
 
     UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName, 
 		                            const size_t &nArgs, 
-		                            UA_Argument  * inputArguments, 
-		                            UA_Argument  * outputArgument);
+		                            UA_Argument  *inputArguments, 
+		                            UA_Argument  *outputArgument);
 
 	static UA_StatusCode methodCallback(UA_Server        *server,
 		                                const UA_NodeId  *sessionId,
@@ -264,7 +263,12 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
 	}
 	// add method node
 	QByteArray byteMethodName = strMethodName.toUtf8();
-    UA_NodeId methNodeId = this->addMethodNodeInternal(byteMethodName, QOpcUaMethodTraits<M>::getNumArgs(), p_inputArguments, p_outputArgument);
+    UA_NodeId methNodeId = this->addMethodNodeInternal(
+		byteMethodName, 
+		QOpcUaMethodTraits<M>::getNumArgs(), 
+		p_inputArguments, 
+		p_outputArgument
+	);
 	// store method with node id hash as key
 	Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
 	m_hashMethods[methNodeId] = [methodCallback](const UA_Variant * input, UA_Variant * output) {

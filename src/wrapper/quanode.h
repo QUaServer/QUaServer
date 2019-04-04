@@ -246,9 +246,17 @@ public:
 	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
 
 	// provide specific implementation for individual variable nodes
-	// signature is <QUaAccessLevel(const QString &, QUaBaseVariable *)>
+	// signature is <QUaAccessLevel(const QString &, QUaNode *)>
 	template<typename M>
 	void setUserAccessLevelCallback(const M &callback);
+
+	// reimplement for custom access control for a given custom UA type (derived C++ class)
+	virtual bool userExecutable(const QString &strUserName);
+
+	// provide specific implementation for individual object nodes
+	// signature is <bool(const QString &, QUaNode *)>
+	template<typename M>
+	void setUserExecutableCallback(const M &callback);
 
 	// Helpers
 
@@ -293,6 +301,7 @@ private:
 
 	std::function<QUaWriteMask  (const QString &)> m_userWriteMaskCallback;
 	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;
+	std::function<bool          (const QString &)> m_userExecutableCallback;
 };
 
 template<typename T>
@@ -323,6 +332,14 @@ template<typename M>
 inline void QUaNode::setUserAccessLevelCallback(const M & callback)
 {
 	m_userAccessLevelCallback = [callback, this](const QString &strUserName) {
+		return callback(strUserName, this);
+	};
+}
+
+template<typename M>
+inline void QUaNode::setUserExecutableCallback(const M & callback)
+{
+	m_userExecutableCallback = [callback, this](const QString &strUserName) {
 		return callback(strUserName, this);
 	};
 }

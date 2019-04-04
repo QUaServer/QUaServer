@@ -232,6 +232,22 @@ private:
 		                              const UA_NodeId  *nodeId, 
 		                              void             *nodeContext);
 
+	static UA_Boolean getUserExecutable(UA_Server        *server, 
+		                                UA_AccessControl *ac,
+		                                const UA_NodeId  *sessionId, 
+		                                void             *sessionContext,
+		                                const UA_NodeId  *methodId, 
+		                                void             *methodContext);
+
+	static UA_Boolean getUserExecutableOnObject(UA_Server        *server, 
+		                                        UA_AccessControl *ac,
+		                                        const UA_NodeId  *sessionId, 
+		                                        void             *sessionContext,
+		                                        const UA_NodeId  *methodId, 
+		                                        void             *methodContext,
+		                                        const UA_NodeId  *objectId, 
+		                                        void             *objectContext);
+
 	static void writeBuildInfo(UA_Server         *server, 
 		                       const UA_NodeId    nodeId, 
 		                       void * UA_RESTRICT p, 
