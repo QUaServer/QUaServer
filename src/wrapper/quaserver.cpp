@@ -96,7 +96,12 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	// get parent node id
 	UA_NodeId parentNodeId       = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	UA_NodeId directParentNodeId = parentNodeId;
+	// handle events
+#ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId));
+#else
+	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId) || metaObject.inherits(&QUaBaseEvent::staticMetaObject));
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check if constructor from explicit instance creation or type registration
 	// this is done by checking that parent is different from object ot variable instance
 	UA_NodeClass outNodeClass;
@@ -104,6 +109,14 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	QUaNode * parentContext = nullptr;
 	while (true)
 	{
+		// handle events
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		// check if event
+		if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+		{
+			break;
+		}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// ignore if new instance is due to new type registration
 		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
@@ -126,23 +139,29 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 			break;
 		}
 	}
+	// handle events
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// NOTE : at this point parentNodeId could be null, so we need lastParentNodeId which is guaranteed not to be null
-	// if parentContext is valid, then we can call deferred constructors waiting for *nodeId and continue with execution
-	if (!parentContext)
+	//        if parentContext is valid, then we can call deferred constructors waiting for *nodeId and continue with execution
+	// NOTE : if-else block below not necessary for objs/vars after fix : https://github.com/open62541/open62541/issues/2564
+	//        but still necessary for children of event instances
+	if (!parentContext && !metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
 		server->m_hashDeferredConstructors[lastParentNodeId].append([server, nodeId, nodeContext, metaObject]() {
 			QUaServer::uaConstructor(server, nodeId, nodeContext, metaObject);
 		});
 		return UA_STATUSCODE_GOOD;
 	}
-	else
+	else if (parentContext)
 	{
+		// there might be event grandchildren waiting
 		for (int i = 0; i < server->m_hashDeferredConstructors[*nodeId].count(); i++)
 		{
 			server->m_hashDeferredConstructors[*nodeId][i]();
 		}
 		server->m_hashDeferredConstructors.remove(*nodeId);
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
 	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
@@ -164,7 +183,19 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	// after calling the UA constructor
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
-	// need to set parent if direct parent is already bound bacaus eits constructor has already been called
+	// handle events
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// create and attach event children
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		for (int i = 0; i < server->m_hashDeferredConstructors[*nodeId].count(); i++)
+		{
+			server->m_hashDeferredConstructors[*nodeId][i]();
+		}
+		server->m_hashDeferredConstructors.remove(*nodeId);
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// need to set parent if direct parent is already bound bacause its constructor has already been called
 	parentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId))
 	{
@@ -709,19 +740,22 @@ void QUaServer::setupServer()
 	m_pobjectsFolder = new QUaFolderObject(this);
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
-	// register base types
+	// register base types (for all types)
 	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
 	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
 	m_mapTypes.insert(QString(QUaProperty::staticMetaObject.className())        , UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
 	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject.className())      , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
 	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
-	// set context for base types
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject.className())       , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// set context for base types (for instantiable types)
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// register constructors for instantiable types
+	// register constructors (for instantiable types)
 	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
 	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty::staticMetaObject);
 	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject::staticMetaObject);
@@ -1510,10 +1544,18 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createInstance", "Unsupported base class");
+		Q_ASSERT_X(false, "QUaServer::createInstance", "Unsupported base class. It must derive from QUaNode");
 		return UA_NODEID_NULL;
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// check if inherits BaseEventType, in which case this method cannot be used
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QUaServer::createInstance", "Cannot use createInstance to create Events. Use createEvent method instead");
+		return UA_NODEID_NULL;
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// try to get typeNodeId, if null, then register it
 	QString   strClassName = QString(metaObject.className());
 	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
@@ -1586,6 +1628,38 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	// return new instance node id
 	return nodeIdNewInstance;
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject)
+{
+	// check if derives from event
+	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QUaServer::createEvent", "Unsupported event class. It must derive from QUaBaseEvent");
+		return UA_NODEID_NULL;
+	}
+	// try to get typeEvtId, if null, then register it
+	QString   strClassName = QString(metaObject.className());
+	UA_NodeId typeEvtId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (UA_NodeId_isNull(&typeEvtId))
+	{
+		this->registerType(metaObject);
+		typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	}
+	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
+	// create event instance
+	UA_NodeId nodeIdNewEvent;
+	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// check no pending constructors
+	Q_ASSERT(m_hashDeferredConstructors.count() == 0);
+	// return new instance node id
+	return nodeIdNewEvent;
+}
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & nodeId)
 {

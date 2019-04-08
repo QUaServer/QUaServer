@@ -90,8 +90,16 @@ QUaNode::QUaNode(QUaServer *server)
 		nodeInstance->setObjectName(strBrowseName);
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
-		//        so in the end we have to wuery children by object name
+		//        so in the end we have to query children by object name
 	}
+	// handle events
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// do not assert if event type
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		return;
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count()      == 0        &&
 		       chidrenNodeIds.count()   == numProps &&

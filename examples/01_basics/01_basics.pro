@@ -13,5 +13,10 @@ INCLUDEPATH += $$PWD/
 
 SOURCES += main.cpp
 
+
+HEADERS += myeventtype.h
+SOURCES += myeventtype.cpp
+
+
 include($$PWD/../../src/wrapper/quaserver.pri)
 include($$PWD/../../src/helper/add_qt_path_win.pri)

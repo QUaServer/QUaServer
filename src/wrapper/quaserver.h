@@ -8,6 +8,9 @@
 #include <QUaBaseDataVariable>
 #include <QUaProperty>
 #include <QUaBaseObject>
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#include <QUaBaseEvent>
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 class QUaServer : public QObject
 {
@@ -74,7 +77,7 @@ public:
 	// register reference to get a respective refTypeId
 	void registerReference(const QUaReference &ref);
 
-	// create instance of a given type
+	// create instance of a given (variable or object) type
 	template<typename T>
 	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
 	// get objects folder
@@ -84,6 +87,15 @@ public:
 	T* nodeById(const QString &strNodeId);
 	// get node reference by node id (nullptr if node id does not exist)
 	QUaNode * nodeById(const QString &strNodeId);
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// Events API
+
+	// create instance of a given event type
+	template<typename T>
+	T* createEvent();
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Access Control API
 
@@ -150,6 +162,13 @@ private:
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
 	UA_NodeId createInstance(const QMetaObject &metaObject, QUaNode * parentNode, const QString &strNodeId = "");
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+	// create instance of a given event type
+	UA_NodeId createEvent(const QMetaObject &metaObject);
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	void bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId &nodeId);
 
@@ -292,6 +311,27 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	// return c++ instance
 	return newInstance;
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+template<typename T>
+inline T * QUaServer::createEvent()
+{
+	// instantiate first in OPC UA
+	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject);
+	if (UA_NodeId_isNull(&newEventNodeId))
+	{
+		return nullptr;
+	}
+	// get new c++ instance created in UA constructor
+	auto tmp = QUaNode::getNodeContext(newEventNodeId, this);
+	T * newEvent = dynamic_cast<T*>(tmp);
+	Q_CHECK_PTR(newEvent);
+	// return c++ event instance
+	return newEvent;
+}
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 template<typename T>
 inline T * QUaServer::nodeById(const QString &strNodeId)

@@ -3,6 +3,8 @@
 
 #include <QUaServer>
 
+#include "myeventtype.h"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -15,19 +17,22 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
-	varBaseData->setDisplayName("my_variable");
-	varBaseData->setValue(1);
+	//QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+	//varBaseData->setDisplayName("my_variable");
+	//varBaseData->setValue(1);
 
-	QUaProperty * varProp = objsFolder->addProperty();
-	varProp->setDisplayName("my_property");
-	varProp->setValue("hola");
+	//QUaProperty * varProp = objsFolder->addProperty();
+	//varProp->setDisplayName("my_property");
+	//varProp->setValue("hola");
 
-	QUaBaseObject * objBase = objsFolder->addBaseObject();
-	objBase->setDisplayName("my_object");
+	//QUaBaseObject * objBase = objsFolder->addBaseObject();
+	//objBase->setDisplayName("my_object");
 
-	QUaFolderObject * objFolder = objsFolder->addFolderObject();
-	objFolder->setDisplayName("my_folder");
+	//QUaFolderObject * objFolder = objsFolder->addFolderObject();
+	//objFolder->setDisplayName("my_folder");
+
+	auto event = server.createEvent<MyEventType>();
+	qDebug() << event->eventType()->value();
 
 	// start server
 

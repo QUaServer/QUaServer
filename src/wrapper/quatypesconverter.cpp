@@ -708,6 +708,8 @@ namespace QUaTypesConverter {
 			return uaVariantToQVariantScalar<QUuid      , UA_Guid      >(uaVariant, QMetaType::QUuid);
 		case UA_TYPES_BYTESTRING:
 			return uaVariantToQVariantScalar<QByteArray , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+		case UA_TYPES_NODEID:
+			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, QMetaType::QString);
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariant", "Unsupported datatype");
 			return QVariant();
@@ -841,6 +843,12 @@ namespace QUaTypesConverter {
 	{
 		return QUuid(data->data1, data->data2, data->data3, data->data4[0], data->data4[1], data->data4[2],
 			data->data4[3], data->data4[4], data->data4[5], data->data4[6], data->data4[7]);
+	}
+	// specialization (NodeId)
+	template<>
+	QString uaVariantToQVariantScalar<QString, UA_NodeId>(const UA_NodeId *data)
+	{
+		return nodeIdToQString(*data);
 	}
 
 }
