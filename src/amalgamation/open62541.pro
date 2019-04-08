@@ -17,6 +17,7 @@ CONFIG(debug, debug|release) {
 
 INCLUDEPATH += $$PWD
 
+HEADERS += $$PWD/open62541.h
 SOURCES += $$PWD/open62541.c
 
 include($$PWD/open62541opts.pri)

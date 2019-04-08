@@ -238,7 +238,7 @@ public:
 	virtual QUaWriteMask userWriteMask(const QString &strUserName);
 
 	// provide specific implementation for individual nodes
-	// signature is <QUaWriteMask(const QString &, QUaNode *)>
+	// signature is <QUaWriteMask(const QString &)>
 	template<typename M>
 	void setUserWriteMaskCallback(const M &callback);
 
@@ -246,7 +246,7 @@ public:
 	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
 
 	// provide specific implementation for individual variable nodes
-	// signature is <QUaAccessLevel(const QString &, QUaNode *)>
+	// signature is <QUaAccessLevel(const QString &)>
 	template<typename M>
 	void setUserAccessLevelCallback(const M &callback);
 
@@ -254,7 +254,7 @@ public:
 	virtual bool userExecutable(const QString &strUserName);
 
 	// provide specific implementation for individual object nodes
-	// signature is <bool(const QString &, QUaNode *)>
+	// signature is <bool(const QString &)>
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
 
@@ -323,24 +323,24 @@ inline QList<T*> QUaNode::findReferences(const QUaReference &ref, const bool &is
 template<typename M>
 inline void QUaNode::setUserWriteMaskCallback(const M & callback)
 {
-	m_userWriteMaskCallback = [callback, this](const QString &strUserName) {
-		return callback(strUserName, this);
+	m_userWriteMaskCallback = [callback](const QString &strUserName) {
+		return callback(strUserName);
 	};
 }
 
 template<typename M>
 inline void QUaNode::setUserAccessLevelCallback(const M & callback)
 {
-	m_userAccessLevelCallback = [callback, this](const QString &strUserName) {
-		return callback(strUserName, this);
+	m_userAccessLevelCallback = [callback](const QString &strUserName) {
+		return callback(strUserName);
 	};
 }
 
 template<typename M>
 inline void QUaNode::setUserExecutableCallback(const M & callback)
 {
-	m_userExecutableCallback = [callback, this](const QString &strUserName) {
-		return callback(strUserName, this);
+	m_userExecutableCallback = [callback](const QString &strUserName) {
+		return callback(strUserName);
 	};
 }
 

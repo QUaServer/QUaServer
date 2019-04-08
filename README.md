@@ -21,6 +21,18 @@ The library version of the `open62541` files used currently in this repo is `v0.
 
 ---
 
+# Compile Events
+
+Normally the library comes with a minimum nodeset compatible with most clients to minimize binary size. The `UA_NAMESPACE_ZERO` option allows to select `MINIMAL`, `REDUCED` or `FULL`. To support *events*, we need to set it to `FULL`.
+
+```bash
+cd "C:\Users\User\Desktop\Repos\open62541.git"
+mkdir build; cd build
+cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_ENABLE_SUBSCRIPTIONS=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON .. -G "Visual Studio 15 2017 Win64"
+```
+
+---
+
 # Compile Encryption
 
 We need the `mbedtls` dependency:

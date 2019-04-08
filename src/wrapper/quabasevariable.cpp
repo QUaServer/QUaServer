@@ -41,7 +41,7 @@ QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	const UA_NodeId &nodeId = *server->m_newNodeNodeId;
 	// setup callbacks
 	UA_ValueCallback callback;
-	callback.onRead  = nullptr; // TODO : mplement?
+	callback.onRead  = nullptr; // TODO : implement?
 	callback.onWrite = &QUaBaseVariable::onWrite;
 	UA_Server_setVariableNode_valueCallback(server->m_server, nodeId, callback);
 }
@@ -59,7 +59,11 @@ QVariant QUaBaseVariable::value() const
 	auto st = UA_Server_readValue(m_qUaServer->m_server, m_nodeId, &outValue);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	return QUaTypesConverter::uaVariantToQVariant(outValue);
+	// convert
+	QVariant outVar = QUaTypesConverter::uaVariantToQVariant(outValue);
+	// clenaup
+	UA_Variant_deleteMembers(&outValue);
+	return outVar;
 }
 
 void QUaBaseVariable::setValue(const QVariant & value)
@@ -131,9 +135,12 @@ void QUaBaseVariable::setValue(const QVariant & value)
 	}
 
 	// convert to UA_Variant and set new value
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
 	auto st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
-		QUaTypesConverter::uaVariantFromQVariant(newValue));
+		tmpVar);
+	// cleanup
+	UA_Variant_deleteMembers(&tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// emit value changed
@@ -229,11 +236,15 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
 	// set converted or default value
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
-		QUaTypesConverter::uaVariantFromQVariant(oldValue));
+		tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+
+	// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
+
 	// set new type
 	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
@@ -288,11 +299,15 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		oldValue = QVariant((QVariant::Type)QMetaType::Int);
 	}
 	// set converted or default value
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
-		QUaTypesConverter::uaVariantFromQVariant(oldValue));
+		tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+
+	// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
+
 	// change data type
 	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
 	st = UA_Server_writeDataType(m_qUaServer->m_server,

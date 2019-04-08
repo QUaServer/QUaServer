@@ -1493,7 +1493,11 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			// set return value if any
 			if ((QMetaType::Type)metamethod.returnType() != QMetaType::Void)
 			{
-				*output = QUaTypesConverter::uaVariantFromQVariant(returnValue);
+				UA_Variant tmpVar = QUaTypesConverter::uaVariantFromQVariant(returnValue);
+
+				// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
+
+				*output = tmpVar;
 			}
 			// return success status
 			return (UA_StatusCode)UA_STATUSCODE_GOOD;

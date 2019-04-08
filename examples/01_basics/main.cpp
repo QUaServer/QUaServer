@@ -17,16 +17,17 @@ int main(int argc, char *argv[])
 
 	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
 	varBaseData->setDisplayName("my_variable");
+	varBaseData->setValue(1);
 
 	QUaProperty * varProp = objsFolder->addProperty();
 	varProp->setDisplayName("my_property");
+	varProp->setValue("hola");
 
 	QUaBaseObject * objBase = objsFolder->addBaseObject();
 	objBase->setDisplayName("my_object");
 
 	QUaFolderObject * objFolder = objsFolder->addFolderObject();
 	objFolder->setDisplayName("my_folder");
-
 
 	// start server
 

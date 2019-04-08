@@ -11,6 +11,8 @@ win32 {
 }
 # include open62541 header directory
 INCLUDEPATH += $$PWD/
+# include header to project
+HEADERS += $$PWD/open62541.h
 
 include($$PWD/open62541opts.pri)
 

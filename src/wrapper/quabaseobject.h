@@ -89,7 +89,11 @@ struct QUaMethodTraitsBase
 		// call method
 		QVariant varResult = methodCallback(convertArgType<Args>(input, iArg--)...);
 		// set result
-		return QUaTypesConverter::uaVariantFromQVariant(varResult);
+		UA_Variant retVar = QUaTypesConverter::uaVariantFromQVariant(varResult);
+
+		// TODO : cleanup? UA_Variant_deleteMembers(&retVar);
+
+		return retVar;
 	}
 };
 // general case
