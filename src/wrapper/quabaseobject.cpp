@@ -40,6 +40,33 @@ QUaBaseObject::QUaBaseObject(QUaServer *server)
 
 }
 
+quint8 QUaBaseObject::eventNotifier() const
+{
+	UA_Byte outByte;
+	auto st = UA_Server_readEventNotifier(m_qUaServer->m_server, m_nodeId, &outByte);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	return outByte;
+}
+
+void QUaBaseObject::setEventNotifier(const quint8 & eventNotifier)
+{
+	auto st = UA_Server_writeEventNotifier(m_qUaServer->m_server, m_nodeId, eventNotifier);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	emit this->eventNotifierChanged(eventNotifier);
+}
+
+void QUaBaseObject::setEventNotifierSubscribeToEvents()
+{
+	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS);
+}
+
+void QUaBaseObject::setEventNotifierNone()
+{
+	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_NONE);
+}
+
 UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
 {
     // add method node

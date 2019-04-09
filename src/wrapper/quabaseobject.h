@@ -200,9 +200,7 @@ class QUaBaseObject : public QUaNode
 
 	// Object Attributes
 
-	//Q_PROPERTY(UA_Byte eventNotifier READ eventNotifier)
-	// UA_Server_readEventNotifier
-	// UA_Server_writeEventNotifier
+	Q_PROPERTY(quint8 eventNotifier READ eventNotifier WRITE setEventNotifier NOTIFY eventNotifierChanged)
 
 friend class QUaServer;
 
@@ -211,7 +209,13 @@ public:
 
 	// Attributes API
 
-	// TODO : eventNotifier
+	quint8 eventNotifier() const;
+	void setEventNotifier(const quint8 &eventNotifier);
+
+	// Helpers
+
+	void setEventNotifierSubscribeToEvents();
+	void setEventNotifierNone();
 
 	// Instance Creation API
 
@@ -223,6 +227,18 @@ public:
 
 	template<typename M>
 	void addMethod(const QString &strMethodName, const M &methodCallback);
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// Events API
+
+	// create instance of a given event type
+	template<typename T>
+	T* createEvent();
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+signals:
+	void eventNotifierChanged(const quint8 &eventNotifier);
 
 private:
 
@@ -289,6 +305,25 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
 		return UA_STATUSCODE_GOOD;
 	};
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+template<typename T>
+inline T * QUaBaseObject::createEvent()
+{
+	// instantiate first in OPC UA
+	UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId);
+	if (UA_NodeId_isNull(&newEventNodeId))
+	{
+		return nullptr;
+	}
+	// get new c++ instance created in UA constructor
+	auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer);
+	T * newEvent = dynamic_cast<T*>(tmp);
+	Q_CHECK_PTR(newEvent);
+	// return c++ event instance
+	return newEvent;
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // QUABASEOBJECT_H
 

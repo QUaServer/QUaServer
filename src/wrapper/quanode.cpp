@@ -123,7 +123,6 @@ QUaNode::QUaNode(QUaServer *server)
 
 QUaNode::~QUaNode()
 {
-	
 	// check if node id has been already removed from node store
 	// i.e. child of deleted parent node, or ...
 	UA_NodeId outNodeId;

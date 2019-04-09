@@ -63,6 +63,13 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	{
 		return;
 	}
+	// check if event (not in tree)
+	auto evt = dynamic_cast<QUaBaseEvent*>(node);
+	if (evt)
+	{
+		evt->deleteLater();
+		return;
+	}
 	// if convertible could mean:
 	// 1) this is a child of a node being deleted programatically 
 	//    this one does not require to call C++ delete because Qt will take care of it
@@ -374,7 +381,8 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
 		// NOTE : custom code : add session to hash
-		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
+		//Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
 		qServer->m_hashSessions[*sessionId] = "";
 
 		/* No userdata atm */
@@ -1592,7 +1600,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject)
+UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject, const UA_NodeId &nodeIdOriginator)
 {
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
@@ -1609,6 +1617,8 @@ UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject)
 		typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
+	// set originator node id temporarily
+	m_newEventOriginatorNodeId = &nodeIdOriginator;
 	// create event instance
 	UA_NodeId nodeIdNewEvent;
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);

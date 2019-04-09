@@ -25,27 +25,36 @@ int main(int argc, char *argv[])
 	//varProp->setDisplayName("my_property");
 	//varProp->setValue("hola");
 
-	//QUaBaseObject * objBase = objsFolder->addBaseObject();
-	//objBase->setDisplayName("my_object");
+	QUaBaseObject * objBase = objsFolder->addBaseObject();
+	objBase->setDisplayName("my_object");
 
 	//QUaFolderObject * objFolder = objsFolder->addFolderObject();
 	//objFolder->setDisplayName("my_folder");
 
-	auto event = server.createEvent<MyEventType>();
+	objsFolder->setEventNotifierSubscribeToEvents();
+	objBase->setEventNotifierSubscribeToEvents();
+	auto event = objBase->createEvent<MyEventType>();
 
 	event->setSourceName("MyApplication");
-	event->setMessage("An event occured in my server");
-	event->setSeverity(66);
-
-	qDebug() << "eventId    " << event->eventId();
+	qDebug() << "-----------------------------------------------------------------";
 	qDebug() << "eventType  " << event->eventType();
-	qDebug() << "sourceNode " << event->sourceNode();
 	qDebug() << "sourceName " << event->sourceName();
-	qDebug() << "time       " << event->time();
-	qDebug() << "receiveTime" << event->receiveTime();
 	qDebug() << "localTime  " << event->localTime();
-	qDebug() << "message    " << event->message();
-	qDebug() << "severity   " << event->severity();
+	qDebug() << "-----------------------------------------------------------------";
+	objsFolder->addMethod("triggerEvent", [&event](int num, quint16 severity) {
+		event->setMessage(QString("An event occured in my server with number %1").arg(num));
+		event->setTime(QDateTime::currentDateTimeUtc());
+		event->setSeverity(severity);
+		event->trigger();
+		qDebug() << "-----------------------------------------------------------------";
+		qDebug() << "eventId    " << event->eventId();
+		qDebug() << "time       " << event->time();
+		qDebug() << "message    " << event->message();
+		qDebug() << "sourceNode " << event->sourceNode();
+		qDebug() << "receiveTime" << event->receiveTime();
+		qDebug() << "severity   " << event->severity();
+		qDebug() << "-----------------------------------------------------------------";
+	});
 
 	// start server
 

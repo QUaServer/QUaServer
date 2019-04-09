@@ -19,6 +19,9 @@ class QUaServer : public QObject
 friend class QUaNode;
 friend class QUaBaseVariable;
 friend class QUaBaseObject;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+friend class QUaBaseEvent;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 public:
 
@@ -166,7 +169,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// create instance of a given event type
-	UA_NodeId createEvent(const QMetaObject &metaObject);
+	UA_NodeId createEvent(const QMetaObject &metaObject, const UA_NodeId &nodeIdOriginator);
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -277,7 +280,8 @@ private:
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newNodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
-
+	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent and used in QUaBaseEvent::QUaBaseEvent
+	const UA_NodeId   * m_newEventOriginatorNodeId;
 };
 
 template<typename T>
@@ -317,7 +321,7 @@ template<typename T>
 inline T * QUaServer::createEvent()
 {
 	// instantiate first in OPC UA
-	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject);
+	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
 		return nullptr;
