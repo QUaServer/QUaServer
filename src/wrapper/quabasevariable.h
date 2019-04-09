@@ -77,7 +77,7 @@ public:
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
 	// Use QVariant::fromValue or use casting to force a dataType
 	QVariant          value() const;
-	void              setValue(const QVariant &value);
+	void              setValue(const QVariant &value, QMetaType::Type newType = QMetaType::UnknownType);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost

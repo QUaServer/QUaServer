@@ -32,7 +32,20 @@ int main(int argc, char *argv[])
 	//objFolder->setDisplayName("my_folder");
 
 	auto event = server.createEvent<MyEventType>();
-	qDebug() << event->eventType()->value();
+
+	event->setSourceName("MyApplication");
+	event->setMessage("An event occured in my server");
+	event->setSeverity(66);
+
+	qDebug() << "eventId    " << event->eventId();
+	qDebug() << "eventType  " << event->eventType();
+	qDebug() << "sourceNode " << event->sourceNode();
+	qDebug() << "sourceName " << event->sourceName();
+	qDebug() << "time       " << event->time();
+	qDebug() << "receiveTime" << event->receiveTime();
+	qDebug() << "localTime  " << event->localTime();
+	qDebug() << "message    " << event->message();
+	qDebug() << "severity   " << event->severity();
 
 	// start server
 

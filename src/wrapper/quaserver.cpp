@@ -121,8 +121,6 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
-			// remove from deferred constructors
-			server->m_hashDeferredConstructors.remove(*nodeId);
 			return UA_STATUSCODE_GOOD;
 		}
 		lastParentNodeId = parentNodeId;
@@ -139,29 +137,6 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 			break;
 		}
 	}
-	// handle events
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// NOTE : at this point parentNodeId could be null, so we need lastParentNodeId which is guaranteed not to be null
-	//        if parentContext is valid, then we can call deferred constructors waiting for *nodeId and continue with execution
-	// NOTE : if-else block below not necessary for objs/vars after fix : https://github.com/open62541/open62541/issues/2564
-	//        but still necessary for children of event instances
-	if (!parentContext && !metaObject.inherits(&QUaBaseEvent::staticMetaObject))
-	{
-		server->m_hashDeferredConstructors[lastParentNodeId].append([server, nodeId, nodeContext, metaObject]() {
-			QUaServer::uaConstructor(server, nodeId, nodeContext, metaObject);
-		});
-		return UA_STATUSCODE_GOOD;
-	}
-	else if (parentContext)
-	{
-		// there might be event grandchildren waiting
-		for (int i = 0; i < server->m_hashDeferredConstructors[*nodeId].count(); i++)
-		{
-			server->m_hashDeferredConstructors[*nodeId][i]();
-		}
-		server->m_hashDeferredConstructors.remove(*nodeId);
-	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
 	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
@@ -183,21 +158,9 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	// after calling the UA constructor
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
-	// handle events
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// create and attach event children
-	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
-	{
-		for (int i = 0; i < server->m_hashDeferredConstructors[*nodeId].count(); i++)
-		{
-			server->m_hashDeferredConstructors[*nodeId][i]();
-		}
-		server->m_hashDeferredConstructors.remove(*nodeId);
-	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// need to set parent if direct parent is already bound bacause its constructor has already been called
 	parentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
-	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId))
+	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId) && parentContext)
 	{
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
@@ -1623,8 +1586,6 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-	// check no pending constructors
-	Q_ASSERT(m_hashDeferredConstructors.count() == 0);
 	// return new instance node id
 	return nodeIdNewInstance;
 }
@@ -1653,8 +1614,6 @@ UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject)
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// check no pending constructors
-	Q_ASSERT(m_hashDeferredConstructors.count() == 0);
 	// return new instance node id
 	return nodeIdNewEvent;
 }

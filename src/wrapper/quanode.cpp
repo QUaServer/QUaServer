@@ -85,18 +85,33 @@ QUaNode::QUaNode(QUaServer *server)
 		auto childNodeId = mapChildren.take(strBrowseName);
 		// get node context (C++ instance)
 		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+		Q_CHECK_PTR(nodeInstance);
 		// assign C++ parent
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(strBrowseName);
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to query children by object name
-	}
+	} // for props
 	// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// do not assert if event type
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
+		for (int i = 0; i < QUaBaseEvent::listDefaultProps.count(); i++)
+		{
+			QString strBrowseName = QUaBaseEvent::listDefaultProps.at(i);
+			Q_ASSERT(mapChildren.contains(strBrowseName));
+			// get child nodeId for child
+			auto childNodeId = mapChildren.take(strBrowseName);
+			// get node context (C++ instance)
+			auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+			Q_CHECK_PTR(nodeInstance);
+			// assign C++ parent
+			nodeInstance->setParent(this);
+			nodeInstance->setObjectName(strBrowseName);
+		}
+		Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Event children not bound properly.");
 		return;
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

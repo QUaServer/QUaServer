@@ -247,7 +247,12 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_GUID      );    // 13 : UA_Guid      : { UA_UInt32 data1; UA_UInt16 data2; UA_UInt16 data3; UA_Byte data4[8]; }
 		case QMetaType::QByteArray:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);    // 14 : UA_ByteString : UA_String * A sequence of octets. */
-		
+		case METATYPE_NODEID:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID);        // 16 : UA_NodeId
+		case METATYPE_TIMEZONEDATATYPE:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
+		case METATYPE_LOCALIZEDTEXT:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
 		// TODO : QMetaType::QVariantList ???
 		
 		default:
@@ -295,18 +300,28 @@ namespace QUaTypesConverter {
 			return &UA_TYPES[UA_TYPES_GUID];          // 13 : UA_Guid      : { UA_UInt32 data1; UA_UInt16 data2; UA_UInt16 data3; UA_Byte data4[8]; }
 		case QMetaType::QByteArray:
 			return &UA_TYPES[UA_TYPES_BYTESTRING];    // 14 : UA_ByteString : UA_String * A sequence of octets. */
+		case METATYPE_NODEID:
+			return &UA_TYPES[UA_TYPES_NODEID];        // 16 : UA_NodeId : { ... }
+		case METATYPE_TIMEZONEDATATYPE:
+			return &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]; // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
+		case METATYPE_LOCALIZEDTEXT:
+			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 		default:
 			Q_ASSERT_X(false, "uaTypeFromQType", "Unsupported datatype");
 			return nullptr;
 		}
 	}
 
-	UA_Variant uaVariantFromQVariant(const QVariant & var)
+	UA_Variant uaVariantFromQVariant(const QVariant & var, QMetaType::Type qtType/* = QMetaType::UnknownType*/)
 	{
 		// TODO : support multidimentional arrays
 
-		// get qt type
-		QMetaType::Type qtType;
+		// get qt type from variant
+		if (qtType == QMetaType::UnknownType)
+		{
+			qtType = static_cast<QMetaType::Type>(var.type());
+		}
+		//QMetaType::Type qtType;
 		const UA_DataType * uaType = nullptr;
 		// fix qt type if array
 		if (var.canConvert<QVariantList>())
@@ -315,7 +330,6 @@ namespace QUaTypesConverter {
 		}
 		else
 		{
-            qtType = static_cast<QMetaType::Type>(var.type());
 			uaType = uaTypeFromQType(qtType);
 		}
 		// get ua type and call respective method
@@ -356,7 +370,13 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantScalar<UA_Guid      , QUuid     >(var, uaType);
 		case QMetaType::QByteArray:    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 			return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
-		case QMetaType::QVariantList:  // UA_Array
+		case METATYPE_NODEID:          // 16 : UA_NodeId : { ... }
+			return uaVariantFromQVariantScalar<UA_NodeId    , QString>(var, uaType);
+		case METATYPE_TIMEZONEDATATYPE: // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
+			return uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(var, uaType);
+		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
+		case QMetaType::QVariantList:   // UA_Array
 			return uaVariantFromQVariantArray(var);
 		default:
 			Q_ASSERT_X(false, "uaVariantFromQVariant", "Unsupported datatype");
@@ -425,6 +445,26 @@ namespace QUaTypesConverter {
 		ptr->data2 = value.data2;
 		ptr->data3 = value.data3;
 		std::memcpy(ptr->data4, value.data4, sizeof(value.data4));
+	}
+	// specialization (NodeId)
+	template<>
+	void uaVariantFromQVariantScalar<UA_NodeId, QString>(const QString &value, UA_NodeId *ptr)
+	{
+		*ptr = nodeIdFromQString(value);
+	}
+	// specialization (QTimeZone)
+	template<>
+	void uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(const QTimeZone &value, UA_TimeZoneDataType *ptr)
+	{
+		// NOTE : this might be wrong because QTimeZone must be linked to an specific QDateTime
+		ptr->offset = value.offsetFromUtc(QDateTime::currentDateTime()) / 60;
+		ptr->daylightSavingInOffset = true;
+	}
+	// specialization (LocalizedText)
+	template<>
+	void uaVariantFromQVariantScalar<UA_LocalizedText, QString>(const QString &value, UA_LocalizedText *ptr)
+	{
+		ptr->text = UA_STRING_ALLOC(value.toUtf8().constData());
 	}
 
 	UA_Variant uaVariantFromQVariantArray(const QVariant & var)
@@ -611,6 +651,22 @@ namespace QUaTypesConverter {
 		{
 			return QMetaType::QByteArray;
 		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UTCTIME)))
+		{
+			return QMetaType::QDateTime;
+		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)))
+		{
+			return METATYPE_NODEID;
+		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)))
+		{
+			return METATYPE_TIMEZONEDATATYPE;
+		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)))
+		{
+			return METATYPE_LOCALIZEDTEXT;
+		}
 		else
 		{
 			Q_ASSERT_X(false, "uaTypeNodeIdToQType", "Unsupported datatype");
@@ -656,6 +712,12 @@ namespace QUaTypesConverter {
 			return QMetaType::QUuid;
 		case UA_TYPES_BYTESTRING:
 			return QMetaType::QByteArray;
+		case UA_TYPES_NODEID:
+			return METATYPE_NODEID;
+		case UA_TYPES_TIMEZONEDATATYPE:
+			return METATYPE_TIMEZONEDATATYPE;
+		case UA_TYPES_LOCALIZEDTEXT:
+			return METATYPE_LOCALIZEDTEXT;
 		default:
 			Q_ASSERT_X(false, "uaTypeToQType", "Unsupported datatype");
 			return QMetaType::UnknownType;
@@ -708,8 +770,15 @@ namespace QUaTypesConverter {
 			return uaVariantToQVariantScalar<QUuid      , UA_Guid      >(uaVariant, QMetaType::QUuid);
 		case UA_TYPES_BYTESTRING:
 			return uaVariantToQVariantScalar<QByteArray , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+		case UA_TYPES_UTCTIME:
+			// NOTE : typedef UA_DateTime UA_UtcTime;
+			return uaVariantToQVariantScalar<QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
 		case UA_TYPES_NODEID:
-			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, QMetaType::QString);
+			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, METATYPE_NODEID);
+		case UA_TYPES_TIMEZONEDATATYPE:
+			return uaVariantToQVariantScalar<QTimeZone  , UA_TimeZoneDataType>(uaVariant, METATYPE_TIMEZONEDATATYPE);
+		case UA_TYPES_LOCALIZEDTEXT:
+			return uaVariantToQVariantScalar<QString    , UA_LocalizedText   >(uaVariant, METATYPE_LOCALIZEDTEXT);
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariant", "Unsupported datatype");
 			return QVariant();
@@ -794,7 +863,9 @@ namespace QUaTypesConverter {
 	{
 		UATYPE  *temp    = static_cast<UATYPE *>(uaVariant.data);
 		QVariant tempVar = QVariant::fromValue(uaVariantToQVariantScalar<TARGETTYPE, UATYPE>(temp));
-		if (type != QMetaType::UnknownType && type != static_cast<QMetaType::Type>(tempVar.type()))
+		if (type != QMetaType::UnknownType && 
+			type < QMetaType::User &&
+			type != static_cast<QMetaType::Type>(tempVar.type()))
 		{
 			// bool QVariant::convert(int targetTypeId) : Casts the variant to the requested type, targetTypeId. 
 			// If the cast cannot be done, the variant is still changed to the requested type, 
@@ -850,6 +921,22 @@ namespace QUaTypesConverter {
 	{
 		return nodeIdToQString(*data);
 	}
+	// specialization (QTimeZone)
+	template<>
+	QTimeZone uaVariantToQVariantScalar<QTimeZone, UA_TimeZoneDataType>(const UA_TimeZoneDataType *data)
+	{
+		// NOTE : offset is in minutes, QTimeZone receives seconds
+		//        don't know what to do with the DaylightSavingInOffset flag 
+		//        (true if offset includes correction, false if not)
+		return QTimeZone(60 * data->offset);
+	}
+	// specialization (LocalizedText)
+	template<>
+	QString uaVariantToQVariantScalar<QString, UA_LocalizedText>(const UA_LocalizedText *data)
+	{
+		return uaStringToQString(data->text);
+	}
+	
 
 }
 

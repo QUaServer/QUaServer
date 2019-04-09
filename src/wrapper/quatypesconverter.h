@@ -6,9 +6,21 @@
 #include <QUuid>
 #include <QRegularExpression>
 #include <QDate>
+#include <QTimeZone>
 #include <QDebug>
 
 #include "open62541.h"
+
+Q_DECLARE_METATYPE(QTimeZone);
+
+#define METATYPE_OFFSET_LOCALIZEDTEXT 1
+#define METATYPE_LOCALIZEDTEXT (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_LOCALIZEDTEXT)
+
+#define METATYPE_OFFSET_TIMEZONEDATATYPE 2
+#define METATYPE_TIMEZONEDATATYPE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_TIMEZONEDATATYPE)
+
+#define METATYPE_OFFSET_NODEID 3
+#define METATYPE_NODEID (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_NODEID)
 
 QT_BEGIN_NAMESPACE
 
@@ -35,11 +47,11 @@ namespace QUaTypesConverter {
 	// ua from qt
 	UA_NodeId          uaTypeNodeIdFromQType(const QMetaType::Type &type);
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
-	UA_Variant         uaVariantFromQVariant(const QVariant        & var);
+	UA_Variant         uaVariantFromQVariant(const QVariant        & var, QMetaType::Type qtType = QMetaType::UnknownType);
 	// ua from qt : scalar
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	UA_Variant uaVariantFromQVariantScalar(const QVariant &var, const UA_DataType *type);
-	template<> // TODO
+	template<> // TODO : implement better
 	UA_Variant uaVariantFromQVariantScalar<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type);
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	void       uaVariantFromQVariantScalar(const QTTYPE &var, TARGETTYPE *ptr);
@@ -47,7 +59,7 @@ namespace QUaTypesConverter {
 	UA_Variant uaVariantFromQVariantArray(const QVariant & var);
 	template<typename TARGETTYPE, typename QTTYPE>
 	UA_Variant uaVariantFromQVariantArray(const QVariant &var, const UA_DataType *type);
-	template<> // TODO
+	template<> // TODO : implement better
 	UA_Variant uaVariantFromQVariantArray<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type);
 
 	// ua to qt

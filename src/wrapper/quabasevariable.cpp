@@ -66,15 +66,18 @@ QVariant QUaBaseVariable::value() const
 	return outVar;
 }
 
-void QUaBaseVariable::setValue(const QVariant & value)
+void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/* = QMetaType::UnknownType*/)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (newType == QMetaType::UnknownType)
+	{
+		newType = (QMetaType::Type)value.type();
+	}
 	// got modifiable copy
 	auto newValue = value;
 	// get types
 	auto oldType = this->dataType();
-	auto newType = (QMetaType::Type)newValue.type();
 	// if variant list we need to adjust newType
 	if (newValue.canConvert<QVariantList>())
 	{
@@ -135,7 +138,7 @@ void QUaBaseVariable::setValue(const QVariant & value)
 	}
 
 	// convert to UA_Variant and set new value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
 	auto st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		tmpVar);
