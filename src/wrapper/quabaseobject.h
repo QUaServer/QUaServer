@@ -214,8 +214,10 @@ public:
 
 	// Helpers
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	void setEventNotifierSubscribeToEvents();
 	void setEventNotifierNone();
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Instance Creation API
 

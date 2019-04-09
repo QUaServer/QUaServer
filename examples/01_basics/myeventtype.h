@@ -1,6 +1,8 @@
 #ifndef MYEVENTTYPE_H
 #define MYEVENTTYPE_H
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 #include <QUaBaseEvent>
 
 class MyEventType : public QUaBaseEvent
@@ -13,6 +15,8 @@ public:
 
 	
 };
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // MYEVENTTYPE_H
 

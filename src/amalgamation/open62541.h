@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-860-g4209f74e
+ * Git-Revision: 0.3-rc2-880-g03a617d8
  */
 
 /*
@@ -32,7 +32,7 @@
 #define UA_OPEN62541_VER_MINOR 4
 #define UA_OPEN62541_VER_PATCH 0
 #define UA_OPEN62541_VER_LABEL "-dev" /* Release candidate label, etc. */
-#define UA_OPEN62541_VER_COMMIT "0.3-rc2-860-g4209f74e"
+#define UA_OPEN62541_VER_COMMIT "0.3-rc2-880-g03a617d8"
 
 /**
  * Feature Options
@@ -73,11 +73,13 @@
 #define UA_ENABLE_DISCOVERY
 /* #undef UA_ENABLE_DISCOVERY_MULTICAST */
 /* #undef UA_ENABLE_QUERY */
+/* #undef UA_ENABLE_MALLOC_SINGLETON */
 #define UA_ENABLE_DISCOVERY_SEMAPHORE
 /* #undef UA_ENABLE_UNIT_TEST_FAILURE_HOOKS */
 /* #undef UA_ENABLE_VALGRIND_INTERACTIVE */
 #define UA_VALGRIND_INTERACTIVE_INTERVAL 1000
 #define UA_GENERATED_NAMESPACE_ZERO
+/* #undef UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING */
 
 /* #undef UA_PACK_DEBIAN */
 
@@ -424,18 +426,29 @@ void UA_free(void* ptr); //de-allocate memory previously allocated with UA_mallo
 # define UA_if_nametoindex if_nametoindex
 #endif
 
+#ifdef UA_ENABLE_MALLOC_SINGLETON
+extern void * (*UA_globalMalloc)(size_t size);
+extern void (*UA_globalFree)(void *ptr);
+extern void * (*UA_globalCalloc)(size_t nelem, size_t elsize);
+extern void * (*UA_globalRealloc)(void *ptr, size_t size);
+# define UA_free(ptr) UA_globalFree(ptr)
+# define UA_malloc(size) UA_globalMalloc(size)
+# define UA_calloc(num, size) UA_globalCalloc(num, size)
+# define UA_realloc(ptr, size) UA_globalRealloc(ptr, size)
+#endif
+
 #include <stdlib.h>
 #ifndef UA_free
-#define UA_free free
+# define UA_free free
 #endif
 #ifndef UA_malloc
-#define UA_malloc malloc
+# define UA_malloc malloc
 #endif
 #ifndef UA_calloc
-#define UA_calloc calloc
+# define UA_calloc calloc
 #endif
 #ifndef UA_realloc
-#define UA_realloc realloc
+# define UA_realloc realloc
 #endif
 
 #include <stdio.h>
@@ -13184,7 +13197,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:26 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -15585,7 +15598,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:26 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 
@@ -23123,9 +23136,6 @@ UA_Server_processBinaryMessage(UA_Server *server, UA_Connection *connection,
  * connection->free. */
 void UA_EXPORT
 UA_Server_removeConnection(UA_Server *server, UA_Connection *connection);
-
-UA_StatusCode UA_EXPORT
-UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId);
 
 struct UA_ServerNetworkLayer {
     void *handle; /* Internal data */

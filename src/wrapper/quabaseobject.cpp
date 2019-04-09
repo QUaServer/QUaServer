@@ -57,6 +57,8 @@ void QUaBaseObject::setEventNotifier(const quint8 & eventNotifier)
 	emit this->eventNotifierChanged(eventNotifier);
 }
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 void QUaBaseObject::setEventNotifierSubscribeToEvents()
 {
 	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS);
@@ -66,6 +68,8 @@ void QUaBaseObject::setEventNotifierNone()
 {
 	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_NONE);
 }
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
 {

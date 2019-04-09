@@ -302,8 +302,10 @@ namespace QUaTypesConverter {
 			return &UA_TYPES[UA_TYPES_BYTESTRING];    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 		case METATYPE_NODEID:
 			return &UA_TYPES[UA_TYPES_NODEID];        // 16 : UA_NodeId : { ... }
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE:
 			return &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]; // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_LOCALIZEDTEXT:
 			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 		default:
@@ -372,8 +374,10 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 		case METATYPE_NODEID:          // 16 : UA_NodeId : { ... }
 			return uaVariantFromQVariantScalar<UA_NodeId    , QString>(var, uaType);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE: // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 			return uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(var, uaType);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
 			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
 		case QMetaType::QVariantList:   // UA_Array
@@ -452,6 +456,7 @@ namespace QUaTypesConverter {
 	{
 		*ptr = nodeIdFromQString(value);
 	}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (QTimeZone)
 	template<>
 	void uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(const QTimeZone &value, UA_TimeZoneDataType *ptr)
@@ -460,6 +465,7 @@ namespace QUaTypesConverter {
 		ptr->offset = value.offsetFromUtc(QDateTime::currentDateTime()) / 60;
 		ptr->daylightSavingInOffset = true;
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (LocalizedText)
 	template<>
 	void uaVariantFromQVariantScalar<UA_LocalizedText, QString>(const QString &value, UA_LocalizedText *ptr)
@@ -714,8 +720,10 @@ namespace QUaTypesConverter {
 			return QMetaType::QByteArray;
 		case UA_TYPES_NODEID:
 			return METATYPE_NODEID;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_TIMEZONEDATATYPE:
 			return METATYPE_TIMEZONEDATATYPE;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_LOCALIZEDTEXT:
 			return METATYPE_LOCALIZEDTEXT;
 		default:
@@ -775,8 +783,10 @@ namespace QUaTypesConverter {
 			return uaVariantToQVariantScalar<QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
 		case UA_TYPES_NODEID:
 			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, METATYPE_NODEID);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_TIMEZONEDATATYPE:
 			return uaVariantToQVariantScalar<QTimeZone  , UA_TimeZoneDataType>(uaVariant, METATYPE_TIMEZONEDATATYPE);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_LOCALIZEDTEXT:
 			return uaVariantToQVariantScalar<QString    , UA_LocalizedText   >(uaVariant, METATYPE_LOCALIZEDTEXT);
 		default:
@@ -921,6 +931,7 @@ namespace QUaTypesConverter {
 	{
 		return nodeIdToQString(*data);
 	}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (QTimeZone)
 	template<>
 	QTimeZone uaVariantToQVariantScalar<QTimeZone, UA_TimeZoneDataType>(const UA_TimeZoneDataType *data)
@@ -930,6 +941,7 @@ namespace QUaTypesConverter {
 		//        (true if offset includes correction, false if not)
 		return QTimeZone(60 * data->offset);
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (LocalizedText)
 	template<>
 	QString uaVariantToQVariantScalar<QString, UA_LocalizedText>(const UA_LocalizedText *data)

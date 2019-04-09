@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-860-g4209f74e
+ * Git-Revision: 0.3-rc2-880-g03a617d8
  */
 
 /*
@@ -1162,7 +1162,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:26 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -3777,7 +3777,7 @@ UA_EventFilter_decodeBinary(const UA_ByteString *src, size_t *offset, UA_EventFi
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:27 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -3951,7 +3951,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:27 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 
@@ -4353,7 +4353,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:27 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -10297,7 +10297,7 @@ UA_calcSizeBinary(const void *p, const UA_DataType *type) {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:26 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 /* Boolean */
@@ -17001,7 +17001,7 @@ const UA_DataType UA_TYPES[UA_TYPES_COUNT] = {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-01 03:27:27 */
+ * on host PPIC09 by user User at 2019-04-08 10:08:58 */
 
 
 /* SecureConversationMessageAbortBody */
@@ -22989,8 +22989,9 @@ processMSG(UA_Server *server, UA_SecureChannel *channel,
         session = &anonymousSession;
     }
 
-    /* Trying to use a non-activated session? */
-    if(sessionRequired && !session->activated) {
+    /* Trying to use a non-activated session?
+     * Do not allow if request is of type CloseSessionRequest */
+    if(sessionRequired && !session->activated && requestType != &UA_TYPES[UA_TYPES_CLOSESESSIONREQUEST]) {
         UA_LOG_WARNING_SESSION(&server->config.logger, session,
                                "Calling service %i on a non-activated session",
                                requestType->binaryEncodingId);
@@ -23302,18 +23303,6 @@ UA_Server_removeConnection(UA_Server *server, UA_Connection *connection) {
     dc->data = connection;
     UA_WorkQueue_enqueueDelayed(&server->workQueue, dc);
 #endif
-}
-
-UA_StatusCode
-UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId)
-{
-	UA_Session *session = UA_SessionManager_getSessionById(&server->sessionManager, sessionId);
-	UA_SecureChannel *channel = session->header.channel;
-
-	UA_SecureChannel_close(channel);
-	UA_StatusCode retval = UA_SessionManager_removeSession(&server->sessionManager, &session->header.authenticationToken);
-
-	return retval;
 }
 
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/src/server/ua_server_utils.c" ***********************************/
@@ -27352,6 +27341,11 @@ UA_PubSubManager_delete(UA_Server *server, UA_PubSubManager *pubSubManager) {
 /*      PubSub Jobs abstraction    */
 /***********************************/
 
+#ifndef UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING
+
+/* If UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_INTERRUPT is enabled, a custom callback
+ * management must be linked to the application */
+
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server, UA_ServerCallback callback,
                                      void *data, UA_Double interval_ms, UA_UInt64 *callbackId) {
@@ -27369,6 +27363,8 @@ void
 UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callbackId) {
     UA_Timer_removeCallback(&server->timer, callbackId);
 }
+
+#endif /* UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING */
 
 #endif /* UA_ENABLE_PUBSUB */
 
@@ -27622,6 +27618,15 @@ addPubSubConnectionRepresentation(UA_Server *server, UA_PubSubConnection *connec
                                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                           UA_NODEID_NUMERIC(0, connection->identifier.identifier.numeric));
 
+    if (UA_NodeId_equal(&addressNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&urlNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&interfaceNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&publisherIdNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&connectionPropertieNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&transportProfileUri, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
     retVal |= writePubSubNs0VariableArray(server, connectionPropertieNode.identifier.numeric,
                                           connection->config->connectionProperties,
                                           connection->config->connectionPropertiesSize,
@@ -27842,14 +27847,21 @@ addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publ
     configurationVersionNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "ConfigurationVersion"),
                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                                    UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
+    if (UA_NodeId_equal(&configurationVersionNode, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
     UA_Variant value;
     UA_Variant_init(&value);
     UA_Variant_setScalar(&value, &publishedDataSet->dataSetMetaData.configurationVersion, &UA_TYPES[UA_TYPES_CONFIGURATIONVERSIONDATATYPE]);
-    UA_Server_writeValue(server, configurationVersionNode, value);
+    retVal |= UA_Server_writeValue(server, configurationVersionNode, value);
 
     publishedDataNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishedData"),
                                             UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
                                             UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
+    if (UA_NodeId_equal(&publishedDataNode, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
 
     UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *) UA_malloc(sizeof(UA_NodePropertyContext));
     publishingIntervalContext->parentNodeId = publishedDataSet->identifier;
@@ -28032,6 +28044,10 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup){
     publishingIntervalNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishingInterval"),
                                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
                                                  UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    if (UA_NodeId_equal(&keepAliveNode, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&publishingIntervalNode, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
     UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *) UA_malloc(sizeof(UA_NodePropertyContext));
     publishingIntervalContext->parentNodeId = writerGroup->identifier;
     publishingIntervalContext->parentCalssifier = UA_NS0ID_WRITERGROUPTYPE;
@@ -28072,7 +28088,10 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup){
                                                   UA_QUALIFIEDNAME(0, "NetworkMessageContentMask"),
                                                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
                                                   messageSettingsId);
-
+    if (UA_NodeId_equal(&messageSettingsId, &UA_NODEID_NULL) ||
+        UA_NodeId_equal(&contentMaskId, &UA_NODEID_NULL)) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
     /* Set the callback */
     UA_DataSource ds;
     ds.read = readContentMask;
@@ -29677,6 +29696,11 @@ checkSignature(const UA_Server *server, const UA_SecureChannel *channel,
     if(channel->securityMode != UA_MESSAGESECURITYMODE_SIGN &&
        channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
         return UA_STATUSCODE_GOOD;
+
+    /* Check for zero signature length in client signature */
+    if(request->clientSignature.signature.length == 0) {
+        return UA_STATUSCODE_BADAPPLICATIONSIGNATUREINVALID;
+    }
 
     if(!channel->securityPolicy)
         return UA_STATUSCODE_BADINTERNALERROR;
@@ -33510,7 +33534,7 @@ copyAllChildren(UA_Server *server, UA_Session *session,
 
 static UA_StatusCode
 recursiveTypeCheckAddChildren(UA_Server *server, UA_Session *session,
-                              const UA_Node *node, const UA_Node *type);
+                              const UA_Node **node, const UA_Node *type);
 
 static void
 Operation_addReference(UA_Server *server, UA_Session *session, void *context,
@@ -33971,17 +33995,18 @@ Operation_addNode_begin(UA_Server *server, UA_Session *session, void *nodeContex
 
 static UA_StatusCode
 recursiveTypeCheckAddChildren(UA_Server *server, UA_Session *session,
-                              const UA_Node *node, const UA_Node *type) {
-    UA_assert(node != NULL);
+                              const UA_Node **nodeptr, const UA_Node *type) {
     UA_assert(type != NULL);
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    const UA_Node *node = *nodeptr;
 
     /* Use attributes from the type. The value and value constraints are the
      * same for the variable and variabletype attribute structs. */
     if(node->nodeClass == UA_NODECLASS_VARIABLE ||
        node->nodeClass == UA_NODECLASS_VARIABLETYPE) {
-        retval = useVariableTypeAttributes(server, session, (const UA_VariableNode**)&node,
+        retval = useVariableTypeAttributes(server, session, (const UA_VariableNode**)nodeptr,
                                            (const UA_VariableTypeNode*)type);
+        node = *nodeptr; /* If the node was replaced */
         if(retval != UA_STATUSCODE_GOOD) {
             UA_LOG_NODEID_WRAP(&node->nodeId, UA_LOG_INFO_SESSION(&server->config.logger, session,
                                "AddNodes: Using attributes for %.*s from the variable type "
@@ -34161,7 +34186,7 @@ AddNode_finish(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId) 
             goto cleanup;
         }
 
-        retval = recursiveTypeCheckAddChildren(server, session, node, type);
+        retval = recursiveTypeCheckAddChildren(server, session, &node, type);
         if(retval != UA_STATUSCODE_GOOD)
             goto cleanup;
     }
@@ -49812,13 +49837,13 @@ UA_ClientConfig_setDefault(UA_ClientConfig *config) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    config->securityPolicies = (UA_SecurityPolicy*)malloc(sizeof(UA_SecurityPolicy));
+    config->securityPolicies = (UA_SecurityPolicy*)UA_malloc(sizeof(UA_SecurityPolicy));
     if(!config->securityPolicies)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     UA_StatusCode retval = UA_SecurityPolicy_None(config->securityPolicies, NULL,
                                                   UA_BYTESTRING_NULL, &config->logger);
     if(retval != UA_STATUSCODE_GOOD) {
-        free(config->securityPolicies);
+        UA_free(config->securityPolicies);
         config->securityPolicies = NULL;
         return retval;
     }
@@ -49863,7 +49888,7 @@ UA_ClientConfig_setDefaultEncryption(UA_ClientConfig *config,
 
     /* Populate SecurityPolicies */
     UA_SecurityPolicy *sp = (UA_SecurityPolicy*)
-        realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * 4);
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * 4);
     if(!sp)
         return UA_STATUSCODE_BADOUTOFMEMORY;
     config->securityPolicies = sp;
@@ -52944,6 +52969,14 @@ UA_DateTime UA_DateTime_nowMonotonic(void) {
 #ifdef UA_ARCHITECTURE_POSIX
 
 
+/* Global malloc singletons */
+#ifdef UA_ENABLE_MALLOC_SINGLETON
+void * (*UA_globalMalloc)(size_t size) = malloc;
+void (*UA_globalFree)(void *ptr) = free;
+void * (*UA_globalCalloc)(size_t nelem, size_t elsize) = calloc;
+void * (*UA_globalRealloc)(void *ptr, size_t size) = realloc;
+#endif
+
 unsigned int UA_socket_set_blocking(UA_SOCKET sockfd){
   int opts = fcntl(sockfd, F_GETFL);
   if(opts < 0 || fcntl(sockfd, F_SETFL, opts & (~O_NONBLOCK)) < 0)
@@ -53213,9 +53246,11 @@ connection_recv(UA_Connection *connection, UA_ByteString *response,
     }
 
     /* Preprend the last incompleteChunk into the buffer */
-    memcpy(response->data, connection->incompleteChunk.data,
-           connection->incompleteChunk.length);
-    UA_ByteString_deleteMembers(&connection->incompleteChunk);
+    if (connection->incompleteChunk.length > 0) {
+        memcpy(response->data, connection->incompleteChunk.data,
+               connection->incompleteChunk.length);
+        UA_ByteString_deleteMembers(&connection->incompleteChunk);
+    }
 
     /* Set the length of the received buffer */
     response->length = offset + (size_t)ret;
@@ -53480,7 +53515,7 @@ ServerNetworkLayerTCP_listen(UA_ServerNetworkLayer *nl, UA_Server *server,
     struct timeval tmptv = {0, timeout * 1000};
     if (UA_select(highestfd+1, &fdset, NULL, &errset, &tmptv) < 0) {
         UA_LOG_SOCKET_ERRNO_WRAP(
-            UA_LOG_WARNING(layer->logger, UA_LOGCATEGORY_NETWORK,
+            UA_LOG_DEBUG(layer->logger, UA_LOGCATEGORY_NETWORK,
                            "Socket select failed with %s", errno_str));
         // we will retry, so do not return bad
         return UA_STATUSCODE_GOOD;

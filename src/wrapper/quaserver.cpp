@@ -63,6 +63,8 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	{
 		return;
 	}
+	// handle events if enabled
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check if event (not in tree)
 	auto evt = dynamic_cast<QUaBaseEvent*>(node);
 	if (evt)
@@ -70,6 +72,8 @@ void QUaServer::uaDestructor(UA_Server       * server,
 		evt->deleteLater();
 		return;
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 	// if convertible could mean:
 	// 1) this is a child of a node being deleted programatically 
 	//    this one does not require to call C++ delete because Qt will take care of it
