@@ -64,6 +64,19 @@ SOURCES += main.cpp
 include($$PWD/../../src/wrapper/quaserver.pri)
 ```
 
+### Examples
+
+This library comes with examples in the `./examples` folder, which are explained in detail throughout this document. To build the examples:
+
+```bash
+cd ./examples
+# Linux
+qmake -r examples.pro
+make
+# Windows
+qmake -r -tp vc examples.pro
+```
+
 ---
 
 ## Basics
@@ -79,14 +92,14 @@ To create a server simple create an `QUaServer` instance and call the `start()` 
 ```c++
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+	QCoreApplication a(argc, argv);
 
 	// create server
 	QUaServer server;
 	// start server
 	server.start();
 
-    return a.exec(); 
+	return a.exec(); 
 }
 ```
 
@@ -103,11 +116,11 @@ To start creating OPC *Objects* and *Variables* it is necessary to get the *Obje
 ```c++
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+	QCoreApplication a(argc, argv);
 
 	QUaServer server;
 
-    // get objects folder
+	// get objects folder
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// add some instances to the objects folder
@@ -118,12 +131,156 @@ int main(int argc, char *argv[])
 
 	server.start();
 
-    return a.exec(); 
+	return a.exec(); 
 }
 ```
+
+Insatances must only be added using the *QUaServer* API, by using the following methods:
+
+* `addProperty` : Adds a `QUaProperty` instance. *Properties* are the **leaves** of the Address Space tree and cannot have other children. They are used to charaterise what its parent represents and their value do not change often. For example, an *engineering unit* or a *brand name*.
+
+* `addBaseDataVariable` : Adds a `QUaBaseDataVariable` instance. *BaseDataVariables* are used to hold data which might change often and can have children (*Objects*, *Properties*, other *BaseDataVariables*). An example is the *current value* of a temperature sensor.
+
+* `addBaseObject` : Adds a `QUaBaseObject` instance. `BaseObjects` can have children and are used to organize other *Objects*, *Properties*, *BaseDataVariables*, etc. The purpose of objects is to **model** a real device. For example a temperature sensor which has *engineering unit* and *brand name* as properties and *current value* as a variable.
+
+* `addFolderObject` : Adds a `QUaFolderObject` instance. `FolderObjects` derive from `BaseObjects` and can do the same, but are typically use to organize a collection of objects. The so called **Objects Folder** is a `QUaFolderObject` instance that always exists on the server to serve as a container for all the user instances.
 
 Once connected to the server, the address space should look something like this:
 
 <p align="center">
   <img src="./res/img/01_basics_01.jpg">
 </p>
+
+Note that some instances seen to be added but they have no name. To fix this, the `DisplayName` needs to be set:
+
+```c++
+QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+varBaseData->setDisplayName("my_variable");
+varBaseData->setValue(1);
+
+QUaProperty * varProp = objsFolder->addProperty();
+varProp->setDisplayName("my_property");
+varProp->setValue("hola");
+
+QUaBaseObject * objBase = objsFolder->addBaseObject();
+objBase->setDisplayName("my_object");
+
+QUaFolderObject * objFolder = objsFolder->addFolderObject();
+objFolder->setDisplayName("my_folder");
+```
+
+For the `varBaseData` and `varProp` instances, also the `Value` is set, which not only defines their intial values but also their `DataType`.
+
+Now the address space should look something like this: 
+
+<p align="center">
+  <img src="./res/img/01_basics_02.jpg">
+</p>
+
+The `DisplayName`, `Value` and `DataType` are **OPC Attributes**. Depending on the type of the instance (*Properties*, *BaseDataVariables*, etc.) it is possible to set different attributes. All OPC instance types derive from the **Node** type. Similarly, in *QUaServer*, all the types derive directly or indirectly from the C++ `QUaNode` abstract class. 
+
+The *QUaServer* API allows to read and write the instances attributes with the following methods:
+
+### For all Types
+
+The *QUaNode* API provides the following methods to access attributes:
+
+```c++
+QString displayName   () const;
+void    setDisplayName(const QString &displayName);
+QString description   () const;
+void    setDescription(const QString &description);
+quint32 writeMask     () const;
+void    setWriteMask  (const quint32 &writeMask);
+
+QString nodeId        () const;
+QString nodeClass     () const;
+
+QString browseName    () const;
+void    setBrowseName (const QString &browseName);
+```
+
+The `nodeId()` method gives the [string *XML notation* of the OPC NodeId](http://documentation.unified-automation.com/uasdkhp/1.0.0/html/_l2_ua_node_ids.html), which is a unique identifier of the node.
+
+By default the NodeId is assigned automatically by the *open62541* library. It is possible to define a custom NodeId when creating an instance by passing the string *XML notation* as an argument to the respective method. If the NodeId is invalid or already exists, creating the instance will fail returning `nullptr`. For example:
+
+```c++
+QUaProperty * varProp = objsFolder->addProperty("ns=1;s=my_prop");
+if(!varProp)
+{
+	qDebug() << "Creating instance failed!";
+}
+```
+
+### For Variable Types
+
+Both `QUaBaseDataVariable` and `QUaProperty` derive from the abstract C++ class `QUaBaseVariable` which provides the following methods to access attributes:
+
+```c++
+QVariant          value() const;
+void              setValue(const QVariant &value);
+QMetaType::Type   dataType() const;
+void              setDataType(const QMetaType::Type &dataType);
+
+qint32            valueRank() const;
+QVector<quint32>  arrayDimensions() const; 
+
+quint8            accessLevel() const;
+void              setAccessLevel(const quint8 &accessLevel);
+
+double            minimumSamplingInterval() const;
+void              setMinimumSamplingInterval(const double &minimumSamplingInterval);
+
+bool              historizing() const;
+```
+
+The `setDataType()` can be used to *force* a data type on the variable value. The following [Qt types](https://doc.qt.io/qt-5/qmetatype.html#Type-enum) are supported:
+
+```c++
+QMetaType::Bool
+QMetaType::Char
+QMetaType::SChar
+QMetaType::UChar
+QMetaType::Short
+QMetaType::UShort
+QMetaType::Int
+QMetaType::UInt
+QMetaType::Long
+QMetaType::LongLong
+QMetaType::ULong
+QMetaType::ULongLong
+QMetaType::Float
+QMetaType::Double
+QMetaType::QString
+QMetaType::QDateTime
+QMetaType::QUuid
+QMetaType::QByteArray
+```
+
+The `setAccessLevel()` method allows to set a mask to define the overall variable read and write access. Nevertheless, the `QUaBaseVariable` API provides a couple of helper methods that allow to define the access more easily without needing to deal with but masks:
+
+```c++
+// Default : read access true
+bool readAccess() const;
+void setReadAccess(const bool &readAccess);
+// Default : write access false
+bool writeAccess() const;
+void setWriteAccess(const bool &writeAccess);
+```
+
+Using such methods we could set a variable writable, for example:
+
+```c++
+QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+varBaseData->setWriteAccess(true);
+```
+
+### Basics Example
+
+Build and test the basics example in [./examples/01_basics](./examples/01_basics/main.cpp) to learn more.
+
+---
+
+## Methods
+
+.
