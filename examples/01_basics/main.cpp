@@ -17,6 +17,9 @@ int main(int argc, char *argv[])
 	varBaseData->setWriteAccess(true);
 	varBaseData->setDisplayName("my_variable");
 	varBaseData->setValue(1);
+	QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value) {
+		qDebug() << "New value :" << value;
+	});
 
 	QUaProperty * varProp = objsFolder->addProperty("ns=1;s=my_prop");
 	varProp->setDisplayName("my_property");

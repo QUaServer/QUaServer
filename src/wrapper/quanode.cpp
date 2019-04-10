@@ -529,8 +529,15 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 	UA_BrowseDescription_deleteMembers(bDesc);
 	UA_BrowseDescription_delete(bDesc);
 	UA_BrowseResult_deleteMembers(&bRes);
+	// check if method
+	UA_NodeClass outNodeClass;
+	UA_Server_readNodeClass(server, childNodeId, &outNodeClass);
+	// NOTE : seems methods added to subtype have references to all instances created of the subtype
+	Q_ASSERT_X(
+		listParents.count() <= 1 && outNodeClass != UA_NODECLASS_METHOD ||
+		listParents.count() >= 1 && outNodeClass == UA_NODECLASS_METHOD,
+		"QUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
 	// return
-	Q_ASSERT_X(listParents.count() <= 1, "QUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
 	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
 }
 

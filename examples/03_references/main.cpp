@@ -3,11 +3,6 @@
 
 #include <QUaServer>
 
-int addNumbers(int x, int y)
-{
-	return x + y;
-}
-
 int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);

@@ -200,6 +200,7 @@ namespace QUaTypesConverter {
 		case QMetaType::QDateTime:
 		case QMetaType::QUuid:
 		case QMetaType::QByteArray:
+		case QMetaType::Void:
 			return true;
 		// TODO : QMetaType::QVariantList ???
 		default:
