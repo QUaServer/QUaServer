@@ -1,182 +1,129 @@
-# Compile
+# QUaServer
 
-**IMPORTANT** : Requires `Qt 5.7` or higher and `C++ 11`.
+This is a [Qt](https://www.qt.io/) based library that provides a C++ **wrapper** for the [open62541](https://open62541.org/) library, and **abstraction** for the OPC UA Server API.
 
-The source code of the `open62541` library is contained in the files:
+By *abstraction* it is meant that some of flexibility provided by the original *open62541* server API is sacrificed for ease of use. If more flexibility is required than what *QUaServer* provides, it is highly recommended to use the original *open62541* instead.
+
+The main goal of this library is to provide an object-oriented API that allows quick prototyping for OPC UA servers without having to spend much time in creating complex address space structures.
+
+*QUaServer* is still work in progress, test properly and use precaution before using in production. Please report any issues you encounter in this repository providing a minimum working code example that replicates the issue and a thorough description.
 
 ```
-src/open62541.h
-src/open62541.c
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-These files are **generated** by the *CMake* build of the [original library repository](https://github.com/open62541/open62541). They were generated and copied to this repo for convenience.
+To test a *QUaServer* based application it is recommended to use the [UA Expert](https://www.unified-automation.com/downloads/opc-ua-clients.html) OPC UA Client.
+
+---
+
+## Include
+
+This library requires at least `Qt 5.7` or higher and `C++ 11`.
+
+To use *QUaServer*, first a copy of the *open62541* shared library is needed. An amalgamation of the latest compatible *open62541* version is included in this repository for convenience in [./src/amalgamation](./src/amalgamation). 
+
+The amalgamation included in this repository was created using the following *CMake* command:
 
 ```bash
-cd "C:\Users\User\Desktop\Repos\open62541.git"
-mkdir build; cd build
+cd open62541.git
+mkdir build; cd build;
 cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
 ```
 
-The library version of the `open62541` files used currently in this repo is `v0.3-rc4`.
-
----
-
-# Compile Events
-
-Normally the library comes with a minimum nodeset compatible with most clients to minimize binary size. The `UA_NAMESPACE_ZERO` option allows to select `MINIMAL`, `REDUCED` or `FULL`. To support *events*, we need to set it to `FULL`.
+The `open62541.pro` Qt project can be used to build the included amalgamation into the required shared library using the command:
 
 ```bash
-cd "C:\Users\User\Desktop\Repos\open62541.git"
-mkdir build; cd build
-cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_ENABLE_SUBSCRIPTIONS=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON .. -G "Visual Studio 15 2017 Win64"
+cd ./src/amalgamation
+# Linux
+qmake open62541.pro
+make
+# Windows
+qmake -tp vc open62541.pro
+```
+
+If it is desired to use a more recent version of *open62541*, it is possible to build the amalgamation using the soure code in the [open62541 git repository](https://github.com/open62541/open62541) and then replace [./src/amalgamation/open62541.h](./src/amalgamation/open62541.h) and [./src/amalgamation/open62541.c](./src/amalgamation/open62541.c). Though compatibility of *QUaServer* with the latest version of *open62541* is not guaranteed.
+
+Finally to include *QUaServer* in your project, just include [./src/wrapper/quaserver.pri](./src/wrapper/quaserver.pri) into your Qt project file (`*.pro` file). For example:
+
+```cmake
+QT += core
+QT -= gui
+
+CONFIG += c++11
+
+TARGET = my_project
+CONFIG += console
+CONFIG -= app_bundle
+
+TEMPLATE = app
+
+INCLUDEPATH += $$PWD/
+
+SOURCES += main.cpp
+
+include($$PWD/../../src/wrapper/quaserver.pri)
 ```
 
 ---
 
-# Compile Encryption
+## Basics
 
-We need the `mbedtls` dependency:
+To start using *QUaServer* it is necessary to include the `QUaServer` header as follows:
 
-* Clone [this repo](https://github.com/ARMmbed/mbedtls).
-
-* Checkout a release tag (e.g. `mbedtls-2.17.0`).
-
-Generate Solution:
-
-```bash
-cd "C:\Users\User\Desktop\Repos\mbedtls.git"
-mkdir build; cd build
-cmake .. -G "Visual Studio 15 2017 Win64"
+```c++
+#include <QUaServer>
 ```
 
-* Build Release and Debug
+To create a server simple create an `QUaServer` instance and call the `start()` method:
 
-You should have headers in `C:\Users\User\Desktop\Repos\mbedtls.git\build\include\mbedtls`.
+```c++
+int main(int argc, char *argv[])
+{
+    QCoreApplication a(argc, argv);
 
-And libs in `C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug` and in `C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Release`.
+	// create server
+	QUaServer server;
+	// start server
+	server.start();
 
-Now **Rebuild** the `open62541` with the following command:
-
-```bash
-cd "C:\Users\User\Desktop\Repos\open62541.git"
-mkdir build; cd build
-cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_ENABLE_ENCRYPTION=ON .. -G "Visual Studio 15 2017 Win64" -DMBEDTLS_INCLUDE_DIRS="C:\Users\User\Desktop\Repos\mbedtls.git\build\include" -DMBEDTLS_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug" -DMBEDX509_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug" -DMBEDCRYPTO_LIBRARY="C:\Users\User\Desktop\Repos\mbedtls.git\build\library\Debug"
+    return a.exec(); 
+}
 ```
 
-* Copy the amalgamated `open62541.h` and `open62541.c` to `./src` and enable the lines that mark `[ENCRYPTION]` in `open62541.pro` and `open62541.pri`.
+Note it is necessary to create a `QCoreApplication` and execute it, because `QUaServer` makes use of [Qt's event loop](https://wiki.qt.io/Threads_Events_QObjects).
 
----
+By default the *QUaServer* listens on port **4840** which is the [IANA assigned port](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=4840) for OPC UA applications. To change the listening port, simply pass it as the first argument of the *QUaServer* constructor:
 
-# Server Certificate
-
-Create self-signed certificate
-
-```bash
-# Create dirs somewhere
-#rm -rf ca;
-#rm -rf server;
-mkdir ca
-mkdir server
-
-# Create CA key
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca/ca.key
-# Create self-signed CA cert
-openssl req -new -x509 -days 360 -key ca/ca.key -subj "/CN=juangburgos CA/O=juangburgos Organization" -out ca/ca.crt
-# Convert cert to der format
-openssl x509 -in ca/ca.crt -inform pem -out ca/ca.crt.der -outform der
-# Create cert revocation list CRL file
-# NOTE : need to have in relative path
-#        - Empty file 'demoCA/index.txt'
-#        - File 'crlnumber' with contents '1000'
-openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl
-# Convert CRL to der format
-openssl crl -in ca/ca.crl -inform pem -out ca/ca.crl.der -outform der
-
-# Create server key
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server/server.key
-# Convert server key to der format
-openssl rsa -in server/server.key -inform pem -out server/server.key.der -outform der
-# Create server cert sign request
-openssl req -new -sha256 \
--key server/server.key \
--subj "/C=ES/ST=MAD/O=MyServer/CN=localhost" \
--out server/server.csr
-# Sign cert sign request (NOTE: must provide exts.txt)
-openssl x509 -days 700 -req \
--in server/server.csr \
--extensions v3_ca \
--extfile server/exts.txt \
--CAcreateserial -CA ca/ca.crt -CAkey ca/ca.key \
--out server/server.crt
-# See all OPC UA extensions are present in cret contents
-openssl x509 -text -noout -in server/server.crt
-# Convert cert to der format
-openssl x509 -in server/server.crt -inform pem -out server/server.crt.der -outform der
+```c++
+QUaServer server(8080);
 ```
 
-NOTE : `*.key` contains both **private** and **pubic** keys.
+To start creating OPC *Objects* and *Variables* it is necessary to get the *Objects Folder* of the server and start adding instances to it:
 
-The `exts.txt` must look like:
+```c++
+int main(int argc, char *argv[])
+{
+    QCoreApplication a(argc, argv);
 
+	QUaServer server;
+
+    // get objects folder
+	QUaFolderObject * objsFolder = server.objectsFolder();
+
+	// add some instances to the objects folder
+	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+	QUaProperty         * varProp     = objsFolder->addProperty();
+	QUaBaseObject       * objBase     = objsFolder->addBaseObject();
+	QUaFolderObject     * objFolder   = objsFolder->addFolderObject();
+
+	server.start();
+
+    return a.exec(); 
+}
 ```
-[v3_ca]
-subjectAltName=DNS:localhost,DNS:ppic09,IP:127.0.0.1,URI:urn:unconfigured:application
-basicConstraints=CA:TRUE
-subjectKeyIdentifier=hash
-authorityKeyIdentifier=keyid,issuer
-keyUsage=digitalSignature,keyEncipherment
-extendedKeyUsage=serverAuth,clientAuth,codeSigning
-```
 
-* NOTE : in `subjectAltName` we put ip address, machine name in windows network, domain name, etc.
+Once connected to the server, the address space should look something like this:
 
-* TODO : `URI:urn:unconfigured:application` is necesary as it is but I think is customizable in server library.
-
-* Load `server/server.key.der` to server library as *server private key*.
-
-* Load `server/server.crt.der` to server library as *server certificate*.
-
-To make it work with UA Expert client:
-
-* Copy `ca/ca.crt.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\certs`.
-
-* Copy `ca/ca.crl.der` to `C:\Users\User\AppData\Roaming\unifiedautomation\uaexpert\PKI\trusted\crl`. 
-
----
-
-## TODO
-
-1. Find out how to use OptionSets (BitMasks).
-
-### 7.17 OptionSetType
-
-The OptionSetType VariableType is used to represent a bit mask. Each array element of the OptionSetValues Property contains either the human-readable representation for the corresponding bit used in the option set or an empty LocalizedText for a bit that has no specific meaning. The order of the bits of the bit mask maps to a position of the array, i.e. the first bit (least significant bit) maps to the first entry in the array, etc.
-
-In addition to this VariableType, the DataType OptionSet can alternatively be used to represent a bit mask. As a guideline the DataType would be used when the bit mask is fixed and applies to several Variables. The VariableType would be used when the bit mask is specific for only that Variable.
-
-The DataType of this VariableType shall be capable of representing a bit mask. It shall be either a numeric DataType representing a signed or unsigned integer, or a ByteString. For example, it can be the BitFieldMaskDataType.
-
-The optional BitMask Property provides the bit mask in an array of Booleans. This allows subscribing to individual entries of the bit mask. The order of the bits of the bit mask points to a position of the array, i.e. the first bit points to the first entry in the array, etc.
-
-### 12.18 BitFieldMaskDataType
-
-This simple DataType is a subtype of UInt64 and represents a bit mask up to 32 bits where individual bits can be written without modifying the other bits.
-
-The first 32 bits (least significant bits) of the BitFieldMaskDataType represent the bit mask and the second 32 bits represent the validity of the bits in the bit mask. When the Server returns the value to the client, the validity provides information of which bits in the bit mask have a meaning. When the client passes the value to the Server, the validity defines which bits should be written. Only those bits defined in validity are changed in the bit mask, all others stay the same. The BitFieldMaskDataType can be used as DataType in the OptionSetType VariableType.
-
-
----
-
-# References
-
-* <https://blog.basyskom.com/2018/want-to-give-qt-opcua-a-try/>
-
-* <https://github.com/open62541/open62541/issues/2584>
-
-* <http://documentation.unified-automation.com/uasdkcpp/1.5.5/html/L2UaDiscoveryConnect.html#DiscoveryConnect_ConnectConfig>
-
-* <https://www.openssl.org/docs/man1.0.2/man5/x509v3_config.html>
-
-* <https://forum.unified-automation.com/topic1762.html#p3553>
-
-* <https://serverfault.com/questions/823679/openssl-error-while-loading-crlnumber>
+<p align="center">
+  <img src="./res/img/01_basics_01.jpg">
+</p>
