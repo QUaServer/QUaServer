@@ -5,33 +5,52 @@
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-
-	// create server
+	QCoreApplication a(argc, argv);
 
 	QUaServer server;
 
-	// add some nodes to the objects folder
-
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
-	//varBaseData->setDisplayName("my_variable");
-	//varBaseData->setValue(1);
+	// basics
 
-	QUaProperty * varProp = objsFolder->addProperty();
-	//varProp->setDisplayName("my_property");
-	//varProp->setValue("hola");
+	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+	varBaseData->setWriteAccess(true);
+	varBaseData->setDisplayName("my_variable");
+	varBaseData->setValue(1);
+
+	QUaProperty * varProp = objsFolder->addProperty("ns=1;s=my_prop");
+	varProp->setDisplayName("my_property");
+	varProp->setValue("hola");
 
 	QUaBaseObject * objBase = objsFolder->addBaseObject();
-	//objBase->setDisplayName("my_object");
+	objBase->setDisplayName("my_object");
 
 	QUaFolderObject * objFolder = objsFolder->addFolderObject();
-	//objFolder->setDisplayName("my_folder");
+	objFolder->setDisplayName("my_folder");
 
-	// start server
+	// temperature sensor model
+
+	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject();
+	sensorsFolder->setDisplayName("Sensors");
+
+	QUaBaseObject * objSensor1 = sensorsFolder->addBaseObject();
+	objSensor1->setDisplayName("TempSensor1");
+
+	QUaProperty * modelProp = objSensor1->addProperty();
+	modelProp->setDisplayName("Model");
+	modelProp->setValue("LM35");
+	QUaProperty * brandProp = objSensor1->addProperty();
+	brandProp->setDisplayName("Brand");
+	brandProp->setValue("Texas Instruments");
+	QUaProperty * euProp = objSensor1->addProperty();
+	euProp->setDisplayName("Units");
+	euProp->setValue("C");
+
+	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable();
+	valueVar->setDisplayName("Current Value");
+	valueVar->setValue(36.7);
 
 	server.start();
 
-    return a.exec(); 
+	return a.exec(); 
 }
