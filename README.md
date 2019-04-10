@@ -87,7 +87,7 @@ To start using *QUaServer* it is necessary to include the `QUaServer` header as 
 #include <QUaServer>
 ```
 
-To create a server simple create an `QUaServer` instance and call the `start()` method:
+To create a server simply create an `QUaServer` instance and call the `start()` method:
 
 ```c++
 int main(int argc, char *argv[])
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 }
 ```
 
-Insatances must only be added using the *QUaServer* API, by using the following methods:
+Instances must only be added using the *QUaServer* API, by using the following methods:
 
 * `addProperty` : Adds a `QUaProperty` instance. *Properties* are the **leaves** of the Address Space tree and cannot have other children. They are used to charaterise what its parent represents and their value do not change often. For example, an *engineering unit* or a *brand name*.
 
@@ -257,7 +257,7 @@ QMetaType::QUuid
 QMetaType::QByteArray
 ```
 
-The `setAccessLevel()` method allows to set a mask to define the overall variable read and write access. Nevertheless, the `QUaBaseVariable` API provides a couple of helper methods that allow to define the access more easily without needing to deal with but masks:
+The `setAccessLevel()` method allows to set a bit mask to define the overall variable read and write access. Nevertheless, the `QUaBaseVariable` API provides a couple of helper methods that allow to define the access more easily without needing to deal with bit masks:
 
 ```c++
 // Default : read access true
@@ -268,14 +268,14 @@ bool writeAccess() const;
 void setWriteAccess(const bool &writeAccess);
 ```
 
-Using such methods we could set a variable writable, for example:
+Using such methods we could set a variable to be **writable**, for example:
 
 ```c++
 QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
 varBaseData->setWriteAccess(true);
 ```
 
-When a variable is written from a client, on the server notifications provided by the `void valueChanged(const QVariant &value)` Qt signal.
+When a variable is written from a client, on the server notifications are provided by the `void QUaBaseVariable::valueChanged(const QVariant &value)` Qt signal.
 
 ```c++
 QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value) {
@@ -388,7 +388,7 @@ OPC UA supports the concept of *References* to create relations between *Nodes*.
 
 When adding an instance using the *QUaServer* API, the library creates the required *HierarchicalReference* type necessary to display the new instance in the instances tree (it uses the *HasComponent*, *HasProperty* or *Organizes* reference types accordingly).
 
-The *QUaServer* API also allows to create custom *NonHierarchicalReferences* that can be used to create custom relations between instances. For example, having a temperature sensor and then define a supplier for that sensor:
+The *QUaServer* API also allows to create **custom** *NonHierarchicalReferences* that can be used to create custom relations between instances. For example, having a temperature sensor and then define a supplier for that sensor:
 
 ```c++
 // create sensor
@@ -402,7 +402,7 @@ server.registerReference({ "Supplies", "IsSuppliedBy" });
 objSupl1->addReference({ "Supplies", "IsSuppliedBy" }, objSensor1);
 ```
 
-The `registerReference()` method has to be called in order to *register* the new references type as a *subtype* of the *NonHierarchicalReferences*. If the reference type is not registered before its first use, it is registered automatically on first use. The registered reference can be observed when the server is running by browsing to `Root/Types/ReferenceTypes/NonHierarchicalReferences`. There should be a new entry corresponding to the custom reference.
+The `registerReference()` method has to be called in order to *register* the new references type as a *subtype* of the *NonHierarchicalReferences*. If the reference type is not registered before its first use, it is registered automatically on first use. The registered reference can be observed when the server is running by browsing to `/Root/Types/ReferenceTypes/NonHierarchicalReferences`. There should be a new entry corresponding to the custom reference.
 
 <p align="center">
   <img src="./res/img/03_references_01.jpg">
@@ -430,7 +430,7 @@ struct QUaReference
 };
 ```
 
-Both **forward** and **reverse** names of the reference have to be defined in order to create the reference. In the example, `Supplies` is the *forward* name, and `IsSuppliedBy` is the reverse name. When adding a reference, by default, it is added in *forward* mode. This can be changed by adding a third argument to the `registerReference()` method which is `true` by default to indicate it is *forward*, `false` to indicate it is *reverse*. 
+Both **forward** and **reverse** names of the reference have to be defined in order to create the reference. In the example, `Supplies` is the *forward* name, and `IsSuppliedBy` is the reverse name. When adding a reference, by default, it is added in *forward* mode. This can be changed by adding a third argument to the `addReference()` method which is `true` by default to indicate it is *forward*, `false` to indicate it is *reverse*. 
 
 ```c++
 // objSupl1 "Supplies" objSensor1
@@ -445,7 +445,7 @@ In the example above, both sensors are supplied by the same supplier:
   <img src="./res/img/03_references_04.jpg">
 </p>
 
-Programmatically, references can be added, removes and browsed using the following *QUaNode* API methods:
+Programmatically, references can be added, removed and browsed using the following *QUaNode* API methods:
 
 ```c++
 void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
@@ -477,6 +477,8 @@ auto listSuppliers = objSensor1->findReferences<QUaBaseObject>({ "Supplies", "Is
 qDebug() << listSuppliers.first()->displayName();
 ```
 
+Note that when an *QUaNode* derived instance is deleted, all its references are removed as well from all nodes in the address space.
+
 ### References Example
 
 Build and test the methods example in [./examples/03_references](./examples/03_references/main.cpp) to learn more.
@@ -487,7 +489,7 @@ Build and test the methods example in [./examples/03_references](./examples/03_r
 
 OPC types can be extended by subtyping *BaseObjects* or *BaseDataVariables* (*Properties* cannot be subtyped). Using the *QUaServer* library, a new *BaseObject* subtype can be created by deriving from `QUaBaseObject`. Similarly, a new *BaseDataVariable* subtype can be created by deriving from `QUaBaseDataVariable`.
 
-Subtyping is very useful to **reuse** code. For example, if multiple temperature sensors are to be exposed through the OPC UA Server, it might be work creating a type for it. Start by sub-classing `QUaBaseObject` as follows:
+Subtyping is very useful to **reuse** code. For example, if multiple temperature sensors are to be exposed through the OPC UA Server, it might be worth creating a type for it. Start by sub-classing `QUaBaseObject` as follows:
 
 In `temperaturesensor.h` :
 
@@ -518,13 +520,13 @@ TemperatureSensor::TemperatureSensor(QUaServer *server)
 
 There are 3 **important requirements** when creating subtypes:
 
-* Inherit from either *QUaBaseObject* or *QUaBaseDataVariable* which in turn inherit indirectly from *QObject*. Therefore the `Q_OBJECT` must also be set.
+* Inherit from either *QUaBaseObject* or *QUaBaseDataVariable* (which in turn inherit indirectly from *QObject*). The `Q_OBJECT` macro must be set.
 
 * Create a public constructor that receives a `QUaServer` pointer as an argument. Add the `Q_INVOKABLE` macro to such constructor.
 
-* In the constructor implementation call the parent constructor (*QUaBaseObject* or *QUaBaseDataVariable* constructor accordingly).
+* In the constructor implementation call the parent constructor (*QUaBaseObject*, *QUaBaseDataVariable* or derived parent constructor accordingly).
 
-Once all this is met, elsewhere in the code it is necessary to register the new type in the server using the `registerType<T>()` method. If not registered, then when creating an instance of the new type, th type will be registered automatically by the library.
+Once all this is met, elsewhere in the code it is necessary to register the new type in the server using the `registerType<T>()` method. If not registered, then when creating an instance of the new type, the type will be registered automatically by the library.
 
 An instance of the new type is created using the `addChild<T>()` method:
 
@@ -552,7 +554,7 @@ int main(int argc, char *argv[])
 }
 ``` 
 
-If the new type was registered correctly, it can be observed by browsing to `Root/Types/ObjectTypes/BaseObjectType`. There should be a new entry corresponding to the custom type.
+If the new type was registered correctly, it can be observed by browsing to `/Root/Types/ObjectTypes/BaseObjectType`. There should be a new entry corresponding to the custom type.
 
 <p align="center">
   <img src="./res/img/04_types_01.jpg">
@@ -632,7 +634,7 @@ QUaBaseDataVariable * TemperatureSensor::currentValue()
 }
 ```
 
-Be careful when using the [`findChild` method](https://doc.qt.io/Qt-5/qobject.html#findChild) to provide the correct [QObject name](https://doc.qt.io/Qt-5/qobject.html#objectName-prop), otherwise a null reference can be returned from any of the getter methods.
+Be **careful** when using the [`findChild` method](https://doc.qt.io/Qt-5/qobject.html#findChild) to provide the correct [QObject name](https://doc.qt.io/Qt-5/qobject.html#objectName-prop), otherwise a null reference can be returned from any of the getter methods.
 
 Note that in the *TemperatureSensor* constructor it is possible to already make use of the children instances and define some default values for them.
 
@@ -653,7 +655,7 @@ sensor3->setDisplayName("Sensor3");
 
 Any `Q_PROPERTY` added to the *TemperatureSensor* declaration that **inherits** `QUaProperty`, `QUaBaseDataVariable` or `QUaBaseObject` will be exposed through OPC UA. Else the `Q_PROPERTY` will be created in the C++ instance but not exposed through OPC UA.
 
-To add **methods** to a subtype, the `Q_INVOKABLE` macro can be used. The limitations are than only [up to 10 arguments can used](https://doc.qt.io/qt-5/qmetamethod.html#invoke) and the agrument types can only be the same supported by the `setDataType()` method (see the *Basics* section).
+To add **methods** to a subtype, the `Q_INVOKABLE` macro can be used. The limitations are than only [up to 10 arguments can used](https://doc.qt.io/qt-5/qmetamethod.html#invoke) and the argument types can only be the same supported by the `setDataType()` method (see the *Basics* section).
 
 ```c++
 class TemperatureSensor : public QUaBaseObject
@@ -734,7 +736,7 @@ Then any client has knowledge of the enum options.
 
 ### Types Example
 
-Build and test the methods example in [./examples/03_references](./examples/04_types/main.cpp) to learn more.
+Build and test the methods example in [./examples/04_types](./examples/04_types/main.cpp) to learn more.
 
 ---
 
