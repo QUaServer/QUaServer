@@ -8,7 +8,7 @@ Validation of the server is based on [Public Key Infrasctructure (PKI)](https://
 
 * PKI makes use of [Asymmetric Encryption](https://www.youtube.com/watch?v=AQDCe585Lnc), which basically means that an entity creates for itself a **pair** of keys, a **public** key and a **private** key. The most important concept to understand is that *data encrypted with the **private** key can only be decrypted with the **public** key, and data encrypted with the **public** key can only be encrypted with the **private** key*. *Public* keys are meant to be send around to third parties, while *private* keys are meant to be stored securely by the owner.
 
-* An [SSL Certificate](https://en.wikipedia.org/wiki/Public_key_certificate) is a piece of data containing information about the owner (its domain, server name, company, etc), the owners's **public** key. The certificate might be *signed* or *unsigned*. When *signed* it also contains a digital **signature** from a *Certificate Authority*.
+* An [SSL Certificate](https://en.wikipedia.org/wiki/Public_key_certificate) is a piece of data containing information about the owner (its domain, server name, company, etc) and the owners's **public** key. The certificate might be *signed* or *unsigned*. When *signed* it also contains a digital **signature** from a *Certificate Authority*.
 
 * A [Certificate Authority (CA)](https://en.wikipedia.org/wiki/Certificate_authority) is a **trusted** entity which also has its own *public* and *private* keys and a *certificate* (signed by itself, or *self-signed*). By *"trusted"* it is meant that clients willingly and knowingly install the CA's certificate (CA's information and *public* key) in their software.
 

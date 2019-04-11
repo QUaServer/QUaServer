@@ -161,6 +161,8 @@ class QUaNode : public QObject
 {
     Q_OBJECT
 
+friend class QUaServer;
+
 	// Node Attributes
 
 	// N/A : not an OPC UA node attribute, is it a library helper?
@@ -234,6 +236,9 @@ public:
 
 	// Access Control API
 
+	// Access Control for Attributes
+	// TODO : not tested thoroughly
+
 	// reimplement for custom access control for a given custom UA type (derived C++ class)
 	virtual QUaWriteMask userWriteMask(const QString &strUserName);
 
@@ -241,6 +246,8 @@ public:
 	// signature is <QUaWriteMask(const QString &)>
 	template<typename M>
 	void setUserWriteMaskCallback(const M &callback);
+
+	// Access Control for Variables
 
 	// reimplement for custom access control for a given custom UA type (derived C++ class)
 	virtual QUaAccessLevel userAccessLevel(const QString &strUserName);
@@ -250,6 +257,10 @@ public:
 	template<typename M>
 	void setUserAccessLevelCallback(const M &callback);
 
+	// Access Control for Methods
+	// TODO : not working properly until
+	//        https://github.com/open62541/open62541/pull/1812 is fixed
+
 	// reimplement for custom access control for a given custom UA type (derived C++ class)
 	virtual bool userExecutable(const QString &strUserName);
 
@@ -257,10 +268,6 @@ public:
 	// signature is <bool(const QString &)>
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
-
-	// Helpers
-
-	// TODO : helpers for write mask using QUaWriteMask
 
 	// Static Helpers
 
@@ -298,6 +305,10 @@ signals:
 private:
 
 	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
+	// NOTE : need internal because user might reimplement public
+	QUaWriteMask   userWriteMaskInternal  (const QString &strUserName);
+	QUaAccessLevel userAccessLevelInternal(const QString &strUserName);
+	bool           userExecutableInternal (const QString &strUserName);
 
 	std::function<QUaWriteMask  (const QString &)> m_userWriteMaskCallback;
 	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;

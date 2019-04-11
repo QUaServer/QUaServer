@@ -448,13 +448,41 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 	return retRefSet;
 }
 
-QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
+QUaWriteMask QUaNode::userWriteMaskInternal(const QString & strUserName)
 {
 	// if has specific callback, use that one
 	if (m_userWriteMaskCallback)
 	{
 		return m_userWriteMaskCallback(strUserName);
 	}
+	// else use possible reimplementation
+	return this->userWriteMask(strUserName);
+}
+
+QUaAccessLevel QUaNode::userAccessLevelInternal(const QString & strUserName)
+{
+	// if has specific callback, use that one
+	if (m_userAccessLevelCallback)
+	{
+		return m_userAccessLevelCallback(strUserName);
+	}
+	// else use possible reimplementation
+	return this->userAccessLevel(strUserName);
+}
+
+bool QUaNode::userExecutableInternal(const QString & strUserName)
+{
+	// if has specific callback, use that one
+	if (m_userExecutableCallback)
+	{
+		return m_userExecutableCallback(strUserName);
+	}
+	// else use possible reimplementation
+	return this->userExecutable(strUserName);
+}
+
+QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
+{
 	// if has a node parent, use parent's callback
 	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
 	if (parent)
@@ -467,16 +495,11 @@ QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
 
 QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
 {
-	// if has specific callback, use that one
-	if (m_userAccessLevelCallback)
-	{
-		return m_userAccessLevelCallback(strUserName);
-	}
 	// if has a node parent, use parent's callback
 	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
 	if (parent)
 	{
-		return parent->userAccessLevel(strUserName);
+		return parent->userAccessLevelInternal(strUserName);
 	}
 	// else all permissions
 	return 0xFF;
@@ -484,11 +507,6 @@ QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
 
 bool QUaNode::userExecutable(const QString & strUserName)
 {
-	// if has specific callback, use that one
-	if (m_userExecutableCallback)
-	{
-		return m_userExecutableCallback(strUserName);
-	}
 	// if has a node parent, use parent's callback
 	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
 	if (parent)

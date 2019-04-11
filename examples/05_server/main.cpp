@@ -16,10 +16,11 @@ int main(int argc, char *argv[])
 	
 	// Instantiate server by passing certificate contents
 	QUaServer server(4840, certServer.readAll());
+	certServer.close();
 
 	// Add server description
 	server.setApplicationName ("my_app");
-	server.setApplicationUri  ("urn:juangburgos:my_app");
+	server.setApplicationUri  ("urn:juangburgos.com:my_app");
 	server.setProductName     ("my_product");
 	server.setProductUri      ("juangburgos.com");
 	server.setManufacturerName("My Company Inc.");

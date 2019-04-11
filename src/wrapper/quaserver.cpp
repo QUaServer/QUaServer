@@ -494,7 +494,7 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
 	if (node)
 	{
-		return node->userWriteMask(strUserName).intValue;
+		return node->userWriteMaskInternal(strUserName).intValue;
 	}
 	// else default
 	return 0xFFFFFFFF;
@@ -529,7 +529,7 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	QUaBaseVariable * variable = dynamic_cast<QUaBaseVariable *>(node);
 	if (variable)
 	{
-		return variable->userAccessLevel(strUserName).intValue;
+		return variable->userAccessLevelInternal(strUserName).intValue;
 	}
 	// else default
 	return 0xFF;
@@ -602,7 +602,7 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	if (object)
 	{
 		// NOTE : could not diff by method name because name multiples are possible
-		return object->userExecutable(strUserName);
+		return object->userExecutableInternal(strUserName);
 	}
 	// else default
 	return true;

@@ -13,5 +13,8 @@ INCLUDEPATH += $$PWD/
 
 SOURCES += main.cpp
 
+HEADERS += customvar.h
+SOURCES += customvar.cpp
+
 include($$PWD/../../src/wrapper/quaserver.pri)
 include($$PWD/../../src/helper/add_qt_path_win.pri)
