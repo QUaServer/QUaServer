@@ -533,6 +533,7 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 	UA_NodeClass outNodeClass;
 	UA_Server_readNodeClass(server, childNodeId, &outNodeClass);
 	// NOTE : seems methods added to subtype have references to all instances created of the subtype
+	// TODO : fix, when https://github.com/open62541/open62541/pull/1812 is fixed
 	Q_ASSERT_X(
 		listParents.count() <= 1 && outNodeClass != UA_NODECLASS_METHOD ||
 		listParents.count() >= 1 && outNodeClass == UA_NODECLASS_METHOD,

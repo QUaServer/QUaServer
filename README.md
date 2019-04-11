@@ -742,7 +742,180 @@ Build and test the methods example in [./examples/04_types](./examples/04_types/
 
 ## Server
 
-TODO.
+The `QUaServer` class constructor not only allows to set a custom port to run the server (see the *Basics* section), but also to set an SSL **certificate** so that clients can **validate** the server. The `QUaServer` instance also contains methods that allow to customise the server **description** published through OPC UA.
+
+See the [validation document](./VALIDATION.md) for more details on how validation works.
+
+### Create Certificates
+
+Make sure `openssl` is installed and follow the next commands to create the certificate (on Windows use [MSys2](https://www.msys2.org/), on Linux just use the command line).
+
+The first step is to create a Certificate Authority (CA). The CA will take the role of a system integrator comissioned with installing OPC Servers in a plant. The CA will have to:
+
+* Create its own *public* and *private* key pair.
+
+* Create its own **self-signed** *certificate*.
+
+* Create its own *Certificate Revocation List (CRL)*.
+
+Keys can be created and transformed into various formats. Ultimately, most OPCUA applications make use of the [DER format](https://wiki.openssl.org/index.php/DER). 
+
+```bash
+# Create directory to store CA's files
+mkdir ca
+# Create CA key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca/ca.key
+# Create self-signed CA cert
+openssl req -new -x509 -days 3600 -key ca/ca.key -subj "/CN=juangburgos CA/O=juangburgos Organization" -out ca/ca.crt
+# Convert cert to der format
+openssl x509 -in ca/ca.crt -inform pem -out ca/ca.crt.der -outform der
+# Create cert revocation list CRL file
+# NOTE : might need to create in relative path
+#        - File './demoCA/index.txt' (Empty)
+#        - File './demoCA/crlnumber' with contents '1000'
+openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl
+# Convert CRL to der format
+openssl crl -in ca/ca.crl -inform pem -out ca/ca.der.crl -outform der
+```
+
+The next steps must be applied for each server the system integrator wants to install.
+
+* Create its own *public* and *private* key pair.
+
+* Create an `exts.txt` which contain the *certificate extensions* required by the OPC UA standard.
+
+* Create its own **unsigned** certificate, and with it a *certificate sign request*.
+
+* Give the CA to sign its *certificate sign request*.
+
+The `exts.txt` should be as follows:
+
+```
+[v3_ca]
+subjectAltName=DNS:localhost,DNS:ppic09,IP:127.0.0.1,IP:192.168.1.18,URI:urn:unconfigured:application
+basicConstraints=CA:TRUE
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+keyUsage=digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,clientAuth,codeSigning
+```
+
+The `subjectAltName` must contains all the URLs that will be used to connect to the server. In the example above, clients might connect to the localhost (`127.0.0.1`) or through the Windows network, using the Windows PC name (`ppic09`), or through the local network (`192.168.1.18`).
+
+```bash
+# Create directory to store server's files
+mkdir server
+# Create server key
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out server/server.key
+# Convert server key to der format
+openssl rsa -in server/server.key -inform pem -out server/server.key.der -outform der
+# Create server cert sign request
+openssl req -new -sha256 \
+-key server/server.key \
+-subj "/C=ES/ST=MAD/O=MyServer/CN=localhost" \
+-out server/server.csr
+```
+
+The CA must now sign the server's *certificate sign request* to create the *signed certificate*, appending also the required *certificate extensions* (`exts.txt`).
+
+```bash
+# Sign cert sign request (NOTE: must provide exts.txt)
+openssl x509 -days 3600 -req \
+-in server/server.csr \
+-extensions v3_ca \
+-extfile server/exts.txt \
+-CAcreateserial -CA ca/ca.crt -CAkey ca/ca.key \
+-out server/server.crt
+# Convert cert to der format
+openssl x509 -in server/server.crt -inform pem -out server/server.crt.der -outform der
+```
+
+### Use Certificates
+
+First the CA's certificate and CRL must be copied to the client's software. 
+
+In the case of *UA Expert*, in the user interface go to `Settings -> Manage Certificates...`. Then click the `Open Certificate Location`, which opens the file epxlorer to a location similar to:
+
+```
+$SOME_PATH/unifiedautomation/uaexpert/PKI/trusted/certs
+```
+
+The CA's certificate must be copied to this path:
+
+```bash
+cp ca/ca.crt.der $SOME_PATH/unifiedautomation/uaexpert/PKI/trusted/certs/ca.crt.der
+```
+
+Going one directory up, then in `crl` is where the CRL must be copied to:
+
+```bash
+cp ca/ca.der.crl $SOME_PATH/unifiedautomation/uaexpert/PKI/trusted/crl/ca.der.crl
+```
+
+Now the *server certificate* must be copied next to the *QUaServer* application:
+
+```bash
+cp server/server.key.der $SERVER_PATH/server.key.der
+```
+
+And in the C++ code the server's certificate contents need to be passed to the `QUaServer` constructor:
+
+```c++
+#include <QCoreApplication>
+#include <QDebug>
+#include <QFile>
+
+#include <QUaServer>
+
+int main(int argc, char *argv[])
+{
+	QCoreApplication a(argc, argv);
+
+	// Load server certificate
+	QFile certServer;
+	certServer.setFileName("server.crt.der");
+	Q_ASSERT(certServer.exists());
+	certServer.open(QIODevice::ReadOnly);
+
+	// Instantiate server by passing certificate contents
+	QUaServer server(4840, certServer.readAll());
+
+	server.start();
+
+	return a.exec(); 
+}
+```
+
+Now the client is able to validate the server before connecting to it.
+
+Note that eventhough validation required creating and managing cryptographic keys, the communications are yet **not encrypted**. The files generated in this section are used in the *Encryption* to actually encrypt communications.
+
+### Server Description
+
+The `QUaServer` instance also contains methods to add custom server description:
+
+```c++
+// Add server description
+server.setApplicationName ("my_app");
+server.setApplicationUri  ("urn:juangburgos:my_app");
+server.setProductName     ("my_product");
+server.setProductUri      ("juangburgos.com");
+server.setManufacturerName("My Company Inc.");
+server.setSoftwareVersion ("6.6.6-master");
+server.setBuildNumber     ("gvfsed43fs");
+```
+
+This information is then made available to the clients through the *Server Object* that can be found by browsing to `/Root/Objects/Server/ServerStatus/BuildInfo`
+
+<p align="center">
+  <img src="./res/img/05_server_01.jpg">
+</p>
+
+### Server Example
+
+Build and test the server example in [./examples/05_server](./examples/05_server/main.cpp) to learn more.
+
+Some test certificates are included for convenience in [./examples/05_server/ca_files](./examples/05_server/ca_files). **Do not use them in production**, just for testing purposes.
 
 ---
 

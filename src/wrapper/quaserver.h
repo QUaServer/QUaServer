@@ -59,7 +59,7 @@ public:
 
 	void start();
 	void stop();
-	bool isRunning();
+	bool isRunning() const;
 
 	// Server Limits API
 
@@ -222,11 +222,11 @@ private:
 		UA_LocalizedText Description;
 	};
 
+	static QUaServer * getServerNodeContext(UA_Server * server);
+
 	static UA_StatusCode createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj);
 
 	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
-
-	static QMap<UA_Server*, QUaServer*> m_mapServers;
 
 	static UA_StatusCode activateSession(UA_Server                    *server, 
 		                                 UA_AccessControl             *ac,

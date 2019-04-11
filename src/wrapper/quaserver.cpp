@@ -14,9 +14,6 @@ typedef struct {
 const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
 const UA_String username_policy  = UA_STRING_STATIC(USERNAME_POLICY);
 
-// [STATIC]
-QMap<UA_Server*, QUaServer*> QUaServer::m_mapServers;
-
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
 	                                   void            * sessionContext, 
@@ -240,6 +237,15 @@ extern "C" {
 			void *exchangeHandle) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 }
 
+QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
+{
+	auto context = QUaNode::getVoidContext(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), server);
+	// try to cast to C++ server
+	auto qServer = dynamic_cast<QUaServer*>(static_cast<QObject*>(context));
+	Q_CHECK_PTR(qServer);
+	return qServer;
+}
+
 UA_StatusCode QUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj)
 {
 	if (!outExtObj)
@@ -349,9 +355,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 	AccessControlContext *context = (AccessControlContext*)ac->context;
 
 	// NOTE : custom code : get server instance
-	QUaServer *qServer = QUaServer::m_mapServers.value(server);
-	Q_CHECK_PTR(qServer);
-
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
 	/* The empty token is interpreted as anonymous */
 	if (userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
 		if (!context->allowAnonymous)
@@ -457,8 +461,7 @@ void QUaServer::closeSession(UA_Server        * server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::m_mapServers.value(server);
-	Q_CHECK_PTR(qServer);
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
 	// remove session form hash
 	qServer->m_hashSessions.remove(*sessionId);
 }
@@ -474,15 +477,14 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::m_mapServers.value(server);
-	Q_CHECK_PTR(qServer);
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
 	// get user
 	QString strUserName = qServer->m_hashSessions.value(*sessionId);
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		// TODO : waint until officially supported
+		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
 		//auto st = UA_Server_closeSession(server, sessionId);
 		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -509,15 +511,14 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::m_mapServers.value(server);
-	Q_CHECK_PTR(qServer);
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
 	// get user
 	QString strUserName = qServer->m_hashSessions.value(*sessionId);
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		// TODO : waint until officially supported
+		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
 		//auto st = UA_Server_closeSession(server, sessionId);
 		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -534,6 +535,7 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	return 0xFF;
 }
 
+// NOTE : called when reading attributes
 UA_Boolean QUaServer::getUserExecutable(UA_Server        *server, 
 		                                UA_AccessControl *ac,
 		                                const UA_NodeId  *sessionId, 
@@ -541,6 +543,9 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 		                                const UA_NodeId  *methodId, 
 		                                void             *methodContext)
 {
+	// TODO : the "cascading" approach might not be working properly for subtypes
+	//        because methods in this case are shared by all class instances
+	// TODO : fix, when https://github.com/open62541/open62541/pull/1812 is fixed
 	UA_NodeId parentNodeId = QUaNode::getParentNodeId(*methodId, server);
 	if (!UA_NodeId_isNull(&parentNodeId))
 	{
@@ -562,6 +567,7 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 	return true;
 }
 
+// NOTE : called when actually requesting to execute method
 UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server, 
 		                                        UA_AccessControl *ac,
 		                                        const UA_NodeId  *sessionId, 
@@ -577,15 +583,14 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::m_mapServers.value(server);
-	Q_CHECK_PTR(qServer);
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
 	// get user
 	QString strUserName = qServer->m_hashSessions.value(*sessionId);
 	// check if user still exists
 	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		// TODO : waint until officially supported
+		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
 		//auto st = UA_Server_closeSession(server, sessionId);
 		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -705,8 +710,6 @@ void QUaServer::setupServer()
 {
 	UA_StatusCode st;
 	m_running = false;
-	// Add to hash of server pairs
-	QUaServer::m_mapServers[this->m_server] = this;
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
@@ -724,6 +727,8 @@ void QUaServer::setupServer()
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject.className())       , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// set context for server
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)              , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// set context for base types (for instantiable types)
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -791,8 +796,6 @@ void QUaServer::setupServer()
 
 QUaServer::~QUaServer()
 {
-	// Remove from servers map
-	m_mapServers.remove(this->m_server);
 	// Cleanup library objects
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	UA_ServerConfig_delete(config);
@@ -952,14 +955,14 @@ void QUaServer::start()
 	{
 		return;
 	}
-	auto st = UA_Server_run_startup(this->m_server);
+	auto st = UA_Server_run_startup(m_server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
 	m_running = true;
 	m_connection = QObject::connect(this, &QUaServer::iterateServer, this, [this]() {
 		if (m_running) 
 		{
-			UA_Server_run_iterate(this->m_server, true);
+			UA_Server_run_iterate(m_server, true);
 			// iterate again
 			emit this->iterateServer();
 		}	
@@ -972,10 +975,10 @@ void QUaServer::stop()
 {
 	m_running = false;
 	QObject::disconnect(m_connection);
-	UA_Server_run_shutdown(this->m_server);
+	UA_Server_run_shutdown(m_server);
 }
 
-bool QUaServer::isRunning()
+bool QUaServer::isRunning() const
 {
 	return m_running;
 }

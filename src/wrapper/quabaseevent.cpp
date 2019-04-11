@@ -22,6 +22,9 @@ QUaBaseEvent::QUaBaseEvent(QUaServer *server)
 	m_nodeIdOriginator = *server->m_newEventOriginatorNodeId;
 	this->setTime(QDateTime::currentDateTimeUtc());
 	this->setLocalTime(QTimeZone::systemTimeZone());
+	// TODO : get m_nodeIdOriginator's context (QUaBaseObject*/QUaServer* -> QObject*) and set event's parent to it,
+	//        so at least the event is a child of that object and gets deleted once object is deleted
+	//        just a defensive mechanism to avoid mem leaks
 }
 
 QByteArray QUaBaseEvent::eventId() const
