@@ -402,7 +402,9 @@ server.registerReference({ "Supplies", "IsSuppliedBy" });
 objSupl1->addReference({ "Supplies", "IsSuppliedBy" }, objSensor1);
 ```
 
-The `registerReference()` method has to be called in order to *register* the new references type as a *subtype* of the *NonHierarchicalReferences*. If the reference type is not registered before its first use, it is registered automatically on first use. The registered reference can be observed when the server is running by browsing to `/Root/Types/ReferenceTypes/NonHierarchicalReferences`. There should be a new entry corresponding to the custom reference.
+The `registerReference()` method has to be called in order to *register* the new reference type as a *subtype* of the *NonHierarchicalReferences*. If the reference type is not registered before its first use, it is registered automatically on first use. 
+
+The registered reference can be observed when the server is running by browsing to `/Root/Types/ReferenceTypes/NonHierarchicalReferences`. There should be a new entry corresponding to the custom reference.
 
 <p align="center">
   <img src="./res/img/03_references_01.jpg">
@@ -477,7 +479,7 @@ auto listSuppliers = objSensor1->findReferences<QUaBaseObject>({ "Supplies", "Is
 qDebug() << listSuppliers.first()->displayName();
 ```
 
-Note that when an *QUaNode* derived instance is deleted, all its references are removed as well from all nodes in the address space.
+Note that when a *QUaNode* derived instance is deleted, all its references are removed.
 
 ### References Example
 
@@ -593,7 +595,7 @@ public:
 };
 ```
 
-The *QUaServer* library automatically adds the C++ instances as [QObject children](https://doc.qt.io/qt-5/objecttrees.html) of the *TemperatureSensor* instance and assigns them the property name as their [QObject name](https://doc.qt.io/Qt-5/qobject.html#objectName-prop). Therefore it is possible retrieve the C++ children using the [`findChild` method](https://doc.qt.io/Qt-5/qobject.html#findChild).
+The *QUaServer* library automatically adds the C++ instances as [QObject children](https://doc.qt.io/qt-5/objecttrees.html) of the *TemperatureSensor* instance and assigns them the `Q_PROPERTY` name as their [QObject name](https://doc.qt.io/Qt-5/qobject.html#objectName-prop). Therefore it is possible retrieve the C++ children using the [`findChild` method](https://doc.qt.io/Qt-5/qobject.html#findChild).
 
 ```c++
 TemperatureSensor::TemperatureSensor(QUaServer *server)
@@ -960,7 +962,7 @@ Now when connecting, the password will be requested. It is likely that the clien
   <img src="./res/img/06_users_03.jpg">
 </p>
 
-The reason is that communications are **not yet encrypted**, therefore the usermame and passwork will be sent in **plain text**. So any application that monitors the network (such as [Wireshark](https://www.wireshark.org/)) can read such messages and read the login credentials.
+The reason is that communications are **not yet encrypted**, therefore the usermame and password will be sent in **plain text**. So any application that monitors the network (such as [Wireshark](https://www.wireshark.org/)) can read such messages and read the login credentials.
 
 For the moment ignore the warning by clicking `Ignore` to connect to the server. In the *Encryption* section it is detailed how to encrypt communications such that the login credentials are protected from [eavesdropping](https://en.wikipedia.org/wiki/Eavesdropping) applications.
 
@@ -1037,7 +1039,7 @@ subsubvar->setWriteAccess(true);
 subsubvar->setValue("hola");
 
 // Define access on top level object, 
-// since no specific is defined on 'subsubvar',
+// since no specific access is defined on 'subsubvar',
 // it inherits the grandparent's
 obj->setUserAccessLevelCallback([](const QString &strUserName){
 	QUaAccessLevel access;
@@ -1056,7 +1058,7 @@ obj->setUserAccessLevelCallback([](const QString &strUserName){
 });
 ```
 
-When creating custom types it is possible to define a custom access level by *reimplementing* the `userAccessLevel()` virtual method. For example:
+When creating *custom types* it is possible to define a *default* custom access level by *reimplementing* the `userAccessLevel()` virtual method. For example:
 
 In `customvar.h`:
 
@@ -1066,9 +1068,9 @@ In `customvar.h`:
 
 class CustomVar : public QUaBaseDataVariable
 {
-    Q_OBJECT
+	Q_OBJECT
 
-    Q_PROPERTY(QUaProperty         * myProp READ myProp)
+	Q_PROPERTY(QUaProperty         * myProp READ myProp)
 	Q_PROPERTY(QUaBaseDataVariable * varFoo READ varFoo)
 	Q_PROPERTY(QUaBaseDataVariable * varBar READ varBar)
 
@@ -1082,7 +1084,6 @@ public:
 	// Reimplement virtual method to define default user access
 	// for all instances of this type
 	QUaAccessLevel userAccessLevel(const QString &strUserName) override;
-
 };
 ```
 
@@ -1135,7 +1136,7 @@ QUaAccessLevel CustomVar::userAccessLevel(const QString & strUserName)
 }
 ```
 
-So any instance of `CustomVar` will use by default the reimplemented method, *unless* there exists a more **specific** callback defined:
+So any instance of `CustomVar` will use the reimplemented method by default, *unless* there exists a more **specific** callback:
 
 ```c++
 QUaAccessLevel juanCanWrite(const QString &strUserName) 
@@ -1167,9 +1168,9 @@ custom1->varFoo()->setUserAccessLevelCallback(&juanCanWrite);
 custom2->setUserAccessLevelCallback(&juanCanWrite);
 ```
 
-In the example above, all children variables (`myProp`, `varFoo` and `varBar`) inherit the reimplemented access level defined in the `CustomVar` which allows only *john* to write. But, the `varFoo` child of the `custom1` instance has a specific callback that will overrule the parent's permission.
+In the example above, all children variables (`myProp`, `varFoo` and `varBar`) inherit the reimplemented access level defined in the `CustomVar` class, which allows only *john* to write. But, the `varFoo` child of the `custom1` instance has an specific callback that will overrule the parent's permission.
 
-The instance `custom2` also inherits by default the reimplemented access level defined in the `CustomVar`, but the specific callback overrules the inherited permission.
+The instance `custom2` also inherits by default the reimplemented access level defined in the `CustomVar` class, but the specific callback overrules the inherited permission.
 
 ### Users Example
 
@@ -1179,7 +1180,100 @@ Build and test the server example in [./examples/06_users](./examples/06_users/m
 
 ## Encryption
 
-TODO.
+In this section the *QUaServer* library is configured to encrypt communications. Before continuing, make sure to go through the *Server* section in detail and generate all the required certificates and keys.
+
+To support encryption, it is necessary to add the [mbedtls library](https://github.com/ARMmbed/mbedtls) to our project's dependencies. First start by cloning the repository and building the `mbedtls` library:
+
+```bash
+# Go to your repos path
+cd $REPOS_PATH
+# Clone the repo
+git clone https://github.com/ARMmbed/mbedtls mbedtls.git
+# Get in the repo
+cd mbedtls.git
+# Checkout some stable branch
+git checkout tags/mbedtls-2.17.0 -b mbedtls-2.17.0
+# Build the library
+mkdir build; cd build
+# Change your Cmake generator accordingly
+cmake .. -G "Visual Studio 15 2017 Win64"
+```
+
+Build both *Debug* and *Release* versions of the library.
+
+Now to include the library in *QUaServer* first modify the header file of the amalgamation [`./src/amalgamation/open62541.h`](./src/amalgamation/open62541.h) to support encryption by defining `UA_ENABLE_ENCRYPTION` (around line `55`):
+
+<p align="center">
+  <img src="./res/img/07_encryption_01.jpg">
+</p>
+
+Then modify the *QMake* file [`./src/amalgamation/open62541opts.pri`](./src/amalgamation/open62541opts.pri) to read as follows:
+
+```cmake
+USE_ENCRYPTION = true
+MBEDTLS_PATH   = $$PWD/../../../mbedtls.git
+```
+
+Note it is necessary to point the `MBEDTLS_PATH` to the path where the `mbedtls` was cloned. In the example above it is a relative path which assume both the *QUaServer* repo and the *mbedtls* repo were cloned side-by-side. Modify this path as necessary.
+
+Now run `qmake` again over your project to load the new configuration. For examples, to update the examples in this repo run:
+
+```bash
+cd ./examples
+# Linux
+qmake -r examples.pro
+# Windows
+qmake -r -tp vc examples.pro
+```
+
+Now copy the server's **certificate** and **private key** to the path where your binary is (`server.crt.der` and `server.key.der` created in the *Server* section).
+
+Finally load the *certificate* and *private key* in the C++ code and pass them to the `QUaServer` constructor:
+
+```c++
+#include <QCoreApplication>
+#include <QDebug>
+#include <QFile>
+
+#include <QUaServer>
+
+int main(int argc, char *argv[])
+{
+	QCoreApplication a(argc, argv);
+
+	// Load server certificate
+	QFile certServer;
+	certServer.setFileName("server.crt.der");
+	Q_ASSERT(certServer.exists());
+	certServer.open(QIODevice::ReadOnly);
+
+	// Load server private key
+	QFile privServer;
+	privServer.setFileName("server.key.der");
+	Q_ASSERT(privServer.exists());
+	privServer.open(QIODevice::ReadOnly);
+
+	// Instantiate server by passing certificate and key
+	QUaServer server(4840, certServer.readAll(), privServer.readAll());
+
+	certServer.close();
+	privServer.close();
+
+	server.start();
+
+	return a.exec(); 
+}
+```
+
+Now when the client browses for the server, there should be a new option to connect using **Sign & Encrypt** which encrypts the communications between clients and the server.
+
+<p align="center">
+  <img src="./res/img/07_encryption_02.jpg">
+</p>
+
+### Encryption Example
+
+Build and test the encryption example in [./examples/07_encryption](./examples/07_encryption/main.cpp) to learn more.
 
 ---
 

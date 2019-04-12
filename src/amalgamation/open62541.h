@@ -52,7 +52,7 @@
 /* #undef UA_ENABLE_PUBSUB_INFORMATIONMODEL */
 /* #undef UA_ENABLE_PUBSUB_INFORMATIONMODEL_METHODS */
 #define UA_ENABLE_DA
-/* #undef UA_ENABLE_ENCRYPTION */
+#define UA_ENABLE_ENCRYPTION
 /* #undef UA_ENABLE_HISTORIZING */
 /* #undef UA_ENABLE_EXPERIMENTAL_HISTORIZING */
 /* #undef UA_ENABLE_SUBSCRIPTIONS_EVENTS */
@@ -13197,7 +13197,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-08 10:08:58 */
+ * on host PPIC09 by user User at 2019-04-08 09:51:39 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -15598,7 +15598,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-08 10:08:58 */
+ * on host PPIC09 by user User at 2019-04-08 09:51:39 */
 
 
 
