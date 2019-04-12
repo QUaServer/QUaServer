@@ -297,6 +297,8 @@ void QUaNode::setBrowseName(const QString & browseName)
 	auto st = UA_Server_writeBrowseName(m_qUaServer->m_server, m_nodeId, bName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// also update QObject name
+	this->setObjectName(browseName);
 	// emit browseName changed
 	emit this->browseNameChanged(browseName);
 }
@@ -319,6 +321,21 @@ QUaBaseObject * QUaNode::addBaseObject(const QString &strNodeId/* = ""*/)
 QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
 {
 	return m_qUaServer->createInstance<QUaFolderObject>(this, strNodeId);
+}
+
+QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/)
+{
+	return this->findChildren<QUaNode*>(strBrowseName, Qt::FindDirectChildrenOnly);
+}
+
+QUaNode* QUaNode::browseChild(const QString & strBrowseName)
+{
+	auto children = this->browseChildren(strBrowseName);
+	if (children.isEmpty())
+	{
+		return nullptr;
+	}
+	return children.first();
 }
 
 void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)

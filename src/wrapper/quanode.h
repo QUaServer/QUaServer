@@ -223,6 +223,22 @@ public:
 	virtual QUaBaseObject       * addBaseObject      (const QString &strNodeId = "");
 	virtual QUaFolderObject     * addFolderObject    (const QString &strNodeId = "");
 
+	// Browse API
+
+	template<typename T>
+	QList<T*> browseChildren(const QString &strBrowseName = QString());
+	// specialization
+	QList<QUaNode*> browseChildren(const QString &strBrowseName = QString());
+
+	// just get the first one
+	template<typename T>
+	T* browseChild(const QString &strBrowseName = QString());
+	// specialization
+	QUaNode* browseChild(const QString &strBrowseName = QString());
+
+	// TODO : browsePath(const QString &strBrowsePath);
+	//        strBrowsePath should be something like "child.grandchild.ggchild"
+
 	// Reference API
 
 	void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
@@ -269,6 +285,8 @@ public:
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
 
+	// TODO : protected, private?
+
 	// Static Helpers
 
 	static UA_NodeId getParentNodeId(const UA_NodeId &childNodeId, QUaServer *server);
@@ -285,8 +303,6 @@ public:
 	static QString getBrowseName (const UA_NodeId &nodeId, UA_Server *server);
 
 	static int getPropsOffsetHelper(const QMetaObject &metaObject);
-
-	// protected, private?
 
 	// to be able to reuse methods in subclasses
 	QUaServer * m_qUaServer;
@@ -314,6 +330,30 @@ private:
 	std::function<QUaAccessLevel(const QString &)> m_userAccessLevelCallback;
 	std::function<bool          (const QString &)> m_userExecutableCallback;
 };
+
+template<typename T>
+inline QList<T*> QUaNode::browseChildren(const QString & strBrowseName/* = QString() */ )
+{
+	QList<T*> retList;
+	// call QUaNode specialization
+	auto originalList = browseChildren(strBrowseName);
+	// filter out the ones that downcast to T*
+	for (int i = 0; i < originalList.count(); i++)
+	{
+		T* possible = dynamic_cast<T*>(originalList.at(i));
+		if (possible)
+		{
+			retList.append(possible);
+		}
+	}
+	return retList;
+}
+
+template<typename T>
+inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/)
+{
+	return dynamic_cast<T*>(this->browseChild(strBrowseName));
+}
 
 template<typename T>
 inline QList<T*> QUaNode::findReferences(const QUaReference &ref, const bool &isForward/* = true*/)

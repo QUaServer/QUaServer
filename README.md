@@ -283,6 +283,22 @@ QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVari
 });
 ```
 
+### For Object Types
+
+The API provides the following methods to access attributes:
+
+```c++
+quint8 eventNotifier() const;
+void setEventNotifier(const quint8 &eventNotifier);
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+void setEventNotifierSubscribeToEvents();
+void setEventNotifierNone();
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+```
+
+The usage of these methods is described in detail in the *Events* section.
+
 ### Basics Example
 
 Build and test the basics example in [./examples/01_basics](./examples/01_basics/main.cpp) to learn more.
@@ -1216,7 +1232,7 @@ MBEDTLS_PATH   = $$PWD/../../../mbedtls.git
 
 Note it is necessary to point the `MBEDTLS_PATH` to the path where the `mbedtls` was cloned. In the example above it is a relative path which assume both the *QUaServer* repo and the *mbedtls* repo were cloned side-by-side. Modify this path as necessary.
 
-Now run `qmake` again over your project to load the new configuration. For examples, to update the examples in this repo run:
+Now run `qmake` again over your project to load the new configuration. For example, to update the examples in this repo run:
 
 ```bash
 cd ./examples
@@ -1225,6 +1241,8 @@ qmake -r examples.pro
 # Windows
 qmake -r -tp vc examples.pro
 ```
+
+After running `qmake` it is often necessary to **rebuild** the application to avoid *missing symbols* errors.
 
 Now copy the server's **certificate** and **private key** to the path where your binary is (`server.crt.der` and `server.key.der` created in the *Server* section).
 
@@ -1279,7 +1297,176 @@ Build and test the encryption example in [./examples/07_encryption](./examples/0
 
 ## Events
 
-TODO.
+At the time of writing, events are considered an `EXPERIMENTAL` feature in the *open62541* library, therefore the same applies for *QUaServer*. Please use with caution.
+
+To use events, the amalgamation included in this repository is not going to be useful. It is necessary to create a new amalgamation from the *open62541* source code that supports events. This can be done by building it with the following commands:
+
+```bash
+cd $REPOS_PATH/open62541.git
+mkdir build; cd build
+# Adjust your Cmake generator accordingly
+cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON .. -G "Visual Studio 15 2017 Win64"
+```
+
+* The `-DUA_NAMESPACE_ZERO=FULL` option is needed because by default *open62541* does not include the complete address space of the OPC UA standard in order to reduce binary size. But to support events, it is actually necessary to have the `FULL` address space available in the server application.
+
+* The `-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON` is the flag that enabled events, and that is marked as **experimental**.
+
+Build the library, and afterwards replace [./src/amalgamation/open62541.h](./src/amalgamation/open62541.h) and [./src/amalgamation/open62541.c](./src/amalgamation/open62541.c). Notice that the amalgamation files are considerably larger than the previous ones because now they contain the full address space.
+
+Now build the library using the Qt project included in this repo:
+
+```bash
+cd ./src/amalgamation
+# Linux
+qmake open62541.pro
+make
+# Windows
+qmake -tp vc open62541.pro
+```
+
+And finally update your project to load the new configuration. For example, to update the examples in this repo run:
+
+```bash
+cd ./examples
+# Linux
+qmake -r examples.pro
+# Windows
+qmake -r -tp vc examples.pro
+```
+
+After running `qmake` it is often necessary to **rebuild** the application to avoid *missing symbols* errors.
+
+Events now can be used in the C++ code. To create an event, first is necessary to **subtype** the `QUaBaseEvent` class, for example:
+
+In `myevent.h`:
+
+```c++
+#include <QUaBaseEvent>
+
+class MyEvent : public QUaBaseEvent
+{
+    Q_OBJECT
+
+public:
+	Q_INVOKABLE explicit MyEvent(QUaServer *server);
+
+};
+```
+
+In `myevent.cpp`:
+
+```c++
+#include "myevent.h"
+
+MyEvent::MyEvent(QUaServer *server)
+	: QUaBaseEvent(server)
+{
+
+}
+```
+
+The same rules apply was when subtyping *Objects* or *Variables* (see the *Types* section).
+
+Events must have an **originator** node, which can be any object in the address space that allows to subscribe to events. This is defined in the `EventNotifier` attribute which can be accesed through the `QUaBaseObject` API:
+
+```c++
+quint8 eventNotifier() const;
+void setEventNotifier(const quint8 &eventNotifier);
+```
+
+The value should be an enumeration, but to simplfy the usage there are a couple of helper methods:
+
+```c++
+void setEventNotifierSubscribeToEvents();
+void setEventNotifierNone();
+```
+
+The `setEventNotifierSubscribeToEvents()` enables events for the object while `setEventNotifierNone()` disables them. By default events are **disabled** for all objects. Except for the **Server Object**.
+
+If there is an event which does not originate from any object, then is necessary to use the *Server Object* to create and trigger the event. An event is instantiated using the `createEvent<T>()` method:
+
+```c++
+auto event = server.createEvent<MyEvent>();
+```
+
+Once an event is created, some variables can be set to define the event information. This is provided by the inherited `QUaBaseEvent` API:
+
+```c++
+QString sourceName() const;
+void setSourceName(const QString &strSourceName);
+
+QDateTime time() const;
+void setTime(const QDateTime &dateTime);
+
+QString message() const;
+void setMessage(const QString &strMessage);
+
+quint16 severity() const;
+void setSeverity(const quint16 &intSeverity);
+```
+
+* `SourceName` : Description of the source of the Event.
+
+* `Time` : Time (in UTC) the Event occurred. It comes from the underlying system or device.
+
+* `Message` : Human-readable description of the Event.
+
+* `Severity` : Urgency of the Event. Value from 1 to 1000, with 1 being the lowest severity and 1000 being the highest.
+
+The variables must be set before triggering the event. Then, the event can be triggered with the `trigger()` method.
+
+In order to be able to test the events though, it is necessary to have a mechanism to trigger events on demand. On option is to create a method to trigger the event:
+
+```c++
+auto event = server.createEvent<MyEvent>();
+
+objsFolder->addMethod("triggerServerEvent", [&event]() {
+	// set event information
+	event->setSourceName("Server");
+	event->setMessage("An event occured in the server");
+	event->setTime(QDateTime::currentDateTimeUtc());
+	event->setSeverity(100);
+	// trigger event
+	event->trigger();	
+});
+```
+
+In order to visualize events, some clients require a special events window. For example in *UA Expert*, click the `Add Document` button, then select `Event View` and click `Add`. Then *drag and drop* the *Server Object* (`/Root/Objects/Server`) to the *Configuration* window. Now is possible to see events.
+
+<p align="center">
+  <img src="./res/img/08_events_01.jpg">
+</p>
+
+The event can be trigger any number of times, and its variables can be updated to new values at any point. Once is not needed anymore, the event can be deleted:
+
+```c++
+delete event;
+```
+
+If it is desired to trigger events with an specific object as originator, simply create the event using that object's `createEvent<T>()` method:
+
+```c++
+QUaFolderObject * objsFolder = server.objectsFolder();
+auto obj = objsFolder->addBaseObject();
+obj->setDisplayName("obj");
+obj->setBrowseName ("obj");
+
+// Enable object for events
+obj->setEventNotifierSubscribeToEvents();
+// Create event with object as originator
+auto obj_event = obj->createEvent<MyEvent>();
+```
+
+But now on the client it is necessary to *drag and drop* the originator object to the *Configuration* window.
+
+<p align="center">
+  <img src="./res/img/08_events_02.jpg">
+</p>
+
+### Events Example
+
+Build and test the events example in [./examples/08_events](./examples/08_events/main.cpp) to learn more.
 
 ---
 

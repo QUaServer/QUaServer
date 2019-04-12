@@ -20,8 +20,12 @@ int main(int argc, char *argv[])
 	Q_ASSERT(privServer.exists());
 	privServer.open(QIODevice::ReadOnly);
 
+#ifdef UA_ENABLE_ENCRYPTION
 	// Instantiate server by passing certificate and key
 	QUaServer server(4840, certServer.readAll(), privServer.readAll());
+#else
+	QUaServer server(4840, certServer.readAll());
+#endif
 
 	certServer.close();
 	privServer.close();
@@ -30,3 +34,4 @@ int main(int argc, char *argv[])
 
 	return a.exec(); 
 }
+
