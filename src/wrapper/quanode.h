@@ -242,6 +242,8 @@ public:
 	// specialization
 	QUaNode * browsePath(const QStringList &strBrowsePath);
 
+	bool hasChild(const QString &strBrowseName);
+
 	// Reference API
 
 	void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);

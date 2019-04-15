@@ -266,12 +266,12 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// compose enum name
 	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
-	Q_ASSERT(m_qUaServer->m_hashEnums.contains(strEnumName));
-	// exit if not exists
+	// register if not exists
 	if (!m_qUaServer->m_hashEnums.contains(strEnumName))
 	{
-		return;
+		m_qUaServer->registerEnum(metaEnum);
 	}
+	Q_ASSERT(m_qUaServer->m_hashEnums.contains(strEnumName));
 	// need to "reset" dataType before setting a new value
 	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
