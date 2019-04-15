@@ -338,6 +338,20 @@ QUaNode* QUaNode::browseChild(const QString & strBrowseName)
 	return children.first();
 }
 
+QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath)
+{
+	QUaNode * currNode = this;
+	for (int i = 0; i < strBrowsePath.count(); i++)
+	{
+		currNode = currNode->browseChild(strBrowsePath.at(i));
+		if (!currNode)
+		{
+			return nullptr;
+		}
+	}
+	return currNode;
+}
+
 void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
 {
 	// first check if reference type is registered

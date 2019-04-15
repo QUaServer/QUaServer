@@ -31,6 +31,29 @@ int main(int argc, char *argv[])
 	QUaFolderObject * objFolder = objsFolder->addFolderObject();
 	objFolder->setDisplayName("my_folder");
 
+	// nested nodes and browsing
+
+	QUaBaseObject * obj = objsFolder->addBaseObject();
+	obj->setDisplayName("obj");
+	obj->setBrowseName ("obj");
+	QUaBaseObject * subobj = obj->addBaseObject();
+	subobj->setDisplayName("subobj");
+	subobj->setBrowseName ("subobj");
+	QUaBaseDataVariable * var = subobj->addBaseDataVariable();
+	var->setDisplayName("var");
+	var->setBrowseName ("var");
+	QUaBaseDataVariable * subvar = var->addBaseDataVariable();
+	subvar->setDisplayName("subvar");
+	subvar->setBrowseName ("subvar");
+	QUaProperty * prop = subvar->addProperty();
+	prop->setDisplayName("prop");
+	prop->setBrowseName ("prop");
+	// browse nested children by passing a list of browse names to the (relative) browsePath method
+	Q_ASSERT(obj->browsePath(QStringList() << "subobj") == subobj);
+	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var") == var);
+	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar") == subvar);
+	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar" << "prop") == prop);
+
 	// temperature sensor model
 
 	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject();

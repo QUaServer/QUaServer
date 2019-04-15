@@ -1366,7 +1366,7 @@ MyEvent::MyEvent(QUaServer *server)
 }
 ```
 
-The same rules apply was when subtyping *Objects* or *Variables* (see the *Types* section).
+The same rules apply as when subtyping *Objects* or *Variables* (see the *Types* section).
 
 Events must have an **originator** node, which can be any object in the address space that allows to subscribe to events. This is defined in the `EventNotifier` attribute which can be accesed through the `QUaBaseObject` API:
 
@@ -1375,7 +1375,7 @@ quint8 eventNotifier() const;
 void setEventNotifier(const quint8 &eventNotifier);
 ```
 
-The value should be an enumeration, but to simplfy the usage there are a couple of helper methods:
+The value should be an enumeration, but to simplify the usage, there are a couple of helper methods:
 
 ```c++
 void setEventNotifierSubscribeToEvents();
@@ -1416,7 +1416,7 @@ void setSeverity(const quint16 &intSeverity);
 
 The variables must be set before triggering the event. Then, the event can be triggered with the `trigger()` method.
 
-In order to be able to test the events though, it is necessary to have a mechanism to trigger events on demand. On option is to create a method to trigger the event:
+In order to be able to test the events though, it is necessary to have a mechanism to trigger events on demand. One option is to create a method to trigger the event:
 
 ```c++
 auto event = server.createEvent<MyEvent>();
@@ -1438,7 +1438,7 @@ In order to visualize events, some clients require a special events window. For 
   <img src="./res/img/08_events_01.jpg">
 </p>
 
-The event can be trigger any number of times, and its variables can be updated to new values at any point. Once is not needed anymore, the event can be deleted:
+The event can be triggered any number of times, and its variables can be updated to new values at any point. Once is not needed anymore, the event can be deleted:
 
 ```c++
 delete event;

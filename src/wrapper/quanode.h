@@ -224,6 +224,7 @@ public:
 	virtual QUaFolderObject     * addFolderObject    (const QString &strNodeId = "");
 
 	// Browse API
+	// (* actually browses using QObject tree)
 
 	template<typename T>
 	QList<T*> browseChildren(const QString &strBrowseName = QString());
@@ -236,8 +237,10 @@ public:
 	// specialization
 	QUaNode* browseChild(const QString &strBrowseName = QString());
 
-	// TODO : browsePath(const QString &strBrowsePath);
-	//        strBrowsePath should be something like "child.grandchild.ggchild"
+	template<typename T>
+	T* browsePath(const QStringList &strBrowsePath);
+	// specialization
+	QUaNode * browsePath(const QStringList &strBrowsePath);
 
 	// Reference API
 
@@ -353,6 +356,12 @@ template<typename T>
 inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/)
 {
 	return dynamic_cast<T*>(this->browseChild(strBrowseName));
+}
+
+template<typename T>
+inline T* browsePath(const QStringList &strBrowsePath)
+{
+	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }
 
 template<typename T>
