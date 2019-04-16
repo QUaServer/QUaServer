@@ -1465,7 +1465,7 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		Q_UNUSED(st);
 		// store method with node id hash as key
 		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
-		m_hashMethods[methNodeId] = [metamethod](void * objectContext, const UA_Variant * input, UA_Variant * output) {
+		m_hashMethods[methNodeId] = [i](void * objectContext, const UA_Variant * input, UA_Variant * output) {
 			// get object instance that owns method
 			QUaBaseObject * object = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
 			Q_ASSERT_X(object, "QUaServer::addMetaMethods", "Cannot call method on invalid C++ object.");
@@ -1473,6 +1473,9 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			{
 				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 			}
+			// NOTE : had to cache the method's index in lambda capture because caching metamethod directly was not working
+			//        in some cases the internal data of the metamethod was deleted which resulted in access violation
+			auto metamethod = object->metaObject()->method(i);
 			// convert input arguments to QVariants
 			QVariantList varListArgs;
 			QList<QGenericArgument> genListArgs;
