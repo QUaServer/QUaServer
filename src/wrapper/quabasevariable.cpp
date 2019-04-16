@@ -126,8 +126,7 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	}
 	// if new value dataType does not match the old value dataType
 	// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"	
-	if (qobject_cast<QUaBaseDataVariable*>(this) &&
-		newType != oldType &&
+	if (newType != oldType &&
 		!newValue.canConvert(oldType))
 	{
 		auto st = UA_Server_writeDataType(m_qUaServer->m_server,
@@ -148,24 +147,20 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	Q_UNUSED(st);
 	// emit value changed
 	emit this->valueChanged(newValue);
-	// assign dataType, valueRank and arrayDimensions according to new value
-	if (qobject_cast<QUaBaseDataVariable*>(this))
+	// set new dataType if necessary
+	if (newType != oldType &&
+		!newValue.canConvert(oldType))
 	{
-		// set new dataType if necessary
-		if (newType != oldType &&
-			!newValue.canConvert(oldType))
-		{
-			st = UA_Server_writeDataType(m_qUaServer->m_server,
-				m_nodeId,
-				QUaTypesConverter::uaTypeNodeIdFromQType(newType));
-			Q_ASSERT(st == UA_STATUSCODE_GOOD);
-			Q_UNUSED(st);
-			// emit dataType changed
-			emit this->dataTypeChanged(newType);
-		}
-		// [NOTE] do not set rank or arrayDimensions because they are permanent
-		//        is better to just set array dimensions on Variant value and leave rank as ANY
+		st = UA_Server_writeDataType(m_qUaServer->m_server,
+			m_nodeId,
+			QUaTypesConverter::uaTypeNodeIdFromQType(newType));
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		// emit dataType changed
+		emit this->dataTypeChanged(newType);
 	}
+	// [NOTE] do not set rank or arrayDimensions because they are permanent
+	//        is better to just set array dimensions on Variant value and leave rank as ANY
 }
 
 QMetaType::Type QUaBaseVariable::dataType() const

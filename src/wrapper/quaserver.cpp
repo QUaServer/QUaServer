@@ -1371,6 +1371,12 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 	for (int i = parentMetaObject.methodOffset(); i < methCount; i++)
 	{
 		QMetaMethod metamethod = parentMetaObject.method(i);
+		// validate id method (not signal, slot or constructor)
+		auto methodType = metamethod.methodType();
+		if (methodType != QMetaMethod::Method)
+		{
+			continue;
+		}
 		// validate return type
 		auto returnType  = (QMetaType::Type)metamethod.returnType();
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
@@ -1544,8 +1550,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// adapt parent relation with child according to parent type
-	UA_NodeId referenceTypeId = QUaServer::getReferenceTypeId(parentNode->metaObject()->className(), 
-		                                                         metaObject.className());
+	UA_NodeId referenceTypeId = QUaServer::getReferenceTypeId(*parentNode->metaObject(), metaObject);
 	// set qualified name, default is class name
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
@@ -1743,27 +1748,26 @@ bool QUaServer::userExists(const QString & strUserName) const
 	return m_hashUsers.contains(strUserName);
 }
 
-UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, const QString & strChildClassName)
+UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, const QMetaObject & childMetaObject)
 {
 	UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 	// adapt parent relation with child according to parent type
-	if (strParentClassName.compare(QUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	if (parentMetaObject.inherits(&QUaFolderObject::staticMetaObject))
 	{
 		referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
 	}
-	else if (strParentClassName.compare(QUaBaseObject      ::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
-		     strParentClassName.compare(QUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+	else if (parentMetaObject.inherits(&QUaBaseObject::staticMetaObject) ||
+		     parentMetaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
-		if (strChildClassName.compare(QUaFolderObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0 ||
-			strChildClassName.compare(QUaBaseObject::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		if (childMetaObject.inherits(&QUaBaseObject::staticMetaObject))
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT);
 		}
-		else if (strChildClassName.compare(QUaBaseDataVariable::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		else if (childMetaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 		}
-		else if (strChildClassName.compare(QUaProperty::staticMetaObject.className(), Qt::CaseInsensitive) == 0)
+		else if (childMetaObject.inherits(&QUaProperty::staticMetaObject))
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 		}
@@ -1772,7 +1776,6 @@ UA_NodeId QUaServer::getReferenceTypeId(const QString & strParentClassName, cons
 	{
 		Q_ASSERT_X(false, "QUaServer::getReferenceTypeId", "Invalid parent type.");
 	}
-	
 	return referenceTypeId;
 }
 

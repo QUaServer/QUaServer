@@ -178,7 +178,7 @@ private:
 	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
 	QHash< UA_NodeId, std::function<UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>      > m_hashMethods;
 
-	static UA_NodeId getReferenceTypeId(const QString &strParentClassName, const QString &strChildClassName);
+	static UA_NodeId getReferenceTypeId(const QMetaObject &parentMetaObject, const QMetaObject &childMetaObject);
 
 	static UA_StatusCode uaConstructor(UA_Server        *server,
 		                               const UA_NodeId  *sessionId, 
