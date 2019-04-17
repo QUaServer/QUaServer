@@ -181,8 +181,11 @@ QMetaType::Type QUaBaseVariable::dataType() const
 	{
 		return QMetaType::Int;
 	}
-	// else return oncverted type
-	return QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
+	// else return converted type
+	auto type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
+	// cleanup
+	UA_NodeId_clear(&outDataType);
+	return type;
 }
 
 void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
