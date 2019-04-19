@@ -1407,6 +1407,7 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		QVector<UA_Argument> vectArgs;
 		auto listArgNames = metamethod.parameterNames();
 		Q_ASSERT(listArgNames.count() == metamethod.parameterCount());
+		auto listTypeNames = metamethod.parameterTypes();
 		for (int k = 0; k < metamethod.parameterCount(); k++)
 		{
 			isSupported = QUaTypesConverter::isSupportedQType((QMetaType::Type)metamethod.parameterType(k));
@@ -1417,10 +1418,20 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			}
 			UA_Argument inputArgument;
 			UA_Argument_init(&inputArgument);
+			// check if type is registered enum
+			UA_NodeId uaType;
+			if (this->m_hashEnums.contains(listTypeNames[k]))
+			{
+				uaType = this->m_hashEnums.value(listTypeNames[k]);
+			}
+			else
+			{
+				uaType = QUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
+			}
 			// create n-th argument
 			inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
-			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames.at(k));
-			inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
+			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames[k]);
+			inputArgument.dataType    = uaType;
 			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
 			vectArgs.append(inputArgument);
 		}
