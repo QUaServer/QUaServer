@@ -54,10 +54,10 @@ class QUaBaseVariable : public QUaNode
 	// Variable Attributes
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
-	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType        NOTIFY dataTypeChanged       )
+	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
 	Q_PROPERTY(qint32            valueRank           READ valueRank          /*NOTE : Read-only      NOTIFY valueRankChanged      */)
 	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only      NOTIFY arrayDimensionsChanged*/)
-	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel     NOTIFY accessLevelChanged    )
+	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel /* NOTIFY accessLevelChanged */  )
 
 	// Cannot be written from the server, as they are specific to the different users and set by the access control callback :
 	// It is defined by overwriting the server's config->accessControl.getUserAccessLevel (see getUserAccessLevel_default)
@@ -116,9 +116,7 @@ public:
 	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
 	
 signals:
-	void valueChanged          (const QVariant         &value          );
-	void dataTypeChanged       (const QMetaType::Type  &dataType       );
-	void accessLevelChanged    (const quint8           &accessLevel    );
+	void valueChanged(const QVariant &value);
 
 private:
 	static void onWrite(UA_Server             *server, 
@@ -128,6 +126,8 @@ private:
 		                void                  *nodeContext, 
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
+
+	bool m_bInternalWrite;
 };
 
 #endif // QUABASEVARIABLE_H

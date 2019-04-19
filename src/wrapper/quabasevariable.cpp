@@ -25,6 +25,12 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	{
 		return;
 	}
+	// do not emit if value change is internal
+	if (var->m_bInternalWrite)
+	{
+		var->m_bInternalWrite = false;
+		return;
+	}
 	// emit value changed
 	emit var->valueChanged(var->value());
 }
@@ -138,6 +144,7 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 
 	// convert to UA_Variant and set new value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
+	m_bInternalWrite = true;
 	auto st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		tmpVar);
@@ -145,8 +152,6 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	UA_Variant_deleteMembers(&tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// emit value changed
-	emit this->valueChanged(newValue);
 	// set new dataType if necessary
 	if (newType != oldType &&
 		!newValue.canConvert(oldType))
@@ -156,8 +161,6 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 			QUaTypesConverter::uaTypeNodeIdFromQType(newType));
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
-		// emit dataType changed
-		emit this->dataTypeChanged(newType);
 	}
 	// [NOTE] do not set rank or arrayDimensions because they are permanent
 	//        is better to just set array dimensions on Variant value and leave rank as ANY
@@ -238,6 +241,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	}
 	// set converted or default value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+	m_bInternalWrite = true;
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		tmpVar);
@@ -252,10 +256,6 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		QUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// emit dataType changed
-	emit this->dataTypeChanged(dataType);
-	// emit value changed
-	emit this->valueChanged(oldValue);
 }
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
@@ -301,6 +301,7 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	}
 	// set converted or default value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+	m_bInternalWrite = true;
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		tmpVar);
@@ -316,10 +317,6 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		enumTypeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// emit dataType changed
-	emit this->dataTypeChanged(QMetaType::Int);
-	// emit value changed
-	emit this->valueChanged(oldValue);
 }
 
 qint32 QUaBaseVariable::valueRank() const
@@ -386,7 +383,6 @@ void QUaBaseVariable::setAccessLevel(const quint8 & accessLevel)
 	auto st = UA_Server_writeAccessLevel(m_qUaServer->m_server, m_nodeId, accessLevel);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	emit this->accessLevelChanged(accessLevel);
 }
 
 double QUaBaseVariable::minimumSamplingInterval() const
