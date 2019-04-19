@@ -179,11 +179,11 @@ QMetaType::Type QUaBaseVariable::dataType() const
 	// check if type is enum, if so, return type int 32
 	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
 	{
+		UA_NodeId_clear(&outDataType);
 		return QMetaType::Int;
 	}
 	// else return converted type
-	auto type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
-	// cleanup
+	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 	UA_NodeId_clear(&outDataType);
 	return type;
 }
