@@ -14,14 +14,15 @@
 
 class QUaServer : public QObject
 {
-	Q_OBJECT
-
-friend class QUaNode;
-friend class QUaBaseVariable;
-friend class QUaBaseObject;
+	friend class QUaNode;
+	friend class QUaBaseVariable;
+	friend class QUaBaseObject;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-friend class QUaBaseEvent;
+	friend class QUaBaseEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	template <typename ClassType, typename R, bool IsMutable, typename... Args> friend struct QUaMethodTraitsBase;
+
+	Q_OBJECT
 
 public:
 

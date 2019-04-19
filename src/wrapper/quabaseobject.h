@@ -32,16 +32,48 @@ struct QUaMethodTraitsBase
 		return { getTypeName<Args>()... };
 	}
 
+	// https://stackoverflow.com/questions/6627651/enable-if-method-specialization
 	template<typename T>
-	inline static UA_Argument getTypeUaArgument(const int &iArg = 0)
+	inline static UA_Argument getTypeUaArgument(QUaServer * uaServer, const int &iArg = 0)
+	{
+		return getTypeUaArgumentInternal<T>(std::is_enum<T>(), uaServer, iArg);
+	}
+
+	template<typename T>
+	inline static UA_Argument getTypeUaArgumentInternal(std::false_type, QUaServer * uaServer, const int &iArg = 0)
+	{
+		Q_UNUSED(uaServer);
+		UA_NodeId nodeId = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
+		return getTypeUaArgumentInternal<T>(nodeId, iArg);
+	}
+
+	template<typename T>
+	inline static UA_Argument getTypeUaArgumentInternal(std::true_type, QUaServer * uaServer, const int &iArg = 0)
+	{
+		QMetaEnum metaEnum = QMetaEnum::fromType<T>();
+		// compose enum name
+		QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+		// register if not exists
+		if (!uaServer->m_hashEnums.contains(strEnumName))
+		{
+			uaServer->registerEnum(metaEnum);
+		}
+		Q_ASSERT(uaServer->m_hashEnums.contains(strEnumName));
+		// pass in enum nodeid
+		UA_NodeId nodeId = uaServer->m_hashEnums.value(strEnumName);
+		return getTypeUaArgumentInternal<T>(nodeId, iArg);
+	}
+
+	template<typename T>
+	inline static UA_Argument getTypeUaArgumentInternal(const UA_NodeId &nodeId, const int &iArg = 0)
 	{
 		UA_Argument inputArgument;
 		UA_Argument_init(&inputArgument);
 		// create n-th argument with name "Arg" + number
 		inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
 		inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
-		inputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
-		inputArgument.valueRank   = UA_VALUERANK_SCALAR;
+		inputArgument.dataType    = nodeId;
+		inputArgument.valueRank   = UA_VALUERANK_SCALAR; // TODO : support arrays UA_VALUERANK_ANY?
 		// return
 		return inputArgument;
 	}
@@ -65,12 +97,12 @@ struct QUaMethodTraitsBase
 		return outputArgument;
 	}
 
-	inline static QVector<UA_Argument> getArgsUaArguments()
+	inline static QVector<UA_Argument> getArgsUaArguments(QUaServer * uaServer)
 	{
 		int iArg = 0;
 		const size_t nArgs = getNumArgs();
 		if (nArgs <= 0) return QVector<UA_Argument>();
-		return { getTypeUaArgument<Args>(iArg++)... };
+		return { getTypeUaArgument<Args>(uaServer, iArg++)... };
 	}
 
 	template<typename T>
@@ -272,7 +304,7 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
 	QVector<UA_Argument> listInputArguments;
 	if (QOpcUaMethodTraits<M>::getNumArgs() > 0)
 	{
-		listInputArguments = QOpcUaMethodTraits<M>::getArgsUaArguments();
+		listInputArguments = QOpcUaMethodTraits<M>::getArgsUaArguments(m_qUaServer);
 		p_inputArguments = listInputArguments.data();
 	}
 	// create output arguments
