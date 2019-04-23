@@ -323,12 +323,12 @@ QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
 	return m_qUaServer->createInstance<QUaFolderObject>(this, strNodeId);
 }
 
-QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/)
+QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/) const
 {
 	return this->findChildren<QUaNode*>(strBrowseName, Qt::FindDirectChildrenOnly);
 }
 
-QUaNode* QUaNode::browseChild(const QString & strBrowseName)
+QUaNode* QUaNode::browseChild(const QString & strBrowseName) const
 {
 	auto children = this->browseChildren(strBrowseName);
 	if (children.isEmpty())

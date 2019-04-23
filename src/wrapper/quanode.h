@@ -227,15 +227,15 @@ public:
 	// (* actually browses using QObject tree)
 
 	template<typename T>
-	QList<T*> browseChildren(const QString &strBrowseName = QString());
+	QList<T*> browseChildren(const QString &strBrowseName = QString()) const;
 	// specialization
-	QList<QUaNode*> browseChildren(const QString &strBrowseName = QString());
+	QList<QUaNode*> browseChildren(const QString &strBrowseName = QString()) const;
 
 	// just get the first one
 	template<typename T>
-	T* browseChild(const QString &strBrowseName = QString());
+	T* browseChild(const QString &strBrowseName = QString()) const;
 	// specialization
-	QUaNode* browseChild(const QString &strBrowseName = QString());
+	QUaNode* browseChild(const QString &strBrowseName = QString()) const;
 
 	template<typename T>
 	T* browsePath(const QStringList &strBrowsePath);
@@ -337,7 +337,7 @@ private:
 };
 
 template<typename T>
-inline QList<T*> QUaNode::browseChildren(const QString & strBrowseName/* = QString() */ )
+inline QList<T*> QUaNode::browseChildren(const QString & strBrowseName/* = QString() */ ) const
 {
 	QList<T*> retList;
 	// call QUaNode specialization
@@ -355,7 +355,7 @@ inline QList<T*> QUaNode::browseChildren(const QString & strBrowseName/* = QStri
 }
 
 template<typename T>
-inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/)
+inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/) const
 {
 	return dynamic_cast<T*>(this->browseChild(strBrowseName));
 }
