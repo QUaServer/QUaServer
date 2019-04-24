@@ -47,3 +47,8 @@ void TemperatureSensor::turnOff()
 {
 	status()->setValue("Off");
 }
+
+void TemperatureSensor::remove()
+{
+	this->deleteLater();
+}

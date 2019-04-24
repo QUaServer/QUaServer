@@ -35,6 +35,8 @@ public:
 	Q_INVOKABLE void turnOn();
 	Q_INVOKABLE void turnOff();
 
+	Q_INVOKABLE void remove();
+
 };
 
 #endif // TEMPERATURESENSOR_H

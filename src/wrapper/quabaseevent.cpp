@@ -11,7 +11,7 @@ QStringList QUaBaseEvent::listDefaultProps = QStringList()
 << "SourceName"
 << "Time"
 << "ReceiveTime"
-<< "LocalTime"
+//<< "LocalTime" // NOTE : removed because is optional and open62541 now does not add it
 << "Message"
 << "Severity";
 
@@ -21,10 +21,20 @@ QUaBaseEvent::QUaBaseEvent(QUaServer *server)
 	// copy temp originator nodeId, this was user can trigger the event in its derived class constructor
 	m_nodeIdOriginator = *server->m_newEventOriginatorNodeId;
 	this->setTime(QDateTime::currentDateTimeUtc());
-	this->setLocalTime(QTimeZone::systemTimeZone());
-	// TODO : get m_nodeIdOriginator's context (QUaBaseObject*/QUaServer* -> QObject*) and set event's parent to it,
-	//        so at least the event is a child of that object and gets deleted once object is deleted
-	//        just a defensive mechanism to avoid mem leaks
+
+	// NOTE : removed because is optional and open62541 now does not add it
+	//this->setLocalTime(QTimeZone::systemTimeZone());
+
+	// set a QObject parent, so event is deleted when originator is deleted
+	auto nodeOriginator = QUaNode::getNodeContext(m_nodeIdOriginator, server);
+	if (nodeOriginator)
+	{
+		this->setParent(nodeOriginator);
+	}
+	else
+	{
+		this->setParent(server);
+	}
 }
 
 QByteArray QUaBaseEvent::eventId() const
@@ -67,6 +77,8 @@ QDateTime QUaBaseEvent::receiveTime() const
 	return const_cast<QUaBaseEvent*>(this)->getReceiveTime()->value().toDateTime().toUTC();
 }
 
+/*
+// NOTE : removed because is optional and open62541 now does not add it
 QTimeZone QUaBaseEvent::localTime() const
 {
 	return qvariant_cast<QTimeZone>(const_cast<QUaBaseEvent*>(this)->getLocalTime()->value());
@@ -76,6 +88,7 @@ void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
 {
 	this->getLocalTime()->setValue(QVariant::fromValue(localTimeZone), METATYPE_TIMEZONEDATATYPE);
 }
+*/
 
 QString QUaBaseEvent::message() const
 {
