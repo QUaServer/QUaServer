@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-880-g03a617d8
+ * Git-Revision: 0.3-rc2-916-g1ad7b993
  */
 
 /*
@@ -32,7 +32,7 @@
 #define UA_OPEN62541_VER_MINOR 4
 #define UA_OPEN62541_VER_PATCH 0
 #define UA_OPEN62541_VER_LABEL "-dev" /* Release candidate label, etc. */
-#define UA_OPEN62541_VER_COMMIT "0.3-rc2-880-g03a617d8"
+#define UA_OPEN62541_VER_COMMIT "0.3-rc2-916-g1ad7b993"
 
 /**
  * Feature Options
@@ -66,6 +66,7 @@
 #endif
 
 /* Advanced Options */
+/* #undef UA_ENABLE_CUSTOM_NODESTORE */
 #define UA_ENABLE_STATUSCODE_DESCRIPTIONS
 #define UA_ENABLE_TYPENAMES
 #define UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
@@ -122,7 +123,7 @@
 
 
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/ua_architecture_base.h" ***********************************/
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/include/open62541/architecture_base.h" ***********************************/
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -833,7 +834,7 @@ typedef uint64_t  uintmax_t;
 
 #endif // !defined(_MSC_VER) || _MSC_VER >= 1600 ]
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/ua_architecture_definitions.h" ***********************************/
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/include/open62541/architecture_definitions.h" ***********************************/
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -1227,241 +1228,711 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_STATUSCODE_INFOTYPE_DATAVALUE 0x00000400
 #define UA_STATUSCODE_INFOBITS_OVERFLOW 0x00000080
 
-#define UA_STATUSCODE_BADUNEXPECTEDERROR 0x80010000 /* An unexpected error occurred. */
-#define UA_STATUSCODE_BADINTERNALERROR 0x80020000 /* An internal error occurred as a result of a programming or configuration error. */
-#define UA_STATUSCODE_BADOUTOFMEMORY 0x80030000 /* Not enough memory to complete the operation. */
-#define UA_STATUSCODE_BADRESOURCEUNAVAILABLE 0x80040000 /* An operating system resource is not available. */
-#define UA_STATUSCODE_BADCOMMUNICATIONERROR 0x80050000 /* A low level communication error occurred. */
-#define UA_STATUSCODE_BADENCODINGERROR 0x80060000 /* Encoding halted because of invalid data in the objects being serialized. */
-#define UA_STATUSCODE_BADDECODINGERROR 0x80070000 /* Decoding halted because of invalid data in the stream. */
-#define UA_STATUSCODE_BADENCODINGLIMITSEXCEEDED 0x80080000 /* The message encoding/decoding limits imposed by the stack have been exceeded. */
-#define UA_STATUSCODE_BADREQUESTTOOLARGE 0x80B80000 /* The request message size exceeds limits set by the server. */
-#define UA_STATUSCODE_BADRESPONSETOOLARGE 0x80B90000 /* The response message size exceeds limits set by the client. */
-#define UA_STATUSCODE_BADUNKNOWNRESPONSE 0x80090000 /* An unrecognized response was received from the server. */
-#define UA_STATUSCODE_BADTIMEOUT 0x800A0000 /* The operation timed out. */
-#define UA_STATUSCODE_BADSERVICEUNSUPPORTED 0x800B0000 /* The server does not support the requested service. */
-#define UA_STATUSCODE_BADSHUTDOWN 0x800C0000 /* The operation was cancelled because the application is shutting down. */
-#define UA_STATUSCODE_BADSERVERNOTCONNECTED 0x800D0000 /* The operation could not complete because the client is not connected to the server. */
-#define UA_STATUSCODE_BADSERVERHALTED 0x800E0000 /* The server has stopped and cannot process any requests. */
-#define UA_STATUSCODE_BADNOTHINGTODO 0x800F0000 /* There was nothing to do because the client passed a list of operations with no elements. */
-#define UA_STATUSCODE_BADTOOMANYOPERATIONS 0x80100000 /* The request could not be processed because it specified too many operations. */
-#define UA_STATUSCODE_BADTOOMANYMONITOREDITEMS 0x80DB0000 /* The request could not be processed because there are too many monitored items in the subscription. */
-#define UA_STATUSCODE_BADDATATYPEIDUNKNOWN 0x80110000 /* The extension object cannot be (de)serialized because the data type id is not recognized. */
-#define UA_STATUSCODE_BADCERTIFICATEINVALID 0x80120000 /* The certificate provided as a parameter is not valid. */
-#define UA_STATUSCODE_BADSECURITYCHECKSFAILED 0x80130000 /* An error occurred verifying security. */
-#define UA_STATUSCODE_BADCERTIFICATEPOLICYCHECKFAILED 0x81140000 /* The certificate does not meet the requirements of the security policy. */
-#define UA_STATUSCODE_BADCERTIFICATETIMEINVALID 0x80140000 /* The certificate has expired or is not yet valid. */
-#define UA_STATUSCODE_BADCERTIFICATEISSUERTIMEINVALID 0x80150000 /* An issuer certificate has expired or is not yet valid. */
-#define UA_STATUSCODE_BADCERTIFICATEHOSTNAMEINVALID 0x80160000 /* The HostName used to connect to a server does not match a HostName in the certificate. */
-#define UA_STATUSCODE_BADCERTIFICATEURIINVALID 0x80170000 /* The URI specified in the ApplicationDescription does not match the URI in the certificate. */
-#define UA_STATUSCODE_BADCERTIFICATEUSENOTALLOWED 0x80180000 /* The certificate may not be used for the requested operation. */
-#define UA_STATUSCODE_BADCERTIFICATEISSUERUSENOTALLOWED 0x80190000 /* The issuer certificate may not be used for the requested operation. */
-#define UA_STATUSCODE_BADCERTIFICATEUNTRUSTED 0x801A0000 /* The certificate is not trusted. */
-#define UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN 0x801B0000 /* It was not possible to determine if the certificate has been revoked. */
-#define UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN 0x801C0000 /* It was not possible to determine if the issuer certificate has been revoked. */
-#define UA_STATUSCODE_BADCERTIFICATEREVOKED 0x801D0000 /* The certificate has been revoked. */
-#define UA_STATUSCODE_BADCERTIFICATEISSUERREVOKED 0x801E0000 /* The issuer certificate has been revoked. */
-#define UA_STATUSCODE_BADCERTIFICATECHAININCOMPLETE 0x810D0000 /* The certificate chain is incomplete. */
-#define UA_STATUSCODE_BADUSERACCESSDENIED 0x801F0000 /* User does not have permission to perform the requested operation. */
-#define UA_STATUSCODE_BADIDENTITYTOKENINVALID 0x80200000 /* The user identity token is not valid. */
-#define UA_STATUSCODE_BADIDENTITYTOKENREJECTED 0x80210000 /* The user identity token is valid but the server has rejected it. */
-#define UA_STATUSCODE_BADSECURECHANNELIDINVALID 0x80220000 /* The specified secure channel is no longer valid. */
-#define UA_STATUSCODE_BADINVALIDTIMESTAMP 0x80230000 /* The timestamp is outside the range allowed by the server. */
-#define UA_STATUSCODE_BADNONCEINVALID 0x80240000 /* The nonce does appear to be not a random value or it is not the correct length. */
-#define UA_STATUSCODE_BADSESSIONIDINVALID 0x80250000 /* The session id is not valid. */
-#define UA_STATUSCODE_BADSESSIONCLOSED 0x80260000 /* The session was closed by the client. */
-#define UA_STATUSCODE_BADSESSIONNOTACTIVATED 0x80270000 /* The session cannot be used because ActivateSession has not been called. */
-#define UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID 0x80280000 /* The subscription id is not valid. */
-#define UA_STATUSCODE_BADREQUESTHEADERINVALID 0x802A0000 /* The header for the request is missing or invalid. */
-#define UA_STATUSCODE_BADTIMESTAMPSTORETURNINVALID 0x802B0000 /* The timestamps to return parameter is invalid. */
-#define UA_STATUSCODE_BADREQUESTCANCELLEDBYCLIENT 0x802C0000 /* The request was cancelled by the client. */
-#define UA_STATUSCODE_BADTOOMANYARGUMENTS 0x80E50000 /* Too many arguments were provided. */
-#define UA_STATUSCODE_BADLICENSEEXPIRED 0x810E0000 /* The server requires a license to operate in general or to perform a service or operation */
-#define UA_STATUSCODE_BADLICENSELIMITSEXCEEDED 0x810F0000 /* The server has limits on number of allowed operations / objects */
-#define UA_STATUSCODE_BADLICENSENOTAVAILABLE 0x81100000 /* The server does not have a license which is required to operate in general or to perform a service or operation. */
-#define UA_STATUSCODE_GOODSUBSCRIPTIONTRANSFERRED 0x002D0000 /* The subscription was transferred to another session. */
-#define UA_STATUSCODE_GOODCOMPLETESASYNCHRONOUSLY 0x002E0000 /* The processing will complete asynchronously. */
-#define UA_STATUSCODE_GOODOVERLOAD 0x002F0000 /* Sampling has slowed down due to resource limitations. */
-#define UA_STATUSCODE_GOODCLAMPED 0x00300000 /* The value written was accepted but was clamped. */
-#define UA_STATUSCODE_BADNOCOMMUNICATION 0x80310000 /* Communication with the data source is defined */
-#define UA_STATUSCODE_BADWAITINGFORINITIALDATA 0x80320000 /* Waiting for the server to obtain values from the underlying data source. */
-#define UA_STATUSCODE_BADNODEIDINVALID 0x80330000 /* The syntax of the node id is not valid. */
-#define UA_STATUSCODE_BADNODEIDUNKNOWN 0x80340000 /* The node id refers to a node that does not exist in the server address space. */
-#define UA_STATUSCODE_BADATTRIBUTEIDINVALID 0x80350000 /* The attribute is not supported for the specified Node. */
-#define UA_STATUSCODE_BADINDEXRANGEINVALID 0x80360000 /* The syntax of the index range parameter is invalid. */
-#define UA_STATUSCODE_BADINDEXRANGENODATA 0x80370000 /* No data exists within the range of indexes specified. */
-#define UA_STATUSCODE_BADDATAENCODINGINVALID 0x80380000 /* The data encoding is invalid. */
-#define UA_STATUSCODE_BADDATAENCODINGUNSUPPORTED 0x80390000 /* The server does not support the requested data encoding for the node. */
-#define UA_STATUSCODE_BADNOTREADABLE 0x803A0000 /* The access level does not allow reading or subscribing to the Node. */
-#define UA_STATUSCODE_BADNOTWRITABLE 0x803B0000 /* The access level does not allow writing to the Node. */
-#define UA_STATUSCODE_BADOUTOFRANGE 0x803C0000 /* The value was out of range. */
-#define UA_STATUSCODE_BADNOTSUPPORTED 0x803D0000 /* The requested operation is not supported. */
-#define UA_STATUSCODE_BADNOTFOUND 0x803E0000 /* A requested item was not found or a search operation ended without success. */
-#define UA_STATUSCODE_BADOBJECTDELETED 0x803F0000 /* The object cannot be used because it has been deleted. */
-#define UA_STATUSCODE_BADNOTIMPLEMENTED 0x80400000 /* Requested operation is not implemented. */
-#define UA_STATUSCODE_BADMONITORINGMODEINVALID 0x80410000 /* The monitoring mode is invalid. */
-#define UA_STATUSCODE_BADMONITOREDITEMIDINVALID 0x80420000 /* The monitoring item id does not refer to a valid monitored item. */
-#define UA_STATUSCODE_BADMONITOREDITEMFILTERINVALID 0x80430000 /* The monitored item filter parameter is not valid. */
-#define UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED 0x80440000 /* The server does not support the requested monitored item filter. */
-#define UA_STATUSCODE_BADFILTERNOTALLOWED 0x80450000 /* A monitoring filter cannot be used in combination with the attribute specified. */
-#define UA_STATUSCODE_BADSTRUCTUREMISSING 0x80460000 /* A mandatory structured parameter was missing or null. */
-#define UA_STATUSCODE_BADEVENTFILTERINVALID 0x80470000 /* The event filter is not valid. */
-#define UA_STATUSCODE_BADCONTENTFILTERINVALID 0x80480000 /* The content filter is not valid. */
-#define UA_STATUSCODE_BADFILTEROPERATORINVALID 0x80C10000 /* An unregognized operator was provided in a filter. */
-#define UA_STATUSCODE_BADFILTEROPERATORUNSUPPORTED 0x80C20000 /* A valid operator was provided */
-#define UA_STATUSCODE_BADFILTEROPERANDCOUNTMISMATCH 0x80C30000 /* The number of operands provided for the filter operator was less then expected for the operand provided. */
-#define UA_STATUSCODE_BADFILTEROPERANDINVALID 0x80490000 /* The operand used in a content filter is not valid. */
-#define UA_STATUSCODE_BADFILTERELEMENTINVALID 0x80C40000 /* The referenced element is not a valid element in the content filter. */
-#define UA_STATUSCODE_BADFILTERLITERALINVALID 0x80C50000 /* The referenced literal is not a valid value. */
-#define UA_STATUSCODE_BADCONTINUATIONPOINTINVALID 0x804A0000 /* The continuation point provide is longer valid. */
-#define UA_STATUSCODE_BADNOCONTINUATIONPOINTS 0x804B0000 /* The operation could not be processed because all continuation points have been allocated. */
-#define UA_STATUSCODE_BADREFERENCETYPEIDINVALID 0x804C0000 /* The operation could not be processed because all continuation points have been allocated. */
-#define UA_STATUSCODE_BADBROWSEDIRECTIONINVALID 0x804D0000 /* The browse direction is not valid. */
-#define UA_STATUSCODE_BADNODENOTINVIEW 0x804E0000 /* The node is not part of the view. */
-#define UA_STATUSCODE_BADNUMERICOVERFLOW 0x81120000 /* The number was not accepted because of a numeric overflow. */
-#define UA_STATUSCODE_BADSERVERURIINVALID 0x804F0000 /* The ServerUri is not a valid URI. */
-#define UA_STATUSCODE_BADSERVERNAMEMISSING 0x80500000 /* No ServerName was specified. */
-#define UA_STATUSCODE_BADDISCOVERYURLMISSING 0x80510000 /* No DiscoveryUrl was specified. */
-#define UA_STATUSCODE_BADSEMPAHOREFILEMISSING 0x80520000 /* The semaphore file specified by the client is not valid. */
-#define UA_STATUSCODE_BADREQUESTTYPEINVALID 0x80530000 /* The security token request type is not valid. */
-#define UA_STATUSCODE_BADSECURITYMODEREJECTED 0x80540000 /* The security mode does not meet the requirements set by the server. */
-#define UA_STATUSCODE_BADSECURITYPOLICYREJECTED 0x80550000 /* The security policy does not meet the requirements set by the server. */
-#define UA_STATUSCODE_BADTOOMANYSESSIONS 0x80560000 /* The server has reached its maximum number of sessions. */
-#define UA_STATUSCODE_BADUSERSIGNATUREINVALID 0x80570000 /* The user token signature is missing or invalid. */
-#define UA_STATUSCODE_BADAPPLICATIONSIGNATUREINVALID 0x80580000 /* The signature generated with the client certificate is missing or invalid. */
-#define UA_STATUSCODE_BADNOVALIDCERTIFICATES 0x80590000 /* The client did not provide at least one software certificate that is valid and meets the profile requirements for the server. */
-#define UA_STATUSCODE_BADIDENTITYCHANGENOTSUPPORTED 0x80C60000 /* The server does not support changing the user identity assigned to the session. */
-#define UA_STATUSCODE_BADREQUESTCANCELLEDBYREQUEST 0x805A0000 /* The request was cancelled by the client with the Cancel service. */
-#define UA_STATUSCODE_BADPARENTNODEIDINVALID 0x805B0000 /* The parent node id does not to refer to a valid node. */
-#define UA_STATUSCODE_BADREFERENCENOTALLOWED 0x805C0000 /* The reference could not be created because it violates constraints imposed by the data model. */
-#define UA_STATUSCODE_BADNODEIDREJECTED 0x805D0000 /* The requested node id was reject because it was either invalid or server does not allow node ids to be specified by the client. */
-#define UA_STATUSCODE_BADNODEIDEXISTS 0x805E0000 /* The requested node id is already used by another node. */
-#define UA_STATUSCODE_BADNODECLASSINVALID 0x805F0000 /* The node class is not valid. */
-#define UA_STATUSCODE_BADBROWSENAMEINVALID 0x80600000 /* The browse name is invalid. */
-#define UA_STATUSCODE_BADBROWSENAMEDUPLICATED 0x80610000 /* The browse name is not unique among nodes that share the same relationship with the parent. */
-#define UA_STATUSCODE_BADNODEATTRIBUTESINVALID 0x80620000 /* The node attributes are not valid for the node class. */
-#define UA_STATUSCODE_BADTYPEDEFINITIONINVALID 0x80630000 /* The type definition node id does not reference an appropriate type node. */
-#define UA_STATUSCODE_BADSOURCENODEIDINVALID 0x80640000 /* The source node id does not reference a valid node. */
-#define UA_STATUSCODE_BADTARGETNODEIDINVALID 0x80650000 /* The target node id does not reference a valid node. */
-#define UA_STATUSCODE_BADDUPLICATEREFERENCENOTALLOWED 0x80660000 /* The reference type between the nodes is already defined. */
-#define UA_STATUSCODE_BADINVALIDSELFREFERENCE 0x80670000 /* The server does not allow this type of self reference on this node. */
-#define UA_STATUSCODE_BADREFERENCELOCALONLY 0x80680000 /* The reference type is not valid for a reference to a remote server. */
-#define UA_STATUSCODE_BADNODELETERIGHTS 0x80690000 /* The server will not allow the node to be deleted. */
-#define UA_STATUSCODE_UNCERTAINREFERENCENOTDELETED 0x40BC0000 /* The server was not able to delete all target references. */
-#define UA_STATUSCODE_BADSERVERINDEXINVALID 0x806A0000 /* The server index is not valid. */
-#define UA_STATUSCODE_BADVIEWIDUNKNOWN 0x806B0000 /* The view id does not refer to a valid view node. */
-#define UA_STATUSCODE_BADVIEWTIMESTAMPINVALID 0x80C90000 /* The view timestamp is not available or not supported. */
-#define UA_STATUSCODE_BADVIEWPARAMETERMISMATCH 0x80CA0000 /* The view parameters are not consistent with each other. */
-#define UA_STATUSCODE_BADVIEWVERSIONINVALID 0x80CB0000 /* The view version is not available or not supported. */
-#define UA_STATUSCODE_UNCERTAINNOTALLNODESAVAILABLE 0x40C00000 /* The list of references may not be complete because the underlying system is not available. */
-#define UA_STATUSCODE_GOODRESULTSMAYBEINCOMPLETE 0x00BA0000 /* The server should have followed a reference to a node in a remote server but did not. The result set may be incomplete. */
-#define UA_STATUSCODE_BADNOTTYPEDEFINITION 0x80C80000 /* The provided Nodeid was not a type definition nodeid. */
-#define UA_STATUSCODE_UNCERTAINREFERENCEOUTOFSERVER 0x406C0000 /* One of the references to follow in the relative path references to a node in the address space in another server. */
-#define UA_STATUSCODE_BADTOOMANYMATCHES 0x806D0000 /* The requested operation has too many matches to return. */
-#define UA_STATUSCODE_BADQUERYTOOCOMPLEX 0x806E0000 /* The requested operation requires too many resources in the server. */
-#define UA_STATUSCODE_BADNOMATCH 0x806F0000 /* The requested operation has no match to return. */
-#define UA_STATUSCODE_BADMAXAGEINVALID 0x80700000 /* The max age parameter is invalid. */
-#define UA_STATUSCODE_BADSECURITYMODEINSUFFICIENT 0x80E60000 /* The operation is not permitted over the current secure channel. */
-#define UA_STATUSCODE_BADHISTORYOPERATIONINVALID 0x80710000 /* The history details parameter is not valid. */
-#define UA_STATUSCODE_BADHISTORYOPERATIONUNSUPPORTED 0x80720000 /* The server does not support the requested operation. */
-#define UA_STATUSCODE_BADINVALIDTIMESTAMPARGUMENT 0x80BD0000 /* The defined timestamp to return was invalid. */
-#define UA_STATUSCODE_BADWRITENOTSUPPORTED 0x80730000 /* The server does not support writing the combination of value */
-#define UA_STATUSCODE_BADTYPEMISMATCH 0x80740000 /* The value supplied for the attribute is not of the same type as the attribute's value. */
-#define UA_STATUSCODE_BADMETHODINVALID 0x80750000 /* The method id does not refer to a method for the specified object. */
-#define UA_STATUSCODE_BADARGUMENTSMISSING 0x80760000 /* The client did not specify all of the input arguments for the method. */
-#define UA_STATUSCODE_BADNOTEXECUTABLE 0x81110000 /* The executable attribute does not allow the execution of the method. */
-#define UA_STATUSCODE_BADTOOMANYSUBSCRIPTIONS 0x80770000 /* The server has reached its  maximum number of subscriptions. */
-#define UA_STATUSCODE_BADTOOMANYPUBLISHREQUESTS 0x80780000 /* The server has reached the maximum number of queued publish requests. */
-#define UA_STATUSCODE_BADNOSUBSCRIPTION 0x80790000 /* There is no subscription available for this session. */
-#define UA_STATUSCODE_BADSEQUENCENUMBERUNKNOWN 0x807A0000 /* The sequence number is unknown to the server. */
-#define UA_STATUSCODE_BADMESSAGENOTAVAILABLE 0x807B0000 /* The requested notification message is no longer available. */
-#define UA_STATUSCODE_BADINSUFFICIENTCLIENTPROFILE 0x807C0000 /* The client of the current session does not support one or more Profiles that are necessary for the subscription. */
-#define UA_STATUSCODE_BADSTATENOTACTIVE 0x80BF0000 /* The sub-state machine is not currently active. */
-#define UA_STATUSCODE_BADALREADYEXISTS 0x81150000 /* An equivalent rule already exists. */
-#define UA_STATUSCODE_BADTCPSERVERTOOBUSY 0x807D0000 /* The server cannot process the request because it is too busy. */
-#define UA_STATUSCODE_BADTCPMESSAGETYPEINVALID 0x807E0000 /* The type of the message specified in the header invalid. */
-#define UA_STATUSCODE_BADTCPSECURECHANNELUNKNOWN 0x807F0000 /* The SecureChannelId and/or TokenId are not currently in use. */
-#define UA_STATUSCODE_BADTCPMESSAGETOOLARGE 0x80800000 /* The size of the message specified in the header is too large. */
-#define UA_STATUSCODE_BADTCPNOTENOUGHRESOURCES 0x80810000 /* There are not enough resources to process the request. */
-#define UA_STATUSCODE_BADTCPINTERNALERROR 0x80820000 /* An internal error occurred. */
-#define UA_STATUSCODE_BADTCPENDPOINTURLINVALID 0x80830000 /* The server does not recognize the QueryString specified. */
-#define UA_STATUSCODE_BADREQUESTINTERRUPTED 0x80840000 /* The request could not be sent because of a network interruption. */
-#define UA_STATUSCODE_BADREQUESTTIMEOUT 0x80850000 /* Timeout occurred while processing the request. */
-#define UA_STATUSCODE_BADSECURECHANNELCLOSED 0x80860000 /* The secure channel has been closed. */
-#define UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN 0x80870000 /* The token has expired or is not recognized. */
-#define UA_STATUSCODE_BADSEQUENCENUMBERINVALID 0x80880000 /* The sequence number is not valid. */
-#define UA_STATUSCODE_BADPROTOCOLVERSIONUNSUPPORTED 0x80BE0000 /* The applications do not have compatible protocol versions. */
-#define UA_STATUSCODE_BADCONFIGURATIONERROR 0x80890000 /* There is a problem with the configuration that affects the usefulness of the value. */
-#define UA_STATUSCODE_BADNOTCONNECTED 0x808A0000 /* The variable should receive its value from another variable */
-#define UA_STATUSCODE_BADDEVICEFAILURE 0x808B0000 /* There has been a failure in the device/data source that generates the value that has affected the value. */
-#define UA_STATUSCODE_BADSENSORFAILURE 0x808C0000 /* There has been a failure in the sensor from which the value is derived by the device/data source. */
-#define UA_STATUSCODE_BADOUTOFSERVICE 0x808D0000 /* The source of the data is not operational. */
-#define UA_STATUSCODE_BADDEADBANDFILTERINVALID 0x808E0000 /* The deadband filter is not valid. */
-#define UA_STATUSCODE_UNCERTAINNOCOMMUNICATIONLASTUSABLEVALUE 0x408F0000 /* Communication to the data source has failed. The variable value is the last value that had a good quality. */
-#define UA_STATUSCODE_UNCERTAINLASTUSABLEVALUE 0x40900000 /* Whatever was updating this value has stopped doing so. */
-#define UA_STATUSCODE_UNCERTAINSUBSTITUTEVALUE 0x40910000 /* The value is an operational value that was manually overwritten. */
-#define UA_STATUSCODE_UNCERTAININITIALVALUE 0x40920000 /* The value is an initial value for a variable that normally receives its value from another variable. */
-#define UA_STATUSCODE_UNCERTAINSENSORNOTACCURATE 0x40930000 /* The value is at one of the sensor limits. */
-#define UA_STATUSCODE_UNCERTAINENGINEERINGUNITSEXCEEDED 0x40940000 /* The value is outside of the range of values defined for this parameter. */
-#define UA_STATUSCODE_UNCERTAINSUBNORMAL 0x40950000 /* The value is derived from multiple sources and has less than the required number of Good sources. */
-#define UA_STATUSCODE_GOODLOCALOVERRIDE 0x00960000 /* The value has been overridden. */
-#define UA_STATUSCODE_BADREFRESHINPROGRESS 0x80970000 /* This Condition refresh failed */
-#define UA_STATUSCODE_BADCONDITIONALREADYDISABLED 0x80980000 /* This condition has already been disabled. */
-#define UA_STATUSCODE_BADCONDITIONALREADYENABLED 0x80CC0000 /* This condition has already been enabled. */
-#define UA_STATUSCODE_BADCONDITIONDISABLED 0x80990000 /* Property not available */
-#define UA_STATUSCODE_BADEVENTIDUNKNOWN 0x809A0000 /* The specified event id is not recognized. */
-#define UA_STATUSCODE_BADEVENTNOTACKNOWLEDGEABLE 0x80BB0000 /* The event cannot be acknowledged. */
-#define UA_STATUSCODE_BADDIALOGNOTACTIVE 0x80CD0000 /* The dialog condition is not active. */
-#define UA_STATUSCODE_BADDIALOGRESPONSEINVALID 0x80CE0000 /* The response is not valid for the dialog. */
-#define UA_STATUSCODE_BADCONDITIONBRANCHALREADYACKED 0x80CF0000 /* The condition branch has already been acknowledged. */
-#define UA_STATUSCODE_BADCONDITIONBRANCHALREADYCONFIRMED 0x80D00000 /* The condition branch has already been confirmed. */
-#define UA_STATUSCODE_BADCONDITIONALREADYSHELVED 0x80D10000 /* The condition has already been shelved. */
-#define UA_STATUSCODE_BADCONDITIONNOTSHELVED 0x80D20000 /* The condition is not currently shelved. */
-#define UA_STATUSCODE_BADSHELVINGTIMEOUTOFRANGE 0x80D30000 /* The shelving time not within an acceptable range. */
-#define UA_STATUSCODE_BADNODATA 0x809B0000 /* No data exists for the requested time range or event filter. */
-#define UA_STATUSCODE_BADBOUNDNOTFOUND 0x80D70000 /* No data found to provide upper or lower bound value. */
-#define UA_STATUSCODE_BADBOUNDNOTSUPPORTED 0x80D80000 /* The server cannot retrieve a bound for the variable. */
-#define UA_STATUSCODE_BADDATALOST 0x809D0000 /* Data is missing due to collection started/stopped/lost. */
-#define UA_STATUSCODE_BADDATAUNAVAILABLE 0x809E0000 /* Expected data is unavailable for the requested time range due to an un-mounted volume */
-#define UA_STATUSCODE_BADENTRYEXISTS 0x809F0000 /* The data or event was not successfully inserted because a matching entry exists. */
-#define UA_STATUSCODE_BADNOENTRYEXISTS 0x80A00000 /* The data or event was not successfully updated because no matching entry exists. */
-#define UA_STATUSCODE_BADTIMESTAMPNOTSUPPORTED 0x80A10000 /* The client requested history using a timestamp format the server does not support (i.e requested ServerTimestamp when server only supports SourceTimestamp). */
-#define UA_STATUSCODE_GOODENTRYINSERTED 0x00A20000 /* The data or event was successfully inserted into the historical database. */
-#define UA_STATUSCODE_GOODENTRYREPLACED 0x00A30000 /* The data or event field was successfully replaced in the historical database. */
-#define UA_STATUSCODE_UNCERTAINDATASUBNORMAL 0x40A40000 /* The value is derived from multiple values and has less than the required number of Good values. */
-#define UA_STATUSCODE_GOODNODATA 0x00A50000 /* No data exists for the requested time range or event filter. */
-#define UA_STATUSCODE_GOODMOREDATA 0x00A60000 /* The data or event field was successfully replaced in the historical database. */
-#define UA_STATUSCODE_BADAGGREGATELISTMISMATCH 0x80D40000 /* The requested number of Aggregates does not match the requested number of NodeIds. */
-#define UA_STATUSCODE_BADAGGREGATENOTSUPPORTED 0x80D50000 /* The requested Aggregate is not support by the server. */
-#define UA_STATUSCODE_BADAGGREGATEINVALIDINPUTS 0x80D60000 /* The aggregate value could not be derived due to invalid data inputs. */
-#define UA_STATUSCODE_BADAGGREGATECONFIGURATIONREJECTED 0x80DA0000 /* The aggregate configuration is not valid for specified node. */
-#define UA_STATUSCODE_GOODDATAIGNORED 0x00D90000 /* The request pecifies fields which are not valid for the EventType or cannot be saved by the historian. */
-#define UA_STATUSCODE_BADREQUESTNOTALLOWED 0x80E40000 /* The request was rejected by the server because it did not meet the criteria set by the server. */
-#define UA_STATUSCODE_BADREQUESTNOTCOMPLETE 0x81130000 /* The request has not been processed by the server yet. */
-#define UA_STATUSCODE_GOODEDITED 0x00DC0000 /* The value does not come from the real source and has been edited by the server. */
-#define UA_STATUSCODE_GOODPOSTACTIONFAILED 0x00DD0000 /* There was an error in execution of these post-actions. */
-#define UA_STATUSCODE_UNCERTAINDOMINANTVALUECHANGED 0x40DE0000 /* The related EngineeringUnit has been changed but the Variable Value is still provided based on the previous unit. */
-#define UA_STATUSCODE_GOODDEPENDENTVALUECHANGED 0x00E00000 /* A dependent value has been changed but the change has not been applied to the device. */
-#define UA_STATUSCODE_BADDOMINANTVALUECHANGED 0x80E10000 /* The related EngineeringUnit has been changed but this change has not been applied to the device. The Variable Value is still dependent on the previous unit but its status is currently Bad. */
-#define UA_STATUSCODE_UNCERTAINDEPENDENTVALUECHANGED 0x40E20000 /* A dependent value has been changed but the change has not been applied to the device. The quality of the dominant variable is uncertain. */
-#define UA_STATUSCODE_BADDEPENDENTVALUECHANGED 0x80E30000 /* A dependent value has been changed but the change has not been applied to the device. The quality of the dominant variable is Bad. */
-#define UA_STATUSCODE_GOODCOMMUNICATIONEVENT 0x00A70000 /* The communication layer has raised an event. */
-#define UA_STATUSCODE_GOODSHUTDOWNEVENT 0x00A80000 /* The system is shutting down. */
-#define UA_STATUSCODE_GOODCALLAGAIN 0x00A90000 /* The operation is not finished and needs to be called again. */
-#define UA_STATUSCODE_GOODNONCRITICALTIMEOUT 0x00AA0000 /* A non-critical timeout occurred. */
-#define UA_STATUSCODE_BADINVALIDARGUMENT 0x80AB0000 /* One or more arguments are invalid. */
-#define UA_STATUSCODE_BADCONNECTIONREJECTED 0x80AC0000 /* Could not establish a network connection to remote server. */
-#define UA_STATUSCODE_BADDISCONNECT 0x80AD0000 /* The server has disconnected from the client. */
-#define UA_STATUSCODE_BADCONNECTIONCLOSED 0x80AE0000 /* The network connection has been closed. */
-#define UA_STATUSCODE_BADINVALIDSTATE 0x80AF0000 /* The operation cannot be completed because the object is closed */
-#define UA_STATUSCODE_BADENDOFSTREAM 0x80B00000 /* Cannot move beyond end of the stream. */
-#define UA_STATUSCODE_BADNODATAAVAILABLE 0x80B10000 /* No data is currently available for reading from a non-blocking stream. */
-#define UA_STATUSCODE_BADWAITINGFORRESPONSE 0x80B20000 /* The asynchronous operation is waiting for a response. */
-#define UA_STATUSCODE_BADOPERATIONABANDONED 0x80B30000 /* The asynchronous operation was abandoned by the caller. */
-#define UA_STATUSCODE_BADEXPECTEDSTREAMTOBLOCK 0x80B40000 /* The stream did not return all data requested (possibly because it is a non-blocking stream). */
-#define UA_STATUSCODE_BADWOULDBLOCK 0x80B50000 /* Non blocking behaviour is required and the operation would block. */
-#define UA_STATUSCODE_BADSYNTAXERROR 0x80B60000 /* A value had an invalid syntax. */
-#define UA_STATUSCODE_BADMAXCONNECTIONSREACHED 0x80B70000 /* The operation could not be finished because all available connections are in use. */
+/* An unexpected error occurred. */
+#define UA_STATUSCODE_BADUNEXPECTEDERROR 0x80010000
+
+/* An internal error occurred as a result of a programming or configuration error. */
+#define UA_STATUSCODE_BADINTERNALERROR 0x80020000
+
+/* Not enough memory to complete the operation. */
+#define UA_STATUSCODE_BADOUTOFMEMORY 0x80030000
+
+/* An operating system resource is not available. */
+#define UA_STATUSCODE_BADRESOURCEUNAVAILABLE 0x80040000
+
+/* A low level communication error occurred. */
+#define UA_STATUSCODE_BADCOMMUNICATIONERROR 0x80050000
+
+/* Encoding halted because of invalid data in the objects being serialized. */
+#define UA_STATUSCODE_BADENCODINGERROR 0x80060000
+
+/* Decoding halted because of invalid data in the stream. */
+#define UA_STATUSCODE_BADDECODINGERROR 0x80070000
+
+/* The message encoding/decoding limits imposed by the stack have been exceeded. */
+#define UA_STATUSCODE_BADENCODINGLIMITSEXCEEDED 0x80080000
+
+/* The request message size exceeds limits set by the server. */
+#define UA_STATUSCODE_BADREQUESTTOOLARGE 0x80B80000
+
+/* The response message size exceeds limits set by the client. */
+#define UA_STATUSCODE_BADRESPONSETOOLARGE 0x80B90000
+
+/* An unrecognized response was received from the server. */
+#define UA_STATUSCODE_BADUNKNOWNRESPONSE 0x80090000
+
+/* The operation timed out. */
+#define UA_STATUSCODE_BADTIMEOUT 0x800A0000
+
+/* The server does not support the requested service. */
+#define UA_STATUSCODE_BADSERVICEUNSUPPORTED 0x800B0000
+
+/* The operation was cancelled because the application is shutting down. */
+#define UA_STATUSCODE_BADSHUTDOWN 0x800C0000
+
+/* The operation could not complete because the client is not connected to the server. */
+#define UA_STATUSCODE_BADSERVERNOTCONNECTED 0x800D0000
+
+/* The server has stopped and cannot process any requests. */
+#define UA_STATUSCODE_BADSERVERHALTED 0x800E0000
+
+/* There was nothing to do because the client passed a list of operations with no elements. */
+#define UA_STATUSCODE_BADNOTHINGTODO 0x800F0000
+
+/* The request could not be processed because it specified too many operations. */
+#define UA_STATUSCODE_BADTOOMANYOPERATIONS 0x80100000
+
+/* The request could not be processed because there are too many monitored items in the subscription. */
+#define UA_STATUSCODE_BADTOOMANYMONITOREDITEMS 0x80DB0000
+
+/* The extension object cannot be (de)serialized because the data type id is not recognized. */
+#define UA_STATUSCODE_BADDATATYPEIDUNKNOWN 0x80110000
+
+/* The certificate provided as a parameter is not valid. */
+#define UA_STATUSCODE_BADCERTIFICATEINVALID 0x80120000
+
+/* An error occurred verifying security. */
+#define UA_STATUSCODE_BADSECURITYCHECKSFAILED 0x80130000
+
+/* The certificate does not meet the requirements of the security policy. */
+#define UA_STATUSCODE_BADCERTIFICATEPOLICYCHECKFAILED 0x81140000
+
+/* The certificate has expired or is not yet valid. */
+#define UA_STATUSCODE_BADCERTIFICATETIMEINVALID 0x80140000
+
+/* An issuer certificate has expired or is not yet valid. */
+#define UA_STATUSCODE_BADCERTIFICATEISSUERTIMEINVALID 0x80150000
+
+/* The HostName used to connect to a server does not match a HostName in the certificate. */
+#define UA_STATUSCODE_BADCERTIFICATEHOSTNAMEINVALID 0x80160000
+
+/* The URI specified in the ApplicationDescription does not match the URI in the certificate. */
+#define UA_STATUSCODE_BADCERTIFICATEURIINVALID 0x80170000
+
+/* The certificate may not be used for the requested operation. */
+#define UA_STATUSCODE_BADCERTIFICATEUSENOTALLOWED 0x80180000
+
+/* The issuer certificate may not be used for the requested operation. */
+#define UA_STATUSCODE_BADCERTIFICATEISSUERUSENOTALLOWED 0x80190000
+
+/* The certificate is not trusted. */
+#define UA_STATUSCODE_BADCERTIFICATEUNTRUSTED 0x801A0000
+
+/* It was not possible to determine if the certificate has been revoked. */
+#define UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN 0x801B0000
+
+/* It was not possible to determine if the issuer certificate has been revoked. */
+#define UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN 0x801C0000
+
+/* The certificate has been revoked. */
+#define UA_STATUSCODE_BADCERTIFICATEREVOKED 0x801D0000
+
+/* The issuer certificate has been revoked. */
+#define UA_STATUSCODE_BADCERTIFICATEISSUERREVOKED 0x801E0000
+
+/* The certificate chain is incomplete. */
+#define UA_STATUSCODE_BADCERTIFICATECHAININCOMPLETE 0x810D0000
+
+/* User does not have permission to perform the requested operation. */
+#define UA_STATUSCODE_BADUSERACCESSDENIED 0x801F0000
+
+/* The user identity token is not valid. */
+#define UA_STATUSCODE_BADIDENTITYTOKENINVALID 0x80200000
+
+/* The user identity token is valid but the server has rejected it. */
+#define UA_STATUSCODE_BADIDENTITYTOKENREJECTED 0x80210000
+
+/* The specified secure channel is no longer valid. */
+#define UA_STATUSCODE_BADSECURECHANNELIDINVALID 0x80220000
+
+/* The timestamp is outside the range allowed by the server. */
+#define UA_STATUSCODE_BADINVALIDTIMESTAMP 0x80230000
+
+/* The nonce does appear to be not a random value or it is not the correct length. */
+#define UA_STATUSCODE_BADNONCEINVALID 0x80240000
+
+/* The session id is not valid. */
+#define UA_STATUSCODE_BADSESSIONIDINVALID 0x80250000
+
+/* The session was closed by the client. */
+#define UA_STATUSCODE_BADSESSIONCLOSED 0x80260000
+
+/* The session cannot be used because ActivateSession has not been called. */
+#define UA_STATUSCODE_BADSESSIONNOTACTIVATED 0x80270000
+
+/* The subscription id is not valid. */
+#define UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID 0x80280000
+
+/* The header for the request is missing or invalid. */
+#define UA_STATUSCODE_BADREQUESTHEADERINVALID 0x802A0000
+
+/* The timestamps to return parameter is invalid. */
+#define UA_STATUSCODE_BADTIMESTAMPSTORETURNINVALID 0x802B0000
+
+/* The request was cancelled by the client. */
+#define UA_STATUSCODE_BADREQUESTCANCELLEDBYCLIENT 0x802C0000
+
+/* Too many arguments were provided. */
+#define UA_STATUSCODE_BADTOOMANYARGUMENTS 0x80E50000
+
+/* The server requires a license to operate in general or to perform a service or operation */
+#define UA_STATUSCODE_BADLICENSEEXPIRED 0x810E0000
+
+/* The server has limits on number of allowed operations / objects */
+#define UA_STATUSCODE_BADLICENSELIMITSEXCEEDED 0x810F0000
+
+/* The server does not have a license which is required to operate in general or to perform a service or operation. */
+#define UA_STATUSCODE_BADLICENSENOTAVAILABLE 0x81100000
+
+/* The subscription was transferred to another session. */
+#define UA_STATUSCODE_GOODSUBSCRIPTIONTRANSFERRED 0x002D0000
+
+/* The processing will complete asynchronously. */
+#define UA_STATUSCODE_GOODCOMPLETESASYNCHRONOUSLY 0x002E0000
+
+/* Sampling has slowed down due to resource limitations. */
+#define UA_STATUSCODE_GOODOVERLOAD 0x002F0000
+
+/* The value written was accepted but was clamped. */
+#define UA_STATUSCODE_GOODCLAMPED 0x00300000
+
+/* Communication with the data source is defined */
+#define UA_STATUSCODE_BADNOCOMMUNICATION 0x80310000
+
+/* Waiting for the server to obtain values from the underlying data source. */
+#define UA_STATUSCODE_BADWAITINGFORINITIALDATA 0x80320000
+
+/* The syntax of the node id is not valid. */
+#define UA_STATUSCODE_BADNODEIDINVALID 0x80330000
+
+/* The node id refers to a node that does not exist in the server address space. */
+#define UA_STATUSCODE_BADNODEIDUNKNOWN 0x80340000
+
+/* The attribute is not supported for the specified Node. */
+#define UA_STATUSCODE_BADATTRIBUTEIDINVALID 0x80350000
+
+/* The syntax of the index range parameter is invalid. */
+#define UA_STATUSCODE_BADINDEXRANGEINVALID 0x80360000
+
+/* No data exists within the range of indexes specified. */
+#define UA_STATUSCODE_BADINDEXRANGENODATA 0x80370000
+
+/* The data encoding is invalid. */
+#define UA_STATUSCODE_BADDATAENCODINGINVALID 0x80380000
+
+/* The server does not support the requested data encoding for the node. */
+#define UA_STATUSCODE_BADDATAENCODINGUNSUPPORTED 0x80390000
+
+/* The access level does not allow reading or subscribing to the Node. */
+#define UA_STATUSCODE_BADNOTREADABLE 0x803A0000
+
+/* The access level does not allow writing to the Node. */
+#define UA_STATUSCODE_BADNOTWRITABLE 0x803B0000
+
+/* The value was out of range. */
+#define UA_STATUSCODE_BADOUTOFRANGE 0x803C0000
+
+/* The requested operation is not supported. */
+#define UA_STATUSCODE_BADNOTSUPPORTED 0x803D0000
+
+/* A requested item was not found or a search operation ended without success. */
+#define UA_STATUSCODE_BADNOTFOUND 0x803E0000
+
+/* The object cannot be used because it has been deleted. */
+#define UA_STATUSCODE_BADOBJECTDELETED 0x803F0000
+
+/* Requested operation is not implemented. */
+#define UA_STATUSCODE_BADNOTIMPLEMENTED 0x80400000
+
+/* The monitoring mode is invalid. */
+#define UA_STATUSCODE_BADMONITORINGMODEINVALID 0x80410000
+
+/* The monitoring item id does not refer to a valid monitored item. */
+#define UA_STATUSCODE_BADMONITOREDITEMIDINVALID 0x80420000
+
+/* The monitored item filter parameter is not valid. */
+#define UA_STATUSCODE_BADMONITOREDITEMFILTERINVALID 0x80430000
+
+/* The server does not support the requested monitored item filter. */
+#define UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED 0x80440000
+
+/* A monitoring filter cannot be used in combination with the attribute specified. */
+#define UA_STATUSCODE_BADFILTERNOTALLOWED 0x80450000
+
+/* A mandatory structured parameter was missing or null. */
+#define UA_STATUSCODE_BADSTRUCTUREMISSING 0x80460000
+
+/* The event filter is not valid. */
+#define UA_STATUSCODE_BADEVENTFILTERINVALID 0x80470000
+
+/* The content filter is not valid. */
+#define UA_STATUSCODE_BADCONTENTFILTERINVALID 0x80480000
+
+/* An unrecognized operator was provided in a filter. */
+#define UA_STATUSCODE_BADFILTEROPERATORINVALID 0x80C10000
+
+/* A valid operator was provided */
+#define UA_STATUSCODE_BADFILTEROPERATORUNSUPPORTED 0x80C20000
+
+/* The number of operands provided for the filter operator was less then expected for the operand provided. */
+#define UA_STATUSCODE_BADFILTEROPERANDCOUNTMISMATCH 0x80C30000
+
+/* The operand used in a content filter is not valid. */
+#define UA_STATUSCODE_BADFILTEROPERANDINVALID 0x80490000
+
+/* The referenced element is not a valid element in the content filter. */
+#define UA_STATUSCODE_BADFILTERELEMENTINVALID 0x80C40000
+
+/* The referenced literal is not a valid value. */
+#define UA_STATUSCODE_BADFILTERLITERALINVALID 0x80C50000
+
+/* The continuation point provide is longer valid. */
+#define UA_STATUSCODE_BADCONTINUATIONPOINTINVALID 0x804A0000
+
+/* The operation could not be processed because all continuation points have been allocated. */
+#define UA_STATUSCODE_BADNOCONTINUATIONPOINTS 0x804B0000
+
+/* The reference type id does not refer to a valid reference type node. */
+#define UA_STATUSCODE_BADREFERENCETYPEIDINVALID 0x804C0000
+
+/* The browse direction is not valid. */
+#define UA_STATUSCODE_BADBROWSEDIRECTIONINVALID 0x804D0000
+
+/* The node is not part of the view. */
+#define UA_STATUSCODE_BADNODENOTINVIEW 0x804E0000
+
+/* The number was not accepted because of a numeric overflow. */
+#define UA_STATUSCODE_BADNUMERICOVERFLOW 0x81120000
+
+/* The ServerUri is not a valid URI. */
+#define UA_STATUSCODE_BADSERVERURIINVALID 0x804F0000
+
+/* No ServerName was specified. */
+#define UA_STATUSCODE_BADSERVERNAMEMISSING 0x80500000
+
+/* No DiscoveryUrl was specified. */
+#define UA_STATUSCODE_BADDISCOVERYURLMISSING 0x80510000
+
+/* The semaphore file specified by the client is not valid. */
+#define UA_STATUSCODE_BADSEMPAHOREFILEMISSING 0x80520000
+
+/* The security token request type is not valid. */
+#define UA_STATUSCODE_BADREQUESTTYPEINVALID 0x80530000
+
+/* The security mode does not meet the requirements set by the server. */
+#define UA_STATUSCODE_BADSECURITYMODEREJECTED 0x80540000
+
+/* The security policy does not meet the requirements set by the server. */
+#define UA_STATUSCODE_BADSECURITYPOLICYREJECTED 0x80550000
+
+/* The server has reached its maximum number of sessions. */
+#define UA_STATUSCODE_BADTOOMANYSESSIONS 0x80560000
+
+/* The user token signature is missing or invalid. */
+#define UA_STATUSCODE_BADUSERSIGNATUREINVALID 0x80570000
+
+/* The signature generated with the client certificate is missing or invalid. */
+#define UA_STATUSCODE_BADAPPLICATIONSIGNATUREINVALID 0x80580000
+
+/* The client did not provide at least one software certificate that is valid and meets the profile requirements for the server. */
+#define UA_STATUSCODE_BADNOVALIDCERTIFICATES 0x80590000
+
+/* The server does not support changing the user identity assigned to the session. */
+#define UA_STATUSCODE_BADIDENTITYCHANGENOTSUPPORTED 0x80C60000
+
+/* The request was cancelled by the client with the Cancel service. */
+#define UA_STATUSCODE_BADREQUESTCANCELLEDBYREQUEST 0x805A0000
+
+/* The parent node id does not to refer to a valid node. */
+#define UA_STATUSCODE_BADPARENTNODEIDINVALID 0x805B0000
+
+/* The reference could not be created because it violates constraints imposed by the data model. */
+#define UA_STATUSCODE_BADREFERENCENOTALLOWED 0x805C0000
+
+/* The requested node id was reject because it was either invalid or server does not allow node ids to be specified by the client. */
+#define UA_STATUSCODE_BADNODEIDREJECTED 0x805D0000
+
+/* The requested node id is already used by another node. */
+#define UA_STATUSCODE_BADNODEIDEXISTS 0x805E0000
+
+/* The node class is not valid. */
+#define UA_STATUSCODE_BADNODECLASSINVALID 0x805F0000
+
+/* The browse name is invalid. */
+#define UA_STATUSCODE_BADBROWSENAMEINVALID 0x80600000
+
+/* The browse name is not unique among nodes that share the same relationship with the parent. */
+#define UA_STATUSCODE_BADBROWSENAMEDUPLICATED 0x80610000
+
+/* The node attributes are not valid for the node class. */
+#define UA_STATUSCODE_BADNODEATTRIBUTESINVALID 0x80620000
+
+/* The type definition node id does not reference an appropriate type node. */
+#define UA_STATUSCODE_BADTYPEDEFINITIONINVALID 0x80630000
+
+/* The source node id does not reference a valid node. */
+#define UA_STATUSCODE_BADSOURCENODEIDINVALID 0x80640000
+
+/* The target node id does not reference a valid node. */
+#define UA_STATUSCODE_BADTARGETNODEIDINVALID 0x80650000
+
+/* The reference type between the nodes is already defined. */
+#define UA_STATUSCODE_BADDUPLICATEREFERENCENOTALLOWED 0x80660000
+
+/* The server does not allow this type of self reference on this node. */
+#define UA_STATUSCODE_BADINVALIDSELFREFERENCE 0x80670000
+
+/* The reference type is not valid for a reference to a remote server. */
+#define UA_STATUSCODE_BADREFERENCELOCALONLY 0x80680000
+
+/* The server will not allow the node to be deleted. */
+#define UA_STATUSCODE_BADNODELETERIGHTS 0x80690000
+
+/* The server was not able to delete all target references. */
+#define UA_STATUSCODE_UNCERTAINREFERENCENOTDELETED 0x40BC0000
+
+/* The server index is not valid. */
+#define UA_STATUSCODE_BADSERVERINDEXINVALID 0x806A0000
+
+/* The view id does not refer to a valid view node. */
+#define UA_STATUSCODE_BADVIEWIDUNKNOWN 0x806B0000
+
+/* The view timestamp is not available or not supported. */
+#define UA_STATUSCODE_BADVIEWTIMESTAMPINVALID 0x80C90000
+
+/* The view parameters are not consistent with each other. */
+#define UA_STATUSCODE_BADVIEWPARAMETERMISMATCH 0x80CA0000
+
+/* The view version is not available or not supported. */
+#define UA_STATUSCODE_BADVIEWVERSIONINVALID 0x80CB0000
+
+/* The list of references may not be complete because the underlying system is not available. */
+#define UA_STATUSCODE_UNCERTAINNOTALLNODESAVAILABLE 0x40C00000
+
+/* The server should have followed a reference to a node in a remote server but did not. The result set may be incomplete. */
+#define UA_STATUSCODE_GOODRESULTSMAYBEINCOMPLETE 0x00BA0000
+
+/* The provided Nodeid was not a type definition nodeid. */
+#define UA_STATUSCODE_BADNOTTYPEDEFINITION 0x80C80000
+
+/* One of the references to follow in the relative path references to a node in the address space in another server. */
+#define UA_STATUSCODE_UNCERTAINREFERENCEOUTOFSERVER 0x406C0000
+
+/* The requested operation has too many matches to return. */
+#define UA_STATUSCODE_BADTOOMANYMATCHES 0x806D0000
+
+/* The requested operation requires too many resources in the server. */
+#define UA_STATUSCODE_BADQUERYTOOCOMPLEX 0x806E0000
+
+/* The requested operation has no match to return. */
+#define UA_STATUSCODE_BADNOMATCH 0x806F0000
+
+/* The max age parameter is invalid. */
+#define UA_STATUSCODE_BADMAXAGEINVALID 0x80700000
+
+/* The operation is not permitted over the current secure channel. */
+#define UA_STATUSCODE_BADSECURITYMODEINSUFFICIENT 0x80E60000
+
+/* The history details parameter is not valid. */
+#define UA_STATUSCODE_BADHISTORYOPERATIONINVALID 0x80710000
+
+/* The server does not support the requested operation. */
+#define UA_STATUSCODE_BADHISTORYOPERATIONUNSUPPORTED 0x80720000
+
+/* The defined timestamp to return was invalid. */
+#define UA_STATUSCODE_BADINVALIDTIMESTAMPARGUMENT 0x80BD0000
+
+/* The server does not support writing the combination of value */
+#define UA_STATUSCODE_BADWRITENOTSUPPORTED 0x80730000
+
+/* The value supplied for the attribute is not of the same type as the attribute's value. */
+#define UA_STATUSCODE_BADTYPEMISMATCH 0x80740000
+
+/* The method id does not refer to a method for the specified object. */
+#define UA_STATUSCODE_BADMETHODINVALID 0x80750000
+
+/* The client did not specify all of the input arguments for the method. */
+#define UA_STATUSCODE_BADARGUMENTSMISSING 0x80760000
+
+/* The executable attribute does not allow the execution of the method. */
+#define UA_STATUSCODE_BADNOTEXECUTABLE 0x81110000
+
+/* The server has reached its maximum number of subscriptions. */
+#define UA_STATUSCODE_BADTOOMANYSUBSCRIPTIONS 0x80770000
+
+/* The server has reached the maximum number of queued publish requests. */
+#define UA_STATUSCODE_BADTOOMANYPUBLISHREQUESTS 0x80780000
+
+/* There is no subscription available for this session. */
+#define UA_STATUSCODE_BADNOSUBSCRIPTION 0x80790000
+
+/* The sequence number is unknown to the server. */
+#define UA_STATUSCODE_BADSEQUENCENUMBERUNKNOWN 0x807A0000
+
+/* The requested notification message is no longer available. */
+#define UA_STATUSCODE_BADMESSAGENOTAVAILABLE 0x807B0000
+
+/* The client of the current session does not support one or more Profiles that are necessary for the subscription. */
+#define UA_STATUSCODE_BADINSUFFICIENTCLIENTPROFILE 0x807C0000
+
+/* The sub-state machine is not currently active. */
+#define UA_STATUSCODE_BADSTATENOTACTIVE 0x80BF0000
+
+/* An equivalent rule already exists. */
+#define UA_STATUSCODE_BADALREADYEXISTS 0x81150000
+
+/* The server cannot process the request because it is too busy. */
+#define UA_STATUSCODE_BADTCPSERVERTOOBUSY 0x807D0000
+
+/* The type of the message specified in the header invalid. */
+#define UA_STATUSCODE_BADTCPMESSAGETYPEINVALID 0x807E0000
+
+/* The SecureChannelId and/or TokenId are not currently in use. */
+#define UA_STATUSCODE_BADTCPSECURECHANNELUNKNOWN 0x807F0000
+
+/* The size of the message specified in the header is too large. */
+#define UA_STATUSCODE_BADTCPMESSAGETOOLARGE 0x80800000
+
+/* There are not enough resources to process the request. */
+#define UA_STATUSCODE_BADTCPNOTENOUGHRESOURCES 0x80810000
+
+/* An internal error occurred. */
+#define UA_STATUSCODE_BADTCPINTERNALERROR 0x80820000
+
+/* The server does not recognize the QueryString specified. */
+#define UA_STATUSCODE_BADTCPENDPOINTURLINVALID 0x80830000
+
+/* The request could not be sent because of a network interruption. */
+#define UA_STATUSCODE_BADREQUESTINTERRUPTED 0x80840000
+
+/* Timeout occurred while processing the request. */
+#define UA_STATUSCODE_BADREQUESTTIMEOUT 0x80850000
+
+/* The secure channel has been closed. */
+#define UA_STATUSCODE_BADSECURECHANNELCLOSED 0x80860000
+
+/* The token has expired or is not recognized. */
+#define UA_STATUSCODE_BADSECURECHANNELTOKENUNKNOWN 0x80870000
+
+/* The sequence number is not valid. */
+#define UA_STATUSCODE_BADSEQUENCENUMBERINVALID 0x80880000
+
+/* The applications do not have compatible protocol versions. */
+#define UA_STATUSCODE_BADPROTOCOLVERSIONUNSUPPORTED 0x80BE0000
+
+/* There is a problem with the configuration that affects the usefulness of the value. */
+#define UA_STATUSCODE_BADCONFIGURATIONERROR 0x80890000
+
+/* The variable should receive its value from another variable */
+#define UA_STATUSCODE_BADNOTCONNECTED 0x808A0000
+
+/* There has been a failure in the device/data source that generates the value that has affected the value. */
+#define UA_STATUSCODE_BADDEVICEFAILURE 0x808B0000
+
+/* There has been a failure in the sensor from which the value is derived by the device/data source. */
+#define UA_STATUSCODE_BADSENSORFAILURE 0x808C0000
+
+/* The source of the data is not operational. */
+#define UA_STATUSCODE_BADOUTOFSERVICE 0x808D0000
+
+/* The deadband filter is not valid. */
+#define UA_STATUSCODE_BADDEADBANDFILTERINVALID 0x808E0000
+
+/* Communication to the data source has failed. The variable value is the last value that had a good quality. */
+#define UA_STATUSCODE_UNCERTAINNOCOMMUNICATIONLASTUSABLEVALUE 0x408F0000
+
+/* Whatever was updating this value has stopped doing so. */
+#define UA_STATUSCODE_UNCERTAINLASTUSABLEVALUE 0x40900000
+
+/* The value is an operational value that was manually overwritten. */
+#define UA_STATUSCODE_UNCERTAINSUBSTITUTEVALUE 0x40910000
+
+/* The value is an initial value for a variable that normally receives its value from another variable. */
+#define UA_STATUSCODE_UNCERTAININITIALVALUE 0x40920000
+
+/* The value is at one of the sensor limits. */
+#define UA_STATUSCODE_UNCERTAINSENSORNOTACCURATE 0x40930000
+
+/* The value is outside of the range of values defined for this parameter. */
+#define UA_STATUSCODE_UNCERTAINENGINEERINGUNITSEXCEEDED 0x40940000
+
+/* The value is derived from multiple sources and has less than the required number of Good sources. */
+#define UA_STATUSCODE_UNCERTAINSUBNORMAL 0x40950000
+
+/* The value has been overridden. */
+#define UA_STATUSCODE_GOODLOCALOVERRIDE 0x00960000
+
+/* This Condition refresh failed */
+#define UA_STATUSCODE_BADREFRESHINPROGRESS 0x80970000
+
+/* This condition has already been disabled. */
+#define UA_STATUSCODE_BADCONDITIONALREADYDISABLED 0x80980000
+
+/* This condition has already been enabled. */
+#define UA_STATUSCODE_BADCONDITIONALREADYENABLED 0x80CC0000
+
+/* Property not available */
+#define UA_STATUSCODE_BADCONDITIONDISABLED 0x80990000
+
+/* The specified event id is not recognized. */
+#define UA_STATUSCODE_BADEVENTIDUNKNOWN 0x809A0000
+
+/* The event cannot be acknowledged. */
+#define UA_STATUSCODE_BADEVENTNOTACKNOWLEDGEABLE 0x80BB0000
+
+/* The dialog condition is not active. */
+#define UA_STATUSCODE_BADDIALOGNOTACTIVE 0x80CD0000
+
+/* The response is not valid for the dialog. */
+#define UA_STATUSCODE_BADDIALOGRESPONSEINVALID 0x80CE0000
+
+/* The condition branch has already been acknowledged. */
+#define UA_STATUSCODE_BADCONDITIONBRANCHALREADYACKED 0x80CF0000
+
+/* The condition branch has already been confirmed. */
+#define UA_STATUSCODE_BADCONDITIONBRANCHALREADYCONFIRMED 0x80D00000
+
+/* The condition has already been shelved. */
+#define UA_STATUSCODE_BADCONDITIONALREADYSHELVED 0x80D10000
+
+/* The condition is not currently shelved. */
+#define UA_STATUSCODE_BADCONDITIONNOTSHELVED 0x80D20000
+
+/* The shelving time not within an acceptable range. */
+#define UA_STATUSCODE_BADSHELVINGTIMEOUTOFRANGE 0x80D30000
+
+/* No data exists for the requested time range or event filter. */
+#define UA_STATUSCODE_BADNODATA 0x809B0000
+
+/* No data found to provide upper or lower bound value. */
+#define UA_STATUSCODE_BADBOUNDNOTFOUND 0x80D70000
+
+/* The server cannot retrieve a bound for the variable. */
+#define UA_STATUSCODE_BADBOUNDNOTSUPPORTED 0x80D80000
+
+/* Data is missing due to collection started/stopped/lost. */
+#define UA_STATUSCODE_BADDATALOST 0x809D0000
+
+/* Expected data is unavailable for the requested time range due to an un-mounted volume */
+#define UA_STATUSCODE_BADDATAUNAVAILABLE 0x809E0000
+
+/* The data or event was not successfully inserted because a matching entry exists. */
+#define UA_STATUSCODE_BADENTRYEXISTS 0x809F0000
+
+/* The data or event was not successfully updated because no matching entry exists. */
+#define UA_STATUSCODE_BADNOENTRYEXISTS 0x80A00000
+
+/* The client requested history using a timestamp format the server does not support (i.e requested ServerTimestamp when server only supports SourceTimestamp). */
+#define UA_STATUSCODE_BADTIMESTAMPNOTSUPPORTED 0x80A10000
+
+/* The data or event was successfully inserted into the historical database. */
+#define UA_STATUSCODE_GOODENTRYINSERTED 0x00A20000
+
+/* The data or event field was successfully replaced in the historical database. */
+#define UA_STATUSCODE_GOODENTRYREPLACED 0x00A30000
+
+/* The value is derived from multiple values and has less than the required number of Good values. */
+#define UA_STATUSCODE_UNCERTAINDATASUBNORMAL 0x40A40000
+
+/* No data exists for the requested time range or event filter. */
+#define UA_STATUSCODE_GOODNODATA 0x00A50000
+
+/* The data or event field was successfully replaced in the historical database. */
+#define UA_STATUSCODE_GOODMOREDATA 0x00A60000
+
+/* The requested number of Aggregates does not match the requested number of NodeIds. */
+#define UA_STATUSCODE_BADAGGREGATELISTMISMATCH 0x80D40000
+
+/* The requested Aggregate is not support by the server. */
+#define UA_STATUSCODE_BADAGGREGATENOTSUPPORTED 0x80D50000
+
+/* The aggregate value could not be derived due to invalid data inputs. */
+#define UA_STATUSCODE_BADAGGREGATEINVALIDINPUTS 0x80D60000
+
+/* The aggregate configuration is not valid for specified node. */
+#define UA_STATUSCODE_BADAGGREGATECONFIGURATIONREJECTED 0x80DA0000
+
+/* The request specifies fields which are not valid for the EventType or cannot be saved by the historian. */
+#define UA_STATUSCODE_GOODDATAIGNORED 0x00D90000
+
+/* The request was rejected by the server because it did not meet the criteria set by the server. */
+#define UA_STATUSCODE_BADREQUESTNOTALLOWED 0x80E40000
+
+/* The request has not been processed by the server yet. */
+#define UA_STATUSCODE_BADREQUESTNOTCOMPLETE 0x81130000
+
+/* The value does not come from the real source and has been edited by the server. */
+#define UA_STATUSCODE_GOODEDITED 0x00DC0000
+
+/* There was an error in execution of these post-actions. */
+#define UA_STATUSCODE_GOODPOSTACTIONFAILED 0x00DD0000
+
+/* The related EngineeringUnit has been changed but the Variable Value is still provided based on the previous unit. */
+#define UA_STATUSCODE_UNCERTAINDOMINANTVALUECHANGED 0x40DE0000
+
+/* A dependent value has been changed but the change has not been applied to the device. */
+#define UA_STATUSCODE_GOODDEPENDENTVALUECHANGED 0x00E00000
+
+/* The related EngineeringUnit has been changed but this change has not been applied to the device. The Variable Value is still dependent on the previous unit but its status is currently Bad. */
+#define UA_STATUSCODE_BADDOMINANTVALUECHANGED 0x80E10000
+
+/* A dependent value has been changed but the change has not been applied to the device. The quality of the dominant variable is uncertain. */
+#define UA_STATUSCODE_UNCERTAINDEPENDENTVALUECHANGED 0x40E20000
+
+/* A dependent value has been changed but the change has not been applied to the device. The quality of the dominant variable is Bad. */
+#define UA_STATUSCODE_BADDEPENDENTVALUECHANGED 0x80E30000
+
+/* The communication layer has raised an event. */
+#define UA_STATUSCODE_GOODCOMMUNICATIONEVENT 0x00A70000
+
+/* The system is shutting down. */
+#define UA_STATUSCODE_GOODSHUTDOWNEVENT 0x00A80000
+
+/* The operation is not finished and needs to be called again. */
+#define UA_STATUSCODE_GOODCALLAGAIN 0x00A90000
+
+/* A non-critical timeout occurred. */
+#define UA_STATUSCODE_GOODNONCRITICALTIMEOUT 0x00AA0000
+
+/* One or more arguments are invalid. */
+#define UA_STATUSCODE_BADINVALIDARGUMENT 0x80AB0000
+
+/* Could not establish a network connection to remote server. */
+#define UA_STATUSCODE_BADCONNECTIONREJECTED 0x80AC0000
+
+/* The server has disconnected from the client. */
+#define UA_STATUSCODE_BADDISCONNECT 0x80AD0000
+
+/* The network connection has been closed. */
+#define UA_STATUSCODE_BADCONNECTIONCLOSED 0x80AE0000
+
+/* The operation cannot be completed because the object is closed */
+#define UA_STATUSCODE_BADINVALIDSTATE 0x80AF0000
+
+/* Cannot move beyond end of the stream. */
+#define UA_STATUSCODE_BADENDOFSTREAM 0x80B00000
+
+/* No data is currently available for reading from a non-blocking stream. */
+#define UA_STATUSCODE_BADNODATAAVAILABLE 0x80B10000
+
+/* The asynchronous operation is waiting for a response. */
+#define UA_STATUSCODE_BADWAITINGFORRESPONSE 0x80B20000
+
+/* The asynchronous operation was abandoned by the caller. */
+#define UA_STATUSCODE_BADOPERATIONABANDONED 0x80B30000
+
+/* The stream did not return all data requested (possibly because it is a non-blocking stream). */
+#define UA_STATUSCODE_BADEXPECTEDSTREAMTOBLOCK 0x80B40000
+
+/* Non blocking behaviour is required and the operation would block. */
+#define UA_STATUSCODE_BADWOULDBLOCK 0x80B50000
+
+/* A value had an invalid syntax. */
+#define UA_STATUSCODE_BADSYNTAXERROR 0x80B60000
+
+/* The operation could not be finished because all available connections are in use. */
+#define UA_STATUSCODE_BADMAXCONNECTIONSREACHED 0x80B70000
+
 
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/nodeids.h" ***********************************/
 
@@ -1584,6 +2055,8 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_STRUCTUREDESCRIPTION_ENCODING_DEFAULTBINARY 126 /* Object */
 #define UA_NS0ID_ENUMDESCRIPTION_ENCODING_DEFAULTBINARY 127 /* Object */
 #define UA_NS0ID_ROLEPERMISSIONTYPE_ENCODING_DEFAULTBINARY 128 /* Object */
+#define UA_NS0ID_HASARGUMENTDESCRIPTION 129 /* ReferenceType */
+#define UA_NS0ID_HASOPTIONALINPUTARGUMENTDESCRIPTION 131 /* ReferenceType */
 #define UA_NS0ID_IDTYPE 256 /* DataType */
 #define UA_NS0ID_NODECLASS 257 /* DataType */
 #define UA_NS0ID_NODE 258 /* DataType */
@@ -2517,7 +2990,7 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_INSTANCECOUNT 2396 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_MAXINSTANCECOUNT 2397 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_MAXRECYCLECOUNT 2398 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS 2399 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC 2399 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_READY 2400 /* Object */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_READY_STATENUMBER 2401 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_RUNNING 2402 /* Object */
@@ -3425,16 +3898,16 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_LASTTRANSITION_NAME 3837 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_LASTTRANSITION_NUMBER 3838 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_LASTTRANSITION_TRANSITIONTIME 3839 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_CREATESESSIONID 3840 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_CREATECLIENTNAME 3841 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_INVOCATIONCREATIONTIME 3842 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTTRANSITIONTIME 3843 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODCALL 3844 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODSESSIONID 3845 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODINPUTARGUMENTS 3846 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODOUTPUTARGUMENTS 3847 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODCALLTIME 3848 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODRETURNSTATUS 3849 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_CREATESESSIONID 3840 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_CREATECLIENTNAME 3841 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_INVOCATIONCREATIONTIME 3842 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTTRANSITIONTIME 3843 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODCALL 3844 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODSESSIONID 3845 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODINPUTARGUMENTS 3846 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODOUTPUTARGUMENTS 3847 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODCALLTIME 3848 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODRETURNSTATUS 3849 /* Variable */
 #define UA_NS0ID_PROGRAMSTATEMACHINETYPE_FINALRESULTDATA 3850 /* Object */
 #define UA_NS0ID_ADDCOMMENTMETHODTYPE 3863 /* Method */
 #define UA_NS0ID_ADDCOMMENTMETHODTYPE_INPUTARGUMENTS 3864 /* Variable */
@@ -7352,9 +7825,9 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_ACCESSRESTRICTIONTYPE_OPTIONSETVALUES 15035 /* Variable */
 #define UA_NS0ID_ATTRIBUTEWRITEMASK_OPTIONSETVALUES 15036 /* Variable */
 #define UA_NS0ID_OPCUA_BINARYSCHEMA_DEPRECATED 15037 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODINPUTVALUES 15038 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODINPUTVALUES 15038 /* Variable */
 #define UA_NS0ID_OPCUA_XMLSCHEMA_DEPRECATED 15039 /* Variable */
-#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTICS_LASTMETHODOUTPUTVALUES 15040 /* Variable */
+#define UA_NS0ID_PROGRAMSTATEMACHINETYPE_PROGRAMDIAGNOSTIC_LASTMETHODOUTPUTVALUES 15040 /* Variable */
 #define UA_NS0ID_KEYVALUEPAIR_ENCODING_DEFAULTJSON 15041 /* Object */
 #define UA_NS0ID_IDENTITYMAPPINGRULETYPE_ENCODING_DEFAULTJSON 15042 /* Object */
 #define UA_NS0ID_SECURITYGROUPFOLDERTYPE_SECURITYGROUPNAME_PLACEHOLDER_MAXPASTKEYCOUNT 15043 /* Variable */
@@ -7423,11 +7896,11 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_MDNSDISCOVERYCONFIGURATION_ENCODING_DEFAULTJSON 15106 /* Object */
 #define UA_NS0ID_REGISTERSERVER2REQUEST_ENCODING_DEFAULTJSON 15107 /* Object */
 #define UA_NS0ID_SUBSCRIBEDDATASETTYPE 15108 /* ObjectType */
-#define UA_NS0ID_SUBSCRIBEDDATASETTYPE_DATASETMETADATA 15109 /* Variable */
-#define UA_NS0ID_SUBSCRIBEDDATASETTYPE_MESSAGERECEIVETIMEOUT 15110 /* Variable */
+#define UA_NS0ID_CHOICESTATETYPE 15109 /* ObjectType */
+#define UA_NS0ID_CHOICESTATETYPE_STATENUMBER 15110 /* Variable */
 #define UA_NS0ID_TARGETVARIABLESTYPE 15111 /* ObjectType */
-#define UA_NS0ID_TARGETVARIABLESTYPE_DATASETMETADATA 15112 /* Variable */
-#define UA_NS0ID_TARGETVARIABLESTYPE_MESSAGERECEIVETIMEOUT 15113 /* Variable */
+#define UA_NS0ID_HASGUARD 15112 /* ReferenceType */
+#define UA_NS0ID_GUARDVARIABLETYPE 15113 /* VariableType */
 #define UA_NS0ID_TARGETVARIABLESTYPE_TARGETVARIABLES 15114 /* Variable */
 #define UA_NS0ID_TARGETVARIABLESTYPE_ADDTARGETVARIABLES 15115 /* Method */
 #define UA_NS0ID_TARGETVARIABLESTYPE_ADDTARGETVARIABLES_INPUTARGUMENTS 15116 /* Variable */
@@ -7442,8 +7915,8 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_TARGETVARIABLESTYPEREMOVETARGETVARIABLESMETHODTYPE_INPUTARGUMENTS 15125 /* Variable */
 #define UA_NS0ID_TARGETVARIABLESTYPEREMOVETARGETVARIABLESMETHODTYPE_OUTPUTARGUMENTS 15126 /* Variable */
 #define UA_NS0ID_SUBSCRIBEDDATASETMIRRORTYPE 15127 /* ObjectType */
-#define UA_NS0ID_SUBSCRIBEDDATASETMIRRORTYPE_DATASETMETADATA 15128 /* Variable */
-#define UA_NS0ID_SUBSCRIBEDDATASETMIRRORTYPE_MESSAGERECEIVETIMEOUT 15129 /* Variable */
+#define UA_NS0ID_EXPRESSIONGUARDVARIABLETYPE 15128 /* VariableType */
+#define UA_NS0ID_EXPRESSIONGUARDVARIABLETYPE_EXPRESSION 15129 /* Variable */
 #define UA_NS0ID_REGISTERSERVER2RESPONSE_ENCODING_DEFAULTJSON 15130 /* Object */
 #define UA_NS0ID_CHANNELSECURITYTOKEN_ENCODING_DEFAULTJSON 15131 /* Object */
 #define UA_NS0ID_OPENSECURECHANNELREQUEST_ENCODING_DEFAULTJSON 15132 /* Object */
@@ -7562,10 +8035,12 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_PUBLISHEDEVENTSTYPE_DATASETMETADATA 15245 /* Variable */
 #define UA_NS0ID_BROKERWRITERGROUPTRANSPORTTYPE_RESOURCEURI 15246 /* Variable */
 #define UA_NS0ID_BROKERWRITERGROUPTRANSPORTTYPE_AUTHENTICATIONPROFILEURI 15247 /* Variable */
+#define UA_NS0ID_CREATECREDENTIALMETHODTYPE 15248 /* Method */
 #define UA_NS0ID_BROKERWRITERGROUPTRANSPORTTYPE_REQUESTEDDELIVERYGUARANTEE 15249 /* Variable */
 #define UA_NS0ID_BROKERDATASETWRITERTRANSPORTTYPE_RESOURCEURI 15250 /* Variable */
 #define UA_NS0ID_BROKERDATASETWRITERTRANSPORTTYPE_AUTHENTICATIONPROFILEURI 15251 /* Variable */
 #define UA_NS0ID_QUERYFIRSTRESPONSE_ENCODING_DEFAULTJSON 15252 /* Object */
+#define UA_NS0ID_CREATECREDENTIALMETHODTYPE_INPUTARGUMENTS 15253 /* Variable */
 #define UA_NS0ID_QUERYNEXTREQUEST_ENCODING_DEFAULTJSON 15254 /* Object */
 #define UA_NS0ID_QUERYNEXTRESPONSE_ENCODING_DEFAULTJSON 15255 /* Object */
 #define UA_NS0ID_READVALUEID_ENCODING_DEFAULTJSON 15256 /* Object */
@@ -7629,8 +8104,8 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_EVENTFILTERRESULT_ENCODING_DEFAULTJSON 15314 /* Object */
 #define UA_NS0ID_AGGREGATEFILTERRESULT_ENCODING_DEFAULTJSON 15315 /* Object */
 #define UA_NS0ID_DATASETREADERTYPE_SUBSCRIBEDDATASET 15316 /* Object */
-#define UA_NS0ID_DATASETREADERTYPE_SUBSCRIBEDDATASET_DATASETMETADATA 15317 /* Variable */
-#define UA_NS0ID_DATASETREADERTYPE_SUBSCRIBEDDATASET_MESSAGERECEIVETIMEOUT 15318 /* Variable */
+#define UA_NS0ID_ELSEGUARDVARIABLETYPE 15317 /* VariableType */
+#define UA_NS0ID_BASEANALOGTYPE 15318 /* VariableType */
 #define UA_NS0ID_DATASETREADERTRANSPORTTYPE 15319 /* ObjectType */
 #define UA_NS0ID_MONITORINGPARAMETERS_ENCODING_DEFAULTJSON 15320 /* Object */
 #define UA_NS0ID_MONITOREDITEMCREATEREQUEST_ENCODING_DEFAULTJSON 15321 /* Object */
@@ -7918,7 +8393,7 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_OPCUA_BINARYSCHEMA_ENUMDESCRIPTION_DATATYPEVERSION 15603 /* Variable */
 #define UA_NS0ID_OPCUA_BINARYSCHEMA_ENUMDESCRIPTION_DICTIONARYFRAGMENT 15604 /* Variable */
 #define UA_NS0ID_DATASETWRITERMESSAGEDATATYPE 15605 /* DataType */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES 15606 /* Object */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET 15606 /* Object */
 #define UA_NS0ID_ROLESETTYPE 15607 /* ObjectType */
 #define UA_NS0ID_ROLESETTYPE_ROLENAME_PLACEHOLDER 15608 /* Object */
 #define UA_NS0ID_PUBSUBGROUPDATATYPE 15609 /* DataType */
@@ -8601,23 +9076,23 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_DATASETREADERDATATYPE_ENCODING_DEFAULTJSON 16286 /* Object */
 #define UA_NS0ID_DATASETREADERTRANSPORTDATATYPE_ENCODING_DEFAULTJSON 16287 /* Object */
 #define UA_NS0ID_DATASETREADERMESSAGEDATATYPE_ENCODING_DEFAULTJSON 16288 /* Object */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES 16289 /* Object */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES_ADDROLE 16290 /* Method */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES_ADDROLE_INPUTARGUMENTS 16291 /* Variable */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES_ADDROLE_OUTPUTARGUMENTS 16292 /* Variable */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES_REMOVEROLE 16293 /* Method */
-#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLES_REMOVEROLE_INPUTARGUMENTS 16294 /* Variable */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES 16295 /* Object */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES_ADDROLE 16296 /* Method */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES_ADDROLE_INPUTARGUMENTS 16297 /* Variable */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES_ADDROLE_OUTPUTARGUMENTS 16298 /* Variable */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES_REMOVEROLE 16299 /* Method */
-#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLES_REMOVEROLE_INPUTARGUMENTS 16300 /* Variable */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES_ADDROLE 16301 /* Method */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES_ADDROLE_INPUTARGUMENTS 16302 /* Variable */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES_ADDROLE_OUTPUTARGUMENTS 16303 /* Variable */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES_REMOVEROLE 16304 /* Method */
-#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLES_REMOVEROLE_INPUTARGUMENTS 16305 /* Variable */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET 16289 /* Object */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET_ADDROLE 16290 /* Method */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET_ADDROLE_INPUTARGUMENTS 16291 /* Variable */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET_ADDROLE_OUTPUTARGUMENTS 16292 /* Variable */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET_REMOVEROLE 16293 /* Method */
+#define UA_NS0ID_SERVERTYPE_SERVERCAPABILITIES_ROLESET_REMOVEROLE_INPUTARGUMENTS 16294 /* Variable */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET 16295 /* Object */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET_ADDROLE 16296 /* Method */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET_ADDROLE_INPUTARGUMENTS 16297 /* Variable */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET_ADDROLE_OUTPUTARGUMENTS 16298 /* Variable */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET_REMOVEROLE 16299 /* Method */
+#define UA_NS0ID_SERVERCAPABILITIESTYPE_ROLESET_REMOVEROLE_INPUTARGUMENTS 16300 /* Variable */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET_ADDROLE 16301 /* Method */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET_ADDROLE_INPUTARGUMENTS 16302 /* Variable */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET_ADDROLE_OUTPUTARGUMENTS 16303 /* Variable */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET_REMOVEROLE 16304 /* Method */
+#define UA_NS0ID_SERVER_SERVERCAPABILITIES_ROLESET_REMOVEROLE_INPUTARGUMENTS 16305 /* Variable */
 #define UA_NS0ID_DEFAULTINPUTVALUES 16306 /* Variable */
 #define UA_NS0ID_AUDIODATATYPE 16307 /* DataType */
 #define UA_NS0ID_SUBSCRIBEDDATASETDATATYPE_ENCODING_DEFAULTJSON 16308 /* Object */
@@ -8625,7 +9100,7 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_TARGETVARIABLESDATATYPE_ENCODING_DEFAULTJSON 16310 /* Object */
 #define UA_NS0ID_SUBSCRIBEDDATASETMIRRORDATATYPE_ENCODING_DEFAULTJSON 16311 /* Object */
 #define UA_NS0ID_SELECTIONLISTTYPE_RESTRICTTOLIST 16312 /* Variable */
-#define UA_NS0ID_SERVER_CURRENTTIMEZONE 16313 /* Variable */
+#define UA_NS0ID_ADDITIONALPARAMETERSTYPE 16313 /* DataType */
 #define UA_NS0ID_FILESYSTEM 16314 /* Object */
 #define UA_NS0ID_FILESYSTEM_FILEDIRECTORYNAME_PLACEHOLDER 16315 /* Object */
 #define UA_NS0ID_FILESYSTEM_FILEDIRECTORYNAME_PLACEHOLDER_CREATEDIRECTORY 16316 /* Method */
@@ -9533,27 +10008,27 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_SAFETYCONDITIONCLASSTYPE 17218 /* ObjectType */
 #define UA_NS0ID_HIGHLYMANAGEDALARMCONDITIONCLASSTYPE 17219 /* ObjectType */
 #define UA_NS0ID_TRAININGCONDITIONCLASSTYPE 17220 /* ObjectType */
-#define UA_NS0ID_TESTINGCONDITIONCLASSTYPE 17221 /* ObjectType */
+#define UA_NS0ID_TESTINGCONDITIONSUBCLASSTYPE 17221 /* ObjectType */
 #define UA_NS0ID_AUDITCONDITIONCOMMENTEVENTTYPE_CONDITIONEVENTID 17222 /* Variable */
 #define UA_NS0ID_AUDITCONDITIONACKNOWLEDGEEVENTTYPE_CONDITIONEVENTID 17223 /* Variable */
 #define UA_NS0ID_AUDITCONDITIONCONFIRMEVENTTYPE_CONDITIONEVENTID 17224 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE 17225 /* ObjectType */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_EVENTID 17226 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_EVENTTYPE 17227 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_SOURCENODE 17228 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_SOURCENAME 17229 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_TIME 17230 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_RECEIVETIME 17231 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_LOCALTIME 17232 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_MESSAGE 17233 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_SEVERITY 17234 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_ACTIONTIMESTAMP 17235 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_STATUS 17236 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_SERVERID 17237 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_CLIENTAUDITENTRYID 17238 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_CLIENTUSERID 17239 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_METHODID 17240 /* Variable */
-#define UA_NS0ID_AUDITCONDITIONSUPPRESSEVENTTYPE_INPUTARGUMENTS 17241 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE 17225 /* ObjectType */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_EVENTID 17226 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_EVENTTYPE 17227 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_SOURCENODE 17228 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_SOURCENAME 17229 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_TIME 17230 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_RECEIVETIME 17231 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_LOCALTIME 17232 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_MESSAGE 17233 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_SEVERITY 17234 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_ACTIONTIMESTAMP 17235 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_STATUS 17236 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_SERVERID 17237 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_CLIENTAUDITENTRYID 17238 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_CLIENTUSERID 17239 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_METHODID 17240 /* Variable */
+#define UA_NS0ID_AUDITCONDITIONSUPPRESSIONEVENTTYPE_INPUTARGUMENTS 17241 /* Variable */
 #define UA_NS0ID_AUDITCONDITIONSILENCEEVENTTYPE 17242 /* ObjectType */
 #define UA_NS0ID_AUDITCONDITIONSILENCEEVENTTYPE_EVENTID 17243 /* Variable */
 #define UA_NS0ID_AUDITCONDITIONSILENCEEVENTTYPE_EVENTTYPE 17244 /* Variable */
@@ -9807,9 +10282,117 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_DATASETREADERPROPERTIES 17492 /* Variable */
 #define UA_NS0ID_DATASETWRITERTYPE_DATASETWRITERPROPERTIES 17493 /* Variable */
 #define UA_NS0ID_DATASETREADERTYPE_DATASETREADERPROPERTIES 17494 /* Variable */
+#define UA_NS0ID_CREATECREDENTIALMETHODTYPE_OUTPUTARGUMENTS 17495 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE 17496 /* ObjectType */
+#define UA_NS0ID_ANALOGUNITTYPE 17497 /* VariableType */
+#define UA_NS0ID_ANALOGUNITTYPE_DEFINITION 17498 /* Variable */
+#define UA_NS0ID_ANALOGUNITTYPE_VALUEPRECISION 17499 /* Variable */
+#define UA_NS0ID_ANALOGUNITTYPE_INSTRUMENTRANGE 17500 /* Variable */
+#define UA_NS0ID_ANALOGUNITTYPE_EURANGE 17501 /* Variable */
+#define UA_NS0ID_ANALOGUNITTYPE_ENGINEERINGUNITS 17502 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBETYPE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_SELECTIONS 17503 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBETYPE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17504 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBETYPE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_RESTRICTTOLIST 17505 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_SELECTIONS 17506 /* Variable */
 #define UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDREADERGROUP_INPUTARGUMENTS 17507 /* Variable */
 #define UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDREADERGROUP_OUTPUTARGUMENTS 17508 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17509 /* Variable */
+#define UA_NS0ID_PUBLISHSUBSCRIBE_CONNECTIONNAME_PLACEHOLDER_ADDRESS_NETWORKINTERFACE_RESTRICTTOLIST 17510 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER 17511 /* Object */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_RESOURCEURI 17512 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_PROFILEURI 17513 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_ENDPOINTURLS 17514 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_SERVICESTATUS 17515 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY 17516 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY_INPUTARGUMENTS 17517 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY_OUTPUTARGUMENTS 17518 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_UPDATECREDENTIAL 17519 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_UPDATECREDENTIAL_INPUTARGUMENTS 17520 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_SERVICENAME_PLACEHOLDER_DELETECREDENTIAL 17521 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_CREATECREDENTIAL 17522 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_CREATECREDENTIAL_INPUTARGUMENTS 17523 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONFOLDERTYPE_CREATECREDENTIAL_OUTPUTARGUMENTS 17524 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY 17525 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY_INPUTARGUMENTS 17526 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_SERVICENAME_PLACEHOLDER_GETENCRYPTINGKEY_OUTPUTARGUMENTS 17527 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_CREATECREDENTIAL 17528 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_CREATECREDENTIAL_INPUTARGUMENTS 17529 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATION_CREATECREDENTIAL_OUTPUTARGUMENTS 17530 /* Variable */
+#define UA_NS0ID_GETENCRYPTINGKEYMETHODTYPE 17531 /* Method */
+#define UA_NS0ID_GETENCRYPTINGKEYMETHODTYPE_INPUTARGUMENTS 17532 /* Variable */
+#define UA_NS0ID_GETENCRYPTINGKEYMETHODTYPE_OUTPUTARGUMENTS 17533 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONTYPE_GETENCRYPTINGKEY 17534 /* Method */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONTYPE_GETENCRYPTINGKEY_INPUTARGUMENTS 17535 /* Variable */
+#define UA_NS0ID_KEYCREDENTIALCONFIGURATIONTYPE_GETENCRYPTINGKEY_OUTPUTARGUMENTS 17536 /* Variable */
+#define UA_NS0ID_ADDITIONALPARAMETERSTYPE_ENCODING_DEFAULTBINARY 17537 /* Object */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_ADDITIONALPARAMETERSTYPE 17538 /* Variable */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_ADDITIONALPARAMETERSTYPE_DATATYPEVERSION 17539 /* Variable */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_ADDITIONALPARAMETERSTYPE_DICTIONARYFRAGMENT 17540 /* Variable */
+#define UA_NS0ID_ADDITIONALPARAMETERSTYPE_ENCODING_DEFAULTXML 17541 /* Object */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_ADDITIONALPARAMETERSTYPE 17542 /* Variable */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_ADDITIONALPARAMETERSTYPE_DATATYPEVERSION 17543 /* Variable */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_ADDITIONALPARAMETERSTYPE_DICTIONARYFRAGMENT 17544 /* Variable */
+#define UA_NS0ID_RSAENCRYPTEDSECRET 17545 /* DataType */
+#define UA_NS0ID_ECCENCRYPTEDSECRET 17546 /* DataType */
+#define UA_NS0ID_ADDITIONALPARAMETERSTYPE_ENCODING_DEFAULTJSON 17547 /* Object */
+#define UA_NS0ID_EPHEMERALKEYTYPE 17548 /* DataType */
+#define UA_NS0ID_EPHEMERALKEYTYPE_ENCODING_DEFAULTBINARY 17549 /* Object */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_EPHEMERALKEYTYPE 17550 /* Variable */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_EPHEMERALKEYTYPE_DATATYPEVERSION 17551 /* Variable */
+#define UA_NS0ID_OPCUA_BINARYSCHEMA_EPHEMERALKEYTYPE_DICTIONARYFRAGMENT 17552 /* Variable */
+#define UA_NS0ID_EPHEMERALKEYTYPE_ENCODING_DEFAULTXML 17553 /* Object */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_EPHEMERALKEYTYPE 17554 /* Variable */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_EPHEMERALKEYTYPE_DATATYPEVERSION 17555 /* Variable */
+#define UA_NS0ID_OPCUA_XMLSCHEMA_EPHEMERALKEYTYPE_DICTIONARYFRAGMENT 17556 /* Variable */
+#define UA_NS0ID_EPHEMERALKEYTYPE_ENCODING_DEFAULTJSON 17557 /* Object */
+#define UA_NS0ID_PUBSUBCONNECTIONTYPE_WRITERGROUPNAME_PLACEHOLDER_HEADERLAYOUTURI 17558 /* Variable */
+#define UA_NS0ID_WRITERGROUPTYPE_HEADERLAYOUTURI 17559 /* Variable */
+#define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_KEYFRAMECOUNT 17560 /* Variable */
 #define UA_NS0ID_PUBSUBCONNECTIONTYPEADDWRITERGROUPMETHODTYPE 17561 /* Method */
+#define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_HEADERLAYOUTURI 17562 /* Variable */
+#define UA_NS0ID_DATASETREADERTYPE_KEYFRAMECOUNT 17563 /* Variable */
+#define UA_NS0ID_DATASETREADERTYPE_HEADERLAYOUTURI 17564 /* Variable */
+#define UA_NS0ID_BASEANALOGTYPE_DEFINITION 17565 /* Variable */
+#define UA_NS0ID_BASEANALOGTYPE_VALUEPRECISION 17566 /* Variable */
+#define UA_NS0ID_BASEANALOGTYPE_INSTRUMENTRANGE 17567 /* Variable */
+#define UA_NS0ID_BASEANALOGTYPE_EURANGE 17568 /* Variable */
+#define UA_NS0ID_BASEANALOGTYPE_ENGINEERINGUNITS 17569 /* Variable */
+#define UA_NS0ID_ANALOGUNITRANGETYPE 17570 /* VariableType */
+#define UA_NS0ID_ANALOGUNITRANGETYPE_DEFINITION 17571 /* Variable */
+#define UA_NS0ID_ANALOGUNITRANGETYPE_VALUEPRECISION 17572 /* Variable */
+#define UA_NS0ID_ANALOGUNITRANGETYPE_INSTRUMENTRANGE 17573 /* Variable */
+#define UA_NS0ID_ANALOGUNITRANGETYPE_EURANGE 17574 /* Variable */
+#define UA_NS0ID_ANALOGUNITRANGETYPE_ENGINEERINGUNITS 17575 /* Variable */
+#define UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDRESS_NETWORKINTERFACE_SELECTIONS 17576 /* Variable */
+#define UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDRESS_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17577 /* Variable */
+#define UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDRESS_NETWORKINTERFACE_RESTRICTTOLIST 17578 /* Variable */
+#define UA_NS0ID_DATAGRAMCONNECTIONTRANSPORTTYPE_DISCOVERYADDRESS_NETWORKINTERFACE_SELECTIONS 17579 /* Variable */
+#define UA_NS0ID_DATAGRAMCONNECTIONTRANSPORTTYPE_DISCOVERYADDRESS_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17580 /* Variable */
+#define UA_NS0ID_DATAGRAMCONNECTIONTRANSPORTTYPE_DISCOVERYADDRESS_NETWORKINTERFACE_RESTRICTTOLIST 17581 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSTYPE_NETWORKINTERFACE_SELECTIONS 17582 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSTYPE_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17583 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSTYPE_NETWORKINTERFACE_RESTRICTTOLIST 17584 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSURLTYPE_NETWORKINTERFACE_SELECTIONS 17585 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSURLTYPE_NETWORKINTERFACE_SELECTIONDESCRIPTIONS 17586 /* Variable */
+#define UA_NS0ID_NETWORKADDRESSURLTYPE_NETWORKINTERFACE_RESTRICTTOLIST 17587 /* Variable */
+#define UA_NS0ID_INDEX 17588 /* DataType */
+#define UA_NS0ID_DICTIONARYENTRYTYPE 17589 /* ObjectType */
+#define UA_NS0ID_DICTIONARYENTRYTYPE_DICTIONARYENTRYNAME_PLACEHOLDER 17590 /* Object */
+#define UA_NS0ID_DICTIONARYFOLDERTYPE 17591 /* ObjectType */
+#define UA_NS0ID_DICTIONARYFOLDERTYPE_DICTIONARYFOLDERNAME_PLACEHOLDER 17592 /* Object */
+#define UA_NS0ID_DICTIONARYFOLDERTYPE_DICTIONARYENTRYNAME_PLACEHOLDER 17593 /* Object */
+#define UA_NS0ID_DICTIONARIES 17594 /* Object */
+#define UA_NS0ID_DICTIONARIES_DICTIONARYFOLDERNAME_PLACEHOLDER 17595 /* Object */
+#define UA_NS0ID_DICTIONARIES_DICTIONARYENTRYNAME_PLACEHOLDER 17596 /* Object */
+#define UA_NS0ID_HASDICTIONARYENTRY 17597 /* ReferenceType */
+#define UA_NS0ID_IRDIDICTIONARYENTRYTYPE 17598 /* ObjectType */
+#define UA_NS0ID_IRDIDICTIONARYENTRYTYPE_DICTIONARYENTRYNAME_PLACEHOLDER 17599 /* Object */
+#define UA_NS0ID_URIDICTIONARYENTRYTYPE 17600 /* ObjectType */
+#define UA_NS0ID_URIDICTIONARYENTRYTYPE_DICTIONARYENTRYNAME_PLACEHOLDER 17601 /* Object */
+#define UA_NS0ID_BASEINTERFACETYPE 17602 /* ObjectType */
+#define UA_NS0ID_HASINTERFACE 17603 /* ReferenceType */
+#define UA_NS0ID_HASADDIN 17604 /* ReferenceType */
+#define UA_NS0ID_DEFAULTINSTANCEBROWSENAME 17605 /* Variable */
 #define UA_NS0ID_GENERICATTRIBUTEVALUE 17606 /* DataType */
 #define UA_NS0ID_GENERICATTRIBUTES 17607 /* DataType */
 #define UA_NS0ID_GENERICATTRIBUTEVALUE_ENCODING_DEFAULTXML 17608 /* Object */
@@ -11880,8 +12463,6 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_DIAGNOSTICS_LIVEVALUES_TIMETONEXTTOKENID 21004 /* Variable */
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_DIAGNOSTICS_LIVEVALUES_TIMETONEXTTOKENID_DIAGNOSTICSLEVEL 21005 /* Variable */
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_SUBSCRIBEDDATASET 21006 /* Object */
-#define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_SUBSCRIBEDDATASET_DATASETMETADATA 21007 /* Variable */
-#define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_SUBSCRIBEDDATASET_MESSAGERECEIVETIMEOUT 21008 /* Variable */
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_CREATETARGETVARIABLES 21009 /* Method */
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_CREATETARGETVARIABLES_INPUTARGUMENTS 21010 /* Variable */
 #define UA_NS0ID_READERGROUPTYPE_DATASETREADERNAME_PLACEHOLDER_CREATETARGETVARIABLES_OUTPUTARGUMENTS 21011 /* Variable */
@@ -11991,7 +12572,6 @@ UA_atomic_subSize(volatile size_t *addr, size_t decrease) {
 #define UA_NS0ID_UADPDATASETWRITERMESSAGETYPE_DATASETOFFSET 21115 /* Variable */
 #define UA_NS0ID_UADPDATASETREADERMESSAGETYPE 21116 /* ObjectType */
 #define UA_NS0ID_UADPDATASETREADERMESSAGETYPE_GROUPVERSION 21117 /* Variable */
-#define UA_NS0ID_UADPDATASETREADERMESSAGETYPE_DATASETORDERING 21118 /* Variable */
 #define UA_NS0ID_UADPDATASETREADERMESSAGETYPE_NETWORKMESSAGENUMBER 21119 /* Variable */
 #define UA_NS0ID_UADPDATASETREADERMESSAGETYPE_DATASETCLASSID 21120 /* Variable */
 #define UA_NS0ID_UADPDATASETREADERMESSAGETYPE_NETWORKMESSAGECONTENTMASK 21121 /* Variable */
@@ -13197,7 +13777,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-08 09:51:39 */
+ * on host PPIC09 by user User at 2019-04-24 10:50:38 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -15598,7 +16178,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-08 09:51:39 */
+ * on host PPIC09 by user User at 2019-04-24 10:50:38 */
 
 
 
@@ -21479,10 +22059,13 @@ UA_parseEndpointUrlEthernet(const UA_String *endpointUrl, UA_String *target,
 /* Convert given byte string to a positive number. Returns the number of valid
  * digits. Stops if a non-digit char is found and returns the number of digits
  * up to that point. */
-size_t UA_readNumber(UA_Byte *buf, size_t buflen, UA_UInt32 *number);
+size_t UA_EXPORT
+UA_readNumber(UA_Byte *buf, size_t buflen, UA_UInt32 *number);
 
 /* Same as UA_ReadNumber but with a base parameter */
-size_t UA_readNumberWithBase(const UA_Byte *buf, size_t buflen, UA_UInt32 *number, UA_Byte base);
+size_t UA_EXPORT
+UA_readNumberWithBase(const UA_Byte *buf, size_t buflen,
+                      UA_UInt32 *number, UA_Byte base);
 
 #ifndef UA_MIN
 #define UA_MIN(A,B) (A > B ? B : A)
@@ -21506,45 +22089,37 @@ size_t UA_readNumberWithBase(const UA_Byte *buf, size_t buflen, UA_UInt32 *numbe
 /**
  * Helper functions for converting data types
  * ------------------------------------ */
-/*
- * Converts a bytestring to the corresponding base64 encoded string representation.
+
+/* Converts a bytestring to the corresponding base64 encoded string
+ * representation.
  *
  * @param byteString the original byte string
  * @param str the resulting base64 encoded byte string
  *
- * @return UA_STATUSCODE_GOOD on success.
- */
+ * Returns UA_STATUSCODE_GOOD on success. */
 UA_StatusCode UA_EXPORT
 UA_ByteString_toBase64String(const UA_ByteString *byteString, UA_String *str);
 
-/*
- * Converts a node id to the corresponding string representation.
+/* Converts a node id to the corresponding string representation.
  * It can be one of:
  * - Numeric: ns=0;i=123
  * - String: ns=0;s=Some String
  * - Guid: ns=0;g=A123456C-0ABC-1A2B-815F-687212AAEE1B
- * - ByteString: ns=0;b=AA==
- *
- */
+ * - ByteString: ns=0;b=AA== */
 UA_StatusCode UA_EXPORT
 UA_NodeId_toString(const UA_NodeId *nodeId, UA_String *nodeIdStr);
 
-/*
- * Compare memory in constant time to mitigate timing attacks.
- *
- * @return true if ptr1 and ptr2 are equal for length bytes.
- */
+/* Compare memory in constant time to mitigate timing attacks.
+ * Returns true if ptr1 and ptr2 are equal for length bytes. */
 static UA_INLINE UA_Boolean
 UA_constantTimeEqual(const void *ptr1, const void *ptr2, size_t length) {
     volatile const UA_Byte *a = (volatile const UA_Byte *)ptr1;
     volatile const UA_Byte *b = (volatile const UA_Byte *)ptr2;
     volatile UA_Byte c = 0;
-
     for(size_t i = 0; i < length; ++i) {
         UA_Byte x = a[i], y = b[i];
         c |= x ^ y;
     }
-
     return !c;
 }
 
@@ -21591,8 +22166,12 @@ struct UA_Client;
  * Server Lifecycle
  * ---------------- */
 
-UA_Server UA_EXPORT * UA_Server_new(const UA_ServerConfig *config);
+UA_Server UA_EXPORT * UA_Server_new(void);
+
 void UA_EXPORT UA_Server_delete(UA_Server *server);
+
+UA_ServerConfig UA_EXPORT *
+UA_Server_getConfig(UA_Server *server);
 
 /* Runs the main loop of the server. In each iteration, this calls into the
  * networklayers to see if messages have arrived.
@@ -22832,9 +23411,6 @@ UA_Server_updateCertificate(UA_Server *server,
 /* Add a new namespace to the server. Returns the index of the new namespace */
 UA_UInt16 UA_EXPORT UA_Server_addNamespace(UA_Server *server, const char* name);
 
-UA_ServerConfig*
-UA_Server_getConfig(UA_Server *server);
-
 /* Get namespace by name from the server. */
 UA_StatusCode UA_EXPORT
 UA_Server_getNamespaceByName(UA_Server *server, const UA_String namespaceUri,
@@ -23528,14 +24104,10 @@ typedef struct {
 } UA_SecurityPolicyEncryptionAlgorithm;
 
 typedef struct {
-    /*
-     * The algorithm used to sign and verify certificates.
-     */
+    /* The algorithm used to sign and verify certificates. */
     UA_SecurityPolicySignatureAlgorithm signatureAlgorithm;
 
-    /*
-     * The algorithm used to encrypt and decrypt messages.
-     */
+    /* The algorithm used to encrypt and decrypt messages. */
     UA_SecurityPolicyEncryptionAlgorithm encryptionAlgorithm;
 
 } UA_SecurityPolicyCryptoModule;
@@ -23710,8 +24282,8 @@ struct UA_SecurityPolicy {
 
     const UA_Logger *logger;
 
-    /*Updates the ApplicationInstanceCertificate and the corresponding
-     * private key at runtime. */
+    /* Updates the ApplicationInstanceCertificate and the corresponding private
+     * key at runtime. */
     UA_StatusCode (*updateCertificateAndPrivateKey)(UA_SecurityPolicy *policy,
                                                     const UA_ByteString newCertificate,
                                                     const UA_ByteString newPrivateKey);
@@ -23818,6 +24390,7 @@ _UA_BEGIN_DECLS
  *                 |    +-----------------+
  *                 +----> UA_DataSetField |  UA_PublishedDataSet_addDataSetField
  *                      +-----------------+
+ *
  * PubSub compile flags
  * --------------------
  *
@@ -23831,7 +24404,7 @@ _UA_BEGIN_DECLS
  *  Enable the information model representation of the PubSub configuration. For more details take a look at the following section `PubSub Information Model Representation`. Disabled by default.
  *
  * PubSub Information Model Representation
- * ----------------------------------------
+ * ---------------------------------------
  * .. _pubsub_informationmodel:
  *
  * The complete PubSub configuration is available inside the information model.
@@ -24658,7 +25231,8 @@ typedef struct {
 
 /**
  * Nodestore Plugin API
- * --------------------
+ * ====================
+ *
  * The following definitions are used for implementing custom node storage
  * backends. **Most users will want to use the default nodestore and don't need
  * to work with the nodestore API**.
@@ -24667,62 +25241,73 @@ typedef struct {
  * nodes. Please use the OPC UA services for that. Otherwise, all consistency
  * checks are omitted. This can crash the application eventually. */
 
-typedef void (*UA_NodestoreVisitor)(void *visitorContext, const UA_Node *node);
+/* For non-multithreaded access, some nodestores allow that nodes are edited
+ * without a copy/replace. This is not possible when the node is only an
+ * intermediate representation and stored e.g. in a database backend. */
+extern const UA_Boolean inPlaceEditAllowed;
 
-typedef struct {
-    /* Nodestore context and lifecycle */
-    void *context;
-    void (*deleteNodestore)(void *nodestoreContext);
-
-    /* For non-multithreaded access, some nodestores allow that nodes are edited
-     * without a copy/replace. This is not possible when the node is only an
-     * intermediate representation and stored e.g. in a database backend. */
-    UA_Boolean inPlaceEditAllowed;
-
-    /* The following definitions are used to create empty nodes of the different
-     * node types. The memory is managed by the nodestore. Therefore, the node
-     * has to be removed via a special deleteNode function. (If the new node is
-     * not added to the nodestore.) */
-    UA_Node * (*newNode)(void *nodestoreContext, UA_NodeClass nodeClass);
-
-    void (*deleteNode)(void *nodestoreContext, UA_Node *node);
-
-    /* ``Get`` returns a pointer to an immutable node. ``Release`` indicates
-     * that the pointer is no longer accessed afterwards. */
-
-    const UA_Node * (*getNode)(void *nodestoreContext, const UA_NodeId *nodeId);
-
-    void (*releaseNode)(void *nodestoreContext, const UA_Node *node);
-
-    /* Returns an editable copy of a node (needs to be deleted with the
-     * deleteNode function or inserted / replaced into the nodestore). */
-    UA_StatusCode (*getNodeCopy)(void *nodestoreContext, const UA_NodeId *nodeId,
-                                 UA_Node **outNode);
-
-    /* Inserts a new node into the nodestore. If the NodeId is zero, then a
-     * fresh numeric NodeId is assigned. If insertion fails, the node is
-     * deleted. */
-    UA_StatusCode (*insertNode)(void *nodestoreContext, UA_Node *node,
-                                UA_NodeId *addedNodeId);
-
-    /* To replace a node, get an editable copy of the node, edit and replace
-     * with this function. If the node was already replaced since the copy was
-     * made, UA_STATUSCODE_BADINTERNALERROR is returned. If the NodeId is not
-     * found, UA_STATUSCODE_BADNODEIDUNKNOWN is returned. In both error cases,
-     * the editable node is deleted. */
-    UA_StatusCode (*replaceNode)(void *nodestoreContext, UA_Node *node);
-
-    /* Removes a node from the nodestore. */
-    UA_StatusCode (*removeNode)(void *nodestoreContext, const UA_NodeId *nodeId);
-
-    /* Execute a callback for every node in the nodestore. */
-    void (*iterate)(void *nodestoreContext, void* visitorContext,
-                    UA_NodestoreVisitor visitor);
-} UA_Nodestore;
+/* Nodestore context and lifecycle */
+UA_StatusCode UA_Nodestore_new(void **nsCtx);
+void UA_Nodestore_delete(void *nsCtx);
 
 /**
- * The following methods specialize internally for the different node classes
- * (distinguished by the nodeClass member) */
+ * The following definitions are used to create empty nodes of the different
+ * node types. The memory is managed by the nodestore. Therefore, the node has
+ * to be removed via a special deleteNode function. (If the new node is not
+ * added to the nodestore.) */
+
+UA_Node *
+UA_Nodestore_newNode(void *nsCtx, UA_NodeClass nodeClass);
+
+void
+UA_Nodestore_deleteNode(void *nsCtx, UA_Node *node);
+
+/**
+ *``Get`` returns a pointer to an immutable node. ``Release`` indicates that the
+ * pointer is no longer accessed afterwards. */
+
+const UA_Node *
+UA_Nodestore_getNode(void *nsCtx, const UA_NodeId *nodeId);
+
+void
+UA_Nodestore_releaseNode(void *nsCtx, const UA_Node *node);
+
+/* Returns an editable copy of a node (needs to be deleted with the
+ * deleteNode function or inserted / replaced into the nodestore). */
+UA_StatusCode
+UA_Nodestore_getNodeCopy(void *nsCtx, const UA_NodeId *nodeId,
+                         UA_Node **outNode);
+
+/* Inserts a new node into the nodestore. If the NodeId is zero, then a fresh
+ * numeric NodeId is assigned. If insertion fails, the node is deleted. */
+UA_StatusCode
+UA_Nodestore_insertNode(void *nsCtx, UA_Node *node, UA_NodeId *addedNodeId);
+
+/* To replace a node, get an editable copy of the node, edit and replace with
+ * this function. If the node was already replaced since the copy was made,
+ * UA_STATUSCODE_BADINTERNALERROR is returned. If the NodeId is not found,
+ * UA_STATUSCODE_BADNODEIDUNKNOWN is returned. In both error cases, the editable
+ * node is deleted. */
+UA_StatusCode
+UA_Nodestore_replaceNode(void *nsCtx, UA_Node *node);
+
+/* Removes a node from the nodestore. */
+UA_StatusCode
+UA_Nodestore_removeNode(void *nsCtx, const UA_NodeId *nodeId);
+
+/* Execute a callback for every node in the nodestore. */
+typedef void (*UA_NodestoreVisitor)(void *visitorCtx, const UA_Node *node);
+void
+UA_Nodestore_iterate(void *nsCtx, UA_NodestoreVisitor visitor,
+                     void *visitorCtx);
+
+/**
+ * Node Handling
+ * =============
+ *
+ * To be used only in the nodestore and internally in the SDK. The following
+ * methods specialize internally for the different node classes, distinguished
+ * by the NodeClass attribute. */
 
 /* Attributes must be of a matching type (VariableAttributes, ObjectAttributes,
  * and so on). The attributes are copied. Note that the attributes structs do
@@ -24839,9 +25424,6 @@ struct UA_ServerConfig {
      *    with custom data types are provided in
      *    ``/examples/custom_datatype/``. */
 
-    /* Nodestore */
-    UA_Nodestore nodestore;
-
     /* Networking */
     size_t networkLayersSize;
     UA_ServerNetworkLayer *networkLayers;
@@ -24903,6 +25485,7 @@ struct UA_ServerConfig {
     UA_UInt32 maxReferencesPerNode;
 
     /* Limits for Subscriptions */
+    UA_UInt32 maxSubscriptions;
     UA_UInt32 maxSubscriptionsPerSession;
     UA_DurationRange publishingIntervalLimits; /* in ms (must not be less than 5) */
     UA_UInt32Range lifeTimeCountLimits;
@@ -24915,6 +25498,7 @@ struct UA_ServerConfig {
 #endif
 
     /* Limits for MonitoredItems */
+    UA_UInt32 maxMonitoredItems;
     UA_UInt32 maxMonitoredItemsPerSubscription;
     UA_DurationRange samplingIntervalLimits; /* in ms (must not be less than 5) */
     UA_UInt32Range queueSizeLimits; /* Negotiated with the client */
@@ -24976,6 +25560,14 @@ struct UA_ServerConfig {
     UA_Boolean deleteAtTimeDataCapability;
 #endif
 };
+
+void UA_EXPORT
+UA_ServerConfig_clean(UA_ServerConfig *config);
+
+/* Set a custom hostname in server configuration */
+UA_EXPORT void
+UA_ServerConfig_setCustomHostname(UA_ServerConfig *config,
+                                  const UA_String customHostname);
 
 _UA_END_DECLS
 
@@ -25857,8 +26449,8 @@ UA_Client_readUserExecutableAttribute(UA_Client *client, const UA_NodeId nodeId,
  * Historical Access
  * ^^^^^^^^^^^^^^^^^
  * The following functions can be used to read a single node historically.
- * Use the regular service to read several nodes at once.
- */
+ * Use the regular service to read several nodes at once. */
+
 #ifdef UA_ENABLE_HISTORIZING
 typedef UA_Boolean
 (*UA_HistoricalIteratorCallback)(UA_Client *client,
@@ -25913,12 +26505,14 @@ UA_Client_HistoryUpdate_deleteRaw(UA_Client *client,
                                   UA_DateTime endTimestamp);
 
 #endif // UA_ENABLE_HISTORIZING
+
 /**
  * Write Attributes
  * ^^^^^^^^^^^^^^^^
  *
  * The following functions can be use to write a single node attribute at a
  * time. Use the regular write service to write several attributes at once. */
+
 /* Don't call this function, use the typed versions */
 UA_StatusCode UA_EXPORT
 __UA_Client_writeAttribute(UA_Client *client, const UA_NodeId *nodeId,
@@ -26096,6 +26690,7 @@ UA_Client_writeUserExecutableAttribute(UA_Client *client, const UA_NodeId nodeId
 /**
  * Method Calling
  * ^^^^^^^^^^^^^^ */
+
 #ifdef UA_ENABLE_METHODCALLS
 UA_StatusCode UA_EXPORT
 UA_Client_call(UA_Client *client, const UA_NodeId objectId,
@@ -26107,6 +26702,7 @@ UA_Client_call(UA_Client *client, const UA_NodeId objectId,
  * Node Management
  * ^^^^^^^^^^^^^^^
  * See the section on :ref:`server-side node management <addnodes>`. */
+
 UA_StatusCode UA_EXPORT
 UA_Client_addReference(UA_Client *client, const UA_NodeId sourceNodeId,
                        const UA_NodeId referenceTypeId, UA_Boolean isForward,
@@ -26268,6 +26864,7 @@ UA_Client_addMethodNode(UA_Client *client, const UA_NodeId requestedNewNodeId,
 /**
  * Misc Highlevel Functionality
  * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
+
 /* Get the namespace-index of a namespace-URI
  *
  * @param client The UA_Client struct for this connection
@@ -26289,7 +26886,7 @@ typedef UA_StatusCode (*UA_NodeIteratorCallback)(UA_NodeId childId, UA_Boolean i
 
 UA_StatusCode UA_EXPORT
 UA_Client_forEachChildNodeCall(UA_Client *client, UA_NodeId parentNodeId,
-                               UA_NodeIteratorCallback callback, void *handle) ;
+                               UA_NodeIteratorCallback callback, void *handle);
 
 _UA_END_DECLS
 
@@ -27306,27 +27903,6 @@ UA_Log_Stdout_clear(void *logContext);
 _UA_END_DECLS
 
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/plugins/include/open62541/plugin/nodestore_default.h" ***********************************/
-
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Julian Grothoff
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- */
-
-
-
-_UA_BEGIN_DECLS
-
-/* Initializes the nodestore, sets the context and function pointers */
-UA_StatusCode UA_EXPORT
-UA_Nodestore_default_new(UA_Nodestore *ns);
-
-_UA_END_DECLS
-
-
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/plugins/include/open62541/server_config_default.h" ***********************************/
 
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
@@ -27345,7 +27921,8 @@ _UA_BEGIN_DECLS
 /* Default Connection */
 /**********************/
 
-extern const UA_EXPORT UA_ConnectionConfig UA_ConnectionConfig_default;
+extern const UA_EXPORT
+UA_ConnectionConfig UA_ConnectionConfig_default;
 
 /*************************/
 /* Default Server Config */
@@ -27365,74 +27942,45 @@ extern const UA_EXPORT UA_ConnectionConfig UA_ConnectionConfig_default;
  * @param recvBufferSize The size in bytes for the network receive buffer
  *
  */
-UA_EXPORT UA_ServerConfig *
-UA_ServerConfig_new_customBuffer(UA_UInt16 portNumber, const UA_ByteString *certificate,
-                                 UA_UInt32 sendBufferSize, UA_UInt32 recvBufferSize);
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_setMinimalCustomBuffer(UA_ServerConfig *config,
+                                       UA_UInt16 portNumber,
+                                       const UA_ByteString *certificate,
+                                       UA_UInt32 sendBufferSize,
+                                       UA_UInt32 recvBufferSize);
 
 /* Creates a new server config with one endpoint.
  *
  * The config will set the tcp network layer to the given port and adds a single
  * endpoint with the security policy ``SecurityPolicy#None`` to the server. A
- * server certificate may be supplied but is optional.
- *
- * @param portNumber The port number for the tcp network layer
- * @param certificate Optional certificate for the server endpoint. Can be
- *        ``NULL``. */
-static UA_INLINE UA_ServerConfig *
-UA_ServerConfig_new_minimal(UA_UInt16 portNumber, const UA_ByteString *certificate) {
-    return UA_ServerConfig_new_customBuffer(portNumber, certificate, 0 ,0);
+ * server certificate may be supplied but is optional. */
+static UA_INLINE UA_StatusCode
+UA_ServerConfig_setMinimal(UA_ServerConfig *config, UA_UInt16 portNumber,
+                           const UA_ByteString *certificate) {
+    return UA_ServerConfig_setMinimalCustomBuffer(config, portNumber,
+                                                  certificate, 0, 0);
 }
 
 #ifdef UA_ENABLE_ENCRYPTION
 
-UA_EXPORT UA_ServerConfig *
-UA_ServerConfig_new_basic128rsa15(UA_UInt16 portNumber,
-                                  const UA_ByteString *certificate,
-                                  const UA_ByteString *privateKey,
-                                  const UA_ByteString *trustList,
-                                  size_t trustListSize,
-                                  const UA_ByteString *revocationList,
-                                  size_t revocationListSize);
-
-UA_EXPORT UA_ServerConfig *
-UA_ServerConfig_new_basic256sha256(UA_UInt16 portNumber,
-                                   const UA_ByteString *certificate,
-                                   const UA_ByteString *privateKey,
-                                   const UA_ByteString *trustList,
-                                   size_t trustListSize,
-                                   const UA_ByteString *revocationList,
-                                   size_t revocationListSize);
-
-UA_EXPORT UA_ServerConfig *
-UA_ServerConfig_new_allSecurityPolicies(UA_UInt16 portNumber,
-                                        const UA_ByteString *certificate,
-                                        const UA_ByteString *privateKey,
-                                        const UA_ByteString *trustList,
-                                        size_t trustListSize,
-                                        const UA_ByteString *revocationList,
-                                        size_t revocationListSize);
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_setDefaultWithSecurityPolicies(UA_ServerConfig *conf,
+                                               UA_UInt16 portNumber,
+                                               const UA_ByteString *certificate,
+                                               const UA_ByteString *privateKey,
+                                               const UA_ByteString *trustList,
+                                               size_t trustListSize,
+                                               const UA_ByteString *revocationList,
+                                               size_t revocationListSize);
 
 #endif
 
 /* Creates a server config on the default port 4840 with no server
  * certificate. */
-static UA_INLINE UA_ServerConfig *
-UA_ServerConfig_new_default(void) {
-    return UA_ServerConfig_new_minimal(4840, NULL);
+static UA_INLINE UA_StatusCode
+UA_ServerConfig_setDefault(UA_ServerConfig *config) {
+    return UA_ServerConfig_setMinimal(config, 4840, NULL);
 }
-
-/* Set a custom hostname in server configuration
- *
- * @param config A valid server configuration
- * @param customHostname The custom hostname used by the server */
-
-UA_EXPORT void
-UA_ServerConfig_set_customHostname(UA_ServerConfig *config,
-                                   const UA_String customHostname);
-
-/* Frees allocated memory in the server config */
-UA_EXPORT void
-UA_ServerConfig_delete(UA_ServerConfig *config);
 
 _UA_END_DECLS
 
@@ -27574,7 +28122,7 @@ _UA_END_DECLS
 #endif
 
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/ua_network_tcp.h" ***********************************/
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/include/open62541/network_tcp.h" ***********************************/
 
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
  * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. 
@@ -27603,7 +28151,7 @@ UA_ClientConnectionTCP_init(UA_ConnectionConfig config, const UA_String endpoint
 _UA_END_DECLS
 
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/ua_architecture_functions.h" ***********************************/
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/include/open62541/architecture_functions.h" ***********************************/
 
 /* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
  * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.

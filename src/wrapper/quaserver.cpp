@@ -639,11 +639,10 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 {
 	// convert cert if valid
 	UA_ByteString cert;
-	UA_ByteString * ptr = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
+	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
 	// create config with port and certificate
-	UA_ServerConfig * config = UA_ServerConfig_new_minimal(intPort, ptr);
-	Q_CHECK_PTR(config);
-	this->m_server = UA_Server_new(config);
+	this->m_server = UA_Server_new();
+	UA_ServerConfig_setMinimal(UA_Server_getConfig(this->m_server), intPort, ptrCert);
 	// setup server
 	this->setupServer();
 }
@@ -654,7 +653,7 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	                 QObject          * parent         /* = 0*/)
 	: QObject(parent)
 {
-	UA_ServerConfig * config;
+	this->m_server = UA_Server_new();
 	// convert cert if valid (should contain public key)
 	UA_ByteString cert;
 	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
@@ -665,15 +664,22 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	if (ptrPriv)
 	{
 		// create config with port, certificate and private key for encryption
-		config = UA_ServerConfig_new_basic256sha256(intPort, ptrCert, ptrPriv, nullptr, 0, nullptr, 0);
+		UA_ServerConfig_setDefaultWithSecurityPolicies(
+			UA_Server_getConfig(this->m_server), 
+			intPort, 
+			ptrCert, 
+			ptrPriv, 
+			nullptr, 
+			0, 
+			nullptr, 
+			0
+		);
 	}
 	else
 	{
 		// create config with port and certificate only (no encryption)
-		config = UA_ServerConfig_new_minimal(intPort, ptrCert);
-	}
-	Q_CHECK_PTR(config);
-	this->m_server = UA_Server_new(config);
+		UA_ServerConfig_setMinimal(UA_Server_getConfig(this->m_server), intPort, ptrCert);
+	}	
 	// setup server
 	this->setupServer();
 }
@@ -797,8 +803,6 @@ void QUaServer::setupServer()
 QUaServer::~QUaServer()
 {
 	// Cleanup library objects
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	UA_ServerConfig_delete(config);
 	UA_Server_delete(this->m_server);
 }
 
@@ -1096,6 +1100,8 @@ void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNo
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+	// clean up
+	UA_QualifiedName_clear(&browseName);
 	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	// register constructor/destructor
@@ -1350,6 +1356,8 @@ void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 		}
+		// clean up
+		UA_QualifiedName_clear(&browseName);
 		// make mandatory
 		auto st = UA_Server_addReference(m_server,
 		                                 tempNodeId,
@@ -1620,6 +1628,8 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+	// clean up
+	UA_QualifiedName_clear(&browseName);
 	// return new instance node id
 	return nodeIdNewInstance;
 }
@@ -1696,6 +1706,8 @@ void QUaServer::registerReference(const QUaReference & ref)
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// clean up
+	UA_QualifiedName_clear(&browseName);
 	// add to hash to complete registration
 	m_hashRefs.insert(ref, outNewNodeId);
 }

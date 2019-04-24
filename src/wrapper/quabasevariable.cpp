@@ -148,10 +148,10 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	auto st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
 		tmpVar);
-	// cleanup
-	UA_Variant_deleteMembers(&tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// clean up
+	UA_Variant_clear(&tmpVar);
 	// set new dataType if necessary
 	if (newType != oldType &&
 		!newValue.canConvert(oldType))
@@ -247,9 +247,8 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-
-	// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
-
+	// clean up
+	UA_Variant_clear(&tmpVar);
 	// set new type
 	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
@@ -307,9 +306,8 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-
-	// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
-
+	// clean up
+	UA_Variant_clear(&tmpVar);
 	// change data type
 	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
 	st = UA_Server_writeDataType(m_qUaServer->m_server,

@@ -282,7 +282,9 @@ QString QUaNode::browseName() const
 	Q_UNUSED(st);
 	// populate return value
 	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	return QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	UA_QualifiedName_clear(&outBrowseName);
+	return strBrowseName;
 }
 
 void QUaNode::setBrowseName(const QString & browseName)
@@ -297,6 +299,7 @@ void QUaNode::setBrowseName(const QString & browseName)
 	auto st = UA_Server_writeBrowseName(m_qUaServer->m_server, m_nodeId, bName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	UA_QualifiedName_clear(&bName);
 	// also update QObject name
 	this->setObjectName(browseName);
 	// emit browseName changed
@@ -474,6 +477,7 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 				retRefSet.insert(nodeId);
 			}
 		}
+		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(m_qUaServer->m_server, true, &bRes.continuationPoint);
 	}
 	// cleanup
@@ -577,6 +581,7 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 			UA_NodeId nodeId = rDesc.nodeId.nodeId;
 			listParents.append(nodeId);
 		}
+		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
 	}
 	// cleanup
@@ -627,6 +632,7 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 			}
 			retListChildren.append(nodeId);
 		}
+		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
 	}
 	// cleanup
@@ -676,7 +682,9 @@ QString QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	return QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	UA_QualifiedName_clear(&outBrowseName);
+	return strBrowseName;
 }
 
 int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)
