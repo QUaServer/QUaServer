@@ -367,7 +367,7 @@ inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/) con
 }
 
 template<typename T>
-inline T* browsePath(const QStringList &strBrowsePath)
+inline T* QUaNode::browsePath(const QStringList &strBrowsePath)
 {
 	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }
