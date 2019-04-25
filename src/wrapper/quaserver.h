@@ -92,6 +92,14 @@ public:
 	// get node reference by node id (nullptr if node id does not exist)
 	QUaNode * nodeById(const QString &strNodeId);
 
+	// Browse API
+	// (* actually browses using QObject tree)
+
+	template<typename T>
+	T* browsePath(const QStringList &strBrowsePath);
+	// specialization
+	QUaNode * browsePath(const QStringList &strBrowsePath);
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
 
@@ -341,6 +349,12 @@ template<typename T>
 inline T * QUaServer::nodeById(const QString &strNodeId)
 {
 	return dynamic_cast<T*>(this->nodeById(strNodeId));
+}
+
+template<typename T>
+inline T * QUaServer::browsePath(const QStringList & strBrowsePath)
+{
+	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }
 
 template<typename T>

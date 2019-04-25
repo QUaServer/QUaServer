@@ -226,6 +226,7 @@ public:
 	// Browse API
 	// (* actually browses using QObject tree)
 
+	// if strBrowseName empty, get all children
 	template<typename T>
 	QList<T*> browseChildren(const QString &strBrowseName = QString()) const;
 	// specialization
@@ -237,12 +238,15 @@ public:
 	// specialization
 	QUaNode* browseChild(const QString &strBrowseName = QString()) const;
 
+	bool hasChild(const QString &strBrowseName);
+
 	template<typename T>
 	T* browsePath(const QStringList &strBrowsePath);
 	// specialization
 	QUaNode * browsePath(const QStringList &strBrowsePath);
 
-	bool hasChild(const QString &strBrowseName);
+	// get node's browse path starting from ObjectsFolder
+	QStringList nodeBrowsePath() const;
 
 	// Reference API
 

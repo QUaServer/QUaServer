@@ -53,6 +53,11 @@ int main(int argc, char *argv[])
 	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var") == var);
 	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar") == subvar);
 	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar" << "prop") == prop);
+	// browse from server by passing the (absolute) browse of the node (starting at ObjectsFolder)
+	Q_ASSERT(server.browsePath(subobj->nodeBrowsePath()) == subobj);
+	Q_ASSERT(server.browsePath(var   ->nodeBrowsePath()) == var   );
+	Q_ASSERT(server.browsePath(subvar->nodeBrowsePath()) == subvar);
+	Q_ASSERT(server.browsePath(prop  ->nodeBrowsePath()) == prop  );
 
 	// temperature sensor model
 

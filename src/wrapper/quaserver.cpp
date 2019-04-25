@@ -1723,6 +1723,28 @@ QUaNode * QUaServer::nodeById(const QString & strNodeId)
 	return QUaNode::getNodeContext(nodeId, m_server);
 }
 
+QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath)
+{
+	QString strFirst = strBrowsePath.first();
+	// check if first is ObjectsFolder
+	if (strFirst.compare(this->objectsFolder()->browseName(), Qt::CaseSensitive) == 0)
+	{
+		return this->objectsFolder()->browsePath(strBrowsePath.mid(1));
+	}
+	// then check if first is a child of ObjectsFolder
+	auto listChildren = this->objectsFolder()->browseChildren();
+	for (int i = 0; i < listChildren.count(); i++)
+	{
+		auto child = listChildren.at(i);
+		if (strFirst.compare(child->browseName(), Qt::CaseSensitive) == 0)
+		{
+			return child->browsePath(strBrowsePath.mid(1));
+		}
+	}
+	// if not, then not supported
+	return nullptr;
+}
+
 bool QUaServer::anonymousLoginAllowed() const
 {
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);

@@ -341,6 +341,11 @@ QUaNode* QUaNode::browseChild(const QString & strBrowseName) const
 	return children.first();
 }
 
+bool QUaNode::hasChild(const QString & strBrowseName)
+{
+	return !this->browseChildren(strBrowseName).isEmpty();
+}
+
 QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath)
 {
 	QUaNode * currNode = this;
@@ -355,9 +360,17 @@ QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath)
 	return currNode;
 }
 
-bool QUaNode::hasChild(const QString & strBrowseName)
+QStringList QUaNode::nodeBrowsePath() const
 {
-	return !this->browseChildren(strBrowseName).isEmpty();
+	// get parents browse path and then attach current browse name
+	// stop recursion if current node is ObjectsFolder
+	if (this == m_qUaServer->objectsFolder())
+	{
+		return QStringList() << this->browseName();
+	}
+	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	Q_CHECK_PTR(parent);
+	return parent->nodeBrowsePath() << this->browseName();
 }
 
 void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
