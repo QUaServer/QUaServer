@@ -159,9 +159,11 @@ union QUaAccessLevel
 
 class QUaNode : public QObject
 {
-    Q_OBJECT
+	friend class QUaServer;
+	friend class QUaBaseObject;
+	friend class QUaBaseVariable;
 
-friend class QUaServer;
+    Q_OBJECT
 
 	// Node Attributes
 
@@ -200,6 +202,8 @@ public:
 	virtual ~QUaNode();
 
 	bool operator ==(const QUaNode &other) const;
+
+	QUaServer * server() const;
 
 	// Attributes API
 
@@ -294,7 +298,21 @@ public:
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
 
-	// TODO : protected, private?
+signals:
+
+	void displayNameChanged(const QString &displayName);
+	void descriptionChanged(const QString &description);
+	void writeMaskChanged  (const quint32 &writeMask  );
+	void browseNameChanged (const QString &browseName );
+	
+	void childAdded(QUaNode * childNode);
+
+private:
+
+	// to be able to reuse methods in subclasses
+	QUaServer * m_qUaServer;
+	// INSTANCE NodeId
+	UA_NodeId m_nodeId;
 
 	// Static Helpers
 
@@ -312,22 +330,6 @@ public:
 	static QString getBrowseName (const UA_NodeId &nodeId, UA_Server *server);
 
 	static int getPropsOffsetHelper(const QMetaObject &metaObject);
-
-	// to be able to reuse methods in subclasses
-	QUaServer * m_qUaServer;
-	// INSTANCE NodeId
-	UA_NodeId m_nodeId;
-
-signals:
-
-	void displayNameChanged(const QString &displayName);
-	void descriptionChanged(const QString &description);
-	void writeMaskChanged  (const quint32 &writeMask  );
-	void browseNameChanged (const QString &browseName );
-	
-	void childAdded(QUaNode * childNode);
-
-private:
 
 	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
 	// NOTE : need internal because user might reimplement public

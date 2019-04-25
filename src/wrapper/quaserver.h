@@ -78,6 +78,7 @@ public:
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QString &strNodeId = "");
+	void registerEnum(const QString &strEnumName, const QMap<int, QByteArray> &mapEnum, const QString &strNodeId = "");
 	// register reference to get a respective refTypeId
 	void registerReference(const QUaReference &ref);
 
@@ -356,6 +357,8 @@ inline T * QUaServer::browsePath(const QStringList & strBrowsePath)
 {
 	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }
+
+// -------- OTHER TYPES --------------------------------------------------
 
 template<typename T>
 inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)

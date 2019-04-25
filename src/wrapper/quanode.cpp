@@ -146,6 +146,11 @@ bool QUaNode::operator==(const QUaNode & other) const
 	return UA_NodeId_equal(&this->m_nodeId, &other.m_nodeId);
 }
 
+QUaServer * QUaNode::server() const
+{
+	return m_qUaServer;
+}
+
 QString QUaNode::displayName() const
 {
 	Q_CHECK_PTR(m_qUaServer);

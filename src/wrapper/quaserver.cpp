@@ -1120,73 +1120,15 @@ void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNo
 void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeId/* = ""*/)
 {
 	// compose enum name
-	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
-	// check if already exists
-	if (m_hashEnums.contains(strEnumName))
-	{
-		return;
-	}
-	// get c-compatible name
-	QByteArray byteEnumName = strEnumName.toUtf8();
-	char * charEnumName     = byteEnumName.data();
-	// register enum as new ua data type
-	UA_DataTypeAttributes ddaatt = UA_DataTypeAttributes_default;
-	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
-	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
-
-	// check if requested node id defined
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	// check if requested node id exists
-	UA_NodeId outNodeId;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
-	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerEnum", "Requested NodeId already exists");
-	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
-	{
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		return;
-	}
-	// if null, then assign one because is feaking necessary
-	// https://github.com/open62541/open62541/issues/2584
-	if (UA_NodeId_isNull(&reqNodeId))
-	{
-		// [IMPORTANT] : _ALLOC version is necessary
-		reqNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName); 
-	}	
-	st = UA_Server_addDataTypeNode(m_server,
-								   reqNodeId,
-   								   UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
-   								   UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-   								   UA_QUALIFIEDNAME (1, charEnumName),
-   								   ddaatt,
-   								   NULL,
-                                   NULL);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// add new enum strings (enum options)
-	UA_VariableAttributes pattr = UA_VariableAttributes_default;
-	pattr.description = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
-	pattr.displayName = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
-	pattr.dataType    = UA_TYPES[UA_TYPES_LOCALIZEDTEXT].typeId;
-	UA_UInt32 arrayDimensions[1] = { 0 };
-	pattr.valueRank              = 1; 
-	pattr.arrayDimensionsSize    = 1;
-	pattr.arrayDimensions        = arrayDimensions;
-	// create vector of enum values
-	QVector<QByteArray> byteKeys;
-	QVector<QOpcUaEnumValue> vectEnumValues;
+	QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	// compose values
+	QMap<int, QByteArray> mapEnum;
 	for (int i = 0; i < metaEnum.keyCount(); i++)
 	{
-		byteKeys.append(metaEnum.key(i));
-		vectEnumValues.append({
-			(UA_Int64)metaEnum.value(i),
-			UA_LOCALIZEDTEXT((char*)"", byteKeys[i].data()),
-			UA_LOCALIZEDTEXT((char*)"", (char*)"")
-		});
+		mapEnum.insert(metaEnum.value(i), metaEnum.key(i));			
 	}
-	st = QUaServer::addEnumValues(m_server, &reqNodeId, vectEnumValues.count(), vectEnumValues.data());
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// finally append to map
-	m_hashEnums.insert(strEnumName, reqNodeId);
+	// call other method
+	this->registerEnum(strBrowseName, mapEnum, strNodeId);
 }
 
 void QUaServer::registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject)
@@ -1579,14 +1521,20 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	browseName.name           = QUaTypesConverter::uaStringFromQString(metaObject.className());
 	// check if requested node id defined
 	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	UA_NodeId reqNodeId = UA_NODEID_NULL;
+	if (!strReqNodeId.isEmpty())
+	{
+		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	}
 	// check if requested node id exists
 	UA_NodeId outNodeId;
 	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
 	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::createInstance", "Requested NodeId already exists");
 	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
 	{
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		UA_NodeId_clear(&reqNodeId);
+		UA_NodeId_clear(&outNodeId);
+		UA_QualifiedName_clear(&browseName);
 		return UA_NODEID_NULL;
 	}
 	// check if variable or object
@@ -1629,6 +1577,8 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		Q_UNUSED(st);
 	}
 	// clean up
+	UA_NodeId_clear(&reqNodeId);
+	UA_NodeId_clear(&outNodeId);
 	UA_QualifiedName_clear(&browseName);
 	// return new instance node id
 	return nodeIdNewInstance;
@@ -1674,6 +1624,76 @@ void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & no
 	UA_Server_setNodeContext(m_server, nodeId, (void**)(&nodeInstance));
 	// set node id to c++ instance
 	nodeInstance->m_nodeId = nodeId;
+}
+
+void QUaServer::registerEnum(const QString & strEnumName, const QMap<int, QByteArray>& mapEnum, const QString & strNodeId)
+{
+	// check if already exists
+	if (m_hashEnums.contains(strEnumName))
+	{
+		return;
+	}
+	// get c-compatible name
+	QByteArray byteEnumName = strEnumName.toUtf8();
+	char * charEnumName     = byteEnumName.data();
+	// register enum as new ua data type
+	UA_DataTypeAttributes ddaatt = UA_DataTypeAttributes_default;
+	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
+	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
+
+	// check if requested node id defined
+	QString strReqNodeId = strNodeId.trimmed();
+	UA_NodeId reqNodeId  = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	// check if requested node id exists
+	UA_NodeId outNodeId;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
+	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerEnum", "Requested NodeId already exists");
+	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	{
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return;
+	}
+	// if null, then assign one because is feaking necessary
+	// https://github.com/open62541/open62541/issues/2584
+	if (UA_NodeId_isNull(&reqNodeId))
+	{
+		// [IMPORTANT] : _ALLOC version is necessary
+		reqNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName); 
+	}	
+	st = UA_Server_addDataTypeNode(m_server,
+								   reqNodeId,
+   								   UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
+   								   UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+   								   UA_QUALIFIEDNAME (1, charEnumName),
+   								   ddaatt,
+   								   NULL,
+                                   NULL);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// add new enum strings (enum options)
+	UA_VariableAttributes pattr = UA_VariableAttributes_default;
+	pattr.description = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
+	pattr.displayName = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
+	pattr.dataType    = UA_TYPES[UA_TYPES_LOCALIZEDTEXT].typeId;
+	UA_UInt32 arrayDimensions[1] = { 0 };
+	pattr.valueRank              = 1; 
+	pattr.arrayDimensionsSize    = 1;
+	pattr.arrayDimensions        = arrayDimensions;
+	// create vector of enum values
+	QVector<QOpcUaEnumValue> vectEnumValues;
+	QMapIterator<int, QByteArray> i(mapEnum);
+	while (i.hasNext()) 
+	{
+		i.next();
+		vectEnumValues.append({
+			(UA_Int64)i.key(),
+			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().data()),
+			UA_LOCALIZEDTEXT((char*)"", (char*)"")
+			});
+	}
+	st = QUaServer::addEnumValues(m_server, &reqNodeId, vectEnumValues.count(), vectEnumValues.data());
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// finally append to map
+	m_hashEnums.insert(strEnumName, reqNodeId);
 }
 
 void QUaServer::registerReference(const QUaReference & ref)

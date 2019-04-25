@@ -86,6 +86,7 @@ public:
 	template<typename T>
 	void              setDataTypeEnum();
 	void              setDataTypeEnum(const QMetaEnum &metaEnum);
+	bool              setDataTypeEnum(const QString &strEnumName);
 	// Read-only, values set automatically when calling setValue
 	// NOTE : includes arrayDimensionsSize
 	qint32            valueRank() const;
@@ -128,6 +129,8 @@ private:
 		                const UA_DataValue    *data);
 
 	bool m_bInternalWrite;
+
+	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
 };
 
 #endif // QUABASEVARIABLE_H

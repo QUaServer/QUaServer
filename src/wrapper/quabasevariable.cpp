@@ -269,6 +269,29 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 		m_qUaServer->registerEnum(metaEnum);
 	}
 	Q_ASSERT(m_qUaServer->m_hashEnums.contains(strEnumName));
+	// get enum nodeId
+	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
+	// call internal method
+	this->setDataTypeEnum(enumTypeNodeId);
+}
+
+bool QUaBaseVariable::setDataTypeEnum(const QString & strEnumName)
+{
+	// check if exists in server's hash
+	if (!m_qUaServer->m_hashEnums.contains(strEnumName))
+	{
+		return false;
+	}
+	// get enum nodeId
+	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
+	// call internal method
+	this->setDataTypeEnum(enumTypeNodeId);
+	// success
+	return true;
+}
+
+void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
+{
 	// need to "reset" dataType before setting a new value
 	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
@@ -309,7 +332,6 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	// clean up
 	UA_Variant_clear(&tmpVar);
 	// change data type
-	UA_NodeId enumTypeNodeId = m_qUaServer->m_hashEnums.value(strEnumName);
 	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
 		enumTypeNodeId);
