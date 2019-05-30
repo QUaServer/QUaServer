@@ -802,6 +802,13 @@ void QUaServer::setupServer()
 
 QUaServer::~QUaServer()
 {
+	// [FIX] : QObject children destructors were called after this one
+	//         and the ~QUaNode destructor makes use of m_server
+	//         so we better destroy the children manually before deleting m_server
+	while (this->children().count() > 0)
+	{
+		delete this->children().at(0);
+	}
 	// Cleanup library objects
 	UA_Server_delete(this->m_server);
 }
