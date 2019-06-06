@@ -973,7 +973,7 @@ void QUaServer::start()
 	m_connection = QObject::connect(this, &QUaServer::iterateServer, this, [this]() {
 		if (m_running) 
 		{
-			UA_Server_run_iterate(m_server, true);
+			UA_Server_run_iterate(m_server, false);
 			// iterate again
 			emit this->iterateServer();
 		}	
