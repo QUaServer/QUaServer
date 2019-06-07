@@ -3,6 +3,8 @@
 
 #include <type_traits>
 
+#include <QTimer>
+
 #include <QUaTypesConverter>
 #include <QUaFolderObject>
 #include <QUaBaseDataVariable>
@@ -135,8 +137,8 @@ public slots:
 private:
 	UA_Server             * m_server;
 	UA_Boolean              m_running;
+	QTimer                  m_iterWaitTimer;
 	QByteArray              m_byteCertificate; // NOTE : needs to exists as long as server instance
-	QMetaObject::Connection m_connection;
 	QUaFolderObject       * m_pobjectsFolder;
 
 #ifdef UA_ENABLE_ENCRYPTION

@@ -970,22 +970,24 @@ void QUaServer::start()
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
 	m_running = true;
-	m_connection = QObject::connect(this, &QUaServer::iterateServer, this, [this]() {
-		if (m_running) 
-		{
-			UA_Server_run_iterate(m_server, false);
-			// iterate again
-			emit this->iterateServer();
-		}	
-	}, Qt::QueuedConnection);
-	// bootstrap iterations
-	emit this->iterateServer();
+	QObject::connect(&m_iterWaitTimer, &QTimer::timeout, this,
+	[this]() {
+		// do not iterate if asked to stop
+		if (!m_running) { return; }
+		// iterate and restart
+		UA_Server_run_iterate(m_server, false);
+	});
+	// start iterations
+	// NOTE : using a 1ms delay seems to have the best trade-off (so far) between
+	//        not blocking Qt's event loop, OPC server's resposiveness, and not overloading the CPU.
+	m_iterWaitTimer.start(1);
 }
 
 void QUaServer::stop()
 {
 	m_running = false;
-	QObject::disconnect(m_connection);
+	m_iterWaitTimer.stop();
+	m_iterWaitTimer.disconnect();
 	UA_Server_run_shutdown(m_server);
 }
 
