@@ -162,6 +162,7 @@ class QUaNode : public QObject
 	friend class QUaServer;
 	friend class QUaBaseObject;
 	friend class QUaBaseVariable;
+	friend class QUaBaseEvent;
 
     Q_OBJECT
 

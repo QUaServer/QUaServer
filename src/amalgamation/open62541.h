@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-916-g1ad7b993
+ * Git-Revision: 0.3-rc2-1038-g2e14f900
  */
 
 /*
@@ -32,7 +32,7 @@
 #define UA_OPEN62541_VER_MINOR 4
 #define UA_OPEN62541_VER_PATCH 0
 #define UA_OPEN62541_VER_LABEL "-dev" /* Release candidate label, etc. */
-#define UA_OPEN62541_VER_COMMIT "0.3-rc2-916-g1ad7b993"
+#define UA_OPEN62541_VER_COMMIT "0.3-rc2-1038-g2e14f900"
 
 /**
  * Feature Options
@@ -269,6 +269,7 @@ void UA_free(void* ptr); //de-allocate memory previously allocated with UA_mallo
 #define UA_setsockopt(sockfd, level, optname, optval, optlen) setsockopt(sockfd, level, optname, (const char*) (optval), optlen)
 #define UA_freeaddrinfo freeaddrinfo
 #define UA_gethostname gethostname
+#define UA_getsockname getsockname
 #define UA_inet_pton InetPton
 
 #if UA_IPV6
@@ -422,6 +423,7 @@ void UA_free(void* ptr); //de-allocate memory previously allocated with UA_mallo
 #define UA_setsockopt setsockopt
 #define UA_freeaddrinfo freeaddrinfo
 #define UA_gethostname gethostname
+#define UA_getsockname getsockname
 #define UA_inet_pton inet_pton
 #if UA_IPV6
 # define UA_if_nametoindex if_nametoindex
@@ -12771,6 +12773,38 @@ typedef enum {
 #define UA_VALUERANK_TWO_DIMENSIONS            2
 #define UA_VALUERANK_THREE_DIMENSIONS          3
 
+/**
+ * Internal Constants
+ * ==================
+ *
+ * Rule Handling
+ * -------------
+ *
+ * The RuleHanding settings define how error cases that result from rules in the
+ * OPC UA specification shall be handled. The rule handling can be softened,
+ * e.g. to workaround misbehaving implementations or to mitigate the impact of
+ * additional rules that are introduced in later versions of the OPC UA
+ * specification. */
+typedef enum {
+    UA_RULEHANDLING_DEFAULT = 0,
+    UA_RULEHANDLING_ABORT,  /* Abort the operation and return an error code */
+    UA_RULEHANDLING_WARN,   /* Print a message in the logs and continue */
+    UA_RULEHANDLING_ACCEPT, /* Continue and disregard the broken rule */
+} UA_RuleHandling;
+
+/**
+ * Order
+ * -----
+ *
+ * The Order enum is used to establish an absolute ordering between elements.
+ */
+
+typedef enum {
+    UA_ORDER_LESS = -1,
+    UA_ORDER_EQ = 0,
+    UA_ORDER_MORE = 1
+} UA_Order;
+
 _UA_END_DECLS
 
 
@@ -12807,7 +12841,7 @@ _UA_BEGIN_DECLS
  * them into higher-order types: arrays, structures and unions. In open62541,
  * only the builtin data types are defined manually. All other data types are
  * generated from standard XML definitions. Their exact definitions can be
- * looked up at https://opcfoundation.org/UA/schemas/Opc.Ua.Types.bsd.xml.
+ * looked up at https://opcfoundation.org/UA/schemas/Opc.Ua.Types.bsd.
  *
  * For users that are new to open62541, take a look at the :ref:`tutorial for
  * working with data types<types-tutorial>` before diving into the
@@ -12928,7 +12962,7 @@ typedef struct {
 } UA_String;
 
 /* Copies the content on the heap. Returns a null-string when alloc fails */
-UA_String UA_EXPORT UA_String_fromChars(char const src[]) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
+UA_String UA_EXPORT UA_String_fromChars(const char *src) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
 
 UA_Boolean UA_EXPORT UA_String_equal(const UA_String *s1, const UA_String *s2);
 
@@ -12940,8 +12974,10 @@ UA_EXPORT extern const UA_String UA_STRING_NULL;
  * of the char-array. */
 static UA_INLINE UA_String
 UA_STRING(char *chars) {
-    UA_String str; str.length = strlen(chars);
-    str.data = (UA_Byte*)chars; return str;
+    UA_String s; s.length = 0; s.data = NULL;
+    if(!chars)
+        return s;
+    s.length = strlen(chars); s.data = (UA_Byte*)chars; return s;
 }
 
 #define UA_STRING_ALLOC(CHARS) UA_String_fromChars(CHARS)
@@ -13048,8 +13084,10 @@ UA_EXPORT extern const UA_ByteString UA_BYTESTRING_NULL;
 
 static UA_INLINE UA_ByteString
 UA_BYTESTRING(char *chars) {
-    UA_ByteString str; str.length = strlen(chars);
-    str.data = (UA_Byte*)chars; return str;
+    UA_ByteString bs; bs.length = 0; bs.data = NULL;
+    if(!chars)
+        return bs;
+    bs.length = strlen(chars); bs.data = (UA_Byte*)chars; return bs;
 }
 
 static UA_INLINE UA_ByteString
@@ -13094,7 +13132,12 @@ UA_EXPORT extern const UA_NodeId UA_NODEID_NULL;
 
 UA_Boolean UA_EXPORT UA_NodeId_isNull(const UA_NodeId *p);
 
-UA_Boolean UA_EXPORT UA_NodeId_equal(const UA_NodeId *n1, const UA_NodeId *n2);
+UA_Order UA_EXPORT UA_NodeId_order(const UA_NodeId *n1, const UA_NodeId *n2);
+
+static UA_INLINE UA_Boolean
+UA_NodeId_equal(const UA_NodeId *n1, const UA_NodeId *n2) {
+    return (UA_NodeId_order(n1, n2) == UA_ORDER_EQ);
+}
 
 /* Returns a non-cryptographic hash for the NodeId */
 UA_UInt32 UA_EXPORT UA_NodeId_hash(const UA_NodeId *n);
@@ -13777,7 +13820,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -16178,7 +16221,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 
@@ -22570,9 +22613,21 @@ UA_Server_writeExecutable(UA_Server *server, const UA_NodeId nodeId,
 /**
  * Browsing
  * -------- */
+
+/* Browse the references of a particular node. See the definition of
+ * BrowseDescription structure for details. */
 UA_BrowseResult UA_EXPORT
-UA_Server_browse(UA_Server *server, UA_UInt32 maxrefs,
-                 const UA_BrowseDescription *descr);
+UA_Server_browse(UA_Server *server, UA_UInt32 maxReferences,
+                 const UA_BrowseDescription *bd);
+
+/* Nonstandard version of the browse service that recurses into child nodes.
+ * Possible loops (that can occur for non-hierarchical references) are handled
+ * by adding every target node at most once to the result array. The returned
+ * ReferenceDescription refers has the `ReferenceTypeId` and `IsForward` fields
+ * set according to the last reference in the (recursive) chain. */
+UA_BrowseResult UA_EXPORT
+UA_Server_browseRecursive(UA_Server *server, UA_UInt32 maxReferences,
+                          const UA_BrowseDescription *bd);
 
 UA_BrowseResult UA_EXPORT
 UA_Server_browseNext(UA_Server *server, UA_Boolean releaseContinuationPoint,
@@ -23947,7 +24002,7 @@ _UA_END_DECLS
 
 _UA_BEGIN_DECLS
 
-extern const UA_ByteString UA_SECURITY_POLICY_NONE_URI;
+extern UA_EXPORT const UA_ByteString UA_SECURITY_POLICY_NONE_URI;
 
 struct UA_SecurityPolicy;
 typedef struct UA_SecurityPolicy UA_SecurityPolicy;
@@ -24326,6 +24381,7 @@ _UA_END_DECLS
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
+ * Copyright (c) 2019 Kalycito Infotech Private Limited
  */
 
 #ifndef UA_SERVER_PUBSUB_H
@@ -24560,8 +24616,8 @@ typedef enum {
 typedef struct {
     UA_DataSetFieldType dataSetFieldType;
     union {
+        /* events need other config later */
         UA_DataSetVariableConfig variable;
-        //events need other config later
     } field;
 } UA_DataSetFieldConfig;
 
@@ -24687,6 +24743,100 @@ UA_Server_getDataSetWriterConfig(UA_Server *server, const UA_NodeId dsw,
 
 UA_StatusCode UA_EXPORT
 UA_Server_removeDataSetWriter(UA_Server *server, const UA_NodeId dsw);
+
+/**
+ * DataSetReader
+ * -------------
+ * DataSetReader can receive NetworkMessages with the DataSet
+ * of interest sent by the Publisher. DataSetReaders represent
+ * the configuration necessary to receive and process DataSetMessages
+ * on the Subscriber side */
+
+/* Parameters for PubSubSecurity */
+typedef struct {
+    UA_Int32 securityMode;          /* placeholder datatype 'MessageSecurityMode' */
+    UA_String securityGroupId;
+    size_t keyServersSize;
+    UA_Int32 *keyServers;
+} UA_PubSubSecurityParameters;
+
+/* Parameters for PubSub DataSetReader Configuration */
+typedef struct {
+    UA_String name;
+    UA_Variant publisherId;
+    UA_UInt16 writerGroupId;
+    UA_UInt16 dataSetWriterId;
+    UA_DataSetMetaDataType dataSetMetaData;
+    UA_DataSetFieldContentMask dataSetFieldContentMask;
+    UA_Double messageReceiveTimeout;
+    UA_PubSubSecurityParameters securityParameters;
+    UA_UadpDataSetReaderMessageDataType messageSettings;
+    UA_TargetVariablesDataType subscribedDataSetTarget;
+} UA_DataSetReaderConfig;
+
+/* Update configuration to the dataSetReader */
+UA_StatusCode
+UA_Server_DataSetReader_updateConfig(UA_Server *server, UA_NodeId dataSetReaderIdentifier,
+                                   UA_NodeId readerGroupIdentifier, const UA_DataSetReaderConfig *config);
+
+/* Get configuration of the dataSetReader */
+UA_StatusCode
+UA_Server_DataSetReader_getConfig(UA_Server *server, UA_NodeId dataSetReaderIdentifier,
+                                 UA_DataSetReaderConfig *config);
+
+/* Return Status Code after creating TargetVariables in Subscriber AddressSpace
+ * TargetVariables define a list of variable mappings between received DataSet fields
+ * and the TargetVariables in the Subscriber AddressSpace */
+UA_StatusCode
+UA_Server_DataSetReader_createTargetVariables(UA_Server *server, UA_NodeId dataSetReaderIdentifier,
+                                             UA_TargetVariablesDataType* targetVariables);
+
+/* To Do:Implementation of SubscribedDataSetMirrorType
+ * UA_StatusCode
+ * A_PubSubDataSetReader_createDataSetMirror(UA_Server *server, UA_NodeId dataSetReaderIdentifier,
+ * UA_SubscribedDataSetMirrorDataType* mirror) */
+
+/**
+ * ReaderGroup
+ * -----------
+ * All ReaderGroups are created within a PubSubConnection and automatically
+ * deleted if the connection is removed. */
+
+/* ReaderGroup configuration */
+typedef struct {
+    UA_String name;
+    UA_PubSubSecurityParameters securityParameters;
+} UA_ReaderGroupConfig;
+
+/* Add DataSetReader to the ReaderGroup */
+UA_StatusCode
+UA_Server_addDataSetReader(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                                      const UA_DataSetReaderConfig *dataSetReaderConfig,
+                                      UA_NodeId *readerIdentifier);
+
+/* Remove DataSetReader from ReaderGroup */
+UA_StatusCode
+UA_Server_removeDataSetReader(UA_Server *server, UA_NodeId readerIdentifier);
+
+/* To Do: Update Configuration of ReaderGroup */
+UA_StatusCode
+UA_Server_ReaderGroup_updateConfig(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                                  const UA_ReaderGroupConfig *config);
+
+/* Get configuraiton of ReaderGroup */
+UA_StatusCode
+UA_Server_ReaderGroup_getConfig(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                               UA_ReaderGroupConfig *config);
+
+/* Add ReaderGroup to the created connection */
+UA_StatusCode
+UA_Server_addReaderGroup(UA_Server *server, UA_NodeId connectionIdentifier,
+                                   const UA_ReaderGroupConfig *readerGroupConfig,
+                                   UA_NodeId *readerGroupIdentifier);
+
+/* Remove ReaderGroup from connection */
+UA_StatusCode
+UA_Server_removeReaderGroup(UA_Server *server, UA_NodeId groupIdentifier);
 
 #endif /* UA_ENABLE_PUBSUB */
 
@@ -25040,14 +25190,6 @@ typedef struct {
     UA_MethodCallback method;
 } UA_MethodNode;
 
-
-/** Attributes for nodes which are capable of generating events */
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-/* Store active monitoredItems on this node */
-# define UA_EVENT_ATTRIBUTES                                         \
-    struct UA_MonitoredItem *monitoredItemQueue;
-#endif
-
 /**
  * ObjectNode
  * ----------
@@ -25060,7 +25202,7 @@ typedef struct {
 typedef struct {
     UA_NODE_BASEATTRIBUTES
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    UA_EVENT_ATTRIBUTES
+    struct UA_MonitoredItem *monitoredItemQueue;
 #endif
     UA_Byte eventNotifier;
 } UA_ObjectNode;
@@ -25399,6 +25541,28 @@ typedef struct {
     UA_Duration max;
 } UA_DurationRange;
 
+#ifdef UA_ENABLE_DISCOVERY
+typedef struct {
+
+    /* Timeout in seconds when to automatically remove a registered server from
+     * the list, if it doesn't re-register within the given time frame. A value
+     * of 0 disables automatic removal. Default is 60 Minutes (60*60). Must be
+     * bigger than 10 seconds, because cleanup is only triggered approximately
+     * every 10 seconds. The server will still be removed depending on the
+     * state of the semaphore file. */
+    UA_UInt32 cleanupTimeout;
+
+    /* Enable mDNS announce and response to queries */
+    bool mdnsEnable;
+
+#ifdef UA_ENABLE_DISCOVERY_MULTICAST
+    UA_MdnsDiscoveryConfiguration mdns;
+#endif
+
+} UA_ServerConfig_Discovery;
+
+#endif
+
 struct UA_ServerConfig {
     UA_UInt16 nThreads; /* only if multithreading is enabled */
     UA_Logger logger;
@@ -25408,12 +25572,9 @@ struct UA_ServerConfig {
     UA_ApplicationDescription applicationDescription;
     UA_ByteString serverCertificate;
 
-    /* MDNS Discovery */
-#ifdef UA_ENABLE_DISCOVERY
-    UA_String mdnsServerName;
-    size_t serverCapabilitiesSize;
-    UA_String *serverCapabilities;
-#endif
+    /* Rule Handling */
+    UA_RuleHandling verifyRequestTimestamp; /* Verify that the server sends a
+                                             * timestamp in the request header */
 
     /* Custom DataTypes. Attention! Custom datatypes are not cleaned up together
      * with the configuration. So it is possible to allocate them on ROM. */
@@ -25508,13 +25669,7 @@ struct UA_ServerConfig {
 
     /* Discovery */
 #ifdef UA_ENABLE_DISCOVERY
-    /* Timeout in seconds when to automatically remove a registered server from
-     * the list, if it doesn't re-register within the given time frame. A value
-     * of 0 disables automatic removal. Default is 60 Minutes (60*60). Must be
-     * bigger than 10 seconds, because cleanup is only triggered approximately
-     * ervery 10 seconds. The server will still be removed depending on the
-     * state of the semaphore file. */
-    UA_UInt32 discoveryCleanupTimeout;
+    UA_ServerConfig_Discovery discovery;
 #endif
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
@@ -26991,8 +27146,8 @@ UA_Client_Subscriptions_setPublishingMode(UA_Client *client,
  * forward Event notifications from that node.
  *
  * During the creation of a MonitoredItem, the server may return changed
- * adjusted parameters. Use ``UA_Client_MonitoredItem_getParameters`` to get the
- * current parameters. */
+ * adjusted parameters. Check the returned ``UA_CreateMonitoredItemsResponse``
+ * to get the current parameters. */
 
 /* Provides default values for a new monitored item. */
 static UA_INLINE UA_MonitoredItemCreateRequest
@@ -27007,6 +27162,10 @@ UA_MonitoredItemCreateRequest_default(UA_NodeId nodeId) {
     request.requestedParameters.queueSize = 1;
     return request;
 }
+
+/**
+ * The clientHandle parameter can't be set by the user, any value will be replaced
+ * by the client before sending the request to the server. */
 
 /* Callback for the deletion of a MonitoredItem */
 typedef void (*UA_Client_DeleteMonitoredItemCallback)
@@ -27057,19 +27216,14 @@ UA_Client_MonitoredItems_delete(UA_Client *client, const UA_DeleteMonitoredItems
 UA_StatusCode UA_EXPORT
 UA_Client_MonitoredItems_deleteSingle(UA_Client *client, UA_UInt32 subscriptionId, UA_UInt32 monitoredItemId);
 
+/* The clientHandle parameter will be filled automatically */
+UA_ModifyMonitoredItemsResponse UA_EXPORT
+UA_Client_MonitoredItems_modify(UA_Client *client,
+                                const UA_ModifyMonitoredItemsRequest request);
+
 /**
  * The following service calls go directly to the server. The MonitoredItem settings are
  * not stored in the client. */
-
-static UA_INLINE UA_ModifyMonitoredItemsResponse
-UA_Client_MonitoredItems_modify(UA_Client *client,
-                                const UA_ModifyMonitoredItemsRequest request) {
-    UA_ModifyMonitoredItemsResponse response;
-    __UA_Client_Service(client,
-                        &request, &UA_TYPES[UA_TYPES_MODIFYMONITOREDITEMSREQUEST],
-                        &response, &UA_TYPES[UA_TYPES_MODIFYMONITOREDITEMSRESPONSE]);
-    return response;
-}
 
 static UA_INLINE UA_SetMonitoringModeResponse
 UA_Client_MonitoredItems_setMonitoringMode(UA_Client *client,
@@ -27982,6 +28136,126 @@ UA_ServerConfig_setDefault(UA_ServerConfig *config) {
     return UA_ServerConfig_setMinimal(config, 4840, NULL);
 }
 
+/* Creates a new server config with no network layer and no endpoints.
+ *
+ * It initializes reasonable defaults for many things, but does not
+ * add any network layer, security policies and endpoints.
+ * Use the various UA_ServerConfig_addXxx functions to add them.
+ * 
+ * @param conf The configuration to manipulate
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_setBasics(UA_ServerConfig *conf);
+
+/* Adds a TCP network layer with custom buffer sizes
+ *
+ * @param conf The configuration to manipulate
+ * @param portNumber The port number for the tcp network layer
+ * @param sendBufferSize The size in bytes for the network send buffer. Pass 0
+ *        to use defaults.
+ * @param recvBufferSize The size in bytes for the network receive buffer.
+ *        Pass 0 to use defaults.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addNetworkLayerTCP(UA_ServerConfig *conf, UA_UInt16 portNumber,
+                                   UA_UInt32 sendBufferSize, UA_UInt32 recvBufferSize);
+
+/* Adds the security policy ``SecurityPolicy#None`` to the server. A
+ * server certificate may be supplied but is optional.
+ *
+ * @param config The configuration to manipulate
+ * @param certificate The optional server certificate.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyNone(UA_ServerConfig *config, 
+                                      const UA_ByteString *certificate);
+
+#ifdef UA_ENABLE_ENCRYPTION
+
+/* Adds the security policy ``SecurityPolicy#Basic128Rsa15`` to the server. A
+ * server certificate may be supplied but is optional.
+ * 
+ * Certificate verification should be configured before calling this
+ * function. See PKI plugin.
+ *
+ * @param config The configuration to manipulate
+ * @param certificate The server certificate.
+ * @param privateKey The private key that corresponds to the certificate.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic128Rsa15(UA_ServerConfig *config, 
+                                               const UA_ByteString *certificate,
+                                               const UA_ByteString *privateKey);
+
+/* Adds the security policy ``SecurityPolicy#Basic256`` to the server. A
+ * server certificate may be supplied but is optional.
+ *
+ * Certificate verification should be configured before calling this
+ * function. See PKI plugin.
+ * 
+ * @param config The configuration to manipulate
+ * @param certificate The server certificate.
+ * @param privateKey The private key that corresponds to the certificate.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic256(UA_ServerConfig *config, 
+                                          const UA_ByteString *certificate,
+                                          const UA_ByteString *privateKey);
+
+/* Adds the security policy ``SecurityPolicy#Basic256Sha256`` to the server. A
+ * server certificate may be supplied but is optional.
+ *
+ * Certificate verification should be configured before calling this
+ * function. See PKI plugin.
+ *
+ * @param config The configuration to manipulate
+ * @param certificate The server certificate.
+ * @param privateKey The private key that corresponds to the certificate.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic256Sha256(UA_ServerConfig *config, 
+                                                const UA_ByteString *certificate,
+                                                const UA_ByteString *privateKey);
+
+/* Adds all supported security policies and sets up certificate
+ * validation procedures.
+ *
+ * Certificate verification should be configured before calling this
+ * function. See PKI plugin.
+ * 
+ * @param config The configuration to manipulate
+ * @param certificate The server certificate.
+ * @param privateKey The private key that corresponds to the certificate.
+ * @param trustList The trustList for client certificate validation.
+ * @param trustListSize The trustList size.
+ * @param revocationList The revocationList for client certificate validation.
+ * @param revocationListSize The revocationList size.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addAllSecurityPolicies(UA_ServerConfig *config,
+                                       const UA_ByteString *certificate,
+                                       const UA_ByteString *privateKey);
+
+#endif
+
+/* Adds an endpoint for the given security policy and mode. The security
+ * policy has to be added already. See UA_ServerConfig_addXxx functions.
+ *
+ * @param config The configuration to manipulate
+ * @param securityPolicyUri The security policy for which to add the endpoint.
+ * @param securityMode The security mode for which to add the endpoint.
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addEndpoint(UA_ServerConfig *config, const UA_String securityPolicyUri, 
+                            UA_MessageSecurityMode securityMode);
+
+/* Adds endpoints for all configured security policies in each mode.
+ *
+ * @param config The configuration to manipulate
+ */
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addAllEndpoints(UA_ServerConfig *config);
+
 _UA_END_DECLS
 
 
@@ -28322,7 +28596,11 @@ void UA_freeaddrinfo(struct addrinfo *res);//equivalent to posix freeaddrinfo im
 #endif
 
 #ifndef UA_gethostname
-int UA_gethostname(char *name, size_t len);//equivalent to posix gethostname implementatio
+int UA_gethostname(char *name, size_t len);//equivalent to posix gethostname implementation
+#endif
+
+#ifndef UA_getsockname
+int UA_getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);//equivalent to posix getsockname implementation
 #endif
 
 #ifndef UA_initialize_architecture_network

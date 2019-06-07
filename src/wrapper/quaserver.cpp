@@ -246,41 +246,6 @@ QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
 	return qServer;
 }
 
-UA_StatusCode QUaServer::createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj)
-{
-	if (!outExtObj)
-	{
-		return UA_STATUSCODE_BADOUTOFMEMORY;
-	}
-	outExtObj->encoding               = UA_EXTENSIONOBJECT_ENCODED_BYTESTRING;
-	outExtObj->content.encoded.typeId = UA_NODEID_NUMERIC(0, 8251); // Default Binary (in open62541 UA_NS0ID_DEFAULTBINARY == 3062)
-	UA_ByteString_allocBuffer(&outExtObj->content.encoded.body, 65000);
-	UA_Byte * p_posExtObj = outExtObj->content.encoded.body.data;
-	const UA_Byte * p_endExtObj = &outExtObj->content.encoded.body.data[65000];
-	// encode enum value
-	UA_StatusCode st = UA_STATUSCODE_GOOD;
-	st |= UA_encodeBinary(&enumVal->Value      , &UA_TYPES[UA_TYPES_INT64]        , &p_posExtObj, &p_endExtObj, NULL, NULL);
-	st |= UA_encodeBinary(&enumVal->DisplayName, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
-	st |= UA_encodeBinary(&enumVal->Description, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT], &p_posExtObj, &p_endExtObj, NULL, NULL);
-	if (st != UA_STATUSCODE_GOOD)
-	{
-		return st;
-	}
-	size_t p_extobj_encOffset = (uintptr_t)(p_posExtObj - outExtObj->content.encoded.body.data);
-	outExtObj->content.encoded.body.length = p_extobj_encOffset;
-	UA_Byte * p_extobj_newBody = (UA_Byte *)UA_malloc(p_extobj_encOffset);
-	if (!p_extobj_newBody)
-	{
-		return UA_STATUSCODE_BADOUTOFMEMORY;
-	}
-	memcpy(p_extobj_newBody, outExtObj->content.encoded.body.data, p_extobj_encOffset);
-	UA_Byte * p_extobj_madatory_oldBody  = outExtObj->content.encoded.body.data;
-	outExtObj->content.encoded.body.data = p_extobj_newBody;
-	UA_free(p_extobj_madatory_oldBody);
-	// success
-	return UA_STATUSCODE_GOOD;
-}
-
 UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues)
 {
 	// setup variable attrs
@@ -291,22 +256,21 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	attr.accessLevel             = 1;
 	attr.valueRank               = 1;
 	attr.arrayDimensionsSize     = 1;
-	attr.arrayDimensions         = (UA_UInt32 *)UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]);
-	if (!attr.arrayDimensions)
-	{
-		return UA_STATUSCODE_BADOUTOFMEMORY;
-	}
-	attr.arrayDimensions[0] = 0;
-	attr.dataType = UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMVALUETYPE);
+	UA_UInt32 arrayDimensions[1];
+	arrayDimensions[0] = 0;
+	attr.arrayDimensions         = &arrayDimensions[0];
+	attr.dataType                = UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMVALUETYPE);
 	// create array of enum values
-	UA_ExtensionObject * arr_extobjs = (UA_ExtensionObject *)UA_malloc(sizeof(UA_ExtensionObject) * numEnumValues);
+	UA_EnumValueType * valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * numEnumValues);
 	for (size_t i = 0; i < numEnumValues; i++)
 	{
-		retVal |= createEnumValue(&enumValues[i], &arr_extobjs[i]);
-		Q_ASSERT(retVal == UA_STATUSCODE_GOOD);
+		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
+		valueEnum[i].value       = enumValues[i].Value;
+		valueEnum[i].displayName = enumValues[i].DisplayName;
+		valueEnum[i].description = enumValues[i].Description;
 	}
 	// create variant with array of enum values
-	UA_Variant_setArray(&attr.value, arr_extobjs, (UA_Int32)numEnumValues, &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+	UA_Variant_setArray(&attr.value, valueEnum, (UA_Int32)numEnumValues, &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
 	attr.displayName   = UA_LOCALIZEDTEXT((char*)"", (char*)"EnumValues");
 	attr.description   = UA_LOCALIZEDTEXT((char*)"", (char*)"");
 	attr.writeMask     = 0;
@@ -323,13 +287,6 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
                                         NULL, 
                                         &enumValuesNodeId);
 	Q_ASSERT(retVal == UA_STATUSCODE_GOOD);
-	// cleanup
-	UA_Array_delete(attr.arrayDimensions, 1, &UA_TYPES[UA_TYPES_UINT32]);
-	for (size_t i = 0; i < numEnumValues; i++)
-	{
-		UA_ExtensionObject_deleteMembers(&arr_extobjs[i]);
-	}
-	UA_free(arr_extobjs);
 	// make mandatory
 	retVal |= UA_Server_addReference(server,
 					                 enumValuesNodeId,
@@ -608,27 +565,6 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	return true;
 }
 
-void QUaServer::writeBuildInfo(UA_Server         *server, 
-		                       const UA_NodeId    nodeId, 
-		                       void * UA_RESTRICT pField, 
-		                       void * UA_RESTRICT pBuild)
-{
-	// update field
-	UA_Variant varField;
-	UA_Variant_init(&varField);
-	UA_Variant_setScalar(&varField, pField, &UA_TYPES[UA_TYPES_STRING]);
-	auto st = UA_Server_writeValue(server, nodeId, varField);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-	// update full structure
-	UA_Variant varBuild;
-	UA_Variant_init(&varBuild);
-	UA_Variant_setScalar(&varBuild, pBuild, &UA_TYPES[UA_TYPES_BUILDINFO]);
-	st = UA_Server_writeValue(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO), varBuild);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-}
-
 #ifndef UA_ENABLE_ENCRYPTION
 // NOTE : cannot load cert later with UA_Server_updateCertificate because
 //        it requires oldCertificate != NULL
@@ -872,13 +808,6 @@ void QUaServer::setProductName(const QString & strProductName)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductName = strProductName.toUtf8();
 	config->buildInfo.productName = UA_STRING(m_byteProductName.data());
-	// write nodes
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME),
-		(void*)&config->buildInfo.productName,
-		(void*)&config->buildInfo
-	);
 }
 
 QString QUaServer::productUri() const
@@ -892,13 +821,6 @@ void QUaServer::setProductUri(const QString & strProductUri)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductUri = strProductUri.toUtf8();
 	config->buildInfo.productUri = UA_STRING(m_byteProductUri.data());
-	// write nodes
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI),
-		(void*)&config->buildInfo.productUri,
-		(void*)&config->buildInfo
-	);
 	// NOTE : update application description productUri as well
 	config->applicationDescription.productUri = UA_STRING(m_byteProductUri.data());
 	// update endpoints
@@ -916,13 +838,6 @@ void QUaServer::setManufacturerName(const QString & strManufacturerName)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteManufacturerName = strManufacturerName.toUtf8();
 	config->buildInfo.manufacturerName = UA_STRING(m_byteManufacturerName.data());
-	// write nodes
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME),
-		(void*)&config->buildInfo.manufacturerName,
-		(void*)&config->buildInfo
-	);
 }
 
 QString QUaServer::softwareVersion() const
@@ -936,13 +851,6 @@ void QUaServer::setSoftwareVersion(const QString & strSoftwareVersion)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteSoftwareVersion = strSoftwareVersion.toUtf8();
 	config->buildInfo.softwareVersion = UA_STRING(m_byteSoftwareVersion.data());
-	// write nodes
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION),
-		(void*)&config->buildInfo.softwareVersion,
-		(void*)&config->buildInfo
-	);
 }
 
 QString QUaServer::buildNumber() const
@@ -956,13 +864,6 @@ void QUaServer::setBuildNumber(const QString & strBuildNumber)
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteBuildNumber = strBuildNumber.toUtf8();
 	config->buildInfo.buildNumber = UA_STRING(m_byteBuildNumber.data());
-	// write nodes
-	QUaServer::writeBuildInfo(
-		m_server,
-		UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER),
-		(void*)&config->buildInfo.buildNumber,
-		(void*)&config->buildInfo
-	);
 }
 
 void QUaServer::start()

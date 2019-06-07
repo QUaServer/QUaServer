@@ -36,6 +36,10 @@ int main(int argc, char *argv[])
 	});
 
 	objsFolder->addMethod("deleteServerEvent", [&server_event]() {
+		if (!server_event)
+		{
+			return;
+		}
 		delete server_event;
 		server_event = nullptr;
 	});
@@ -60,6 +64,10 @@ int main(int argc, char *argv[])
 	});
 
 	objsFolder->addMethod("deleteObjectEvent", [&obj_event]() {
+		if (!obj_event)
+		{
+			return;
+		}
 		delete obj_event;
 		obj_event = nullptr;
 	});

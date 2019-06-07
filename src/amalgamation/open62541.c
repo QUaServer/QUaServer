@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-916-g1ad7b993
+ * Git-Revision: 0.3-rc2-1038-g2e14f900
  */
 
 /*
@@ -1162,7 +1162,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -3777,7 +3777,7 @@ UA_EventFilter_decodeBinary(const UA_ByteString *src, size_t *offset, UA_EventFi
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -3951,7 +3951,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 
@@ -4353,7 +4353,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -5025,7 +5025,7 @@ void mdns_record_received(const struct resource *r, void *data);
 
 void mdns_create_txt(UA_Server *server, const char *fullServiceDomain,
                      const char *path, const UA_String *capabilites,
-                     const size_t *capabilitiesSize,
+                     const size_t capabilitiesSize,
                      void (*conflict)(char *host, int type, void *arg));
 
 void mdns_set_address_record(UA_Server *server,
@@ -5058,7 +5058,7 @@ UA_Discovery_addRecord(UA_Server *server, const UA_String *servername,
                        const UA_String *hostname, UA_UInt16 port,
                        const UA_String *path, const UA_DiscoveryProtocol protocol,
                        UA_Boolean createTxt, const UA_String* capabilites,
-                       size_t *capabilitiesSize);
+                       const size_t capabilitiesSize);
 UA_StatusCode
 UA_Discovery_removeRecord(UA_Server *server, const UA_String *servername,
                           const UA_String *hostname, UA_UInt16 port,
@@ -5283,16 +5283,12 @@ _UA_BEGIN_DECLS
 
 #define UA_MAXCONTINUATIONPOINTS 5
 
-typedef struct ContinuationPointEntry {
-    LIST_ENTRY(ContinuationPointEntry) pointers;
-    UA_ByteString        identifier;
-    UA_BrowseDescription browseDescription;
-    UA_UInt32            maxReferences;
+struct ContinuationPoint;
+typedef struct ContinuationPoint ContinuationPoint;
 
-    /* The last point in the node references? */
-    size_t referenceKindIndex;
-    size_t targetIndex;
-} ContinuationPointEntry;
+/* Returns the next entry in the linked list */
+ContinuationPoint *
+ContinuationPoint_clear(ContinuationPoint *cp);
 
 struct UA_Subscription;
 typedef struct UA_Subscription UA_Subscription;
@@ -5318,7 +5314,7 @@ typedef struct {
     UA_DateTime       validTill;
     UA_ByteString     serverNonce;
     UA_UInt16 availableContinuationPoints;
-    LIST_HEAD(ContinuationPointList, ContinuationPointEntry) continuationPoints;
+    ContinuationPoint *continuationPoints;
 #ifdef UA_ENABLE_SUBSCRIPTIONS
     UA_UInt32 lastSubscriptionId;
     UA_UInt32 lastSeenSubscriptionId;
@@ -5477,12 +5473,6 @@ _UA_BEGIN_DECLS
 /* MonitoredItem */
 /*****************/
 
-typedef enum {
-    UA_MONITOREDITEMTYPE_CHANGENOTIFY = 1,
-    UA_MONITOREDITEMTYPE_STATUSNOTIFY = 2,
-    UA_MONITOREDITEMTYPE_EVENTNOTIFY = 4
-} UA_MonitoredItemType;
-
 struct UA_MonitoredItem;
 typedef struct UA_MonitoredItem UA_MonitoredItem;
 
@@ -5526,31 +5516,28 @@ typedef TAILQ_HEAD(NotificationQueue, UA_Notification) NotificationQueue;
 struct UA_MonitoredItem {
     UA_DelayedCallback delayedFreePointers;
     LIST_ENTRY(UA_MonitoredItem) listEntry;
-    UA_Subscription *subscription;
+    UA_Subscription *subscription; /* Local MonitoredItem if the subscription is NULL */
     UA_UInt32 monitoredItemId;
     UA_UInt32 clientHandle;
     UA_Boolean registered; /* Was the MonitoredItem registered in Userland with
                               the callback? */
 
     /* Settings */
-    UA_MonitoredItemType monitoredItemType;
     UA_TimestampsToReturn timestampsToReturn;
     UA_MonitoringMode monitoringMode;
     UA_NodeId monitoredNodeId;
     UA_UInt32 attributeId;
     UA_String indexRange;
     UA_Double samplingInterval; // [ms]
-    UA_UInt32 maxQueueSize; /* The max number of enqueued notifications (not
-                               counting overflow events) */
     UA_Boolean discardOldest;
-    // TODO: dataEncoding is hardcoded to UA binary
     union {
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-        UA_EventFilter eventFilter;
+        UA_EventFilter eventFilter; /* If attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER */
 #endif
         UA_DataChangeFilter dataChangeFilter;
     } filter;
     UA_Variant lastValue;
+    // TODO: dataEncoding is hardcoded to UA binary
 
     /* Sample Callback */
     UA_UInt64 sampleCallbackId;
@@ -5559,9 +5546,12 @@ struct UA_MonitoredItem {
 
     /* Notification Queue */
     NotificationQueue queue;
+    UA_UInt32 maxQueueSize; /* The max number of enqueued notifications (not
+                             * counting overflow events) */
     UA_UInt32 queueSize;
-     /* Save the amount of OverflowEvents in a separate counter */
-     UA_UInt32 eventOverflows;
+    UA_UInt32 eventOverflows; /* Separate counter for the queue. Can at most
+                               * double the queue size */
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     UA_MonitoredItem *next;
 #endif
@@ -5630,7 +5620,7 @@ struct UA_Subscription {
 
     /* MonitoredItems */
     UA_UInt32 lastMonitoredItemId; /* increase the identifiers */
-    LIST_HEAD(UA_ListOfUAMonitoredItems, UA_MonitoredItem) monitoredItems;
+    LIST_HEAD(, UA_MonitoredItem) monitoredItems;
     UA_UInt32 monitoredItemsSize;
 
     /* Global list of notifications from the MonitoredItems */
@@ -6047,6 +6037,7 @@ _UA_END_DECLS
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
+ * Copyright (c) 2019 Kalycito Infotech Private Limited
  */
 
 
@@ -6056,9 +6047,13 @@ _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_PUBSUB /* conditional compilation */
 
-//forward declarations
+/* forward declarations */
 struct UA_WriterGroup;
 typedef struct UA_WriterGroup UA_WriterGroup;
+
+/* Declaration for ReaderGroup */
+struct UA_ReaderGroup;
+typedef struct UA_ReaderGroup UA_ReaderGroup;
 
 /* The configuration structs (public part of PubSub entities) are defined in include/ua_plugin_pubsub.h */
 
@@ -6091,6 +6086,8 @@ typedef struct{
     UA_PubSubChannel *channel;
     UA_NodeId identifier;
     LIST_HEAD(UA_ListOfWriterGroup, UA_WriterGroup) writerGroups;
+    LIST_HEAD(UA_ListOfPubSubReaderGroup, UA_ReaderGroup) readerGroups;
+    size_t readerGroupsSize;
 } UA_PubSubConnection;
 
 UA_StatusCode
@@ -6175,6 +6172,74 @@ UA_DataSetFieldConfig_copy(const UA_DataSetFieldConfig *src, UA_DataSetFieldConf
 UA_DataSetField *
 UA_DataSetField_findDSFbyId(UA_Server *server, UA_NodeId identifier);
 
+/**********************************************/
+/*               DataSetReader                */
+/**********************************************/
+
+/* SubscribedDataSetDataType Definition */
+typedef enum {
+    UA_PUBSUB_SDS_TARGET,
+    UA_PUBSUB_SDS_MIRROR
+}UA_SubscribedDataSetEnumType;
+
+/* DataSetReader Type definition */
+typedef struct UA_DataSetReader {
+    UA_DataSetReaderConfig config;
+    /* implementation defined fields */
+    UA_NodeId identifier;
+    UA_NodeId linkedReaderGroup;
+    LIST_ENTRY(UA_DataSetReader) listEntry;
+    UA_SubscribedDataSetEnumType subscribedDataSetType;
+    UA_TargetVariablesDataType subscribedDataSetTarget;
+    /* To Do UA_SubscribedDataSetMirrorDataType subscribedDataSetMirror */
+}UA_DataSetReader;
+
+/* Delete DataSetReader */
+void UA_DataSetReader_delete(UA_Server *server, UA_DataSetReader *dataSetReader);
+
+/* Process Network Message using DataSetReader */
+void UA_Server_DataSetReader_process(UA_Server *server, UA_DataSetReader *dataSetReader, UA_DataSetMessage* dataSetMsg);
+
+/* Copy the configuration of DataSetReader */
+UA_StatusCode UA_DataSetReaderConfig_copy(const UA_DataSetReaderConfig *src, UA_DataSetReaderConfig *dst);
+
+/* Add TargetVariables */
+UA_StatusCode
+UA_Server_DataSetReader_addTargetVariables(UA_Server* server, UA_NodeId* parentNode, UA_NodeId dataSetReaderIdentifier, UA_SubscribedDataSetEnumType sdsType);
+
+/**********************************************/
+/*                ReaderGroup                 */
+/**********************************************/
+/* ReaderGroup Type Definition*/
+
+struct UA_ReaderGroup {
+    UA_ReaderGroupConfig config;
+    UA_NodeId identifier;
+    UA_NodeId linkedConnection;
+    LIST_ENTRY(UA_ReaderGroup) listEntry;
+    LIST_HEAD(UA_ListOfPubSubDataSetReader, UA_DataSetReader) readers;
+    /* for simplified information access */
+    UA_UInt32 readersCount;
+    UA_UInt64 subscribeCallbackId;
+    UA_Boolean subscribeCallbackIsRegistered;
+};
+
+/* Delete ReaderGroup */
+void UA_Server_ReaderGroup_delete(UA_Server *server, UA_ReaderGroup *readerGroup);
+
+/* Copy configuration of ReaderGroup */
+UA_StatusCode
+UA_ReaderGroupConfig_copy(const UA_ReaderGroupConfig *src, UA_ReaderGroupConfig *dst);
+
+/* Process Network Message */
+UA_StatusCode
+UA_Server_processNetworkMessage(UA_Server *server, UA_NetworkMessage* pMsg, UA_PubSubConnection *pConnection);
+
+/* Prototypes for internal util functions - some functions maybe removed later
+ *(currently moved from public to internal)*/
+UA_ReaderGroup *UA_ReaderGroup_findRGbyId(UA_Server *server, UA_NodeId identifier);
+UA_DataSetReader *UA_ReaderGroup_findDSRbyId(UA_Server *server, UA_NodeId identifier);
+
 /*********************************************************/
 /*               PublishValues handling                  */
 /*********************************************************/
@@ -6183,6 +6248,15 @@ UA_StatusCode
 UA_WriterGroup_addPublishCallback(UA_Server *server, UA_WriterGroup *writerGroup);
 void
 UA_WriterGroup_publishCallback(UA_Server *server, UA_WriterGroup *writerGroup);
+
+/*********************************************************/
+/*               SubscribeValues handling                */
+/*********************************************************/
+
+UA_StatusCode
+UA_ReaderGroup_addSubscribeCallback(UA_Server *server, UA_ReaderGroup *readerGroup);
+void
+UA_ReaderGroup_subscribeCallback(UA_Server *server, UA_ReaderGroup *readerGroup);
 
 #endif /* UA_ENABLE_PUBSUB */
 
@@ -6246,6 +6320,7 @@ _UA_END_DECLS
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
+ * Copyright (c) 2019 Kalycito Infotech Private Limited
  */
 
 #ifndef UA_PUBSUB_NS0_H_
@@ -6269,6 +6344,9 @@ UA_StatusCode
 addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup);
 
 UA_StatusCode
+addReaderGroupRepresentation(UA_Server *server, UA_ReaderGroup *readerGroup);
+
+UA_StatusCode
 removeGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup);
 
 UA_StatusCode
@@ -6282,6 +6360,12 @@ addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publ
 
 UA_StatusCode
 removePublishedDataSetRepresentation(UA_Server *server, UA_PublishedDataSet *publishedDataSet);
+
+UA_StatusCode
+addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReader);
+
+UA_StatusCode
+removeDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReader);
 
 #endif /* UA_ENABLE_PUBSUB_INFORMATIONMODEL */
 
@@ -6302,6 +6386,7 @@ _UA_END_DECLS
  *    Copyright 2015-2016 (c) Oleksiy Vasylyev
  *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
  *    Copyright 2017 (c) Julian Grothoff
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -6414,6 +6499,7 @@ UA_StatusCode UA_Server_editNode(UA_Server *server, UA_Session *session,
 extern const UA_NodeId subtypeId;
 extern const UA_NodeId hierarchicalReferences;
 
+void setupNs1Uri(UA_Server *server);
 UA_UInt16 addNamespace(UA_Server *server, const UA_String name);
 
 UA_Boolean
@@ -6425,26 +6511,19 @@ isNodeInTree(void *nsCtx, const UA_NodeId *leafNode,
              const UA_NodeId *nodeToFind, const UA_NodeId *referenceTypeIds,
              size_t referenceTypeIdsSize);
 
-/* Returns an array with the hierarchy of type nodes. The returned array starts
- * at the leaf and continues "upwards" or "downwards" in the hierarchy based on the
- * ``hasSubType`` references. Since multiple-inheritance is possible in general,
- * duplicate entries are removed.
- * The parameter `walkDownwards` indicates the direction of search.
- * If set to TRUE it will get all the subtypes of the given
- * leafType (including leafType).
- * If set to FALSE it will get all the parent types of the given
- * leafType (including leafType)*/
+/* Returns an array with the hierarchy of nodes. The start nodes are returned as
+ * well. The returned array starts at the leaf and continues "upwards" or
+ * "downwards". Duplicate entries are removed. The parameter `walkDownwards`
+ * indicates the direction of search. */
 UA_StatusCode
-getTypeHierarchy(void *nsCtx, const UA_NodeId *leafType,
-                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                 UA_Boolean walkDownwards);
+getLocalRecursiveHierarchy(UA_Server *server, const UA_NodeId *startNodes, size_t startNodesSize,
+                           const UA_NodeId *refTypes, size_t refTypesSize, UA_Boolean walkDownwards,
+                           UA_NodeId **results, size_t *resultsSize);
 
-/* Same as getTypeHierarchy but takes multiple leafTypes as parameter and returns
- * an combined list of all the found types for all the leaf types */
+/* Returns the recursive type and interface hierarchy of the node */ 
 UA_StatusCode
-getTypesHierarchy(void *nsCtx, const UA_NodeId *leafType, size_t leafTypeSize,
-                  UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                  UA_Boolean walkDownwards);
+getParentTypeAndInterfaceHierarchy(UA_Server *server, const UA_NodeId *typeNode,
+                                   UA_NodeId **typeHierarchy, size_t *typeHierarchySize);
 
 /* Returns the type node from the node on the stack top. The type node is pushed
  * on the stack and returned. */
@@ -6523,8 +6602,13 @@ compatibleDataType(UA_Server *server, const UA_NodeId *dataType,
 UA_Boolean
 compatibleValueRanks(UA_Int32 valueRank, UA_Int32 constraintValueRank);
 
+struct BrowseOpts {
+    UA_UInt32 maxReferences;
+    UA_Boolean recursive;
+};
+
 void
-Operation_Browse(UA_Server *server, UA_Session *session, const UA_UInt32 *maxrefs,
+Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts *maxrefs,
                  const UA_BrowseDescription *descr, UA_BrowseResult *result);
 
 UA_DataValue
@@ -6556,6 +6640,9 @@ AddNode_finish(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId);
 /**********************/
 
 UA_StatusCode UA_Server_initNS0(UA_Server *server);
+
+UA_StatusCode writeNs0VariableArray(UA_Server *server, UA_UInt32 id, void *v,
+                      size_t length, const UA_DataType *type);
 
 _UA_END_DECLS
 
@@ -6642,7 +6729,7 @@ void Service_GetEndpoints(UA_Server *server, UA_Session *session,
  * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  * Returns the Servers known to a Discovery Server. Unlike FindServer,
  * this Service is only implemented by Discovery Servers. It additionally
- * Returns servery which may have been detected trough Multicast */
+ * returns servers which may have been detected through Multicast. */
 void Service_FindServersOnNetwork(UA_Server *server, UA_Session *session,
                                   const UA_FindServersOnNetworkRequest *request,
                                   UA_FindServersOnNetworkResponse *response);
@@ -7429,18 +7516,22 @@ UA_UInt32_random(void) {
 /*****************/
 
 UA_String
-UA_String_fromChars(char const src[]) {
-    UA_String str;
-    str.length = strlen(src);
-    if(str.length > 0) {
-        str.data = (u8*)UA_malloc(str.length);
-        if(!str.data)
-            return UA_STRING_NULL;
-        memcpy(str.data, src, str.length);
+UA_String_fromChars(const char *src) {
+    UA_String s; s.length = 0; s.data = NULL;
+    if(!src)
+        return s;
+    s.length = strlen(src);
+    if(s.length > 0) {
+        s.data = (u8*)UA_malloc(s.length);
+        if(!s.data) {
+            s.length = 0;
+            return s;
+        }
+        memcpy(s.data, src, s.length);
     } else {
-        str.data = (u8*)UA_EMPTY_ARRAY_SENTINEL;
+        s.data = (u8*)UA_EMPTY_ARRAY_SENTINEL;
     }
-    return str;
+    return s;
 }
 
 UA_Boolean
@@ -7613,27 +7704,65 @@ UA_NodeId_isNull(const UA_NodeId *p) {
     return false;
 }
 
-UA_Boolean
-UA_NodeId_equal(const UA_NodeId *n1, const UA_NodeId *n2) {
-    if(n1 == NULL || n2 == NULL)
-        return false;
-    if(n1->namespaceIndex != n2->namespaceIndex ||
-       n1->identifierType!=n2->identifierType)
-        return false;
+/* Absolute ordering for NodeIds */
+UA_Order
+UA_NodeId_order(const UA_NodeId *n1, const UA_NodeId *n2) {
+    /* Compare namespaceIndex */
+    if(n1->namespaceIndex < n2->namespaceIndex)
+        return UA_ORDER_LESS;
+    if(n1->namespaceIndex > n2->namespaceIndex)
+        return UA_ORDER_MORE;
+
+    /* Compare identifierType */
+    if(n1->identifierType < n2->identifierType)
+        return UA_ORDER_LESS;
+    if(n1->identifierType > n2->identifierType)
+        return UA_ORDER_MORE;
+
+    /* Compare the identifier */
     switch(n1->identifierType) {
     case UA_NODEIDTYPE_NUMERIC:
-        return (n1->identifier.numeric == n2->identifier.numeric);
-    case UA_NODEIDTYPE_STRING:
-        return UA_String_equal(&n1->identifier.string,
-                               &n2->identifier.string);
+        if(n1->identifier.numeric < n2->identifier.numeric)
+            return UA_ORDER_LESS;
+        if(n1->identifier.numeric > n2->identifier.numeric)
+            return UA_ORDER_MORE;
+        break;
     case UA_NODEIDTYPE_GUID:
-        return UA_Guid_equal(&n1->identifier.guid,
-                             &n2->identifier.guid);
-    case UA_NODEIDTYPE_BYTESTRING:
-        return UA_ByteString_equal(&n1->identifier.byteString,
-                                   &n2->identifier.byteString);
+        if(n1->identifier.guid.data1 < n2->identifier.guid.data1 ||
+           n1->identifier.guid.data2 < n2->identifier.guid.data2 ||
+           n1->identifier.guid.data3 < n2->identifier.guid.data3 ||
+           strncmp((const char*)n1->identifier.guid.data4,
+                   (const char*)n2->identifier.guid.data4, 8) < 0)
+            return UA_ORDER_LESS;
+        if(n1->identifier.guid.data1 > n2->identifier.guid.data1 ||
+           n1->identifier.guid.data2 > n2->identifier.guid.data2 ||
+           n1->identifier.guid.data3 > n2->identifier.guid.data3 ||
+           strncmp((const char*)n1->identifier.guid.data4,
+                   (const char*)n2->identifier.guid.data4, 8) > 0)
+            return UA_ORDER_MORE;
+        break;
+    case UA_NODEIDTYPE_STRING:
+    case UA_NODEIDTYPE_BYTESTRING: {
+        if(n1->identifier.string.length < n2->identifier.string.length)
+            return UA_ORDER_LESS;
+        if(n1->identifier.string.length > n2->identifier.string.length)
+            return UA_ORDER_MORE;
+        if(n1->identifier.string.length > 0) {
+            int cmp = strncmp((const char*)n1->identifier.string.data,
+                              (const char*)n2->identifier.string.data,
+                              n1->identifier.string.length);
+            if(cmp < 0)
+                return UA_ORDER_LESS;
+            if(cmp > 0)
+                return UA_ORDER_MORE;
+        }
+        break;
     }
-    return false;
+    default:
+        break;
+    }
+
+    return UA_ORDER_EQ;
 }
 
 UA_Boolean
@@ -9162,8 +9291,8 @@ DECODE_BINARY(NodeId) {
         return ret;
 
     /* Filter out the bits used only for ExpandedNodeIds */
-    encodingByte &= (u8)~(UA_EXPANDEDNODEID_SERVERINDEX_FLAG |
-                          UA_EXPANDEDNODEID_NAMESPACEURI_FLAG);
+    encodingByte &= (u8)~(u8)(UA_EXPANDEDNODEID_SERVERINDEX_FLAG |
+                              UA_EXPANDEDNODEID_NAMESPACEURI_FLAG);
 
     /* Decode the namespace and identifier */
     switch(encodingByte) {
@@ -9777,7 +9906,8 @@ ENCODE_BINARY(DiagnosticInfo) {
 
     /* Encode the inner diagnostic info */
     if(src->hasInnerDiagnosticInfo)
-        ret = ENCODE_WITHEXCHANGE(&src->innerDiagnosticInfo,
+        // innerDiagnosticInfo is already a pointer, so don't use the & reference here
+        ret = ENCODE_WITHEXCHANGE(src->innerDiagnosticInfo,
                                   UA_TYPES_DIAGNOSTICINFO);
 
     return ret;
@@ -10291,7 +10421,7 @@ UA_calcSizeBinary(const void *p, const UA_DataType *type) {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 /* Boolean */
@@ -16995,7 +17125,7 @@ const UA_DataType UA_TYPES[UA_TYPES_COUNT] = {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-04-24 10:50:38 */
+ * on host PPIC09 by user User at 2019-06-07 01:35:32 */
 
 
 /* SecureConversationMessageAbortBody */
@@ -18432,7 +18562,7 @@ UA_Timer_deleteMembers(UA_Timer *t) {
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014, 2016-2017 (c) Florian Palm
@@ -18440,6 +18570,7 @@ UA_Timer_deleteMembers(UA_Timer *t) {
  *    Copyright 2015 (c) Oleksiy Vasylyev
  *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
  *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -18479,12 +18610,13 @@ UA_Connection_processHELACK(UA_Connection *connection,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Hides somme errors before sending them to a client according to the
+/* Hides some errors before sending them to a client according to the
  * standard. */
 static void
 hideErrors(UA_TcpErrorMessage *const error) {
     switch(error->error) {
     case UA_STATUSCODE_BADCERTIFICATEUNTRUSTED:
+    case UA_STATUSCODE_BADCERTIFICATEREVOKED:
         error->error = UA_STATUSCODE_BADSECURITYCHECKSFAILED;
         error->reason = UA_STRING_NULL;
         break;
@@ -20279,13 +20411,13 @@ void UA_Session_deleteMembersCleanup(UA_Session *session, UA_Server* server) {
     UA_NodeId_deleteMembers(&session->sessionId);
     UA_String_deleteMembers(&session->sessionName);
     UA_ByteString_deleteMembers(&session->serverNonce);
-    struct ContinuationPointEntry *cp, *temp;
-    LIST_FOREACH_SAFE(cp, &session->continuationPoints, pointers, temp) {
-        LIST_REMOVE(cp, pointers);
-        UA_ByteString_deleteMembers(&cp->identifier);
-        UA_BrowseDescription_deleteMembers(&cp->browseDescription);
+    struct ContinuationPoint *cp, *next = session->continuationPoints;
+    while((cp = next)) {
+        next = ContinuationPoint_clear(cp);
         UA_free(cp);
     }
+    session->continuationPoints = NULL;
+    session->availableContinuationPoints = UA_MAXCONTINUATIONPOINTS;
 }
 
 void UA_Session_attachToSecureChannel(UA_Session *session, UA_SecureChannel *channel) {
@@ -20674,17 +20806,17 @@ copyStandardAttributes(UA_Node *node, const UA_NodeAttributes *attr) {
     /* retval  = UA_NodeId_copy(&item->requestedNewNodeId.nodeId, &node->nodeId); */
     /* retval |= UA_QualifiedName_copy(&item->browseName, &node->browseName); */
 
-	UA_StatusCode retval;
+    UA_StatusCode retval;
     /* The new nodeset format has optional display name.
      * See https://github.com/open62541/open62541/issues/2627
      * If display name is NULL, then we take the name part of the browse name */
     if (attr->displayName.text.length == 0) {
-		retval = UA_String_copy(&node->browseName.name,
-									   &node->displayName.text);
+        retval = UA_String_copy(&node->browseName.name,
+                                       &node->displayName.text);
     } else {
-		retval = UA_LocalizedText_copy(&attr->displayName,
-													 &node->displayName);
-		retval |= UA_LocalizedText_copy(&attr->description, &node->description);
+        retval = UA_LocalizedText_copy(&attr->displayName,
+                                                     &node->displayName);
+        retval |= UA_LocalizedText_copy(&attr->description, &node->description);
     }
 
     node->writeMask = attr->writeMask;
@@ -20703,16 +20835,18 @@ copyCommonVariableAttributes(UA_VariableNode *node,
     node->arrayDimensionsSize = attr->arrayDimensionsSize;
 
     /* Data type and value rank */
-    retval |= UA_NodeId_copy(&attr->dataType, &node->dataType);
+    retval = UA_NodeId_copy(&attr->dataType, &node->dataType);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
     node->valueRank = attr->valueRank;
 
     /* Copy the value */
     node->valueSource = UA_VALUESOURCE_DATA;
     UA_NodeId extensionObject = UA_NODEID_NUMERIC(0, UA_NS0ID_STRUCTURE);
     /* If we have an extension object which is still encoded (e.g. from the
-     * nodeset compiler) we need to decode it and set the decoded value instead
-     * of the encoded object */
-    UA_Boolean valueSet = false;
+     * nodeset compiler) return an error.
+     * This was used in the old version of the nodeset compiler and is not
+     * needed anymore. */
     if(attr->value.type != NULL && UA_NodeId_equal(&attr->value.type->typeId, &extensionObject)) {
         /* Do nothing since we got an empty array of extension objects */
         if(attr->value.data == UA_EMPTY_ARRAY_SENTINEL)
@@ -20720,38 +20854,13 @@ copyCommonVariableAttributes(UA_VariableNode *node,
 
         const UA_ExtensionObject *obj = (const UA_ExtensionObject *)attr->value.data;
         if(obj && obj->encoding == UA_EXTENSIONOBJECT_ENCODED_BYTESTRING) {
-            /* TODO: Once we generate type description in the nodeset compiler,
-             * UA_findDatatypeByBinary can be made internal to the decoding
-             * layer. */
-            const UA_DataType *type = UA_findDataTypeByBinary(&obj->content.encoded.typeId);
-
-            if(type) {
-                void *dst = UA_Array_new(attr->value.arrayLength, type);
-                if (!dst) {
-                    return UA_STATUSCODE_BADOUTOFMEMORY;
-                }
-                uint8_t *tmpPos = (uint8_t *)dst;
-
-                for(size_t i=0; i<attr->value.arrayLength; i++) {
-                    size_t offset =0;
-                    const UA_ExtensionObject *curr = &((const UA_ExtensionObject *)attr->value.data)[i];
-                    UA_StatusCode ret = UA_decodeBinary(&curr->content.encoded.body, &offset, tmpPos, type, NULL);
-                    if(ret != UA_STATUSCODE_GOOD) {
-                        return ret;
-                    }
-                    tmpPos += type->memSize;
-                }
-
-                UA_Variant_setArray(&node->value.data.value.value, dst, attr->value.arrayLength, type);
-                valueSet = true;
-            }
+            return UA_STATUSCODE_BADNOTSUPPORTED;
         }
     }
 
-    if(!valueSet)
-        retval |= UA_Variant_copy(&attr->value, &node->value.data.value.value);
+    retval = UA_Variant_copy(&attr->value, &node->value.data.value.value);
 
-    node->value.data.value.hasValue = true;
+    node->value.data.value.hasValue = node->value.data.value.value.type != NULL;
 
     return retval;
 }
@@ -21070,6 +21179,7 @@ void UA_Node_deleteReferences(UA_Node *node) {
  *    Copyright 2017 (c) frax2222
  *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
  *    Copyright 2018 (c) Hilscher Gesellschaft für Systemautomation mbH (Author: Martin Lang)
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -21087,7 +21197,25 @@ void UA_Node_deleteReferences(UA_Node *node) {
 /* Namespace Handling */
 /**********************/
 
+/*
+ * The NS1 Uri can be changed by the user to some custom string.
+ * This method is called to initialize the NS1 Uri if it is not set before to the default Application URI.
+ *
+ * This is done as soon as the Namespace Array is read or written via node value read / write services,
+ * or UA_Server_addNamespace, UA_Server_getNamespaceByName or UA_Server_run_startup is called.
+ *
+ * Therefore one has to set the custom NS1 URI before one of the previously mentioned steps.
+ */
+void setupNs1Uri(UA_Server *server) {
+    if (!server->namespaces[1].data) {
+        UA_String_copy(&server->config.applicationDescription.applicationUri, &server->namespaces[1]);
+    }
+}
+
 UA_UInt16 addNamespace(UA_Server *server, const UA_String name) {
+    /* ensure that the uri for ns1 is set up from the app description */
+    setupNs1Uri(server);
+
     /* Check if the namespace already exists in the server's namespace array */
     for(UA_UInt16 i = 0; i < server->namespacesSize; ++i) {
         if(UA_String_equal(&name, &server->namespaces[i]))
@@ -21131,6 +21259,9 @@ UA_Server_getConfig(UA_Server *server)
 UA_StatusCode
 UA_Server_getNamespaceByName(UA_Server *server, const UA_String namespaceUri,
                              size_t* foundIndex) {
+    /* ensure that the uri for ns1 is set up from the app description */
+    setupNs1Uri(server);
+
     for(size_t idx = 0; idx < server->namespacesSize; idx++) {
         if(!UA_String_equal(&server->namespaces[idx], &namespaceUri))
             continue;
@@ -21267,10 +21398,15 @@ UA_Server_new() {
     server->adminSession.sessionId.identifier.guid.data1 = 1;
     server->adminSession.validTill = UA_INT64_MAX;
 
-    /* Create Namespaces 0 and 1 */
+    /* Create Namespaces 0 and 1
+     * Ns1 will be filled later with the uri from the app description */
     server->namespaces = (UA_String *)UA_Array_new(2, &UA_TYPES[UA_TYPES_STRING]);
+    if(!server->namespaces) {
+        UA_Server_delete(server);
+        return NULL;
+    }
     server->namespaces[0] = UA_STRING_ALLOC("http://opcfoundation.org/UA/");
-    UA_String_copy(&server->config.applicationDescription.applicationUri, &server->namespaces[1]);
+    server->namespaces[1] = UA_STRING_NULL;
     server->namespacesSize = 2;
 
     /* Initialized SecureChannel and Session managers */
@@ -21445,9 +21581,19 @@ verifyServerApplicationURI(const UA_Server *server) {
 
 UA_StatusCode
 UA_Server_run_startup(UA_Server *server) {
+    /* ensure that the uri for ns1 is set up from the app description */
+    setupNs1Uri(server);
+
+    /* write ServerArray with same ApplicationURI value as NamespaceArray */
+    UA_StatusCode retVal = writeNs0VariableArray(server, UA_NS0ID_SERVER_SERVERARRAY,
+                                    &server->config.applicationDescription.applicationUri,
+                                    1, &UA_TYPES[UA_TYPES_STRING]);
+    if(retVal != UA_STATUSCODE_GOOD)
+        return retVal;
+
     if(server->state > UA_SERVERLIFECYCLE_FRESH)
         return UA_STATUSCODE_GOOD;
-    
+
     /* At least one endpoint has to be configured */
     if(server->config.endpointsSize == 0) {
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
@@ -21489,8 +21635,7 @@ UA_Server_run_startup(UA_Server *server) {
 
     /* Start the multicast discovery server */
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    if(server->config.applicationDescription.applicationType ==
-       UA_APPLICATIONTYPE_DISCOVERYSERVER)
+    if(server->config.discovery.mdnsEnable)
         startMulticastDiscoveryServer(server);
 #endif
 
@@ -21533,8 +21678,7 @@ UA_Server_run_iterate(UA_Server *server, UA_Boolean waitInternal) {
     }
 
 #if defined(UA_ENABLE_DISCOVERY_MULTICAST) && !defined(UA_ENABLE_MULTITHREADING)
-    if(server->config.applicationDescription.applicationType ==
-       UA_APPLICATIONTYPE_DISCOVERYSERVER) {
+    if(server->config.discovery.mdnsEnable) {
         // TODO multicastNextRepeat does not consider new input data (requests)
         // on the socket. It will be handled on the next call. if needed, we
         // need to use select with timeout on the multicast socket
@@ -21576,8 +21720,7 @@ UA_Server_run_shutdown(UA_Server *server) {
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
     /* Stop multicast discovery */
-    if(server->config.applicationDescription.applicationType ==
-       UA_APPLICATIONTYPE_DISCOVERYSERVER)
+    if(server->config.discovery.mdnsEnable)
         stopMulticastDiscoveryServer(server);
 #endif
 
@@ -21649,7 +21792,7 @@ UA_Server_AccessControl_allowHistoryUpdateDeleteRawModified(UA_Server *server,
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
@@ -21657,6 +21800,7 @@ UA_Server_AccessControl_allowHistoryUpdateDeleteRawModified(UA_Server *server,
  *    Copyright 2017 (c) Julian Grothoff
  *    Copyright 2017 (c) Henrik Norrman
  *    Copyright 2018 (c) Fabian Arndt, Root-Core
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -21913,24 +22057,79 @@ readStatus(UA_Server *server, const UA_NodeId *sessionId, void *sessionContext,
         return UA_STATUSCODE_GOOD;
     }
 
-    UA_ServerStatusDataType *statustype = UA_ServerStatusDataType_new();
-    statustype->startTime = server->startTime;
-    statustype->currentTime = UA_DateTime_now();
-    statustype->state = UA_SERVERSTATE_RUNNING;
-    statustype->secondsTillShutdown = 0;
-    UA_BuildInfo_copy(&server->config.buildInfo, &statustype->buildInfo);
-
-    value->value.type = &UA_TYPES[UA_TYPES_SERVERSTATUSDATATYPE];
-    value->value.arrayLength = 0;
-    value->value.data = statustype;
-    value->value.arrayDimensionsSize = 0;
-    value->value.arrayDimensions = NULL;
-    value->hasValue = true;
     if(sourceTimestamp) {
         value->hasSourceTimestamp = true;
         value->sourceTimestamp = UA_DateTime_now();
     }
-    return UA_STATUSCODE_GOOD;
+
+    void *data = NULL;
+
+    UA_assert(nodeId->identifierType == UA_NODEIDTYPE_NUMERIC);
+
+    switch(nodeId->identifier.numeric) {
+    case UA_NS0ID_SERVER_SERVERSTATUS: {
+        UA_ServerStatusDataType *statustype = UA_ServerStatusDataType_new();
+        if(!statustype)
+            return UA_STATUSCODE_BADOUTOFMEMORY;
+        statustype->startTime = server->startTime;
+        statustype->currentTime = UA_DateTime_now();
+        statustype->state = UA_SERVERSTATE_RUNNING;
+        statustype->secondsTillShutdown = 0;
+        value->value.data = statustype;
+        value->value.type = &UA_TYPES[UA_TYPES_SERVERSTATUSDATATYPE];
+        value->hasValue = true;
+        return UA_BuildInfo_copy(&server->config.buildInfo, &statustype->buildInfo);
+    }
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO:
+        value->value.type = &UA_TYPES[UA_TYPES_BUILDINFO];
+        data = &server->config.buildInfo;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI:
+        value->value.type = &UA_TYPES[UA_TYPES_STRING];
+        data = &server->config.buildInfo.productUri;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME:
+        value->value.type = &UA_TYPES[UA_TYPES_STRING];
+        data = &server->config.buildInfo.manufacturerName;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME:
+        value->value.type = &UA_TYPES[UA_TYPES_STRING];
+        data = &server->config.buildInfo.productName;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION:
+        value->value.type = &UA_TYPES[UA_TYPES_STRING];
+        data = &server->config.buildInfo.softwareVersion;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER:
+        value->value.type = &UA_TYPES[UA_TYPES_STRING];
+        data = &server->config.buildInfo.buildNumber;
+        break;
+
+    case UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE:
+        value->value.type = &UA_TYPES[UA_TYPES_DATETIME];
+        data = &server->config.buildInfo.buildDate;
+        break;
+
+    default:
+        value->hasStatus = true;
+        value->status = UA_STATUSCODE_BADINTERNALERROR;
+        return UA_STATUSCODE_GOOD;
+    }
+
+    value->value.data = UA_new(value->value.type);
+    if(!value->value.data) {
+        value->value.type = NULL;
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
+
+    value->hasValue = true;
+    return UA_copy(data, value->value.data, value->value.type);
 }
 
 #ifdef UA_GENERATED_NAMESPACE_ZERO
@@ -21990,6 +22189,9 @@ readNamespaces(UA_Server *server, const UA_NodeId *sessionId, void *sessionConte
                const UA_NodeId *nodeid, void *nodeContext, UA_Boolean includeSourceTimeStamp,
                const UA_NumericRange *range,
                UA_DataValue *value) {
+    /* ensure that the uri for ns1 is set up from the app description */
+    setupNs1Uri(server);
+
     if(range) {
         value->hasStatus = true;
         value->status = UA_STATUSCODE_BADINDEXRANGEINVALID;
@@ -22032,6 +22234,9 @@ writeNamespaces(UA_Server *server, const UA_NodeId *sessionId, void *sessionCont
     if(newNamespacesSize <= server->namespacesSize)
         return UA_STATUSCODE_BADTYPEMISMATCH;
 
+    /* ensure that the uri for ns1 is set up from the app description */
+    setupNs1Uri(server);
+    
     /* Test if the existing namespaces are unchanged */
     for(size_t i = 0; i < server->namespacesSize; ++i) {
         if(!UA_String_equal(&server->namespaces[i], &newNamespaces[i]))
@@ -22125,7 +22330,7 @@ writeNs0Variable(UA_Server *server, UA_UInt32 id, void *v, const UA_DataType *ty
     return UA_Server_writeValue(server, UA_NODEID_NUMERIC(0, id), var);
 }
 
-static UA_StatusCode
+UA_StatusCode
 writeNs0VariableArray(UA_Server *server, UA_UInt32 id, void *v,
                       size_t length, const UA_DataType *type) {
     UA_Variant var;
@@ -22269,7 +22474,7 @@ UA_Server_initNS0(UA_Server *server) {
     /* CurrentTime */
     UA_DataSource currentTime = {readCurrentTime, NULL};
     retVal |= UA_Server_setVariableNode_dataSource(server,
-                        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME), currentTime);
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME), currentTime);
 
     /* State */
     UA_ServerState state = UA_SERVERSTATE_RUNNING;
@@ -22277,32 +22482,38 @@ UA_Server_initNS0(UA_Server *server) {
                                &state, &UA_TYPES[UA_TYPES_SERVERSTATE]);
 
     /* BuildInfo */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO,
-                               &server->config.buildInfo, &UA_TYPES[UA_TYPES_BUILDINFO]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO), serverStatus);
 
     /* BuildInfo - ProductUri */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI,
-                               &server->config.buildInfo.productUri, &UA_TYPES[UA_TYPES_STRING]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTURI),
+                                                   serverStatus);
 
     /* BuildInfo - ManufacturerName */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME,
-                               &server->config.buildInfo.manufacturerName, &UA_TYPES[UA_TYPES_STRING]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_MANUFACTURERNAME),
+                                                   serverStatus);
 
     /* BuildInfo - ProductName */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME,
-                               &server->config.buildInfo.productName, &UA_TYPES[UA_TYPES_STRING]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_PRODUCTNAME),
+                                                   serverStatus);
 
     /* BuildInfo - SoftwareVersion */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION,
-                               &server->config.buildInfo.softwareVersion, &UA_TYPES[UA_TYPES_STRING]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_SOFTWAREVERSION),
+                                                   serverStatus);
 
     /* BuildInfo - BuildNumber */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER,
-                               &server->config.buildInfo.buildNumber, &UA_TYPES[UA_TYPES_STRING]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDNUMBER),
+                                                   serverStatus);
 
     /* BuildInfo - BuildDate */
-    retVal |= writeNs0Variable(server, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE,
-                               &server->config.buildInfo.buildDate, &UA_TYPES[UA_TYPES_DATETIME]);
+    retVal |= UA_Server_setVariableNode_dataSource(server,
+                 UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_BUILDINFO_BUILDDATE),
+                                                   serverStatus);
 
 #ifdef UA_GENERATED_NAMESPACE_ZERO
 
@@ -22497,11 +22708,11 @@ UA_Server_initNS0(UA_Server *server) {
     UA_ObjectTypeAttributes overflowAttr = UA_ObjectTypeAttributes_default;
     overflowAttr.description = UA_LOCALIZEDTEXT("en-US", "A simple event for indicating a queue overflow.");
     overflowAttr.displayName = UA_LOCALIZEDTEXT("en-US", "SimpleOverflowEventType");
-    UA_Server_addObjectTypeNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SIMPLEOVERFLOWEVENTTYPE),
-                                UA_NODEID_NUMERIC(0, UA_NS0ID_EVENTQUEUEOVERFLOWEVENTTYPE),
-                                UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
-                                UA_QUALIFIEDNAME(0, "SimpleOverflowEventType"),
-                                overflowAttr, NULL, NULL);
+    retVal |= UA_Server_addObjectTypeNode(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SIMPLEOVERFLOWEVENTTYPE),
+                                          UA_NODEID_NUMERIC(0, UA_NS0ID_EVENTQUEUEOVERFLOWEVENTTYPE),
+                                          UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
+                                          UA_QUALIFIEDNAME(0, "SimpleOverflowEventType"),
+                                          overflowAttr, NULL, NULL);
 #endif
 
     if(retVal != UA_STATUSCODE_GOOD) {
@@ -22532,12 +22743,8 @@ UA_ServerConfig_clean(UA_ServerConfig *config) {
     /* Server Description */
     UA_BuildInfo_deleteMembers(&config->buildInfo);
     UA_ApplicationDescription_deleteMembers(&config->applicationDescription);
-#ifdef UA_ENABLE_DISCOVERY
-    UA_String_deleteMembers(&config->mdnsServerName);
-    UA_Array_delete(config->serverCapabilities, config->serverCapabilitiesSize,
-                    &UA_TYPES[UA_TYPES_STRING]);
-    config->serverCapabilities = NULL;
-    config->serverCapabilitiesSize = 0;
+#ifdef UA_ENABLE_DISCOVERY_MULTICAST
+    UA_MdnsDiscoveryConfiguration_clear(&config->discovery.mdns);
 #endif
 
     /* Custom DataTypes */
@@ -23179,9 +23386,15 @@ processMSG(UA_Server *server, UA_SecureChannel *channel,
     ((UA_ResponseHeader*)response)->timestamp = UA_DateTime_now();
 
     /* Check timestamp in the request header */
-    if(!(requestHeader->timestamp)) {
-        return sendServiceFault(channel, msg, requestPos, responseType,
-                                requestId, UA_STATUSCODE_BADINVALIDTIMESTAMP);
+    if(requestHeader->timestamp == 0) {
+        if(server->config.verifyRequestTimestamp <= UA_RULEHANDLING_WARN) {
+            UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
+                                   "The server sends no timestamp in the request header. "
+                                   "See the 'verifyRequestTimestamp' setting.");
+            if(server->config.verifyRequestTimestamp <= UA_RULEHANDLING_ABORT)
+                return sendServiceFault(channel, msg, requestPos, responseType,
+                                        requestId, UA_STATUSCODE_BADINVALIDTIMESTAMP);
+        }
     }
 
     /* Process normal services before initializing the message context.
@@ -23619,148 +23832,42 @@ UA_Node_hasSubTypeOrInstances(const UA_Node *node) {
     return false;
 }
 
-static const UA_NodeId hasSubtypeNodeId =
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASSUBTYPE}};
-
-static UA_StatusCode
-getTypeHierarchyFromNode(UA_NodeId **results_ptr, size_t *results_count,
-                         size_t *results_size, const UA_Node *node,
-                         UA_Boolean walkDownwards) {
-    UA_NodeId *results = *results_ptr;
-    for(size_t i = 0; i < node->referencesSize; ++i) {
-        /* Is the reference kind relevant? */
-        UA_NodeReferenceKind *refs = &node->references[i];
-        // if downwards, we do not want inverse, if upwards we want inverse
-        if (walkDownwards == refs->isInverse)
-            continue;
-        if(!UA_NodeId_equal(&hasSubtypeNodeId, &refs->referenceTypeId))
-            continue;
-
-        /* Append all targets of the reference kind .. if not a duplicate */
-        for(size_t j = 0; j < refs->targetIdsSize; ++j) {
-            /* Is the target a duplicate? (multi-inheritance) */
-            UA_NodeId *targetId = &refs->targetIds[j].nodeId;
-            UA_Boolean duplicate = false;
-            for(size_t k = 0; k < *results_count; ++k) {
-                if(UA_NodeId_equal(targetId, &results[k])) {
-                    duplicate = true;
-                    break;
-                }
-            }
-            if(duplicate)
-                continue;
-
-            /* Increase array length if necessary */
-            if(*results_count >= *results_size) {
-                size_t new_size = sizeof(UA_NodeId) * (*results_size) * 2;
-                UA_NodeId *new_results = (UA_NodeId*)UA_realloc(results, new_size);
-                if(!new_results) {
-                    UA_Array_delete(results, *results_count, &UA_TYPES[UA_TYPES_NODEID]);
-                    return UA_STATUSCODE_BADOUTOFMEMORY;
-                }
-                results = new_results;
-                *results_ptr = results;
-                *results_size *= 2;
-            }
-
-            /* Copy new nodeid to the end of the list */
-            UA_StatusCode retval = UA_NodeId_copy(targetId, &results[*results_count]);
-            if(retval != UA_STATUSCODE_GOOD) {
-                UA_Array_delete(results, *results_count, &UA_TYPES[UA_TYPES_NODEID]);
-                return retval;
-            }
-            *results_count += 1;
-        }
-    }
-    return UA_STATUSCODE_GOOD;
-}
+static const UA_NodeId hasInterfaceNodeId =
+    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASINTERFACE}};
 
 UA_StatusCode
-getTypeHierarchy(void *nsCtx, const UA_NodeId *leafType,
-                 UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                 UA_Boolean walkDownwards) {
-    /* Allocate the results array. Probably too big, but saves mallocs. */
-    size_t results_size = 20;
-    UA_NodeId *results = (UA_NodeId*)UA_malloc(sizeof(UA_NodeId) * results_size);
-    if(!results)
-        return UA_STATUSCODE_BADOUTOFMEMORY;
+getParentTypeAndInterfaceHierarchy(UA_Server *server, const UA_NodeId *typeNode,
+                                   UA_NodeId **typeHierarchy, size_t *typeHierarchySize) {
+    UA_NodeId *subTypes = NULL;
+    size_t subTypesSize = 0;
+    UA_StatusCode retval =
+        getLocalRecursiveHierarchy(server, typeNode, 1, &subtypeId, 1,
+                                   false, &subTypes, &subTypesSize);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
 
-    /* The leaf is the first element */
-    size_t results_count = 1;
-    UA_StatusCode retval = UA_NodeId_copy(leafType, &results[0]);
+    UA_NodeId *interfaces = NULL;
+    size_t interfacesSize = 0;
+    retval = getLocalRecursiveHierarchy(server, typeNode, 1, &hasInterfaceNodeId, 1,
+                                        true, &interfaces, &interfacesSize);
     if(retval != UA_STATUSCODE_GOOD) {
-        UA_free(results);
+        UA_Array_delete(subTypes, subTypesSize, &UA_TYPES[UA_TYPES_NODEID]);
         return retval;
     }
 
-    /* Loop over the array members .. and add new elements to the end */
-    for(size_t idx = 0; idx < results_count; ++idx) {
-        /* Get the node */
-        const UA_Node *node = UA_Nodestore_getNode(nsCtx, &results[idx]);
-
-        /* Invalid node, remove from the array */
-        if(!node) {
-            for(size_t i = idx; i < results_count-1; ++i)
-                results[i] = results[i+1];
-            results_count--;
-            continue;
-        }
-
-        /* Add references from the current node to the end of the array */
-        retval = getTypeHierarchyFromNode(&results, &results_count,
-                                          &results_size, node, walkDownwards);
-
-        /* Release the node */
-        UA_Nodestore_releaseNode(nsCtx, node);
-
-        if(retval != UA_STATUSCODE_GOOD) {
-            UA_Array_delete(results, results_count, &UA_TYPES[UA_TYPES_NODEID]);
-            return retval;
-        }
+    UA_NodeId *total = (UA_NodeId*)
+        UA_realloc(subTypes, sizeof(UA_NodeId)*(subTypesSize + interfacesSize - 1));
+    if(!total) {
+        UA_Array_delete(subTypes, subTypesSize, &UA_TYPES[UA_TYPES_NODEID]);
+        UA_Array_delete(subTypes, subTypesSize, &UA_TYPES[UA_TYPES_NODEID]);
+        return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    /* Zero results. The leaf node was not found */
-    if(results_count == 0) {
-        UA_free(results);
-        results = NULL;
-    }
-
-    *typeHierarchy = results;
-    *typeHierarchySize = results_count;
-    return UA_STATUSCODE_GOOD;
-}
-
-
-UA_StatusCode
-getTypesHierarchy(void *nsCtx, const UA_NodeId *leafType, size_t leafTypeSize,
-                  UA_NodeId **typeHierarchy, size_t *typeHierarchySize,
-                  UA_Boolean walkDownwards) {
-    UA_NodeId *results = NULL;
-    size_t results_count = 0;
-    for (size_t i = 0; i < leafTypeSize; i++) {
-        UA_NodeId *tmpResults = NULL;
-        size_t tmpResults_size = 0;
-        UA_StatusCode retval = getTypeHierarchy(nsCtx, &leafType[i], &tmpResults, &tmpResults_size, walkDownwards);
-        if(retval != UA_STATUSCODE_GOOD) {
-            UA_Array_delete(results, results_count, &UA_TYPES[UA_TYPES_NODEID]);
-            return retval;
-        }
-        if (tmpResults_size == 0 || tmpResults == NULL )
-            continue;
-        size_t new_size = sizeof(UA_NodeId) * (results_count + tmpResults_size);
-        UA_NodeId *new_results = (UA_NodeId*)UA_realloc(results, new_size);
-        if(!new_results) {
-            UA_Array_delete(results, results_count, &UA_TYPES[UA_TYPES_NODEID]);
-            return UA_STATUSCODE_BADOUTOFMEMORY;
-        }
-        results = new_results;
-        memcpy(&results[results_count],tmpResults, sizeof(UA_NodeId)*tmpResults_size);
-        /* do not use UA_Array_delete since we still need the content of the nodes */
-        UA_free(tmpResults);
-        results_count = results_count + tmpResults_size;
-    }
-    *typeHierarchy = results;
-    *typeHierarchySize = results_count;
+    memcpy(&total[subTypesSize], &interfaces[1], sizeof(UA_NodeId)*(interfacesSize-1));
+    UA_free(interfaces);
+    
+    *typeHierarchy = total;
+    *typeHierarchySize = subTypesSize + interfacesSize - 1;
     return UA_STATUSCODE_GOOD;
 }
 
@@ -23983,19 +24090,15 @@ register_server_with_discovery_server(UA_Server *server,
         request.server.discoveryUrls[config_discurls + i] = nl->discoveryUrl;
     }
 
-    UA_MdnsDiscoveryConfiguration mdnsConfig;
-    UA_MdnsDiscoveryConfiguration_init(&mdnsConfig);
-
+#ifdef UA_ENABLE_DISCOVERY_MULTICAST
     request.discoveryConfigurationSize = 1;
     request.discoveryConfiguration = UA_ExtensionObject_new();
     UA_ExtensionObject_init(&request.discoveryConfiguration[0]);
+    // Set to NODELETE so that we can just use a pointer to the mdns config
     request.discoveryConfiguration[0].encoding = UA_EXTENSIONOBJECT_DECODED_NODELETE;
     request.discoveryConfiguration[0].content.decoded.type = &UA_TYPES[UA_TYPES_MDNSDISCOVERYCONFIGURATION];
-    request.discoveryConfiguration[0].content.decoded.data = &mdnsConfig;
-
-    mdnsConfig.mdnsServerName = server->config.mdnsServerName;
-    mdnsConfig.serverCapabilities = server->config.serverCapabilities;
-    mdnsConfig.serverCapabilitiesSize = server->config.serverCapabilitiesSize;
+    request.discoveryConfiguration[0].content.decoded.data = &server->config.discovery.mdns;
+#endif
 
     // First try with RegisterServer2, if that isn't implemented, use RegisterServer
     UA_RegisterServer2Response response;
@@ -24004,7 +24107,11 @@ register_server_with_discovery_server(UA_Server *server,
 
     UA_StatusCode serviceResult = response.responseHeader.serviceResult;
     UA_RegisterServer2Response_deleteMembers(&response);
-    UA_ExtensionObject_delete(request.discoveryConfiguration);
+    UA_Array_delete(request.discoveryConfiguration,
+                    request.discoveryConfigurationSize,
+                    &UA_TYPES[UA_TYPES_EXTENSIONOBJECT]);
+    request.discoveryConfiguration = NULL;
+    request.discoveryConfigurationSize = 0;
 
     if(serviceResult == UA_STATUSCODE_BADNOTIMPLEMENTED ||
        serviceResult == UA_STATUSCODE_BADSERVICEUNSUPPORTED) {
@@ -25815,6 +25922,7 @@ void UA_DataSetMessage_free(const UA_DataSetMessage* p) {
  *
  * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
  * Copyright (c) 2019 Fraunhofer IOSB (Author: Julius Pfrommer)
+ * Copyright (c) 2019 Kalycito Infotech Private Limited
  */
 
 
@@ -25828,8 +25936,11 @@ void UA_DataSetMessage_free(const UA_DataSetMessage* p) {
 #endif
 
 #define UA_MAX_STACKBUF 512 /* Max size of network messages on the stack */
+#define UA_MAX_SIZENAME 64  /* Max size of Qualified Name of Subscribed Variable */
 
 /* Forward declaration */
+static size_t
+iterateVariableAttrDimension(UA_VariableAttributes varAttr);
 static void
 UA_WriterGroup_deleteMembers(UA_Server *server, UA_WriterGroup *writerGroup);
 static void
@@ -25914,6 +26025,12 @@ UA_PubSubConnection_deleteMembers(UA_Server *server, UA_PubSubConnection *connec
     LIST_FOREACH_SAFE(writerGroup, &connection->writerGroups, listEntry, tmpWriterGroup){
         UA_Server_removeWriterGroup(server, writerGroup->identifier);
     }
+    /* remove contained ReaderGroups */
+    UA_ReaderGroup *readerGroups, *tmpReaderGroup;
+    LIST_FOREACH_SAFE(readerGroups, &connection->readerGroups, listEntry, tmpReaderGroup){
+      UA_Server_removeReaderGroup(server, readerGroups->identifier);
+    }
+
     UA_NodeId_deleteMembers(&connection->identifier);
     if(connection->channel){
         connection->channel->close(connection->channel);
@@ -25936,7 +26053,7 @@ UA_Server_addWriterGroup(UA_Server *server, const UA_NodeId connection,
 
     //allocate memory for new WriterGroup
     UA_WriterGroup *newWriterGroup = (UA_WriterGroup *) UA_calloc(1, sizeof(UA_WriterGroup));
-    if (!newWriterGroup)
+    if(!newWriterGroup)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
     newWriterGroup->linkedConnection = currentConnectionContext->identifier;
@@ -25990,9 +26107,1009 @@ UA_Server_removeWriterGroup(UA_Server *server, const UA_NodeId writerGroup){
 }
 
 /**********************************************/
-/*               PublishedDataSet             */
+/*               ReaderGroup                  */
 /**********************************************/
 
+/**
+ * Add ReaderGroup to connection.
+ *
+ * @param server
+ * @param connectionIdentifier
+ * @param readerGroupConfiguration
+ * @param readerGroupIdentifier
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_addReaderGroup(UA_Server *server, UA_NodeId connectionIdentifier,
+                                   const UA_ReaderGroupConfig *readerGroupConfig,
+                                   UA_NodeId *readerGroupIdentifier) {
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_ReaderGroupConfig tmpReaderGroupConfig;
+
+    /* Search the connection by the given connectionIdentifier */
+    if(!readerGroupConfig) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    /* Search the connection by the given connectionIdentifier */
+    UA_PubSubConnection *currentConnectionContext = UA_PubSubConnection_findConnectionbyId(server, connectionIdentifier);
+    if(!currentConnectionContext) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    /* Allocate memory for new reader group */
+    UA_ReaderGroup *newGroup = (UA_ReaderGroup *)UA_calloc(1, sizeof(UA_ReaderGroup));
+    if(!newGroup) {
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
+
+    /* Generate nodeid for the readergroup identifier */
+    newGroup->linkedConnection = currentConnectionContext->identifier;
+    UA_PubSubManager_generateUniqueNodeId(server, &newGroup->identifier);
+    if(readerGroupIdentifier) {
+        UA_NodeId_copy(&newGroup->identifier, readerGroupIdentifier);
+    }
+
+    /* Deep copy of the config */
+    retval |= UA_ReaderGroupConfig_copy(readerGroupConfig, &tmpReaderGroupConfig);
+    newGroup->config = tmpReaderGroupConfig;
+    retval |= UA_ReaderGroup_addSubscribeCallback(server, newGroup);
+    LIST_INSERT_HEAD(&currentConnectionContext->readerGroups, newGroup, listEntry);
+    currentConnectionContext->readerGroupsSize++;
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
+    addReaderGroupRepresentation(server, newGroup);
+#endif
+
+    return retval;
+}
+
+/**
+ * Remove ReaderGroup from connection and delete contained readers.
+ *
+ * @param server
+ * @param groupIdentifier
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_removeReaderGroup(UA_Server *server, UA_NodeId groupIdentifier) {
+    UA_ReaderGroup* readerGroup = UA_ReaderGroup_findRGbyId(server, groupIdentifier);
+    if(readerGroup == NULL) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    /* Search the connection to which the given readergroup is connected to */
+    UA_PubSubConnection *connection = UA_PubSubConnection_findConnectionbyId(server, readerGroup->linkedConnection);
+    if(connection == NULL) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
+    /* To Do:RemoveGroupRepresentation(server, &readerGroup->identifier) */
+#endif
+
+    /* UA_Server_ReaderGroup_delete also removes itself from the list */
+    UA_Server_ReaderGroup_delete(server, readerGroup);
+    /* Remove readerGroup from Connection */
+    LIST_REMOVE(readerGroup, listEntry);
+    UA_free(readerGroup);
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * To Do:
+ * Update ReaderGroup configuration.
+ *
+ * @param server
+ * @param readerGroupIdentifier
+ * @param readerGroupConfiguration
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_ReaderGroup_updateConfig(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                                  const UA_ReaderGroupConfig *config) {
+    return UA_STATUSCODE_BADNOTIMPLEMENTED;
+}
+
+/**
+ * Get ReaderGroup configuration.
+ *
+ * @param server
+ * @param groupIdentifier
+ * @param readerGroupConfiguration
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_ReaderGroup_getConfig(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                               UA_ReaderGroupConfig *config) {
+    if(!config) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    /* Identify the readergroup through the readerGroupIdentifier */
+    UA_ReaderGroup *currentReaderGroup = UA_ReaderGroup_findRGbyId(server, readerGroupIdentifier);
+    if(!currentReaderGroup) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    UA_ReaderGroupConfig tmpReaderGroupConfig;
+    /* deep copy of the actual config */
+    UA_ReaderGroupConfig_copy(&currentReaderGroup->config, &tmpReaderGroupConfig);
+    *config = tmpReaderGroupConfig;
+    return UA_STATUSCODE_GOOD;
+}
+
+/* To Do UA_ReaderGroupConfig delete */
+
+/**
+ * Delete ReaderGroup.
+ *
+ * @param server
+ * @param groupIdentifier
+ */
+void UA_Server_ReaderGroup_delete(UA_Server* server, UA_ReaderGroup *readerGroup) {
+    /* To Do Call UA_ReaderGroupConfig_delete */
+    UA_DataSetReader *dataSetReader, *tmpDataSetReader;
+    LIST_FOREACH_SAFE(dataSetReader, &readerGroup->readers, listEntry, tmpDataSetReader) {
+        UA_DataSetReader_delete(server, dataSetReader);
+    }
+    UA_PubSubConnection* pConn = UA_PubSubConnection_findConnectionbyId(server, readerGroup->linkedConnection);
+    if(pConn != NULL) {
+        pConn->readerGroupsSize--;
+    }
+
+    /* Delete ReaderGroup and its members */
+    UA_String_deleteMembers(&readerGroup->config.name);
+    UA_NodeId_deleteMembers(&readerGroup->linkedConnection);
+    UA_NodeId_deleteMembers(&readerGroup->identifier);
+}
+
+/**
+ * Copy ReaderGroup configuration.
+ *
+ * @param source
+ * @param destination
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_ReaderGroupConfig_copy(const UA_ReaderGroupConfig *src,
+                                UA_ReaderGroupConfig *dst) {
+    UA_String_copy(&src->name, &dst->name);
+    /* Currently simple memcpy only */
+    memcpy(&dst->securityParameters, &src->securityParameters, sizeof(UA_PubSubSecurityParameters));
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * Process NetworkMessage.
+ *
+ * @param server
+ * @param networkmessage
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_processNetworkMessage(UA_Server *server, UA_NetworkMessage *pMsg,
+                                          UA_PubSubConnection *pConnection) {
+    UA_StatusCode retval = UA_STATUSCODE_BADNOTIMPLEMENTED;
+    if((pMsg == NULL) || (pConnection == NULL)) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    UA_Boolean publisherIdAvailable = false;
+    if(pMsg->publisherIdEnabled) {
+        publisherIdAvailable = true;
+    }
+
+    /* To Do The condition with dataSetWriterIdAvailable and WriterGroupIdAvailable to be handled
+     * when pMsg->groupHeaderEnabled, pMsg->dataSetClassIdEnabled, pMsg->payloadHeaderEnabled
+     * Here some filtering is possible */
+
+    UA_Byte anzDataSets = 1;
+    if(pMsg->payloadHeaderEnabled) {
+        anzDataSets = pMsg->payloadHeader.dataSetPayloadHeader.count;
+    }
+
+    UA_DataSetReader* dataSetReaderErg = NULL;
+        if(pConnection->readerGroupsSize == 1) {
+            if(LIST_FIRST(&pConnection->readerGroups)->readersCount == 1) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "only 1 DataSetReader available. This one will be used.");
+            dataSetReaderErg = LIST_FIRST(&LIST_FIRST(&pConnection->readerGroups)->readers);
+            }
+
+        }
+        else {
+            UA_DataSetReader *tmpReader;
+            if(publisherIdAvailable) {
+                UA_ReaderGroup* readerGroup = NULL;
+                LIST_FOREACH(readerGroup, &pConnection->readerGroups, listEntry) {
+                    LIST_FOREACH(tmpReader, &readerGroup->readers, listEntry) {
+                        if(publisherIdAvailable && (tmpReader->config.publisherId.type != NULL)) {
+                            switch (pMsg->publisherIdType) {
+                                case UA_PUBLISHERDATATYPE_BYTE:
+                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_BYTE]) &&
+                                       (pMsg->publisherId.publisherIdByte == (*(UA_Byte*)tmpReader->config.publisherId.data))) {
+                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
+                                        dataSetReaderErg = tmpReader;
+                                    }
+                                    break;
+
+                                case UA_PUBLISHERDATATYPE_UINT16:
+                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT16]) &&
+                                        (pMsg->publisherId.publisherIdByte == (*(UA_UInt16*)tmpReader->config.publisherId.data))) {
+                                         UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
+                                         dataSetReaderErg = tmpReader;
+                                    }
+                                    break;
+
+                                case UA_PUBLISHERDATATYPE_UINT32:
+                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT32])&&
+                                        (pMsg->publisherId.publisherIdUInt32 == (*(UA_UInt32*)tmpReader->config.publisherId.data))) {
+                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
+                                        dataSetReaderErg = tmpReader;
+                                    }
+                                    break;
+
+                                case UA_PUBLISHERDATATYPE_UINT64:
+                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT64]) &&
+                                        (pMsg->publisherId.publisherIdUInt64 == (*(UA_UInt64*)tmpReader->config.publisherId.data))) {
+                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
+                                        dataSetReaderErg = tmpReader;
+                                    }
+                                    break;
+
+                                case UA_PUBLISHERDATATYPE_STRING:
+                                     if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_STRING]) &&
+                                         (UA_String_equal(&pMsg->publisherId.publisherIdString, (UA_String*)tmpReader->config.publisherId.data))) {
+                                         UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
+                                         dataSetReaderErg = tmpReader;
+                                     }
+                                     break;
+
+                            }
+                         }
+                         /* to break out of LIST_FOREACH loop */
+                         if(dataSetReaderErg!= NULL) {
+                             break;
+                         }
+
+                     }
+                 }
+             }
+         }
+
+        UA_Boolean processMsg = true;
+        if(processMsg) {
+           for(UA_Byte iterator = 0; iterator < anzDataSets; iterator++) {
+               UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "Process Msg with DataSetReader!");
+               UA_Server_DataSetReader_process(server, dataSetReaderErg, &pMsg->payload.dataSetPayload.dataSetMessages[iterator]);
+           }
+        }
+
+        /* To Do the condition with dataSetWriterId and WriterGroupId
+         * else condition for dataSetWriterIdAvailable and writerGroupIdAvailable) */
+
+    return retval;
+}
+
+/**
+ * Find size iterator - array dimension for VariableAttributes
+ *
+ * @param VariableAttributes
+ * @return global variable size iterator
+ */
+static size_t
+iterateVariableAttrDimension (UA_VariableAttributes varAttr) {
+    size_t sizeIterator = 0;
+    for(size_t indexIterator = 0; indexIterator < varAttr.arrayDimensionsSize; indexIterator++) {
+        sizeIterator += varAttr.arrayDimensions[indexIterator];
+    }
+    return sizeIterator;
+}
+
+/**
+ * Find ReaderGroup with its identifier.
+ *
+ * @param server
+ * @param groupIdentifier
+ * @return the ReaderGroup or NULL if not found
+ */
+UA_ReaderGroup * UA_ReaderGroup_findRGbyId(UA_Server *server, UA_NodeId identifier) {
+    for (size_t iteratorConn = 0; iteratorConn < server->pubSubManager.connectionsSize; iteratorConn++) {
+        UA_ReaderGroup* readerGroup = NULL;
+        LIST_FOREACH(readerGroup, &server->pubSubManager.connections[iteratorConn].readerGroups, listEntry) {
+            if(UA_NodeId_equal(&identifier, &readerGroup->identifier)) {
+                return readerGroup;
+            }
+
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Find a DataSetReader with its identifier
+ *
+ * @param server
+ * @param identifier
+ * @return the DataSetReader or NULL if not found
+ */
+UA_DataSetReader *UA_ReaderGroup_findDSRbyId(UA_Server *server, UA_NodeId identifier) {
+    for (size_t iteratorConn = 0; iteratorConn < server->pubSubManager.connectionsSize; iteratorConn++) {
+        UA_ReaderGroup* readerGroup = NULL;
+        LIST_FOREACH(readerGroup, &server->pubSubManager.connections[iteratorConn].readerGroups, listEntry) {
+            UA_DataSetReader *tmpReader;
+            LIST_FOREACH(tmpReader, &readerGroup->readers, listEntry) {
+                if(UA_NodeId_equal(&tmpReader->identifier, &identifier)) {
+                    return tmpReader;
+                }
+
+            }
+        }
+    }
+    return NULL;
+}
+
+/**********************************************/
+/*               DataSetReader                */
+/**********************************************/
+
+/**
+ * Add a DataSetReader to ReaderGroup
+ *
+ * @param server
+ * @param readerGroupIdentifier
+ * @param dataSetReaderConfig
+ * @param readerIdentifier
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_addDataSetReader(UA_Server *server, UA_NodeId readerGroupIdentifier,
+                                      const UA_DataSetReaderConfig *dataSetReaderConfig,
+                                      UA_NodeId *readerIdentifier) {
+    /* Search the reader group by the given readerGroupIdentifier */
+    UA_ReaderGroup *readerGroup = UA_ReaderGroup_findRGbyId(server, readerGroupIdentifier);
+
+    if(!dataSetReaderConfig) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    if(readerGroup == NULL) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    /* Allocate memory for new DataSetReader */
+    UA_DataSetReader *newDataSetReader = (UA_DataSetReader *)UA_calloc(1, sizeof(UA_DataSetReader));
+    /* Copy the config into the new dataSetReader */
+    UA_DataSetReaderConfig_copy(dataSetReaderConfig, &newDataSetReader->config);
+    newDataSetReader->linkedReaderGroup = readerGroup->identifier;
+    UA_PubSubManager_generateUniqueNodeId(server, &newDataSetReader->identifier);
+    if(readerIdentifier != NULL) {
+        UA_NodeId_copy(&newDataSetReader->identifier, readerIdentifier);
+    }
+
+    /* Add the new reader to the group */
+    LIST_INSERT_HEAD(&readerGroup->readers, newDataSetReader, listEntry);
+    readerGroup->readersCount++;
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
+    addDataSetReaderRepresentation(server, newDataSetReader);
+#endif
+
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * Remove a DataSetReader from ReaderGroup
+ *
+ * @param server
+ * @param readerGroupIdentifier
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_removeDataSetReader(UA_Server *server, UA_NodeId readerIdentifier) {
+    /* Remove datasetreader given by the identifier */
+    UA_DataSetReader *dataSetReader = UA_ReaderGroup_findDSRbyId(server, readerIdentifier);
+    if(!dataSetReader) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
+    removeDataSetReaderRepresentation(server, dataSetReader);
+#endif
+
+    UA_DataSetReader_delete(server, dataSetReader);
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * Update the config of the DataSetReader.
+ *
+ * @param server
+ * @param dataSetReaderIdentifier
+ * @param readerGroupIdentifier
+ * @param config
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_DataSetReader_updateConfig(UA_Server *server, UA_NodeId dataSetReaderIdentifier, UA_NodeId readerGroupIdentifier,
+                                    const UA_DataSetReaderConfig *config) {
+    if(config == NULL) {
+       return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    UA_DataSetReader *currentDataSetReader =  UA_ReaderGroup_findDSRbyId(server, dataSetReaderIdentifier);
+    UA_ReaderGroup   *currentReaderGroup = UA_ReaderGroup_findRGbyId(server, readerGroupIdentifier);
+    if(!currentDataSetReader) {
+       return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    /* The update functionality will be extended during the next PubSub batches.
+     * Currently is only a change of the publishing interval possible. */
+    if(currentDataSetReader->config.writerGroupId != config->writerGroupId) {
+       UA_PubSubManager_removeRepeatedPubSubCallback(server, currentReaderGroup->subscribeCallbackId);
+       currentDataSetReader->config.writerGroupId = config->writerGroupId;
+       UA_ReaderGroup_subscribeCallback(server, currentReaderGroup);
+    }
+    else {
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                       "No or unsupported ReaderGroup update.");
+    }
+
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * Get the current config of the UA_DataSetReader.
+ *
+ * @param server
+ * @param dataSetReaderIdentifier
+ * @param config
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_DataSetReader_getConfig(UA_Server *server, UA_NodeId dataSetReaderIdentifier,
+                                 UA_DataSetReaderConfig *config) {
+    if(!config) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    UA_DataSetReader *currentDataSetReader = UA_ReaderGroup_findDSRbyId(server, dataSetReaderIdentifier);
+    if(!currentDataSetReader) {
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+
+    UA_DataSetReaderConfig tmpReaderConfig;
+    /* Deep copy of the actual config */
+    UA_DataSetReaderConfig_copy(&currentDataSetReader->config, &tmpReaderConfig);
+    *config = tmpReaderConfig;
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * This Method is used to initially set the SubscribedDataSet to TargetVariablesType and to create the list of target Variables of a SubscribedDataSetType.
+ *
+ * @param server
+ * @param dataSetReaderIdentifier
+ * @param targetVariables
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_Server_DataSetReader_createTargetVariables(UA_Server *server, UA_NodeId dataSetReaderIdentifier, UA_TargetVariablesDataType *targetVariables) {
+    UA_StatusCode retval = UA_STATUSCODE_BADUNEXPECTEDERROR;
+    UA_DataSetReader* pDS = UA_ReaderGroup_findDSRbyId(server, dataSetReaderIdentifier);
+    if(pDS == NULL) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    if(pDS->subscribedDataSetTarget.targetVariablesSize > 0) {
+        UA_TargetVariablesDataType_deleteMembers(&pDS->subscribedDataSetTarget);
+        pDS->subscribedDataSetTarget.targetVariablesSize = 0;
+        pDS->subscribedDataSetTarget.targetVariables = NULL;
+    }
+
+    /* Set subscribed dataset to TargetVariableType */
+    pDS->subscribedDataSetType = UA_PUBSUB_SDS_TARGET;
+    retval = UA_TargetVariablesDataType_copy(targetVariables, &pDS->subscribedDataSetTarget);
+    return retval;
+}
+
+/**
+ * Adds Subscribed Variables from the DataSetMetaData for the given DataSet into the given parent node
+ * and creates the corresponding data in the targetVariables of the DataSetReader
+ *
+ * @param server
+ * @param parentNode
+ * @param dataSetReaderIdentifier
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode UA_Server_DataSetReader_addTargetVariables(UA_Server *server, UA_NodeId *parentNode, UA_NodeId dataSetReaderIdentifier, UA_SubscribedDataSetEnumType sdsType) {
+    if((server == NULL) || (parentNode == NULL)) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_DataSetReader* pDataSetReader = UA_ReaderGroup_findDSRbyId(server, dataSetReaderIdentifier);
+    if(pDataSetReader == NULL) {
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    /* To Do Declare for all other type */
+    UA_DateTime dateTimeTypeVal = 0;
+    UA_TargetVariablesDataType targetVars;
+    targetVars.targetVariablesSize = pDataSetReader->config.dataSetMetaData.fieldsSize;
+    targetVars.targetVariables = (UA_FieldTargetDataType *)UA_calloc(targetVars.targetVariablesSize, sizeof(UA_FieldTargetDataType));
+    UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+    for (size_t iteratorField = 0; iteratorField < pDataSetReader->config.dataSetMetaData.fieldsSize; iteratorField++) {
+        UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+        vAttr.valueRank = pDataSetReader->config.dataSetMetaData.fields[iteratorField].valueRank;
+        if(pDataSetReader->config.dataSetMetaData.fields[iteratorField].arrayDimensionsSize > 0) {
+            retVal = UA_Array_copy(pDataSetReader->config.dataSetMetaData.fields[iteratorField].arrayDimensions, pDataSetReader->config.dataSetMetaData.fields[iteratorField].arrayDimensionsSize, (void**)&vAttr.arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
+            if(retVal == UA_STATUSCODE_GOOD) {
+                vAttr.arrayDimensionsSize = pDataSetReader->config.dataSetMetaData.fields[iteratorField].arrayDimensionsSize;
+            }
+
+        }
+
+        switch (pDataSetReader->config.dataSetMetaData.fields[iteratorField].builtInType) {
+            case UA_NS0ID_BOOLEAN:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Boolean *boolArray = (UA_Boolean*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_BOOLEAN]);
+                    UA_Variant_setArrayCopy(&vAttr.value, boolArray, sizeIterator, &UA_TYPES[UA_TYPES_BOOLEAN]);
+                    UA_Array_delete(boolArray, sizeIterator, &UA_TYPES[UA_TYPES_BOOLEAN]);
+                }
+                else {
+                    UA_Boolean boolTypeVal = false;
+                    UA_Variant_setScalar(&vAttr.value, &boolTypeVal, &UA_TYPES[UA_TYPES_BOOLEAN]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+            break;
+
+            case UA_NS0ID_SBYTE:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+
+                    UA_SByte *sbyteArray = (UA_SByte*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_SBYTE]);
+                    UA_Variant_setArrayCopy(&vAttr.value, sbyteArray, sizeIterator, &UA_TYPES[UA_TYPES_SBYTE]);
+                    UA_Array_delete(sbyteArray, sizeIterator, &UA_TYPES[UA_TYPES_SBYTE]);
+                }
+                else {
+                    UA_SByte sbyteTypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &sbyteTypeVal, &UA_TYPES[UA_TYPES_SBYTE]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_BYTE:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Byte *byteArray = (UA_Byte*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_BYTE]);
+                    UA_Variant_setArrayCopy(&vAttr.value, byteArray, sizeIterator, &UA_TYPES[UA_TYPES_BYTE]);
+                    UA_Array_delete(byteArray, sizeIterator, &UA_TYPES[UA_TYPES_BYTE]);
+                }
+                else {
+                    UA_Byte byteTypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &byteTypeVal, &UA_TYPES[UA_TYPES_BYTE]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_INT16:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Int16 *int16Array = (UA_Int16*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_INT16]);
+                    UA_Variant_setArrayCopy(&vAttr.value, int16Array, sizeIterator, &UA_TYPES[UA_TYPES_INT16]);
+                    UA_Array_delete(int16Array, sizeIterator, &UA_TYPES[UA_TYPES_INT16]);
+                }
+                else {
+                    UA_Int16 int16TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &int16TypeVal, &UA_TYPES[UA_TYPES_INT16]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_UINT16:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_UInt16 *uint16Array = (UA_UInt16*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_UINT16]);
+                    UA_Variant_setArrayCopy(&vAttr.value, uint16Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT16]);
+                    UA_Array_delete(uint16Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT16]);
+                }
+                else {
+                    UA_UInt16 uint16TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &uint16TypeVal, &UA_TYPES[UA_TYPES_UINT16]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_INT32:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Int32 *int32Array = (UA_Int32*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_INT32]);
+                    UA_Variant_setArrayCopy(&vAttr.value, int32Array, sizeIterator, &UA_TYPES[UA_TYPES_INT32]);
+                    UA_Array_delete(int32Array, sizeIterator, &UA_TYPES[UA_TYPES_INT32]);
+                }
+                else {
+                    UA_Int32 int32TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &int32TypeVal, &UA_TYPES[UA_TYPES_INT32]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_UINT32:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_UInt32 *uint32Array = (UA_UInt32*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_UINT32]);
+                    UA_Variant_setArrayCopy(&vAttr.value, uint32Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT32]);
+                    UA_Array_delete(uint32Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT32]);
+                }
+                else {
+                    UA_UInt32 uint32TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &uint32TypeVal, &UA_TYPES[UA_TYPES_UINT32]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_INT64:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Int64 *int64Array = (UA_Int64*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_INT64]);
+                    UA_Variant_setArrayCopy(&vAttr.value, int64Array, sizeIterator, &UA_TYPES[UA_TYPES_INT64]);
+                    UA_Array_delete(int64Array, sizeIterator, &UA_TYPES[UA_TYPES_INT64]);
+                }
+                else {
+                    UA_Int64 int64TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &int64TypeVal, &UA_TYPES[UA_TYPES_INT64]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_UINT64:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_UInt64 *uint64Array = (UA_UInt64*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_UINT64]);
+                    UA_Variant_setArrayCopy(&vAttr.value, uint64Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT64]);
+                    UA_Array_delete(uint64Array, sizeIterator, &UA_TYPES[UA_TYPES_UINT64]);
+                }
+                else {
+                    UA_UInt64 uint64TypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &uint64TypeVal, &UA_TYPES[UA_TYPES_UINT64]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_FLOAT:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Float *floatArray = (UA_Float*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_FLOAT]);
+                    UA_Variant_setArrayCopy(&vAttr.value, floatArray, sizeIterator, &UA_TYPES[UA_TYPES_FLOAT]);
+                    UA_Array_delete(floatArray, sizeIterator, &UA_TYPES[UA_TYPES_FLOAT]);
+                }
+                else {
+                    UA_Float floatTypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &floatTypeVal, &UA_TYPES[UA_TYPES_FLOAT]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_DOUBLE:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Double *doubleArray = (UA_Double*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_DOUBLE]);
+                    UA_Variant_setArrayCopy(&vAttr.value, doubleArray, sizeIterator, &UA_TYPES[UA_TYPES_DOUBLE]);
+                    UA_Array_delete(doubleArray, sizeIterator, &UA_TYPES[UA_TYPES_DOUBLE]);
+                }
+                else {
+                    UA_Double doubleTypeVal = 0.0;
+                    UA_Variant_setScalar(&vAttr.value, &doubleTypeVal, &UA_TYPES[UA_TYPES_DOUBLE]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_STRING:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_String *stringArray = (UA_String*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_STRING]);
+                    UA_Variant_setArrayCopy(&vAttr.value, stringArray, sizeIterator, &UA_TYPES[UA_TYPES_STRING]);
+                    UA_Array_delete(stringArray, sizeIterator, &UA_TYPES[UA_TYPES_STRING]);
+                }
+                else {
+                    UA_String stringTypeVal = UA_STRING_NULL;
+                    UA_Variant_setScalar(&vAttr.value, &stringTypeVal, &UA_TYPES[UA_TYPES_STRING]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_DATETIME:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_DateTime *dateTimeArray = (UA_DateTime*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_DATETIME]);
+                    UA_Variant_setArrayCopy(&vAttr.value, dateTimeArray, sizeIterator, &UA_TYPES[UA_TYPES_DATETIME]);
+                    UA_Array_delete(dateTimeArray, sizeIterator, &UA_TYPES[UA_TYPES_DATETIME]);
+                }
+                else {
+                    dateTimeTypeVal = 0;
+                    UA_Variant_setScalar(&vAttr.value, &dateTimeTypeVal, &UA_TYPES[UA_TYPES_DATETIME]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_GUID:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_Guid *guidArray = (UA_Guid*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_GUID]);
+                    UA_Variant_setArrayCopy(&vAttr.value, guidArray, sizeIterator, &UA_TYPES[UA_TYPES_GUID]);
+                    UA_Array_delete(guidArray, sizeIterator, &UA_TYPES[UA_TYPES_GUID]);
+                }
+                else {
+                    UA_Guid guidTypeVal = UA_GUID_NULL;
+                    UA_Variant_setScalar(&vAttr.value, &guidTypeVal, &UA_TYPES[UA_TYPES_GUID]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_NODEID:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_NodeId *nodeidArray = (UA_NodeId*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_NODEID]);
+                    UA_Variant_setArrayCopy(&vAttr.value, nodeidArray, sizeIterator, &UA_TYPES[UA_TYPES_NODEID]);
+                    UA_Array_delete(nodeidArray, sizeIterator, &UA_TYPES[UA_TYPES_NODEID]);
+                }
+                else {
+                    UA_NodeId nodeidTypeVal = UA_NODEID_NULL;
+                    UA_Variant_setScalar(&vAttr.value, &nodeidTypeVal, &UA_TYPES[UA_TYPES_NODEID]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            case UA_NS0ID_BYTESTRING:
+                if(vAttr.arrayDimensionsSize > 0) {
+                    size_t sizeIterator = iterateVariableAttrDimension(vAttr);
+                    UA_ByteString *byteStringArray = (UA_ByteString*)UA_Array_new(sizeIterator, &UA_TYPES[UA_TYPES_BYTESTRING]);
+                    UA_Variant_setArrayCopy(&vAttr.value, byteStringArray, sizeIterator, &UA_TYPES[UA_TYPES_BYTESTRING]);
+                    UA_Array_delete(byteStringArray, sizeIterator, &UA_TYPES[UA_TYPES_BYTESTRING]);
+                }
+                else {
+                    UA_ByteString byteStringTypeVal = UA_BYTESTRING_NULL;
+                    UA_Variant_setScalar(&vAttr.value, &byteStringTypeVal, &UA_TYPES[UA_TYPES_BYTESTRING]);
+                }
+
+                UA_NodeId_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].dataType, &vAttr.dataType);
+
+            break;
+
+            default:
+                /* Type not supported */
+                UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "Type %u not supported, create empty variable.", pDataSetReader->config.dataSetMetaData.fields[iteratorField].builtInType);
+            break;
+        }
+
+        vAttr.accessLevel = UA_ACCESSLEVELMASK_READ;
+        UA_LocalizedText_copy(&pDataSetReader->config.dataSetMetaData.fields[iteratorField].description, &vAttr.description);
+        UA_QualifiedName qn;
+        UA_QualifiedName_init(&qn);
+        char szTmpName[UA_MAX_SIZENAME];
+        if(pDataSetReader->config.dataSetMetaData.fields[iteratorField].name.length > 0) {
+            UA_UInt16 slen = UA_MAX_SIZENAME -1;
+            vAttr.displayName.locale = UA_STRING("en-US");
+            vAttr.displayName.text = pDataSetReader->config.dataSetMetaData.fields[iteratorField].name;
+            if(pDataSetReader->config.dataSetMetaData.fields[iteratorField].name.length < slen) {
+                slen = (UA_UInt16)pDataSetReader->config.dataSetMetaData.fields[iteratorField].name.length;
+                UA_snprintf(szTmpName, sizeof(szTmpName), "%s", (const char*)pDataSetReader->config.dataSetMetaData.fields[iteratorField].name.data);
+            }
+
+            szTmpName[slen] = '\0';
+            qn = UA_QUALIFIEDNAME(1, szTmpName);
+        }
+        else {
+            strcpy(szTmpName, "SubscribedVariable");
+            vAttr.displayName = UA_LOCALIZEDTEXT("en-US", szTmpName);
+            qn = UA_QUALIFIEDNAME(1, "SubscribedVariable");
+        }
+
+        /* Add variable to the given parent node */
+        UA_NodeId newNode;
+        retVal = UA_Server_addVariableNode(server, UA_NODEID_NULL, *parentNode,
+                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), qn,
+                                       UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), vAttr, NULL, &newNode);
+        if(retVal == UA_STATUSCODE_GOOD) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "addVariableNode %s succeeded", szTmpName);
+        }
+        else {
+            retval = retVal;
+            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND, "addVariableNode: error 0x%x", retVal);
+        }
+
+        UA_FieldTargetDataType_init(&targetVars.targetVariables[iteratorField]);
+        targetVars.targetVariables[iteratorField].attributeId = UA_ATTRIBUTEID_VALUE;
+        UA_NodeId_copy(&newNode, &targetVars.targetVariables[iteratorField].targetNodeId);
+        UA_NodeId_deleteMembers(&newNode);
+        if(vAttr.arrayDimensionsSize > 0) {
+            UA_Variant_deleteMembers(&vAttr.value);
+            UA_Array_delete(vAttr.arrayDimensions, vAttr.arrayDimensionsSize, &UA_TYPES[UA_TYPES_UINT32]);
+        }
+    }
+
+    if(sdsType == UA_PUBSUB_SDS_TARGET) {
+        retval = UA_Server_DataSetReader_createTargetVariables(server, pDataSetReader->identifier, &targetVars);
+    }
+
+    UA_TargetVariablesDataType_deleteMembers(&targetVars);
+    return retval;
+}
+
+/**
+ * Process a NetworkMessage with a DataSetReader.
+ *
+ * @param server
+ * @param dataSetReader
+ * @param dataSetMsg
+ */
+void UA_Server_DataSetReader_process(UA_Server *server, UA_DataSetReader *dataSetReader, UA_DataSetMessage* dataSetMsg) {
+    if((dataSetReader == NULL) || (dataSetMsg == NULL) || (server == NULL)) {
+        return;
+    }
+
+    if(!dataSetMsg->header.dataSetMessageValid) {
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetMessage is discarded: message is not valid");
+         /* To Do check ConfigurationVersion*/
+         /*if(dataSetMsg->header.configVersionMajorVersionEnabled)
+         * {
+         * if(dataSetMsg->header.configVersionMajorVersion != dataSetReader->config.dataSetMetaData.configurationVersion.majorVersion)
+         * {
+         * UA_LOG_WARNING(server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetMessage is discarded: ConfigurationVersion MajorVersion does not match");
+         * return;
+         * }
+         } */
+    }
+    else {
+        if(dataSetMsg->header.dataSetMessageType == UA_DATASETMESSAGE_DATAKEYFRAME) {
+            if(dataSetMsg->header.fieldEncoding != UA_FIELDENCODING_RAWDATA) {
+                size_t anzFields = dataSetMsg->data.keyFrameData.fieldCount;
+                    if(dataSetReader->config.dataSetMetaData.fieldsSize < anzFields) {
+                    anzFields = dataSetReader->config.dataSetMetaData.fieldsSize;
+                }
+
+                if(dataSetReader->subscribedDataSetTarget.targetVariablesSize < anzFields) {
+                    anzFields = dataSetReader->subscribedDataSetTarget.targetVariablesSize;
+                }
+
+                UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+                for (UA_UInt16 iteratorField = 0; iteratorField < anzFields; iteratorField++) {
+                    if(dataSetMsg->data.keyFrameData.dataSetFields[iteratorField].hasValue) {
+                        if(dataSetReader->subscribedDataSetTarget.targetVariables[iteratorField].attributeId == UA_ATTRIBUTEID_VALUE) {
+                            retVal = UA_Server_writeValue(server, dataSetReader->subscribedDataSetTarget.targetVariables[iteratorField].targetNodeId, dataSetMsg->data.keyFrameData.dataSetFields[iteratorField].value);
+                            if(retVal != UA_STATUSCODE_GOOD) {
+                                UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "Error Write Value KF %u: 0x%x", iteratorField, retVal);
+                            }
+
+                        }
+                        else {
+                            UA_WriteValue writeVal;
+                            UA_WriteValue_init(&writeVal);
+                            writeVal.attributeId = dataSetReader->subscribedDataSetTarget.targetVariables[iteratorField].attributeId;
+                            writeVal.indexRange = dataSetReader->subscribedDataSetTarget.targetVariables[iteratorField].receiverIndexRange;
+                            writeVal.nodeId = dataSetReader->subscribedDataSetTarget.targetVariables[iteratorField].targetNodeId;
+                            UA_DataValue_copy(&dataSetMsg->data.keyFrameData.dataSetFields[iteratorField], &writeVal.value);
+                            retVal = UA_Server_write(server, &writeVal);
+                            if(retVal != UA_STATUSCODE_GOOD) {
+                                UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "Error Write KF %u: 0x%x", iteratorField, retVal);
+                            }
+
+                        }
+
+                    }
+
+               }
+
+           }
+
+        }
+
+    }
+}
+
+/**
+ * Copy the config of the DataSetReader.
+ *
+ * @param src
+ * @param dst
+ * @return UA_STATUSCODE_GOOD on success
+ */
+UA_StatusCode
+UA_DataSetReaderConfig_copy(const UA_DataSetReaderConfig *src,
+                                  UA_DataSetReaderConfig *dst) {
+    memset(dst, 0, sizeof(UA_DataSetReaderConfig));
+    UA_StatusCode retVal = UA_String_copy(&src->name, &dst->name);
+    if(retVal != UA_STATUSCODE_GOOD) {
+        return retVal;
+    }
+
+    retVal = UA_Variant_copy(&src->publisherId, &dst->publisherId);
+    if(retVal != UA_STATUSCODE_GOOD) {
+        return retVal;
+    }
+
+    dst->writerGroupId = src->writerGroupId;
+    dst->dataSetWriterId = src->dataSetWriterId;
+    retVal = UA_DataSetMetaDataType_copy(&src->dataSetMetaData, &dst->dataSetMetaData);
+    if(retVal != UA_STATUSCODE_GOOD) {
+        return retVal;
+    }
+
+    dst->dataSetFieldContentMask = src->dataSetFieldContentMask;
+    dst->messageReceiveTimeout = src->messageReceiveTimeout;
+
+    /* Currently memcpy is used to copy the securityParameters */
+    memcpy(&dst->securityParameters, &src->securityParameters, sizeof(UA_PubSubSecurityParameters));
+    retVal = UA_UadpDataSetReaderMessageDataType_copy(&src->messageSettings, &dst->messageSettings);
+    if(retVal != UA_STATUSCODE_GOOD) {
+        return retVal;
+    }
+
+    return UA_STATUSCODE_GOOD;
+}
+
+/**
+ * Delete the DataSetReader.
+ *
+ * @param server
+ * @param dataSetReader
+ */
+void UA_DataSetReader_delete(UA_Server *server, UA_DataSetReader *dataSetReader) {
+    /* Delete DataSetReader config */
+    UA_String_deleteMembers(&dataSetReader->config.name);
+    UA_Variant_deleteMembers(&dataSetReader->config.publisherId);
+    UA_DataSetMetaDataType_deleteMembers(&dataSetReader->config.dataSetMetaData);
+    UA_UadpDataSetReaderMessageDataType_deleteMembers(&dataSetReader->config.messageSettings);
+    UA_TargetVariablesDataType_deleteMembers(&dataSetReader->subscribedDataSetTarget);
+
+    /* Delete DataSetReader */
+    UA_ReaderGroup* pGroup = UA_ReaderGroup_findRGbyId(server, dataSetReader->linkedReaderGroup);
+    if(pGroup != NULL) {
+        pGroup->readersCount--;
+    }
+
+    UA_NodeId_deleteMembers(&dataSetReader->identifier);
+    UA_NodeId_deleteMembers(&dataSetReader->linkedReaderGroup);
+    /* Remove DataSetReader from group */
+    LIST_REMOVE(dataSetReader, listEntry);
+    /* Free memory allocated for DataSetReader */
+    UA_free(dataSetReader);
+}
+
+/**********************************************/
+/*               PublishedDataSet             */
+/**********************************************/
 UA_StatusCode
 UA_PublishedDataSetConfig_copy(const UA_PublishedDataSetConfig *src,
                                UA_PublishedDataSetConfig *dst) {
@@ -26004,10 +27121,11 @@ UA_PublishedDataSetConfig_copy(const UA_PublishedDataSetConfig *src,
             //no additional items
             break;
         case UA_PUBSUB_DATASET_PUBLISHEDITEMS_TEMPLATE:
-            if (src->config.itemsTemplate.variablesToAddSize > 0){
+            if(src->config.itemsTemplate.variablesToAddSize > 0){
                 dst->config.itemsTemplate.variablesToAdd = (UA_PublishedVariableDataType *) UA_calloc(
                         src->config.itemsTemplate.variablesToAddSize, sizeof(UA_PublishedVariableDataType));
             }
+
             for(size_t i = 0; i < src->config.itemsTemplate.variablesToAddSize; i++){
                 retVal |= UA_PublishedVariableDataType_copy(&src->config.itemsTemplate.variablesToAdd[i],
                                                             &dst->config.itemsTemplate.variablesToAdd[i]);
@@ -26015,6 +27133,7 @@ UA_PublishedDataSetConfig_copy(const UA_PublishedDataSetConfig *src,
             retVal |= UA_DataSetMetaDataType_copy(&src->config.itemsTemplate.metaData,
                                                   &dst->config.itemsTemplate.metaData);
             break;
+
         default:
             return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -26057,7 +27176,7 @@ UA_PublishedDataSetConfig_deleteMembers(UA_PublishedDataSetConfig *pdsConfig){
             //no additional items
             break;
         case UA_PUBSUB_DATASET_PUBLISHEDITEMS_TEMPLATE:
-            if (pdsConfig->config.itemsTemplate.variablesToAddSize > 0){
+            if(pdsConfig->config.itemsTemplate.variablesToAddSize > 0){
                 for(size_t i = 0; i < pdsConfig->config.itemsTemplate.variablesToAddSize; i++){
                     UA_PublishedVariableDataType_deleteMembers(&pdsConfig->config.itemsTemplate.variablesToAdd[i]);
                 }
@@ -26143,7 +27262,6 @@ UA_Server_removeDataSetField(UA_Server *server, const UA_NodeId dsf) {
     parentPublishedDataSet->fieldSize--;
     if(currentField->config.field.variable.promotedField)
         parentPublishedDataSet->promotedFieldsCount--;
-    
     /* update major version of PublishedDataSet */
     parentPublishedDataSet->dataSetMetaData.configurationVersion.majorVersion =
         UA_PubSubConfigurationVersionTimeDifference();
@@ -26673,7 +27791,7 @@ UA_PubSubDataSetWriter_generateDeltaFrameMessage(UA_Server *server,
             continue;
 
         UA_DataSetMessage_DeltaFrameField *dff = &deltaFields[currentDeltaField];
-        
+
         dff->fieldIndex = (UA_UInt16) i;
         UA_DataValue_copy(&dataSetWriter->lastSamples[i].value, &dff->fieldValue);
         dataSetWriter->lastSamples[i].valueChanged = false;
@@ -26685,13 +27803,11 @@ UA_PubSubDataSetWriter_generateDeltaFrameMessage(UA_Server *server,
         /* Deactivate timestamps? */
         if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SOURCETIMESTAMP) == 0)
             dff->fieldValue.hasSourceTimestamp = false;
-        if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SOURCEPICOSECONDS) ==
-           0)
+        if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SOURCEPICOSECONDS) == 0)
             dff->fieldValue.hasServerPicoseconds = false;
         if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SERVERTIMESTAMP) == 0)
             dff->fieldValue.hasServerTimestamp = false;
-        if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SERVERPICOSECONDS) ==
-           0)
+        if(((u64)dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_SERVERPICOSECONDS) == 0)
             dff->fieldValue.hasServerPicoseconds = false;
 
         currentDeltaField++;
@@ -26767,7 +27883,8 @@ UA_DataSetWriter_generateDataSetMessage(UA_Server *server, UA_DataSetMessage *da
 
     /* The field encoding depends on the flags inside the writer config.
      * TODO: This can be moved to the encoding layer. */
-    if(dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_RAWDATA) {
+    if(dataSetWriter->config.dataSetFieldContentMask & (u64)UA_DATASETFIELDCONTENTMASK_RAWDATA
+) {
         dataSetMessage->header.fieldEncoding = UA_FIELDENCODING_RAWDATA;
     } else if((u64)dataSetWriter->config.dataSetFieldContentMask &
               ((u64)UA_DATASETFIELDCONTENTMASK_SOURCETIMESTAMP | (u64)UA_DATASETFIELDCONTENTMASK_SERVERPICOSECONDS |
@@ -26987,7 +28104,7 @@ sendNetworkMessage(UA_PubSubConnection *connection, UA_WriterGroup *wg,
     if(connection->config->publisherIdType == UA_PUBSUB_PUBLISHERID_NUMERIC) {
         nm.publisherIdType = UA_PUBLISHERDATATYPE_UINT16;
         nm.publisherId.publisherIdUInt32 = connection->config->publisherId.numeric;
-    } else if (connection->config->publisherIdType == UA_PUBSUB_PUBLISHERID_STRING){
+    } else if(connection->config->publisherIdType == UA_PUBSUB_PUBLISHERID_STRING){
         nm.publisherIdType = UA_PUBLISHERDATATYPE_STRING;
         nm.publisherId.publisherIdString = connection->config->publisherId.string;
     }
@@ -27019,7 +28136,7 @@ sendNetworkMessage(UA_PubSubConnection *connection, UA_WriterGroup *wg,
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
     }
-        
+
     /* Encode the message */
     UA_Byte *bufPos = buf.data;
     memset(bufPos, 0, msgSize);
@@ -27118,8 +28235,7 @@ UA_WriterGroup_publishCallback(UA_Server *server, UA_WriterGroup *writerGroup) {
                 res = sendNetworkMessageJson(connection, &dsmStore[dsmCount],
                         &dsw->config.dataSetWriterId, 1, &writerGroup->config.transportSettings);
             }
-
-            if(res != UA_STATUSCODE_GOOD)
+           if(res != UA_STATUSCODE_GOOD)
                 UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
                                "PubSub Publish: Could not send a NetworkMessage");
             UA_DataSetMessage_free(&dsmStore[dsmCount]);
@@ -27147,7 +28263,6 @@ UA_WriterGroup_publishCallback(UA_Server *server, UA_WriterGroup *writerGroup) {
             res3 = sendNetworkMessageJson(connection, &dsmStore[i * maxDSM],
                     &dsWriterIds[i * maxDSM], nmDsmCount, &writerGroup->config.transportSettings);
         }
-
         if(res3 != UA_STATUSCODE_GOOD)
             UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
                            "PubSub Publish: Sending a NetworkMessage failed");
@@ -27172,6 +28287,59 @@ UA_WriterGroup_addPublishCallback(UA_Server *server, UA_WriterGroup *writerGroup
 
     /* Run once after creation */
     UA_WriterGroup_publishCallback(server, writerGroup);
+    return retval;
+}
+
+/* This callback triggers the collection and reception of NetworkMessages and the
+ * contained DataSetMessages. */
+void UA_ReaderGroup_subscribeCallback(UA_Server *server, UA_ReaderGroup *readerGroup) {
+    UA_PubSubConnection *connection = UA_PubSubConnection_findConnectionbyId(server, readerGroup->linkedConnection);
+    UA_ByteString buffer;
+    if(UA_ByteString_allocBuffer(&buffer, 512) != UA_STATUSCODE_GOOD) {
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "Message buffer alloc failed!");
+        return;
+    }
+
+    connection->channel->receive(connection->channel, &buffer, NULL, 300000);
+    if(buffer.length > 0) {
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "Message received:");
+        UA_NetworkMessage currentNetworkMessage;
+        memset(&currentNetworkMessage, 0, sizeof(UA_NetworkMessage));
+        size_t currentPosition = 0;
+        UA_NetworkMessage_decodeBinary(&buffer, &currentPosition, &currentNetworkMessage);
+        UA_Server_processNetworkMessage(server, &currentNetworkMessage, connection);
+        UA_NetworkMessage_deleteMembers(&currentNetworkMessage);
+    }
+
+    UA_ByteString_deleteMembers(&buffer);
+}
+
+/* Add new subscribeCallback. The first execution is triggered directly after
+ * creation. */
+UA_StatusCode
+UA_ReaderGroup_addSubscribeCallback(UA_Server *server, UA_ReaderGroup *readerGroup) {
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_PubSubConnection *connection = UA_PubSubConnection_findConnectionbyId(server, readerGroup->linkedConnection);
+    if(connection != NULL) {
+        retval = connection->channel->regist(connection->channel, NULL, NULL);
+        if(retval == UA_STATUSCODE_GOOD) {
+            retval = UA_PubSubManager_addRepeatedCallback(server,
+                    (UA_ServerCallback) UA_ReaderGroup_subscribeCallback,
+                    readerGroup, 5,
+                    &readerGroup->subscribeCallbackId);
+        }
+        else {
+            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER, "register channel failed: 0x%x!", retval);
+        }
+
+    }
+
+    if(retval == UA_STATUSCODE_GOOD) {
+        readerGroup->subscribeCallbackIsRegistered = true;
+    }
+
+    /* Run once after creation */
+    UA_ReaderGroup_subscribeCallback(server, readerGroup);
     return retval;
 }
 
@@ -27522,6 +28690,7 @@ UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callb
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
+ * Copyright (c) 2019 Kalycito Infotech Private Limited
  */
 
 
@@ -27872,7 +29041,7 @@ addPubSubConnectionAction(UA_Server *server,
         //UA_PubSubConnection_addWriterGroup(server, UA_NODEID_NULL, NULL, NULL);
     }
     for(size_t i = 0; i < pubSubConnectionDataType.readerGroupsSize; i++){
-        //UA_PubSubConnection_addReaderGroup(server, NULL, NULL, NULL);
+        //UA_Server_addReaderGroup(server, NULL, NULL, NULL);
     }
     UA_NetworkAddressUrlDataType_deleteMembers(&networkAddressUrlDataType);
     //set ouput value
@@ -27912,6 +29081,49 @@ removeConnectionAction(UA_Server *server,
     retVal |= UA_Server_removePubSubConnection(server, nodeToRemove);
     if(retVal == UA_STATUSCODE_BADNOTFOUND)
         retVal = UA_STATUSCODE_BADNODEIDUNKNOWN;
+    return retVal;
+}
+#endif
+
+/**********************************************/
+/*               DataSetReader                */
+/**********************************************/
+UA_StatusCode
+addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReader){
+    //TODO implement reader part
+    return UA_STATUSCODE_BADNOTIMPLEMENTED;
+}
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL_METHODS
+static UA_StatusCode
+addDataSetReaderAction(UA_Server *server,
+                       const UA_NodeId *sessionId, void *sessionHandle,
+                       const UA_NodeId *methodId, void *methodContext,
+                       const UA_NodeId *objectId, void *objectContext,
+                       size_t inputSize, const UA_Variant *input,
+                       size_t outputSize, UA_Variant *output){
+    UA_StatusCode retVal = UA_STATUSCODE_BADNOTIMPLEMENTED;
+    //TODO implement reader part
+    return retVal;
+}
+#endif
+
+UA_StatusCode
+removeDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader* dataSetReader){
+    //TODO implement reader part
+    return UA_STATUSCODE_BADNOTIMPLEMENTED;
+}
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL_METHODS
+static UA_StatusCode
+removeDataSetReaderAction(UA_Server *server,
+                          const UA_NodeId *sessionId, void *sessionHandle,
+                          const UA_NodeId *methodId, void *methodContext,
+                          const UA_NodeId *objectId, void *objectContext,
+                          size_t inputSize, const UA_Variant *input,
+                          size_t outputSize, UA_Variant *output){
+    UA_StatusCode retVal = UA_STATUSCODE_BADNOTIMPLEMENTED;
+    //TODO implement reader part
     return retVal;
 }
 #endif
@@ -28317,6 +29529,29 @@ removeGroupAction(UA_Server *server,
 #endif
 
 /**********************************************/
+/*               ReaderGroup                  */
+/**********************************************/
+UA_StatusCode
+addReaderGroupRepresentation(UA_Server *server, UA_ReaderGroup *readerGroup){
+    //TODO implement reader part
+    return UA_STATUSCODE_BADNOTIMPLEMENTED;
+}
+
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL_METHODS
+static UA_StatusCode
+addReaderGroupAction(UA_Server *server,
+                     const UA_NodeId *sessionId, void *sessionHandle,
+                     const UA_NodeId *methodId, void *methodContext,
+                     const UA_NodeId *objectId, void *objectContext,
+                     size_t inputSize, const UA_Variant *input,
+                     size_t outputSize, UA_Variant *output){
+    UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+    //TODO implement reader part
+    return retVal;
+}
+#endif
+
+/**********************************************/
 /*               DataSetWriter                */
 /**********************************************/
 UA_StatusCode
@@ -28440,11 +29675,27 @@ writerGroupTypeDestructor(UA_Server *server,
 }
 
 static void
+readerGroupTypeDestructor(UA_Server *server,
+                          const UA_NodeId *sessionId, void *sessionContext,
+                          const UA_NodeId *typeId, void *typeContext,
+                          const UA_NodeId *nodeId, void **nodeContext) {
+    UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "ReaderGroup destructor called!");
+}
+
+static void
 dataSetWriterTypeDestructor(UA_Server *server,
                             const UA_NodeId *sessionId, void *sessionContext,
                             const UA_NodeId *typeId, void *typeContext,
                             const UA_NodeId *nodeId, void **nodeContext) {
     UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "DataSetWriter destructor called!");
+}
+
+static void
+dataSetReaderTypeDestructor(UA_Server *server,
+                            const UA_NodeId *sessionId, void *sessionContext,
+                            const UA_NodeId *typeId, void *typeContext,
+                            const UA_NodeId *nodeId, void **nodeContext) {
+    UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "DataSetReader destructor called!");
 }
 
 static void
@@ -28503,9 +29754,12 @@ UA_Server_initPubSubNS0(UA_Server *server) {
     retVal |= UA_Server_setMethodNode_callback(server,
                                                UA_NODEID_NUMERIC(0, UA_NS0ID_PUBLISHEDDATAITEMSTYPE_REMOVEVARIABLES), removeVariablesAction);
     retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDWRITERGROUP), addWriterGroupAction);
+    retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBSUBCONNECTIONTYPE_ADDREADERGROUP), addReaderGroupAction);
     retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBSUBCONNECTIONTYPE_REMOVEGROUP), removeGroupAction);
     retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_WRITERGROUPTYPE_ADDDATASETWRITER), addDataSetWriterAction);
     retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_WRITERGROUPTYPE_REMOVEDATASETWRITER), removeDataSetWriterAction);
+    retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_READERGROUPTYPE_ADDDATASETREADER), addDataSetReaderAction);
+    retVal |= UA_Server_setMethodNode_callback(server, UA_NODEID_NUMERIC(0, UA_NS0ID_READERGROUPTYPE_REMOVEDATASETREADER), removeDataSetReaderAction);
 
 #else
     retVal |= UA_Server_deleteReference(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBLISHSUBSCRIBE), UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT), true,
@@ -28521,10 +29775,14 @@ UA_Server_initPubSubNS0(UA_Server *server) {
     UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBSUBCONNECTIONTYPE), liveCycle);
     liveCycle.destructor = writerGroupTypeDestructor;
     UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_WRITERGROUPTYPE), liveCycle);
+    liveCycle.destructor = readerGroupTypeDestructor;
+    UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_READERGROUPTYPE), liveCycle);
     liveCycle.destructor = dataSetWriterTypeDestructor;
     UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_DATASETWRITERDATATYPE), liveCycle);
     liveCycle.destructor = publishedDataItemsTypeDestructor;
     UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_PUBLISHEDDATAITEMSTYPE), liveCycle);
+    liveCycle.destructor = dataSetReaderTypeDestructor;
+    UA_Server_setNodeTypeLifecycle(server, UA_NODEID_NUMERIC(0, UA_NS0ID_DATASETREADERDATATYPE), liveCycle);
 
     return retVal;
 }
@@ -28537,7 +29795,7 @@ UA_Server_initPubSubNS0(UA_Server *server) {
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
  *
- *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
+ *    Copyright 2014-2019 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014-2017 (c) Florian Palm
  *    Copyright 2015-2016 (c) Sten Grüner
  *    Copyright 2015 (c) LEvertz
@@ -28552,21 +29810,232 @@ UA_Server_initPubSubNS0(UA_Server *server) {
  */
 
 
+/***********/
+/* RefTree */
+/***********/
+
+/* References are browsed with a minimum number of copy operations. A RefTree
+ * holds a single array for both the NodeIds encountered during (recursive)
+ * browsing and the entries for a tree-structure to check for duplicates. Once
+ * the (recursive) browse has finished, the tree-structure part can be simply
+ * cut away. A single realloc operation (with some pointer repairing) can be
+ * used to increase the capacity of the RefTree.
+ *
+ * If an ExpandedNodeId is encountered, it has to be processed right away.
+ * Remote ExpandedNodeId are not put into the tree, since it is not possible to
+ * recurse into them anyway.
+ *
+ * The layout of the results array is as follows:
+ *
+ * | Targets [NodeId] | Tree [RefEntry] | */
+
+#define UA_BROWSE_INITIAL_SIZE 16
+
+typedef struct RefEntry {
+    ZIP_ENTRY(RefEntry) zipfields;
+    const UA_NodeId *target;
+    UA_UInt32 targetHash; /* Hash of the target nodeid */
+} RefEntry;
+ 
+static enum ZIP_CMP
+cmpTarget(const void *a, const void *b) {
+    const RefEntry *aa = (const RefEntry*)a;
+    const RefEntry *bb = (const RefEntry*)b;
+    if(aa->targetHash < bb->targetHash)
+        return ZIP_CMP_LESS;
+    if(aa->targetHash > bb->targetHash)
+        return ZIP_CMP_MORE;
+    return (enum ZIP_CMP)UA_NodeId_order(aa->target, bb->target);
+}
+
+ZIP_HEAD(RefHead, RefEntry);
+typedef struct RefHead RefHead;
+ZIP_PROTTYPE(RefHead, RefEntry, RefEntry)
+ZIP_IMPL(RefHead, RefEntry, zipfields, RefEntry, zipfields, cmpTarget)
+
+typedef struct {
+    UA_NodeId *targets;
+    RefHead head;
+    size_t capacity; /* available space */
+    size_t size;     /* used space */
+} RefTree;
+
+static UA_StatusCode
+RefTree_init(RefTree *rt) {
+    size_t space = (sizeof(UA_NodeId) + sizeof(RefEntry)) * UA_BROWSE_INITIAL_SIZE;
+    rt->targets = (UA_NodeId*)UA_malloc(space);
+    if(!rt->targets)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    rt->capacity = UA_BROWSE_INITIAL_SIZE;
+    rt->size = 0;
+    ZIP_INIT(&rt->head);
+    return UA_STATUSCODE_GOOD;
+}
+
+static
+void RefTree_clear(RefTree *rt) {
+    for(size_t i = 0; i < rt->size; i++)
+        UA_NodeId_deleteMembers(&rt->targets[i]);
+    UA_free(rt->targets);
+}
+
+/* Double the capacity of the reftree */
+static UA_StatusCode
+RefTree_double(RefTree *rt) {
+    size_t capacity = rt->capacity * 2;
+    size_t space = (sizeof(UA_NodeId) + sizeof(RefEntry)) * capacity;
+    UA_NodeId *newTargets = (UA_NodeId*)realloc(rt->targets, space);
+    if(!newTargets)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+
+    /* Repair the pointers for the realloced array+tree  */
+    uintptr_t arraydiff = (uintptr_t)newTargets - (uintptr_t)rt->targets;
+    RefEntry *reArray = (RefEntry*)
+        ((uintptr_t)newTargets + (capacity * sizeof(UA_NodeId)));
+    uintptr_t entrydiff = (uintptr_t)reArray -
+        ((uintptr_t)rt->targets + (rt->capacity * sizeof(UA_NodeId)));
+    RefEntry *oldReArray = (RefEntry*)
+        ((uintptr_t)newTargets + (rt->capacity * sizeof(UA_NodeId)));
+    memmove(reArray, oldReArray, rt->size * sizeof(RefEntry));
+    for(size_t i = 0; i < rt->size; i++) {
+        if(reArray[i].zipfields.zip_left)
+            *(uintptr_t*)&reArray[i].zipfields.zip_left += entrydiff;
+        if(reArray[i].zipfields.zip_right)
+            *(uintptr_t*)&reArray[i].zipfields.zip_right += entrydiff;
+        *(uintptr_t*)&reArray[i].target += arraydiff;
+    }
+
+    rt->head.zip_root = (RefEntry*)((uintptr_t)rt->head.zip_root + entrydiff);
+    rt->capacity = capacity;
+    rt->targets = newTargets;
+    return UA_STATUSCODE_GOOD;
+}
+
+static UA_StatusCode
+RefTree_add(RefTree *rt, const UA_NodeId *target) {
+    UA_StatusCode s = UA_STATUSCODE_GOOD;
+    if(rt->capacity <= rt->size) {
+        s = RefTree_double(rt);
+        if(s != UA_STATUSCODE_GOOD)
+            return s;
+    }
+    s = UA_NodeId_copy(target, &rt->targets[rt->size]);
+    if(s != UA_STATUSCODE_GOOD)
+        return s;
+    RefEntry *re = (RefEntry*)((uintptr_t)rt->targets +
+                               (sizeof(UA_NodeId) * rt->capacity) +
+                               (sizeof(RefEntry) * rt->size));
+    re->target = &rt->targets[rt->size];
+    re->targetHash = UA_NodeId_hash(target);
+    ZIP_INSERT(RefHead, &rt->head, re, ZIP_FFS32(UA_UInt32_random()));
+    rt->size++;
+    return UA_STATUSCODE_GOOD;
+}
+
+/*********************/
+/* ContinuationPoint */
+/*********************/
+
+struct ContinuationPoint {
+    ContinuationPoint *next;
+    UA_Guid identifier;
+    UA_UInt32 maxReferences;
+    UA_BrowseDescription bd;
+    UA_Boolean recursive;
+
+    RefTree rt;
+    size_t n;    /* Index of the node in the rt that is currently visited */
+    size_t nk;   /* Index of the ReferenceKind in the node that is visited */
+    size_t nki;  /* Index of the reference in the ReferenceKind that is visited */
+};
+
+static UA_StatusCode
+ContinuationPoint_init(ContinuationPoint *cp, UA_UInt32 maxRefs,
+                       UA_Boolean recursive) {
+    memset(cp, 0, sizeof(ContinuationPoint));
+    cp->identifier = UA_Guid_random();
+    cp->maxReferences = maxRefs;
+    cp->recursive = recursive;
+    return RefTree_init(&cp->rt);
+}
+
+ContinuationPoint *
+ContinuationPoint_clear(ContinuationPoint *cp) {
+    UA_BrowseDescription_clear(&cp->bd);
+    RefTree_clear(&cp->rt);
+    return cp->next;
+}
+
 /**********/
 /* Browse */
 /**********/
 
+/* The RefTree structure is kept across calls to Browse(Next). The RefResult
+ * structure is valid only for the current service call. Note that we can call
+ * Browse internally without a RefResult. Then, only the RefTree is set up with
+ * the target identifiers. */
+
+typedef struct {
+    size_t size;
+    size_t capacity;
+    UA_ReferenceDescription *descr;
+} RefResult;
+
+static UA_StatusCode
+RefResult_init(RefResult *rr, UA_UInt32 maxRefs) {
+    UA_UInt32 initialRes = UA_BROWSE_INITIAL_SIZE;
+    if(initialRes > maxRefs)
+        initialRes = maxRefs;
+    memset(rr, 0, sizeof(RefResult));
+    rr->descr = (UA_ReferenceDescription*)
+        UA_Array_new(initialRes, &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION]);
+    if(!rr->descr)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    rr->capacity = initialRes;
+    rr->size = 0;
+    return UA_STATUSCODE_GOOD;
+}
+
+static UA_StatusCode
+RefResult_double(RefResult *rr, UA_UInt32 maxSize) {
+    size_t newSize = rr->capacity * 2;
+    if(newSize > maxSize)
+        newSize = maxSize;
+    UA_ReferenceDescription *rd = (UA_ReferenceDescription*)
+        UA_realloc(rr->descr, newSize * sizeof(UA_ReferenceDescription));
+    if(!rd)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    memset(&rd[rr->size], 0, sizeof(UA_ReferenceDescription) * (newSize - rr->size));
+    rr->descr = rd;
+    rr->capacity = newSize;
+    return UA_STATUSCODE_GOOD;
+}
+
+static void
+RefResult_clear(RefResult *rr) {
+    UA_assert(rr->descr != NULL);
+    for(size_t i = 0; i < rr->size; i++)
+        UA_ReferenceDescription_clear(&rr->descr[i]);
+    UA_free(rr->descr);
+}
+
 /* Target node on top of the stack */
 static UA_StatusCode
-fillReferenceDescription(UA_Server *server, const UA_Node *curr,
-                         const UA_NodeReferenceKind *ref,
-                         UA_UInt32 mask, UA_ReferenceDescription *descr) {
-    UA_ReferenceDescription_init(descr);
-    UA_StatusCode retval = UA_NodeId_copy(&curr->nodeId, &descr->nodeId.nodeId);
+fillReferenceDescription(UA_Server *server, const UA_NodeReferenceKind *ref, UA_UInt32 mask,
+                         const UA_ExpandedNodeId *nodeId, const UA_Node *curr,
+                         UA_ReferenceDescription *descr) {
+    /* Fields without access to the actual node */
+    UA_StatusCode retval = UA_ExpandedNodeId_copy(nodeId, &descr->nodeId);
     if(mask & UA_BROWSERESULTMASK_REFERENCETYPEID)
         retval |= UA_NodeId_copy(&ref->referenceTypeId, &descr->referenceTypeId);
     if(mask & UA_BROWSERESULTMASK_ISFORWARD)
         descr->isForward = !ref->isInverse;
+
+    /* Remote references (ExpandedNodeId) are not further looked up here */
+    if(!curr)
+        return retval;
+    
+    /* Fields that require the actual node */
     if(mask & UA_BROWSERESULTMASK_NODECLASS)
         retval |= UA_NodeClass_copy(&curr->nodeClass, &descr->nodeClass);
     if(mask & UA_BROWSERESULTMASK_BROWSENAME)
@@ -28584,15 +30053,6 @@ fillReferenceDescription(UA_Server *server, const UA_Node *curr,
         }
     }
     return retval;
-}
-
-static void
-removeCp(ContinuationPointEntry *cp, UA_Session* session) {
-    LIST_REMOVE(cp, pointers);
-    UA_ByteString_deleteMembers(&cp->identifier);
-    UA_BrowseDescription_deleteMembers(&cp->browseDescription);
-    UA_free(cp);
-    ++session->availableContinuationPoints;
 }
 
 static UA_Boolean
@@ -28613,243 +30073,284 @@ matchClassMask(const UA_Node *node, UA_UInt32 nodeClassMask) {
     return true;
 }
 
-/* Returns whether the node / continuationpoint is done */
-static UA_Boolean
-browseReferences(UA_Server *server, const UA_Node *node,
-                 ContinuationPointEntry *cp, UA_BrowseResult *result) {
-    UA_assert(cp != NULL);
-    const UA_BrowseDescription *descr = &cp->browseDescription;
-
-    /* If the node has no references, just return */
-    if(node->referencesSize == 0) {
-        result->referencesSize = 0;
-        return true;
+static UA_StatusCode
+browseNodeRefKind(UA_Server *server, UA_Session *session, ContinuationPoint *cp,
+                  RefResult *rr, UA_Boolean *maxed, const UA_NodeReferenceKind *rk,
+                  const UA_ExpandedNodeId *target) {
+    /* Is the target already in the tree? */
+    RefEntry re;
+    re.target = &target->nodeId;
+    re.targetHash = UA_NodeId_hash(&target->nodeId);
+    if(ZIP_FIND(RefHead, &cp->rt.head, &re)) {
+        cp->nki++;
+        return UA_STATUSCODE_GOOD;
     }
 
-    /* Follow all references? */
-    UA_Boolean browseAll = UA_NodeId_isNull(&descr->referenceTypeId);
-
-    /* How many references can we return at most? */
-    size_t maxrefs = cp->maxReferences;
-    if(maxrefs == 0) {
-        if(server->config.maxReferencesPerNode != 0) {
-            maxrefs = server->config.maxReferencesPerNode;
-        } else {
-            maxrefs = UA_INT32_MAX;
-        }
-    } else {
-        if(server->config.maxReferencesPerNode != 0 && maxrefs > server->config.maxReferencesPerNode) {
-            maxrefs = server->config.maxReferencesPerNode;
+    /* Get the target if it is not a remote node */
+    const UA_Node *node = NULL;
+    if(target->serverIndex == 0) {
+        node = UA_Nodestore_getNode(server->nsCtx, &target->nodeId);
+        if(node) {
+            /* Test if the node class matches */
+            UA_Boolean match = matchClassMask(node, cp->bd.nodeClassMask);
+            if(!match) {
+                UA_Nodestore_releaseNode(server->nsCtx, node);
+                cp->nki++;
+                return UA_STATUSCODE_GOOD;
+            }
         }
     }
 
-    /* Allocate the results array */
-    size_t refs_size = 2; /* True size of the array */
-    result->references = (UA_ReferenceDescription*)
-        UA_Array_new(refs_size, &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION]);
-    if(!result->references) {
-        result->statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
-        return false;
+    /* A match! */
+
+    /* Don't return detailed results if not required */
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    if(!rr)
+        goto cleanup;
+
+    /* Increase the capacity of the results array/tree if required */
+    if(rr->capacity <= rr->size) {
+        retval = RefResult_double(rr, cp->maxReferences);
+        /* Reached MaxReferences; Redo for this target */
+        if(retval != UA_STATUSCODE_GOOD)
+            goto cleanup;
+        if(rr->size == rr->capacity) {
+            *maxed = true;
+            goto cleanup;
+        }
     }
 
-    size_t referenceKindIndex = cp->referenceKindIndex;
-    size_t targetIndex = cp->targetIndex;
+    /* Fill the detailed results */
+    retval = fillReferenceDescription(server, rk, cp->bd.resultMask, target,
+                                      node, &rr->descr[rr->size]);
+    if(retval != UA_STATUSCODE_GOOD)
+        goto cleanup;
+    rr->size++;
 
-    /* Loop over the node's references */
-    for(; referenceKindIndex < node->referencesSize; ++referenceKindIndex) {
-        UA_NodeReferenceKind *rk = &node->references[referenceKindIndex];
+ cleanup:
+    if(!(*maxed) && retval == UA_STATUSCODE_GOOD) {
+        /* Proceed to the next target */
+        if(node)
+            retval = RefTree_add(&cp->rt, &target->nodeId);
+        cp->nki++;
+    }
+    if(node)
+        UA_Nodestore_releaseNode(server->nsCtx, node);
+    return retval;
+}
+
+static UA_StatusCode
+browseNode(UA_Server *server, UA_Session *session,
+           ContinuationPoint *cp, RefResult *rr, UA_Boolean *maxed,
+           size_t referenceTypesSize, const UA_NodeId *referenceTypes,
+           const UA_Node *node) {
+    for(; cp->nk < node->referencesSize; cp->nk++, cp->nki = 0) {
+        UA_NodeReferenceKind *rk = &node->references[cp->nk];
 
         /* Reference in the right direction? */
-        if(rk->isInverse && descr->browseDirection == UA_BROWSEDIRECTION_FORWARD)
+        if(rk->isInverse && cp->bd.browseDirection == UA_BROWSEDIRECTION_FORWARD)
             continue;
-        if(!rk->isInverse && descr->browseDirection == UA_BROWSEDIRECTION_INVERSE)
+        if(!rk->isInverse && cp->bd.browseDirection == UA_BROWSEDIRECTION_INVERSE)
             continue;
 
         /* Is the reference part of the hierarchy of references we look for? */
-        if(!browseAll && !relevantReference(server, descr->includeSubtypes,
-                                            &descr->referenceTypeId, &rk->referenceTypeId))
+        UA_Boolean relevant = (referenceTypes == NULL);
+        for(size_t i = 0; i < referenceTypesSize && !relevant; i++)
+            relevant = UA_NodeId_equal(&rk->referenceTypeId, &referenceTypes[i]);
+        if(!relevant)
             continue;
 
-        /* Loop over the targets */
-        for(; targetIndex < rk->targetIdsSize; ++targetIndex) {
-            /* Get the node */
-            const UA_Node *target =
-                UA_Nodestore_getNode(server->nsCtx, &rk->targetIds[targetIndex].nodeId);
-            if(!target)
-                continue;
-
-            /* Test if the node class matches */
-            if(!matchClassMask(target, descr->nodeClassMask)) {
-                UA_Nodestore_releaseNode(server->nsCtx, target);
-                continue;
-            }
-
-            /* A match! Can we return it? */
-            if(result->referencesSize >= maxrefs) {
-                /* There are references we could not return */
-                cp->referenceKindIndex = referenceKindIndex;
-                cp->targetIndex = targetIndex;
-                UA_Nodestore_releaseNode(server->nsCtx, target);
-                return false;
-            }
-
-            /* Make enough space in the array */
-            if(result->referencesSize >= refs_size) {
-                refs_size *= 2;
-                if(refs_size > maxrefs)
-                    refs_size = maxrefs;
-                UA_ReferenceDescription *rd = (UA_ReferenceDescription*)
-                    UA_realloc(result->references, sizeof(UA_ReferenceDescription) * refs_size);
-                if(!rd) {
-                    result->statusCode = UA_STATUSCODE_BADOUTOFMEMORY;
-                    UA_Nodestore_releaseNode(server->nsCtx, target);
-                    goto error_recovery;
-                }
-                result->references = rd;
-            }
-
-            /* Copy the node description. Target is on top of the stack */
-            result->statusCode =
-                fillReferenceDescription(server, target, rk, descr->resultMask,
-                                         &result->references[result->referencesSize]);
-
-            UA_Nodestore_releaseNode(server->nsCtx, target);
-
-            if(result->statusCode != UA_STATUSCODE_GOOD)
-                goto error_recovery;
-
-            /* Increase the counter */
-            result->referencesSize++;
+        /* cp->nki is increaed in browseNodeRefKind upon success */
+        for(; cp->nki < rk->targetIdsSize; ) {
+            UA_StatusCode retval = browseNodeRefKind(server, session, cp, rr, maxed,
+                                                     rk, &rk->targetIds[cp->nki]);
+            if(*maxed || retval != UA_STATUSCODE_GOOD)
+                return retval;
         }
-
-        targetIndex = 0; /* Start at index 0 for the next reference kind */
     }
 
-    /* No relevant references, return array of length zero */
-    if(result->referencesSize == 0) {
-        UA_free(result->references);
-        result->references = (UA_ReferenceDescription*)UA_EMPTY_ARRAY_SENTINEL;
-    }
-
-    /* The node is done */
-    return true;
-
- error_recovery:
-    if(result->referencesSize == 0)
-        UA_free(result->references);
-    else
-        UA_Array_delete(result->references, result->referencesSize,
-                        &UA_TYPES[UA_TYPES_REFERENCEDESCRIPTION]);
-    result->references = NULL;
-    result->referencesSize = 0;
-    return false;
+    return UA_STATUSCODE_GOOD;
 }
 
 /* Results for a single browsedescription. This is the inner loop for both
  * Browse and BrowseNext. The ContinuationPoint contains all the data used.
  * Including the BrowseDescription. Returns whether there are remaining
  * references. */
-static UA_Boolean
-browseWithContinuation(UA_Server *server, UA_Session *session,
-                       ContinuationPointEntry *cp, UA_BrowseResult *result) {
-    const UA_BrowseDescription *descr = &cp->browseDescription;
-
+/* Results for a single browsedescription. Sets all NodeIds for the RefTree. */
+static UA_StatusCode
+browseWithCp(UA_Server *server, UA_Session *session, ContinuationPoint *cp,
+             RefResult *rr, UA_Boolean *maxed) {
     /* Is the browsedirection valid? */
-    if(descr->browseDirection != UA_BROWSEDIRECTION_BOTH &&
-       descr->browseDirection != UA_BROWSEDIRECTION_FORWARD &&
-       descr->browseDirection != UA_BROWSEDIRECTION_INVERSE) {
-        result->statusCode = UA_STATUSCODE_BADBROWSEDIRECTIONINVALID;
-        return true;
+    if(cp->bd.browseDirection != UA_BROWSEDIRECTION_BOTH &&
+       cp->bd.browseDirection != UA_BROWSEDIRECTION_FORWARD &&
+       cp->bd.browseDirection != UA_BROWSEDIRECTION_INVERSE) {
+        return UA_STATUSCODE_BADBROWSEDIRECTIONINVALID;
     }
 
-    /* Is the reference type valid? */
-    if(!UA_NodeId_isNull(&descr->referenceTypeId)) {
-        const UA_Node *reftype = UA_Nodestore_getNode(server->nsCtx, &descr->referenceTypeId);
-        if(!reftype) {
-            result->statusCode = UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
-            return true;
-        }
+    /* Set the list of references to check */
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_NodeId *referenceTypes = NULL; /* NULL -> all reference types are relevant */
+    size_t referenceTypesSize = 0;
+    if(!UA_NodeId_isNull(&cp->bd.referenceTypeId)) {
+        const UA_Node *reftype = UA_Nodestore_getNode(server->nsCtx, &cp->bd.referenceTypeId);
+        if(!reftype)
+            return UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
 
         UA_Boolean isRef = (reftype->nodeClass == UA_NODECLASS_REFERENCETYPE);
         UA_Nodestore_releaseNode(server->nsCtx, reftype);
 
-        if(!isRef) {
-            result->statusCode = UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
-            return true;
+        if(!isRef)
+            return UA_STATUSCODE_BADREFERENCETYPEIDINVALID;
+
+        if(!UA_NodeId_isNull(&cp->bd.referenceTypeId)) {
+            if(cp->bd.includeSubtypes) {
+                retval = getLocalRecursiveHierarchy(server, &cp->bd.referenceTypeId, 1, &subtypeId, 1,
+                                                    true, &referenceTypes, &referenceTypesSize);
+                if(retval != UA_STATUSCODE_GOOD)
+                    return retval;
+                UA_assert(referenceTypesSize > 0); /* The original referenceTypeId has been mirrored back */
+            } else {
+                referenceTypes = &cp->bd.referenceTypeId;
+                referenceTypesSize = 1;
+            }
         }
     }
 
-    const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &descr->nodeId);
-    if(!node) {
-        result->statusCode = UA_STATUSCODE_BADNODEIDUNKNOWN;
-        return true;
+    for(; cp->n < cp->rt.size; cp->n++, cp->nk = 0, cp->nki = 0) {
+        /* Get the node */
+        const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &cp->rt.targets[cp->n]);
+        if(!node)
+            continue;
+
+        /* Browse the references in the current node */
+        retval = browseNode(server, session, cp, rr, maxed, referenceTypesSize, referenceTypes, node);
+        UA_Nodestore_releaseNode(server->nsCtx, node);
+        if(retval != UA_STATUSCODE_GOOD)
+            break;
+        if(!cp->recursive || *maxed)
+            break;
     }
 
-    /* Browse the references */
-    UA_Boolean done = browseReferences(server, node, cp, result);
-    UA_Nodestore_releaseNode(server->nsCtx, node);
-    return done;
+    if(referenceTypes != &cp->bd.referenceTypeId)
+        UA_Array_delete(referenceTypes, referenceTypesSize, &UA_TYPES[UA_TYPES_NODEID]);
+
+    return retval;
 }
 
 /* Start to browse with no previous cp */
 void
-Operation_Browse(UA_Server *server, UA_Session *session, const UA_UInt32 *maxrefs,
+Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts *bo,
                  const UA_BrowseDescription *descr, UA_BrowseResult *result) {
-    /* Stack-allocate a temporary cp */
-    UA_STACKARRAY(ContinuationPointEntry, cp, 1);
-    memset(cp, 0, sizeof(ContinuationPointEntry));
-    cp->maxReferences = *maxrefs;
-    cp->browseDescription = *descr; /* Shallow copy. Deep-copy later if we persist the cp. */
+    /* How many references can we return at most? */
+    UA_UInt32 maxRefs = bo->maxReferences;
+    if(maxRefs == 0) {
+        if(server->config.maxReferencesPerNode != 0) {
+            maxRefs = server->config.maxReferencesPerNode;
+        } else {
+            maxRefs = UA_INT32_MAX;
+        }
+    } else {
+        if(server->config.maxReferencesPerNode != 0 &&
+           maxRefs > server->config.maxReferencesPerNode) {
+            maxRefs = server->config.maxReferencesPerNode;
+        }
+    }
 
-    UA_Boolean done = browseWithContinuation(server, session, cp, result);
-
-    /* Exit early if done or an error occurred */
-    if(done || result->statusCode != UA_STATUSCODE_GOOD)
+    /* Create the results array */
+    RefResult rr;
+    result->statusCode = RefResult_init(&rr, maxRefs);
+    if(result->statusCode != UA_STATUSCODE_GOOD)
         return;
 
-    /* Persist the new continuation point */
-    ContinuationPointEntry *cp2 = NULL;
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
-    if(session->availableContinuationPoints <= 0 ||
-       !(cp2 = (ContinuationPointEntry *)UA_malloc(sizeof(ContinuationPointEntry)))) {
-        retval = UA_STATUSCODE_BADNOCONTINUATIONPOINTS;
-        goto cleanup;
-    }
-    memset(cp2, 0, sizeof(ContinuationPointEntry));
-    cp2->referenceKindIndex = cp->referenceKindIndex;
-    cp2->targetIndex = cp->targetIndex;
-    cp2->maxReferences = cp->maxReferences;
-    retval = UA_BrowseDescription_copy(descr, &cp2->browseDescription);
-    if(retval != UA_STATUSCODE_GOOD)
-        goto cleanup;
+    ContinuationPoint cp;
+    ContinuationPoint_init(&cp, maxRefs, bo->recursive);
+    cp.bd = *descr; /* Deep-copy only when the cp is persisted in the session */
 
-    /* Create a random bytestring via a Guid */
-    UA_Guid *ident = UA_Guid_new();
-    if(!ident) {
+    /* Add the initial node to the RefTree */
+    result->statusCode = RefTree_add(&cp.rt, &descr->nodeId);
+    if(result->statusCode != UA_STATUSCODE_GOOD) {
+        RefTree_clear(&cp.rt);
+        RefResult_clear(&rr);
+        return;
+    }
+    
+    /* Recurse to get all references */
+    UA_Boolean maxed = false;
+    result->statusCode = browseWithCp(server, session, &cp, &rr, &maxed);
+    if(result->statusCode != UA_STATUSCODE_GOOD) {
+        RefTree_clear(&cp.rt);
+        RefResult_clear(&rr);
+        return;
+    }
+
+    /* No results */
+    if(rr.size == 0) {
+        result->references = (UA_ReferenceDescription*)UA_EMPTY_ARRAY_SENTINEL;
+        RefTree_clear(&cp.rt);
+        UA_free(rr.descr);
+        return;
+    }
+
+    /* Move results to the output */
+    result->references = rr.descr;
+    result->referencesSize = rr.size;
+
+    /* Nothing left for BrowseNext */
+    if(!maxed) {
+        RefTree_clear(&cp.rt);
+        return;
+    }
+
+    /* Create a new continuation point. */
+    ContinuationPoint *newCp = (ContinuationPoint*)UA_malloc(sizeof(ContinuationPoint));
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    UA_ByteString tmp;
+    if(!newCp) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
-    *ident = UA_Guid_random();
-    cp2->identifier.data = (UA_Byte*)ident;
-    cp2->identifier.length = sizeof(UA_Guid);
+    *newCp = cp;
 
-    /* Return the cp identifier */
-    retval = UA_ByteString_copy(&cp2->identifier, &result->continuationPoint);
+    /* Make a deep copy of the BrowseDescription */
+    retval = UA_BrowseDescription_copy(descr, &newCp->bd);
     if(retval != UA_STATUSCODE_GOOD)
         goto cleanup;
 
+    /* Return the cp identifier */
+    tmp.length = sizeof(UA_Guid);
+    tmp.data = (UA_Byte*)&newCp->identifier;
+    retval = UA_ByteString_copy(&tmp, &result->continuationPoint);
+    if(retval != UA_STATUSCODE_GOOD)
+        goto cleanup;
+
+    /* Remove the oldest continuation point if required */
+    if(session->availableContinuationPoints <= 0) {
+        struct ContinuationPoint **prev = &session->continuationPoints;
+        struct ContinuationPoint *cp2 = session->continuationPoints;
+        while(cp2 && cp2->next) {
+            prev = &cp2->next;
+            cp2 = cp2->next;
+        }
+        if(cp2) {
+            *prev = NULL;
+            ContinuationPoint_clear(cp2);
+            UA_free(cp2);
+            ++session->availableContinuationPoints;
+        }
+    }
+
     /* Attach the cp to the session */
-    LIST_INSERT_HEAD(&session->continuationPoints, cp2, pointers);
+    newCp->next = session->continuationPoints;
+    session->continuationPoints = newCp;
     --session->availableContinuationPoints;
     return;
 
  cleanup:
-    if(cp2) {
-        UA_ByteString_deleteMembers(&cp2->identifier);
-        UA_BrowseDescription_deleteMembers(&cp2->browseDescription);
-        UA_free(cp2);
+    UA_BrowseResult_deleteMembers(result); /* Holds the content that was in rr before */
+    if(newCp) {
+        ContinuationPoint_clear(newCp);
+        UA_free(newCp);
     }
-    UA_BrowseResult_deleteMembers(result);
     result->statusCode = retval;
 }
 
@@ -28857,6 +30358,7 @@ void Service_Browse(UA_Server *server, UA_Session *session,
                     const UA_BrowseRequest *request, UA_BrowseResponse *response) {
     UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Processing BrowseRequest");
 
+    /* Test the number of operations in the request */
     if(server->config.maxNodesPerBrowse != 0 &&
        request->nodesToBrowseSize > server->config.maxNodesPerBrowse) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
@@ -28869,30 +30371,52 @@ void Service_Browse(UA_Server *server, UA_Session *session,
         return;
     }
 
-    UA_UInt32 requestedMaxReferencesPerNode = request->requestedMaxReferencesPerNode;
+    struct BrowseOpts bo;
+    bo.maxReferences = request->requestedMaxReferencesPerNode;
+    bo.recursive = false;
     response->responseHeader.serviceResult =
-        UA_Server_processServiceOperations(server, session, (UA_ServiceOperation)Operation_Browse,
-                                           &requestedMaxReferencesPerNode,
+        UA_Server_processServiceOperations(server, session, (UA_ServiceOperation)Operation_Browse, &bo,
                                            &request->nodesToBrowseSize, &UA_TYPES[UA_TYPES_BROWSEDESCRIPTION],
                                            &response->resultsSize, &UA_TYPES[UA_TYPES_BROWSERESULT]);
 }
 
 UA_BrowseResult
-UA_Server_browse(UA_Server *server, UA_UInt32 maxrefs, const UA_BrowseDescription *descr) {
+UA_Server_browse(UA_Server *server, UA_UInt32 maxReferences,
+                 const UA_BrowseDescription *bd) {
     UA_BrowseResult result;
     UA_BrowseResult_init(&result);
-    Operation_Browse(server, &server->adminSession, &maxrefs, descr, &result);
+    struct BrowseOpts bo;
+    bo.maxReferences = maxReferences;
+    bo.recursive = false;
+    Operation_Browse(server, &server->adminSession, &bo, bd, &result);
+    return result;
+}
+
+UA_BrowseResult
+UA_Server_browseRecursive(UA_Server *server, UA_UInt32 maxReferences,
+                          const UA_BrowseDescription *bd) {
+    UA_BrowseResult result;
+    UA_BrowseResult_init(&result);
+    struct BrowseOpts bo;
+    bo.maxReferences = maxReferences;
+    bo.recursive = true;
+    Operation_Browse(server, &server->adminSession, &bo, bd, &result);
     return result;
 }
 
 static void
-Operation_BrowseNext(UA_Server *server, UA_Session *session, const UA_Boolean *releaseContinuationPoints,
+Operation_BrowseNext(UA_Server *server, UA_Session *session,
+                     const UA_Boolean *releaseContinuationPoints,
                      const UA_ByteString *continuationPoint, UA_BrowseResult *result) {
     /* Find the continuation point */
-    ContinuationPointEntry *cp;
-    LIST_FOREACH(cp, &session->continuationPoints, pointers) {
-        if(UA_ByteString_equal(&cp->identifier, continuationPoint))
+    ContinuationPoint **prev = &session->continuationPoints, *cp;
+    UA_ByteString identifier;
+    while((cp = *prev)) {
+        identifier.length = sizeof(UA_Guid);
+        identifier.data = (UA_Byte*)&cp->identifier;
+        if(UA_ByteString_equal(&identifier, continuationPoint))
             break;
+        prev = &cp->next;
     }
     if(!cp) {
         result->statusCode = UA_STATUSCODE_BADCONTINUATIONPOINTINVALID;
@@ -28901,24 +30425,53 @@ Operation_BrowseNext(UA_Server *server, UA_Session *session, const UA_Boolean *r
 
     /* Remove the cp */
     if(*releaseContinuationPoints) {
-        removeCp(cp, session);
+        *prev = ContinuationPoint_clear(cp);
+        UA_free(cp);
+        ++session->availableContinuationPoints;
         return;
     }
 
-    /* Continue browsing */
-    UA_Boolean done = browseWithContinuation(server, session, cp, result);
+    /* Allocate the results array */
+    RefResult rr;
+    result->statusCode = RefResult_init(&rr, cp->maxReferences);
+    if(result->statusCode != UA_STATUSCODE_GOOD)
+        return;
+    
+    /* Recurse to get all references */
+    UA_Boolean maxed = false;
+    result->statusCode = browseWithCp(server, session, cp, &rr, &maxed);
+    if(result->statusCode != UA_STATUSCODE_GOOD)
+        goto removeCp;
 
-    if(done) {
-        /* Remove the cp if there are no references left */
-        removeCp(cp, session);
-    } else {
-        /* Return the cp identifier */
-        UA_StatusCode retval = UA_ByteString_copy(&cp->identifier, &result->continuationPoint);
-        if(retval != UA_STATUSCODE_GOOD) {
-            UA_BrowseResult_deleteMembers(result);
-            result->statusCode = retval;
-        }
+    /* No results */
+    if(rr.size == 0) {
+        result->references = (UA_ReferenceDescription*)UA_EMPTY_ARRAY_SENTINEL;
+        goto removeCp;
     }
+
+    if(maxed) {
+        /* Keep the cp */
+        result->statusCode = UA_ByteString_copy(&identifier, &result->continuationPoint);
+        if(result->statusCode != UA_STATUSCODE_GOOD)
+            goto removeCp;
+    } else {
+        /* All done, remove the cp */
+        *prev = ContinuationPoint_clear(cp);
+        UA_free(cp);
+        ++session->availableContinuationPoints;
+    }
+
+    /* Move results to the output */
+    result->references = rr.descr;
+    result->referencesSize = rr.size;
+    return;
+
+ removeCp:
+    *prev = cp->next;
+    ContinuationPoint_clear(cp);
+    UA_free(cp);
+    session->availableContinuationPoints++;
+    RefResult_clear(&rr);
 }
 
 void
@@ -28943,6 +30496,50 @@ UA_Server_browseNext(UA_Server *server, UA_Boolean releaseContinuationPoint,
     Operation_BrowseNext(server, &server->adminSession, &releaseContinuationPoint,
                          continuationPoint, &result);
     return result;
+}
+
+UA_StatusCode
+getLocalRecursiveHierarchy(UA_Server *server, const UA_NodeId *startNodes, size_t startNodesSize,
+                           const UA_NodeId *refTypes, size_t refTypesSize, UA_Boolean walkDownwards,
+                           UA_NodeId **results, size_t *resultsSize) {
+    ContinuationPoint cp;
+    UA_StatusCode retval = ContinuationPoint_init(&cp, 0, true);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    for(size_t i = 0; i < startNodesSize; i++)
+        retval |= RefTree_add(&cp.rt, &startNodes[i]);
+    if(retval != UA_STATUSCODE_GOOD) {
+        ContinuationPoint_clear(&cp);
+        return retval;
+    }
+
+    if(!walkDownwards)
+        cp.bd.browseDirection = UA_BROWSEDIRECTION_INVERSE;
+
+    UA_Boolean maxed = false;
+    for(; cp.n < cp.rt.size; cp.n++, cp.nk = 0, cp.nki = 0) {
+        /* Get the node */
+        const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &cp.rt.targets[cp.n]);
+        if(!node)
+            continue;
+
+        /* Browse the references in the current node */
+        retval = browseNode(server, &server->adminSession, &cp, NULL,
+                            &maxed, refTypesSize, refTypes, node);
+        UA_Nodestore_releaseNode(server->nsCtx, node);
+        if(retval != UA_STATUSCODE_GOOD)
+            break;
+    }
+    
+    if(retval == UA_STATUSCODE_GOOD) {
+        *results = cp.rt.targets;
+        *resultsSize = cp.rt.size;
+        cp.rt.targets = NULL;
+        cp.rt.size = 0;
+    }
+    ContinuationPoint_clear(&cp);
+    return retval;
 }
 
 /***********************/
@@ -29265,6 +30862,7 @@ Service_TranslateBrowsePathsToNodeIds(UA_Server *server, UA_Session *session,
     UA_LOG_DEBUG_SESSION(&server->config.logger, session,
                          "Processing TranslateBrowsePathsToNodeIdsRequest");
 
+    /* Test the number of operations in the request */
     if(server->config.maxNodesPerTranslateBrowsePathsToNodeIds != 0 &&
        request->browsePathsSize > server->config.maxNodesPerTranslateBrowsePathsToNodeIds) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
@@ -29321,6 +30919,7 @@ void Service_RegisterNodes(UA_Server *server, UA_Session *session,
         return;
     }
 
+    /* Test the number of operations in the request */
     if(server->config.maxNodesPerRegisterNodes != 0 &&
        request->nodesToRegisterSize > server->config.maxNodesPerRegisterNodes) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
@@ -29344,6 +30943,7 @@ void Service_UnregisterNodes(UA_Server *server, UA_Session *session,
     if(request->nodesToUnregisterSize == 0)
         response->responseHeader.serviceResult = UA_STATUSCODE_BADNOTHINGTODO;
 
+    /* Test the number of operations in the request */
     if(server->config.maxNodesPerRegisterNodes != 0 &&
        request->nodesToUnregisterSize > server->config.maxNodesPerRegisterNodes) {
         response->responseHeader.serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
@@ -31721,11 +33321,6 @@ setApplicationDescriptionFromServer(UA_ApplicationDescription *target, const UA_
     if(result != UA_STATUSCODE_GOOD)
         return result;
 
-    // UaExpert does not list DiscoveryServer, thus set it to Server
-    // See http://forum.unified-automation.com/topic1987.html
-    if(target->applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER)
-        target->applicationType = UA_APPLICATIONTYPE_SERVER;
-
     /* add the discoveryUrls from the networklayers */
     size_t discSize = sizeof(UA_String) * (target->discoveryUrlsSize + server->config.networkLayersSize);
     UA_String* disc = (UA_String *)UA_realloc(target->discoveryUrls, discSize);
@@ -31827,12 +33422,10 @@ void Service_FindServers(UA_Server *server, UA_Session *session,
     /* Copy into the response. TODO: Evaluate return codes */
     size_t pos = 0;
     if(foundSelf) {
-        setApplicationDescriptionFromServer(&response->servers[0], server);
-        pos = 1;
+        setApplicationDescriptionFromServer(&response->servers[pos++], server);
     }
     for(size_t i = 0; i < foundServersSize; i++) {
-        setApplicationDescriptionFromRegisteredServer(request, &response->servers[pos], foundServers[i]);
-        pos++;
+        setApplicationDescriptionFromRegisteredServer(request, &response->servers[pos++], foundServers[i]);
     }
 
 #endif
@@ -32015,7 +33608,7 @@ process_RegisterServer(UA_Server *server, UA_Session *session,
     }
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    if(server->config.applicationDescription.applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER) {
+    if(server->config.discovery.mdnsEnable) {
         for(size_t i = 0; i < requestServer->discoveryUrlsSize; i++) {
             /* create TXT if is online and first index, delete TXT if is offline and last index */
             UA_Boolean updateTxt = (requestServer->isOnline && i==0) ||
@@ -32121,8 +33714,8 @@ void UA_Discovery_cleanupTimedOut(UA_Server *server, UA_DateTime nowMonotonic) {
     UA_DateTime timedOut = nowMonotonic;
     // registration is timed out if lastSeen is older than 60 minutes (default
     // value, can be modified by user).
-    if(server->config.discoveryCleanupTimeout)
-        timedOut -= server->config.discoveryCleanupTimeout*UA_DATETIME_SEC;
+    if(server->config.discovery.cleanupTimeout)
+        timedOut -= server->config.discovery.cleanupTimeout*UA_DATETIME_SEC;
 
     registeredServer_list_entry* current, *temp;
     LIST_FOREACH_SAFE(current, &server->discoveryManager.registeredServers, pointers, temp) {
@@ -32146,7 +33739,7 @@ void UA_Discovery_cleanupTimedOut(UA_Server *server, UA_DateTime nowMonotonic) {
         }
 #endif
 
-        if(semaphoreDeleted || (server->config.discoveryCleanupTimeout &&
+        if(semaphoreDeleted || (server->config.discovery.cleanupTimeout &&
                                 current->lastSeen < timedOut)) {
             if(semaphoreDeleted) {
                 UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER,
@@ -32194,7 +33787,7 @@ struct PeriodicServerRegisterCallback {
  * > errors occurred. The recommended approach would double the period each attempt until reaching the maximum.
  *
  * We will do so by using the additional data parameter which holds information
- * if the next interval is default or if it is a repeaded call. */
+ * if the next interval is default or if it is a repeated call. */
 static void
 periodicServerRegister(UA_Server *server, void *data) {
     UA_assert(data != NULL);
@@ -32395,7 +33988,6 @@ setSubscriptionSettings(UA_Server *server, UA_Subscription *subscription,
     Subscription_unregisterPublishCallback(server, subscription);
 
     /* re-parameterize the subscription */
-    subscription->publishingInterval = requestedPublishingInterval;
     UA_BOUNDEDVALUE_SETWBOUNDS(server->config.publishingIntervalLimits,
                                requestedPublishingInterval, subscription->publishingInterval);
     /* check for nan*/
@@ -32529,34 +34121,52 @@ setMonitoredItemSettings(UA_Server *server, UA_MonitoredItem *mon,
                          UA_MonitoringMode monitoringMode,
                          const UA_MonitoringParameters *params,
                          const UA_DataType* dataType) {
-    /* Filter */
-    if(params->filter.encoding != UA_EXTENSIONOBJECT_DECODED) {
-        UA_DataChangeFilter_init(&(mon->filter.dataChangeFilter));
-        mon->filter.dataChangeFilter.trigger = UA_DATACHANGETRIGGER_STATUSVALUE;
-    } else if(params->filter.content.decoded.type == &UA_TYPES[UA_TYPES_DATACHANGEFILTER]) {
-        UA_DataChangeFilter *filter = (UA_DataChangeFilter *)params->filter.content.decoded.data;
-        // TODO implement EURange to support UA_DEADBANDTYPE_PERCENT
-        switch(filter->deadbandType) {
-        case UA_DEADBANDTYPE_NONE:
-            break;
-        case UA_DEADBANDTYPE_ABSOLUTE:
-            if(!dataType || !UA_DataType_isNumeric(dataType))
-                return UA_STATUSCODE_BADFILTERNOTALLOWED;
-            break;
-        case UA_DEADBANDTYPE_PERCENT:
-            return UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED;
-        default:
-            return UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED;
-        }
-        UA_DataChangeFilter_copy(filter, &mon->filter.dataChangeFilter);
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    } else if (params->filter.content.decoded.type == &UA_TYPES[UA_TYPES_EVENTFILTER]) {
-        UA_EventFilter_copy((UA_EventFilter *)params->filter.content.decoded.data,
-                            &mon->filter.eventFilter);
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
+        /* Event MonitoredItem */
+#ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+        return UA_STATUSCODE_BADNOTSUPPORTED;
+#else
+        if(params->filter.encoding != UA_EXTENSIONOBJECT_DECODED &&
+           params->filter.encoding != UA_EXTENSIONOBJECT_DECODED_NODELETE)
+            return UA_STATUSCODE_BADEVENTFILTERINVALID;
+        if(params->filter.content.decoded.type != &UA_TYPES[UA_TYPES_EVENTFILTER])
+            return UA_STATUSCODE_BADEVENTFILTERINVALID;
+        UA_EventFilter_clear(&mon->filter.eventFilter);
+        retval = UA_EventFilter_copy((UA_EventFilter *)params->filter.content.decoded.data,
+                                     &mon->filter.eventFilter);
 #endif
     } else {
-        return UA_STATUSCODE_BADMONITOREDITEMFILTERINVALID;
+        /* DataChange MonitoredItem */
+        if(params->filter.encoding != UA_EXTENSIONOBJECT_DECODED &&
+           params->filter.encoding != UA_EXTENSIONOBJECT_DECODED_NODELETE) {
+            /* Default: Look for status and value */
+            UA_DataChangeFilter_clear(&mon->filter.dataChangeFilter);
+            mon->filter.dataChangeFilter.trigger = UA_DATACHANGETRIGGER_STATUSVALUE;
+        } else if(params->filter.content.decoded.type == &UA_TYPES[UA_TYPES_DATACHANGEFILTER]) {
+            UA_DataChangeFilter *filter = (UA_DataChangeFilter *)params->filter.content.decoded.data;
+            // TODO implement EURange to support UA_DEADBANDTYPE_PERCENT
+            switch(filter->deadbandType) {
+            case UA_DEADBANDTYPE_NONE:
+                break;
+            case UA_DEADBANDTYPE_ABSOLUTE:
+                if(!dataType || !UA_DataType_isNumeric(dataType))
+                    return UA_STATUSCODE_BADFILTERNOTALLOWED;
+                break;
+            case UA_DEADBANDTYPE_PERCENT:
+                return UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED;
+            default:
+                return UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED;
+            }
+            retval = UA_DataChangeFilter_copy(filter, &mon->filter.dataChangeFilter);
+        } else {
+            return UA_STATUSCODE_BADMONITOREDITEMFILTERUNSUPPORTED;
+        }
     }
+
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
 
     /* <-- The point of no return --> */
 
@@ -32572,8 +34182,8 @@ setMonitoredItemSettings(UA_Server *server, UA_MonitoredItem *mon,
 
     /* SamplingInterval */
     UA_Double samplingInterval = params->samplingInterval;
+
     if(mon->attributeId == UA_ATTRIBUTEID_VALUE) {
-        mon->monitoredItemType = UA_MONITOREDITEMTYPE_CHANGENOTIFY;
         const UA_VariableNode *vn = (const UA_VariableNode *)
             UA_Nodestore_getNode(server->nsCtx, &mon->monitoredNodeId);
         if(vn) {
@@ -32582,20 +34192,12 @@ setMonitoredItemSettings(UA_Server *server, UA_MonitoredItem *mon,
                 samplingInterval = vn->minimumSamplingInterval;
             UA_Nodestore_releaseNode(server->nsCtx, (const UA_Node *)vn);
         }
-    } else if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
-        /* TODO: events should not need a samplinginterval */
-        samplingInterval = 10000.0f; // 10 seconds to reduce the load
-        mon->monitoredItemType = UA_MONITOREDITEMTYPE_EVENTNOTIFY;
-    } else {
-        mon->monitoredItemType = UA_MONITOREDITEMTYPE_CHANGENOTIFY;
     }
-    mon->samplingInterval = samplingInterval;
+
     UA_BOUNDEDVALUE_SETWBOUNDS(server->config.samplingIntervalLimits,
                                samplingInterval, mon->samplingInterval);
     if(samplingInterval != samplingInterval) /* Check for nan */
         mon->samplingInterval = server->config.samplingIntervalLimits.min;
-
-    UA_assert(mon->monitoredItemType != 0);
 
     /* QueueSize */
     UA_BOUNDEDVALUE_SETWBOUNDS(server->config.queueSizeLimits,
@@ -32615,8 +34217,9 @@ setMonitoredItemSettings(UA_Server *server, UA_MonitoredItem *mon,
 static const UA_String binaryEncoding = {sizeof("Default Binary") - 1, (UA_Byte *)"Default Binary"};
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-static UA_StatusCode UA_Server_addMonitoredItemToNodeEditNodeCallback(UA_Server *server, UA_Session *session,
-                                                                      UA_Node *node, void *data) {
+static UA_StatusCode
+UA_Server_addMonitoredItemToNodeEditNodeCallback(UA_Server *server, UA_Session *session,
+                                                 UA_Node *node, void *data) {
     /* data is the MonitoredItem */
     /* SLIST_INSERT_HEAD */
     ((UA_MonitoredItem *)data)->next = ((UA_ObjectNode *)node)->monitoredItemQueue;
@@ -32719,7 +34322,7 @@ Operation_CreateMonitoredItem(UA_Server *server, UA_Session *session, struct cre
         newMon->monitoredItemId = ++cmc->sub->lastMonitoredItemId;
         UA_Subscription_addMonitoredItem(server, cmc->sub, newMon);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-        if(newMon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+        if(newMon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
             /* Insert the monitored item into the node's queue */
             UA_Server_editNode(server, NULL, &newMon->monitoredNodeId,
                                UA_Server_addMonitoredItemToNodeEditNodeCallback, newMon);
@@ -32752,7 +34355,8 @@ Operation_CreateMonitoredItem(UA_Server *server, UA_Session *session, struct cre
                         newMon->monitoredItemId);
 
     /* Create the first sample */
-    if(request->monitoringMode == UA_MONITORINGMODE_REPORTING)
+    if(request->monitoringMode == UA_MONITORINGMODE_REPORTING &&
+       newMon->attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER)
         UA_MonitoredItem_sampleCallback(server, newMon);
 
     /* Prepare the response */
@@ -32899,29 +34503,25 @@ Operation_SetMonitoringMode(UA_Server *server, UA_Session *session,
         return;
     }
 
-    if(mon->monitoredItemType != UA_MONITOREDITEMTYPE_CHANGENOTIFY
-           && mon->monitoredItemType != UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
-        *result = UA_STATUSCODE_BADNOTIMPLEMENTED;
-        return;
-    }
-
     /* Check if the MonitoringMode is valid or not */
     if(smc->monitoringMode > UA_MONITORINGMODE_REPORTING) {
         *result = UA_STATUSCODE_BADMONITORINGMODEINVALID;
         return;
     }
 
+    /* Nothing has changed */
     if(mon->monitoringMode == smc->monitoringMode)
         return;
 
     mon->monitoringMode = smc->monitoringMode;
+
     if(mon->monitoringMode == UA_MONITORINGMODE_REPORTING) {
         *result = UA_MonitoredItem_registerSampleCallback(server, mon);
     } else {
         UA_MonitoredItem_unregisterSampleCallback(server, mon);
 
         // TODO correctly implement SAMPLING
-        /*  Setting the mode to DISABLED or SAMPLING causes all queued Notifications to be deleted */
+        /* Setting the mode to DISABLED or SAMPLING causes all queued Notifications to be deleted */
         UA_Notification *notification, *notification_tmp;
         TAILQ_FOREACH_SAFE(notification, &mon->queue, listEntry, notification_tmp) {
             UA_Notification_dequeue(server, notification);
@@ -33465,8 +35065,13 @@ typeCheckVariableNode(UA_Server *server, UA_Session *session,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
+    UA_NodeId baseDataType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
+
     /* Check the datatype against the vt */
-    if(!compatibleDataType(server, &node->dataType, &vt->dataType, false)) {
+    /* If the node does not have any value and the dataType is BaseDataType,
+     * then it's also fine. This is the default for empty nodes. */
+    if(!compatibleDataType(server, &node->dataType, &vt->dataType, false) &&
+       (value.hasValue || !UA_NodeId_equal(&node->dataType, &baseDataType))) {
         UA_LOG_NODEID_WRAP(&node->nodeId, UA_LOG_INFO_SESSION(&server->config.logger, session,
                               "AddNodes: The value of %.*s is incompatible with "
                               "the datatype of the VariableType",
@@ -33638,8 +35243,10 @@ findChildByBrowsename(UA_Server *server, UA_Session *session,
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, session, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, session, &bo, &bd, &br);
     if(br.statusCode != UA_STATUSCODE_GOOD)
         return br.statusCode;
 
@@ -33802,8 +35409,10 @@ copyAllChildren(UA_Server *server, UA_Session *session,
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, session, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, session, &bo, &bd, &br);
     if(br.statusCode != UA_STATUSCODE_GOOD)
         return br.statusCode;
 
@@ -33825,8 +35434,8 @@ addTypeChildren(UA_Server *server, UA_Session *session,
     /* Get the hierarchy of the type and all its supertypes */
     UA_NodeId *hierarchy = NULL;
     size_t hierarchySize = 0;
-    UA_StatusCode retval = getTypeHierarchy(server->nsCtx, &type->nodeId,
-                                            &hierarchy, &hierarchySize, false);
+    UA_StatusCode retval = getParentTypeAndInterfaceHierarchy(server, &type->nodeId,
+                                                              &hierarchy, &hierarchySize);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
@@ -33972,8 +35581,10 @@ AddNode_addRefs(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId,
                 /* Get subtypes of the parent reference types */
                 UA_NodeId *parentTypeHierachy = NULL;
                 size_t parentTypeHierachySize = 0;
-                getTypesHierarchy(server->nsCtx, parentReferences,UA_PARENT_REFERENCES_COUNT,
-                                  &parentTypeHierachy, &parentTypeHierachySize, true);
+                retval = getLocalRecursiveHierarchy(server, parentReferences, UA_PARENT_REFERENCES_COUNT,
+                                                    &subtypeId, 1, true, &parentTypeHierachy, &parentTypeHierachySize);
+                if(retval != UA_STATUSCODE_GOOD)
+                    goto cleanup;
                 /* Abstract variable is allowed if parent is a children of a base data variable */
                 const UA_NodeId variableTypes = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE);
                 /* A variable may be of an object type which again is below BaseObjectType */
@@ -33999,8 +35610,10 @@ AddNode_addRefs(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId,
                 /* Get subtypes of the parent reference types */
                 UA_NodeId *parentTypeHierachy = NULL;
                 size_t parentTypeHierachySize = 0;
-                getTypesHierarchy(server->nsCtx, parentReferences,UA_PARENT_REFERENCES_COUNT,
-                                  &parentTypeHierachy, &parentTypeHierachySize, true);
+                retval = getLocalRecursiveHierarchy(server, parentReferences, UA_PARENT_REFERENCES_COUNT,
+                                                    &subtypeId, 1, true, &parentTypeHierachy, &parentTypeHierachySize);
+                if(retval != UA_STATUSCODE_GOOD)
+                    goto cleanup;
                 /* Object node created of an abstract ObjectType. Only allowed
                  * if within BaseObjectType folder */
                 const UA_NodeId objectTypes = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
@@ -34205,6 +35818,80 @@ recursiveTypeCheckAddChildren(UA_Server *server, UA_Session *session,
     return UA_STATUSCODE_GOOD;
 }
 
+static UA_StatusCode
+findDefaultInstanceBrowseNameNode(UA_Server *server,
+                    UA_NodeId startingNode, UA_NodeId *foundId){
+
+    UA_NodeId_init(foundId);
+    UA_RelativePathElement rpe;
+    UA_RelativePathElement_init(&rpe);
+    rpe.referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
+    rpe.isInverse = false;
+    rpe.includeSubtypes = false;
+    rpe.targetName = UA_QUALIFIEDNAME(0, "DefaultInstanceBrowseName");
+    UA_BrowsePath bp;
+    UA_BrowsePath_init(&bp);
+    bp.startingNode = startingNode;
+    bp.relativePath.elementsSize = 1;
+    bp.relativePath.elements = &rpe;
+    UA_BrowsePathResult bpr =
+            UA_Server_translateBrowsePathToNodeIds(server, &bp);
+    UA_StatusCode retval = bpr.statusCode;
+    if (retval == UA_STATUSCODE_GOOD &&
+        bpr.targetsSize > 0) {
+        retval = UA_NodeId_copy(&bpr.targets[0].targetId.nodeId, foundId);
+    }
+    UA_BrowsePathResult_deleteMembers(&bpr);
+    return retval;
+}
+
+/* Check if we got a valid browse name for the new node.
+ * For object nodes the BrowseName may only be null if the parent type has a
+ * 'DefaultInstanceBrowseName' property.
+ * */
+static UA_StatusCode
+checkValidBrowseName(UA_Server *server, UA_Session *session,
+                     const UA_Node *node, const UA_Node *type) {
+
+    UA_assert(type != NULL);
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    if(node->nodeClass != UA_NODECLASS_OBJECT) {
+        /* nodes other than Objects must have a browseName */
+        if (UA_QualifiedName_isNull(&node->browseName))
+            return UA_STATUSCODE_BADBROWSENAMEINVALID;
+        return UA_STATUSCODE_GOOD;
+    }
+
+    /* If the object node already has a browse name we are done here. */
+    if(!UA_QualifiedName_isNull(&node->browseName))
+        return UA_STATUSCODE_GOOD;
+
+    /* at this point we have an object with an empty browse name.
+     * Check the type node if it has a DefaultInstanceBrowseName property
+     */
+
+    UA_NodeId defaultBrowseNameNode;
+    retval = findDefaultInstanceBrowseNameNode(server, type->nodeId, &defaultBrowseNameNode);
+    if (retval != UA_STATUSCODE_GOOD) {
+        if (retval == UA_STATUSCODE_BADNOMATCH)
+            /* the DefaultBrowseName property is not found, return the corresponding status code */
+            return UA_STATUSCODE_BADBROWSENAMEINVALID;
+        return retval;
+    }
+
+    UA_Variant defaultBrowseName;
+    retval = UA_Server_readValue(server, defaultBrowseNameNode, &defaultBrowseName);
+    if (retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    UA_QualifiedName *defaultValue = (UA_QualifiedName *) defaultBrowseName.data;
+    retval = UA_Server_writeBrowseName(server, node->nodeId, *defaultValue);
+    UA_Variant_clear(&defaultBrowseName);
+
+    return retval;
+}
+
 /* Construct children first */
 static UA_StatusCode
 recursiveCallConstructors(UA_Server *server, UA_Session *session,
@@ -34222,8 +35909,10 @@ recursiveCallConstructors(UA_Server *server, UA_Session *session,
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, session, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, session, &bo, &bd, &br);
     if(br.statusCode != UA_STATUSCODE_GOOD)
         return br.statusCode;
 
@@ -34351,6 +36040,10 @@ AddNode_finish(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId) 
             retval = UA_STATUSCODE_BADTYPEDEFINITIONINVALID;
             goto cleanup;
         }
+
+        retval = checkValidBrowseName(server, session, node, type);
+        if(retval != UA_STATUSCODE_GOOD)
+            goto cleanup;
 
         retval = recursiveTypeCheckAddChildren(server, session, &node, type);
         if(retval != UA_STATUSCODE_GOOD)
@@ -34587,8 +36280,10 @@ recursiveDeconstructNode(UA_Server *server, UA_Session *session,
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, session, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, session, &bo, &bd, &br);
     if(br.statusCode != UA_STATUSCODE_GOOD)
         return;
 
@@ -34623,8 +36318,10 @@ recursiveDeleteNode(UA_Server *server, UA_Session *session,
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, session, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, session, &bo, &bd, &br);
     if(br.statusCode != UA_STATUSCODE_GOOD)
         return;
 
@@ -34690,7 +36387,7 @@ deleteNodeOperation(UA_Server *server, UA_Session *session, void *context,
     UA_NodeId *hierarchicalRefs = NULL;
     size_t hierarchicalRefsSize = 0;
     UA_NodeId hr = UA_NODEID_NUMERIC(0, UA_NS0ID_HIERARCHICALREFERENCES);
-    getTypeHierarchy(server->nsCtx, &hr, &hierarchicalRefs, &hierarchicalRefsSize, true);
+    getLocalRecursiveHierarchy(server, &hr, 1, &subtypeId, 1, true, &hierarchicalRefs, &hierarchicalRefsSize);
     if(!hierarchicalRefs) {
         UA_LOG_WARNING_SESSION(&server->config.logger, session,
                                "Delete Nodes: Cannot test for hierarchical "
@@ -35059,8 +36756,10 @@ UA_Server_addMethodNodeEx_finish(UA_Server *server, const UA_NodeId nodeId, UA_M
 
     UA_BrowseResult br;
     UA_BrowseResult_init(&br);
-    UA_UInt32 maxrefs = 0;
-    Operation_Browse(server, &server->adminSession, &maxrefs, &bd, &br);
+    struct BrowseOpts bo;
+    bo.maxReferences = 0;
+    bo.recursive = false;
+    Operation_Browse(server, &server->adminSession, &bo, &bd, &br);
 
     UA_StatusCode retval = br.statusCode;
     if(retval != UA_STATUSCODE_GOOD) {
@@ -35347,15 +37046,22 @@ addMdnsRecordForNetworkLayer(UA_Server *server, const UA_String *appName,
                        (int)nl->discoveryUrl.length, nl->discoveryUrl.data);
         return retval;
     }
-    UA_Discovery_addRecord(server, appName, &hostname, port,
-                           &path, UA_DISCOVERY_TCP, true,
-                           server->config.serverCapabilities,
-                           &server->config.serverCapabilitiesSize);
+
+    retval = UA_Discovery_addRecord(server, appName, &hostname, port,
+                                    &path, UA_DISCOVERY_TCP, true,
+                                    server->config.discovery.mdns.serverCapabilities,
+                                    server->config.discovery.mdns.serverCapabilitiesSize);
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_NETWORK,
+                       "Cannot add mDNS Record: %s",
+                       UA_StatusCode_name(retval));
+        return retval;
+    }
     return UA_STATUSCODE_GOOD;
 }
 
 void startMulticastDiscoveryServer(UA_Server *server) {
-    UA_String *appName = &server->config.mdnsServerName;
+    UA_String *appName = &server->config.discovery.mdns.mdnsServerName;
     for(size_t i = 0; i < server->config.networkLayersSize; i++)
         addMdnsRecordForNetworkLayer(server, appName, &server->config.networkLayers[i]);
 
@@ -35369,10 +37075,13 @@ void startMulticastDiscoveryServer(UA_Server *server) {
 
 void
 stopMulticastDiscoveryServer(UA_Server *server) {
+    if (!server->discoveryManager.mdnsDaemon)
+        return;
+
     char hostname[256];
     if(UA_gethostname(hostname, 255) == 0) {
         UA_String hnString = UA_STRING(hostname);
-        UA_Discovery_removeRecord(server, &server->config.mdnsServerName,
+        UA_Discovery_removeRecord(server, &server->config.discovery.mdns.mdnsServerName,
                                   &hnString, 4840, true);
     } else {
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
@@ -35403,6 +37112,11 @@ filterServerRecord(size_t serverCapabilityFilterSize, UA_String *serverCapabilit
 void Service_FindServersOnNetwork(UA_Server *server, UA_Session *session,
                                   const UA_FindServersOnNetworkRequest *request,
                                   UA_FindServersOnNetworkResponse *response) {
+    if (!server->config.discovery.mdnsEnable) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADNOTIMPLEMENTED;
+        return;
+    }
+
     /* Set LastCounterResetTime */
     UA_DateTime_copy(&server->discoveryManager.serverOnNetworkRecordIdLastReset,
                      &response->lastCounterResetTime);
@@ -35488,7 +37202,7 @@ UA_Server_updateMdnsForDiscoveryUrl(UA_Server *server, const UA_String *serverNa
     UA_StatusCode addRetval =
         UA_Discovery_addRecord(server, serverName, &hostname,
                                port, &path, UA_DISCOVERY_TCP, updateTxt,
-                               capabilities, &capabilitiesSize);
+                               capabilities, capabilitiesSize);
     if(addRetval != UA_STATUSCODE_GOOD)
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
                        "Could not add mDNS record for hostname %.*s.",
@@ -35602,12 +37316,12 @@ UA_Discovery_addRecord(UA_Server *server, const UA_String *servername,
                        const UA_String *hostname, UA_UInt16 port,
                        const UA_String *path, const UA_DiscoveryProtocol protocol,
                        UA_Boolean createTxt, const UA_String* capabilites,
-                       size_t *capabilitiesSize) {
+                       const size_t capabilitiesSize) {
     // we assume that the hostname is not an IP address, but a valid domain name
     // It is required by the OPC UA spec (see Part 12, DiscoveryURL to DNS SRV mapping)
     // to always use the hostname instead of the IP address
 
-    if(!capabilitiesSize || (*capabilitiesSize > 0 && !capabilites))
+    if(capabilitiesSize > 0 && !capabilites)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
     size_t hostnameLen = hostname->length;
@@ -35753,7 +37467,7 @@ iterateMulticastDiscoveryServer(UA_Server* server, UA_DateTime *nextRepeat,
                                 UA_Boolean processIn) {
     struct timeval next_sleep = { 0, 0 };
     unsigned short retval = mdnsd_step(server->discoveryManager.mdnsDaemon,
-                                       server->discoveryManager.mdnsSocket,
+                                       (int)server->discoveryManager.mdnsSocket,
                                        processIn, true, &next_sleep);
     if(retval == 1) {
         UA_LOG_SOCKET_ERRNO_WRAP(
@@ -36432,13 +38146,16 @@ HelAckHandshake(UA_Client *client, const UA_String endpointUrl) {
 
     /* Prepare the HEL message and encode at offset 8 */
     UA_TcpHelloMessage hello;
-    UA_String_copy(&endpointUrl, &hello.endpointUrl); /* must be less than 4096 bytes */
+    /* just reference to avoid copy */
+    hello.endpointUrl = endpointUrl;
     memcpy(&hello, &client->config.localConnectionConfig,
            sizeof(UA_ConnectionConfig)); /* same struct layout */
 
     UA_Byte *bufPos = &message.data[8]; /* skip the header */
     const UA_Byte *bufEnd = &message.data[message.length];
     retval = UA_TcpHelloMessage_encodeBinary(&hello, &bufPos, bufEnd);
+    /* avoid deleting reference */
+    hello.endpointUrl = UA_STRING_NULL;
     UA_TcpHelloMessage_deleteMembers(&hello);
     if(retval != UA_STATUSCODE_GOOD) {
         conn->releaseSendBuffer(conn, &message);
@@ -39714,6 +41431,44 @@ UA_Client_MonitoredItems_deleteSingle(UA_Client *client, UA_UInt32 subscriptionI
     return retval;
 }
 
+UA_ModifyMonitoredItemsResponse UA_EXPORT
+UA_Client_MonitoredItems_modify(UA_Client *client,
+                                const UA_ModifyMonitoredItemsRequest request) {
+    UA_ModifyMonitoredItemsResponse response;
+
+    UA_Client_Subscription *sub = 0;
+    LIST_FOREACH(sub, &client->subscriptions, listEntry) {
+        if (sub->subscriptionId == request.subscriptionId)
+            break;
+    }
+
+    if (!sub) {
+        UA_ModifyMonitoredItemsResponse_init(&response);
+        response.responseHeader.serviceResult = UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
+        return response;
+    }
+
+    UA_ModifyMonitoredItemsRequest modifiedRequest;
+    UA_ModifyMonitoredItemsRequest_copy(&request, &modifiedRequest);
+
+    for (size_t i = 0; i < modifiedRequest.itemsToModifySize; ++i) {
+        UA_Client_MonitoredItem *mon = 0;
+        LIST_FOREACH(mon, &sub->monitoredItems, listEntry) {
+            if(mon->monitoredItemId == modifiedRequest.itemsToModify[i].monitoredItemId) {
+                modifiedRequest.itemsToModify[i].requestedParameters.clientHandle = mon->clientHandle;
+                break;
+            }
+        }
+    }
+
+    __UA_Client_Service(client,
+                        &modifiedRequest, &UA_TYPES[UA_TYPES_MODIFYMONITOREDITEMSREQUEST],
+                        &response, &UA_TYPES[UA_TYPES_MODIFYMONITOREDITEMSRESPONSE]);
+
+    UA_ModifyMonitoredItemsRequest_deleteMembers(&modifiedRequest);
+    return response;
+}
+
 /*************************************/
 /* Async Processing of Notifications */
 /*************************************/
@@ -39799,7 +41554,7 @@ processEventNotification(UA_Client *client, UA_Client_Subscription *sub,
         /* Find the MonitoredItem */
         UA_Client_MonitoredItem *mon;
         LIST_FOREACH(mon, &sub->monitoredItems, listEntry) {
-            if(mon->monitoredItemId == eventFieldList->clientHandle)
+            if(mon->clientHandle == eventFieldList->clientHandle)
                 break;
         }
 
@@ -40618,15 +42373,58 @@ unsigned char* UA_unbase64( const char* ascii, int len, int *flen )
 
 
 
-/* ExpandedNodeId - ns=0;i=18 */
+/* HasAddIn - ns=0;i=17604 */
 
 static UA_StatusCode function_namespace0_generated_0_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
+attr.inverseName  = UA_LOCALIZEDTEXT("", "AddInOf");
+attr.displayName = UA_LOCALIZEDTEXT("", "HasAddIn");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
+UA_NODEID_NUMERIC(ns[0], 17604),
+UA_NODEID_NUMERIC(ns[0], 32),
+UA_NODEID_NUMERIC(ns[0], 45),
+UA_QUALIFIEDNAME(ns[0], "HasAddIn"),
+ UA_NODEID_NULL,
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_REFERENCETYPEATTRIBUTES],NULL, NULL);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_0_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 17604)
+);
+}
+
+/* HasInterface - ns=0;i=17603 */
+
+static UA_StatusCode function_namespace0_generated_1_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
+attr.inverseName  = UA_LOCALIZEDTEXT("", "InterfaceOf");
+attr.displayName = UA_LOCALIZEDTEXT("", "HasInterface");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
+UA_NODEID_NUMERIC(ns[0], 17603),
+UA_NODEID_NUMERIC(ns[0], 32),
+UA_NODEID_NUMERIC(ns[0], 45),
+UA_QUALIFIEDNAME(ns[0], "HasInterface"),
+ UA_NODEID_NULL,
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_REFERENCETYPEATTRIBUTES],NULL, NULL);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_1_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 17603)
+);
+}
+
+/* ExpandedNodeId - ns=0;i=18 */
+
+static UA_StatusCode function_namespace0_generated_2_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ExpandedNodeId");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an absolute identifier for a node.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 18),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40637,7 +42435,7 @@ UA_QUALIFIEDNAME(ns[0], "ExpandedNodeId"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_0_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_2_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 18)
 );
@@ -40645,13 +42443,10 @@ UA_NODEID_NUMERIC(ns[0], 18)
 
 /* StatusCode - ns=0;i=19 */
 
-static UA_StatusCode function_namespace0_generated_1_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_3_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "StatusCode");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a code representing the outcome of an operation by a Server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 19),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40662,7 +42457,7 @@ UA_QUALIFIEDNAME(ns[0], "StatusCode"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_1_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_3_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 19)
 );
@@ -40670,13 +42465,10 @@ UA_NODEID_NUMERIC(ns[0], 19)
 
 /* ByteString - ns=0;i=15 */
 
-static UA_StatusCode function_namespace0_generated_2_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_4_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ByteString");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a sequence of bytes.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 15),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40687,7 +42479,7 @@ UA_QUALIFIEDNAME(ns[0], "ByteString"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_2_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_4_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 15)
 );
@@ -40695,14 +42487,11 @@ UA_NODEID_NUMERIC(ns[0], 15)
 
 /* Image - ns=0;i=30 */
 
-static UA_StatusCode function_namespace0_generated_3_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_5_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "Image");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an image encoded as a string of bytes.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 30),
 UA_NODEID_NUMERIC(ns[0], 15),
@@ -40713,7 +42502,7 @@ UA_QUALIFIEDNAME(ns[0], "Image"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_3_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_5_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 30)
 );
@@ -40721,13 +42510,10 @@ UA_NODEID_NUMERIC(ns[0], 30)
 
 /* DataValue - ns=0;i=23 */
 
-static UA_StatusCode function_namespace0_generated_4_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_6_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "DataValue");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a structure containing a value, a status code and timestamps.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 23),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40738,7 +42524,7 @@ UA_QUALIFIEDNAME(ns[0], "DataValue"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_4_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_6_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 23)
 );
@@ -40746,14 +42532,11 @@ UA_NODEID_NUMERIC(ns[0], 23)
 
 /* Structure - ns=0;i=22 */
 
-static UA_StatusCode function_namespace0_generated_5_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_7_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "Structure");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is any type of structure that can be described with a data encoding.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 22),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40764,7 +42547,7 @@ UA_QUALIFIEDNAME(ns[0], "Structure"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_5_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_7_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 22)
 );
@@ -40772,7 +42555,7 @@ UA_NODEID_NUMERIC(ns[0], 22)
 
 /* BuildInfo - ns=0;i=338 */
 
-static UA_StatusCode function_namespace0_generated_6_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_8_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "BuildInfo");
@@ -40786,7 +42569,7 @@ UA_QUALIFIEDNAME(ns[0], "BuildInfo"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_6_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_8_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 338)
 );
@@ -40794,7 +42577,7 @@ UA_NODEID_NUMERIC(ns[0], 338)
 
 /* ServerStatusDataType - ns=0;i=862 */
 
-static UA_StatusCode function_namespace0_generated_7_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_9_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerStatusDataType");
@@ -40808,7 +42591,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerStatusDataType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_7_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_9_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 862)
 );
@@ -40816,13 +42599,10 @@ UA_NODEID_NUMERIC(ns[0], 862)
 
 /* EnumValueType - ns=0;i=7594 */
 
-static UA_StatusCode function_namespace0_generated_8_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_10_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "EnumValueType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A mapping between a value of an enumerated type and a name and description.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 7594),
 UA_NODEID_NUMERIC(ns[0], 22),
@@ -40833,7 +42613,7 @@ UA_QUALIFIEDNAME(ns[0], "EnumValueType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_8_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_10_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7594)
 );
@@ -40841,7 +42621,7 @@ UA_NODEID_NUMERIC(ns[0], 7594)
 
 /* ServerDiagnosticsSummaryDataType - ns=0;i=859 */
 
-static UA_StatusCode function_namespace0_generated_9_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_11_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerDiagnosticsSummaryDataType");
@@ -40855,7 +42635,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerDiagnosticsSummaryDataType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_9_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_11_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 859)
 );
@@ -40863,13 +42643,10 @@ UA_NODEID_NUMERIC(ns[0], 859)
 
 /* SignedSoftwareCertificate - ns=0;i=344 */
 
-static UA_StatusCode function_namespace0_generated_10_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_12_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "SignedSoftwareCertificate");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A software certificate with a digital signature.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 344),
 UA_NODEID_NUMERIC(ns[0], 22),
@@ -40880,7 +42657,7 @@ UA_QUALIFIEDNAME(ns[0], "SignedSoftwareCertificate"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_10_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_12_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 344)
 );
@@ -40888,13 +42665,10 @@ UA_NODEID_NUMERIC(ns[0], 344)
 
 /* Argument - ns=0;i=296 */
 
-static UA_StatusCode function_namespace0_generated_11_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_13_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Argument");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "An argument for a method.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 296),
 UA_NODEID_NUMERIC(ns[0], 22),
@@ -40905,7 +42679,7 @@ UA_QUALIFIEDNAME(ns[0], "Argument"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_11_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_13_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 296)
 );
@@ -40913,13 +42687,10 @@ UA_NODEID_NUMERIC(ns[0], 296)
 
 /* LocalizedText - ns=0;i=21 */
 
-static UA_StatusCode function_namespace0_generated_12_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_14_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "LocalizedText");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is human readable Unicode text with a locale identifier.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 21),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40930,7 +42701,7 @@ UA_QUALIFIEDNAME(ns[0], "LocalizedText"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_12_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_14_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 21)
 );
@@ -40938,13 +42709,10 @@ UA_NODEID_NUMERIC(ns[0], 21)
 
 /* QualifiedName - ns=0;i=20 */
 
-static UA_StatusCode function_namespace0_generated_13_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_15_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "QualifiedName");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a name qualified by a namespace.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 20),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40955,7 +42723,7 @@ UA_QUALIFIEDNAME(ns[0], "QualifiedName"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_13_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_15_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 20)
 );
@@ -40963,14 +42731,11 @@ UA_NODEID_NUMERIC(ns[0], 20)
 
 /* Number - ns=0;i=26 */
 
-static UA_StatusCode function_namespace0_generated_14_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_16_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "Number");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that can have any numeric DataType.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 26),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -40981,7 +42746,7 @@ UA_QUALIFIEDNAME(ns[0], "Number"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_14_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_16_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 26)
 );
@@ -40989,13 +42754,10 @@ UA_NODEID_NUMERIC(ns[0], 26)
 
 /* Decimal - ns=0;i=50 */
 
-static UA_StatusCode function_namespace0_generated_15_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_17_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Decimal");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes an arbitrary precision decimal value.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 50),
 UA_NODEID_NUMERIC(ns[0], 26),
@@ -41006,7 +42768,7 @@ UA_QUALIFIEDNAME(ns[0], "Decimal"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_15_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_17_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 50)
 );
@@ -41014,14 +42776,11 @@ UA_NODEID_NUMERIC(ns[0], 50)
 
 /* UInteger - ns=0;i=28 */
 
-static UA_StatusCode function_namespace0_generated_16_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_18_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "UInteger");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that can have any unsigned integer DataType.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 28),
 UA_NODEID_NUMERIC(ns[0], 26),
@@ -41032,7 +42791,7 @@ UA_QUALIFIEDNAME(ns[0], "UInteger"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_16_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_18_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 28)
 );
@@ -41040,13 +42799,10 @@ UA_NODEID_NUMERIC(ns[0], 28)
 
 /* UInt16 - ns=0;i=5 */
 
-static UA_StatusCode function_namespace0_generated_17_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_19_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "UInt16");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between 0 and 65535.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 5),
 UA_NODEID_NUMERIC(ns[0], 28),
@@ -41057,7 +42813,7 @@ UA_QUALIFIEDNAME(ns[0], "UInt16"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_17_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_19_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 5)
 );
@@ -41065,13 +42821,10 @@ UA_NODEID_NUMERIC(ns[0], 5)
 
 /* UInt32 - ns=0;i=7 */
 
-static UA_StatusCode function_namespace0_generated_18_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_20_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "UInt32");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between 0 and 4,294,967,295.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 7),
 UA_NODEID_NUMERIC(ns[0], 28),
@@ -41082,7 +42835,7 @@ UA_QUALIFIEDNAME(ns[0], "UInt32"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_18_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_20_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7)
 );
@@ -41090,13 +42843,10 @@ UA_NODEID_NUMERIC(ns[0], 7)
 
 /* UInt64 - ns=0;i=9 */
 
-static UA_StatusCode function_namespace0_generated_19_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_21_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "UInt64");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between 0 and 18,446,744,073,709,551,615.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 9),
 UA_NODEID_NUMERIC(ns[0], 28),
@@ -41107,7 +42857,7 @@ UA_QUALIFIEDNAME(ns[0], "UInt64"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_19_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_21_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 9)
 );
@@ -41115,13 +42865,10 @@ UA_NODEID_NUMERIC(ns[0], 9)
 
 /* Byte - ns=0;i=3 */
 
-static UA_StatusCode function_namespace0_generated_20_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_22_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Byte");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between 0 and 255.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 3),
 UA_NODEID_NUMERIC(ns[0], 28),
@@ -41132,7 +42879,7 @@ UA_QUALIFIEDNAME(ns[0], "Byte"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_20_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_22_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3)
 );
@@ -41140,14 +42887,11 @@ UA_NODEID_NUMERIC(ns[0], 3)
 
 /* Integer - ns=0;i=27 */
 
-static UA_StatusCode function_namespace0_generated_21_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_23_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "Integer");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that can have any integer DataType.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 27),
 UA_NODEID_NUMERIC(ns[0], 26),
@@ -41158,7 +42902,7 @@ UA_QUALIFIEDNAME(ns[0], "Integer"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_21_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_23_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 27)
 );
@@ -41166,13 +42910,10 @@ UA_NODEID_NUMERIC(ns[0], 27)
 
 /* SByte - ns=0;i=2 */
 
-static UA_StatusCode function_namespace0_generated_22_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_24_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "SByte");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between -128 and 127.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 2),
 UA_NODEID_NUMERIC(ns[0], 27),
@@ -41183,7 +42924,7 @@ UA_QUALIFIEDNAME(ns[0], "SByte"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_22_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_24_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2)
 );
@@ -41191,13 +42932,10 @@ UA_NODEID_NUMERIC(ns[0], 2)
 
 /* Int64 - ns=0;i=8 */
 
-static UA_StatusCode function_namespace0_generated_23_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_25_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Int64");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between −9,223,372,036,854,775,808 and 9,223,372,036,854,775,807.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 8),
 UA_NODEID_NUMERIC(ns[0], 27),
@@ -41208,7 +42946,7 @@ UA_QUALIFIEDNAME(ns[0], "Int64"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_23_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_25_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 8)
 );
@@ -41216,13 +42954,10 @@ UA_NODEID_NUMERIC(ns[0], 8)
 
 /* Int32 - ns=0;i=6 */
 
-static UA_StatusCode function_namespace0_generated_24_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_26_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Int32");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between −2,147,483,648  and 2,147,483,647.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 6),
 UA_NODEID_NUMERIC(ns[0], 27),
@@ -41233,7 +42968,7 @@ UA_QUALIFIEDNAME(ns[0], "Int32"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_24_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_26_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 6)
 );
@@ -41241,13 +42976,10 @@ UA_NODEID_NUMERIC(ns[0], 6)
 
 /* Int16 - ns=0;i=4 */
 
-static UA_StatusCode function_namespace0_generated_25_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_27_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Int16");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an integer between −32,768 and 32,767.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 4),
 UA_NODEID_NUMERIC(ns[0], 27),
@@ -41258,7 +42990,7 @@ UA_QUALIFIEDNAME(ns[0], "Int16"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_25_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_27_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 4)
 );
@@ -41266,13 +42998,10 @@ UA_NODEID_NUMERIC(ns[0], 4)
 
 /* Float - ns=0;i=10 */
 
-static UA_StatusCode function_namespace0_generated_26_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_28_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Float");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an IEEE 754-1985 single precision floating point number.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 10),
 UA_NODEID_NUMERIC(ns[0], 26),
@@ -41283,7 +43012,7 @@ UA_QUALIFIEDNAME(ns[0], "Float"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_26_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_28_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 10)
 );
@@ -41291,13 +43020,10 @@ UA_NODEID_NUMERIC(ns[0], 10)
 
 /* Double - ns=0;i=11 */
 
-static UA_StatusCode function_namespace0_generated_27_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_29_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Double");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an IEEE 754-1985 double precision floating point number.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 11),
 UA_NODEID_NUMERIC(ns[0], 26),
@@ -41308,7 +43034,7 @@ UA_QUALIFIEDNAME(ns[0], "Double"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_27_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_29_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11)
 );
@@ -41316,13 +43042,10 @@ UA_NODEID_NUMERIC(ns[0], 11)
 
 /* Duration - ns=0;i=290 */
 
-static UA_StatusCode function_namespace0_generated_28_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_30_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Duration");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A period of time measured in milliseconds.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 290),
 UA_NODEID_NUMERIC(ns[0], 11),
@@ -41333,7 +43056,7 @@ UA_QUALIFIEDNAME(ns[0], "Duration"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_28_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_30_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 290)
 );
@@ -41341,13 +43064,10 @@ UA_NODEID_NUMERIC(ns[0], 290)
 
 /* DiagnosticInfo - ns=0;i=25 */
 
-static UA_StatusCode function_namespace0_generated_29_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_31_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "DiagnosticInfo");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a structure containing diagnostics associated with a StatusCode.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 25),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41358,7 +43078,7 @@ UA_QUALIFIEDNAME(ns[0], "DiagnosticInfo"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_29_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_31_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 25)
 );
@@ -41366,14 +43086,11 @@ UA_NODEID_NUMERIC(ns[0], 25)
 
 /* Enumeration - ns=0;i=29 */
 
-static UA_StatusCode function_namespace0_generated_30_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_32_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.isAbstract = true;
 attr.displayName = UA_LOCALIZEDTEXT("", "Enumeration");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an enumerated DataType.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 29),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41384,7 +43101,7 @@ UA_QUALIFIEDNAME(ns[0], "Enumeration"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_30_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_32_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 29)
 );
@@ -41392,13 +43109,10 @@ UA_NODEID_NUMERIC(ns[0], 29)
 
 /* NamingRuleType - ns=0;i=120 */
 
-static UA_StatusCode function_namespace0_generated_31_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_33_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "NamingRuleType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that specifies the significance of the BrowseName for an instance declaration.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 120),
 UA_NODEID_NUMERIC(ns[0], 29),
@@ -41409,7 +43123,7 @@ UA_QUALIFIEDNAME(ns[0], "NamingRuleType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_31_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_33_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 120)
 );
@@ -41417,7 +43131,7 @@ UA_NODEID_NUMERIC(ns[0], 120)
 
 /* EnumValues - ns=0;i=12169 */
 
-static UA_StatusCode function_namespace0_generated_32_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_34_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -41460,7 +43174,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_32_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_34_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 12169)
 );
@@ -41468,7 +43182,7 @@ UA_NODEID_NUMERIC(ns[0], 12169)
 
 /* RedundancySupport - ns=0;i=851 */
 
-static UA_StatusCode function_namespace0_generated_33_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_35_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "RedundancySupport");
@@ -41482,7 +43196,7 @@ UA_QUALIFIEDNAME(ns[0], "RedundancySupport"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_33_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_35_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 851)
 );
@@ -41490,7 +43204,7 @@ UA_NODEID_NUMERIC(ns[0], 851)
 
 /* EnumStrings - ns=0;i=7611 */
 
-static UA_StatusCode function_namespace0_generated_34_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_36_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -41521,7 +43235,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_34_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_36_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7611)
 );
@@ -41529,7 +43243,7 @@ UA_NODEID_NUMERIC(ns[0], 7611)
 
 /* ServerState - ns=0;i=852 */
 
-static UA_StatusCode function_namespace0_generated_35_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_37_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerState");
@@ -41543,7 +43257,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerState"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_35_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_37_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 852)
 );
@@ -41551,14 +43265,11 @@ UA_NODEID_NUMERIC(ns[0], 852)
 
 /* HasHistoricalConfiguration - ns=0;i=56 */
 
-static UA_StatusCode function_namespace0_generated_36_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_38_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
 attr.inverseName  = UA_LOCALIZEDTEXT("", "HistoricalConfigurationOf");
 attr.displayName = UA_LOCALIZEDTEXT("", "HasHistoricalConfiguration");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for a reference to the historical configuration for a data variable.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
 UA_NODEID_NUMERIC(ns[0], 56),
 UA_NODEID_NUMERIC(ns[0], 44),
@@ -41569,7 +43280,7 @@ UA_QUALIFIEDNAME(ns[0], "HasHistoricalConfiguration"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_36_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_38_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 56)
 );
@@ -41577,14 +43288,11 @@ UA_NODEID_NUMERIC(ns[0], 56)
 
 /* HasEffect - ns=0;i=54 */
 
-static UA_StatusCode function_namespace0_generated_37_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_39_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
 attr.inverseName  = UA_LOCALIZEDTEXT("", "MayBeEffectedBy");
 attr.displayName = UA_LOCALIZEDTEXT("", "HasEffect");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for a reference to an event that may be raised when a transition occurs.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
 UA_NODEID_NUMERIC(ns[0], 54),
 UA_NODEID_NUMERIC(ns[0], 32),
@@ -41595,7 +43303,7 @@ UA_QUALIFIEDNAME(ns[0], "HasEffect"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_37_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_39_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 54)
 );
@@ -41603,14 +43311,11 @@ UA_NODEID_NUMERIC(ns[0], 54)
 
 /* ToState - ns=0;i=52 */
 
-static UA_StatusCode function_namespace0_generated_38_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_40_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
 attr.inverseName  = UA_LOCALIZEDTEXT("", "FromTransition");
 attr.displayName = UA_LOCALIZEDTEXT("", "ToState");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for a reference to the state after a transition.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
 UA_NODEID_NUMERIC(ns[0], 52),
 UA_NODEID_NUMERIC(ns[0], 32),
@@ -41621,7 +43326,7 @@ UA_QUALIFIEDNAME(ns[0], "ToState"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_38_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_40_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 52)
 );
@@ -41629,14 +43334,11 @@ UA_NODEID_NUMERIC(ns[0], 52)
 
 /* HasCause - ns=0;i=53 */
 
-static UA_StatusCode function_namespace0_generated_39_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_41_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
 attr.inverseName  = UA_LOCALIZEDTEXT("", "MayBeCausedBy");
 attr.displayName = UA_LOCALIZEDTEXT("", "HasCause");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for a reference to a method that can cause a transition to occur.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
 UA_NODEID_NUMERIC(ns[0], 53),
 UA_NODEID_NUMERIC(ns[0], 32),
@@ -41647,7 +43349,7 @@ UA_QUALIFIEDNAME(ns[0], "HasCause"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_39_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_41_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 53)
 );
@@ -41655,14 +43357,11 @@ UA_NODEID_NUMERIC(ns[0], 53)
 
 /* FromState - ns=0;i=51 */
 
-static UA_StatusCode function_namespace0_generated_40_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_42_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ReferenceTypeAttributes attr = UA_ReferenceTypeAttributes_default;
 attr.inverseName  = UA_LOCALIZEDTEXT("", "ToTransition");
 attr.displayName = UA_LOCALIZEDTEXT("", "FromState");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for a reference to the state before a transition.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_REFERENCETYPE,
 UA_NODEID_NUMERIC(ns[0], 51),
 UA_NODEID_NUMERIC(ns[0], 32),
@@ -41673,7 +43372,7 @@ UA_QUALIFIEDNAME(ns[0], "FromState"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_40_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_42_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 51)
 );
@@ -41681,13 +43380,10 @@ UA_NODEID_NUMERIC(ns[0], 51)
 
 /* String - ns=0;i=12 */
 
-static UA_StatusCode function_namespace0_generated_41_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_43_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "String");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a sequence of printable Unicode characters.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 12),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41698,7 +43394,7 @@ UA_QUALIFIEDNAME(ns[0], "String"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_41_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_43_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 12)
 );
@@ -41706,13 +43402,10 @@ UA_NODEID_NUMERIC(ns[0], 12)
 
 /* LocaleId - ns=0;i=295 */
 
-static UA_StatusCode function_namespace0_generated_42_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_44_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "LocaleId");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "An identifier for a user locale.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 295),
 UA_NODEID_NUMERIC(ns[0], 12),
@@ -41723,7 +43416,7 @@ UA_QUALIFIEDNAME(ns[0], "LocaleId"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_42_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_44_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 295)
 );
@@ -41731,13 +43424,10 @@ UA_NODEID_NUMERIC(ns[0], 295)
 
 /* DateTime - ns=0;i=13 */
 
-static UA_StatusCode function_namespace0_generated_43_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_45_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "DateTime");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a Gregorian calender date and time.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 13),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41748,7 +43438,7 @@ UA_QUALIFIEDNAME(ns[0], "DateTime"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_43_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_45_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 13)
 );
@@ -41756,13 +43446,10 @@ UA_NODEID_NUMERIC(ns[0], 13)
 
 /* UtcTime - ns=0;i=294 */
 
-static UA_StatusCode function_namespace0_generated_44_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_46_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "UtcTime");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A date/time value specified in Universal Coordinated Time (UTC).");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 294),
 UA_NODEID_NUMERIC(ns[0], 13),
@@ -41773,7 +43460,7 @@ UA_QUALIFIEDNAME(ns[0], "UtcTime"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_44_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_46_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 294)
 );
@@ -41781,13 +43468,10 @@ UA_NODEID_NUMERIC(ns[0], 294)
 
 /* NodeId - ns=0;i=17 */
 
-static UA_StatusCode function_namespace0_generated_45_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_47_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "NodeId");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an identifier for a node within a Server address space.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 17),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41798,7 +43482,7 @@ UA_QUALIFIEDNAME(ns[0], "NodeId"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_45_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_47_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 17)
 );
@@ -41806,13 +43490,10 @@ UA_NODEID_NUMERIC(ns[0], 17)
 
 /* Guid - ns=0;i=14 */
 
-static UA_StatusCode function_namespace0_generated_46_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_48_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Guid");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is a 128-bit globally unique identifier.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 14),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41823,7 +43504,7 @@ UA_QUALIFIEDNAME(ns[0], "Guid"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_46_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_48_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 14)
 );
@@ -41831,13 +43512,10 @@ UA_NODEID_NUMERIC(ns[0], 14)
 
 /* Boolean - ns=0;i=1 */
 
-static UA_StatusCode function_namespace0_generated_47_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_49_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Boolean");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is either TRUE or FALSE.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 1),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41848,7 +43526,7 @@ UA_QUALIFIEDNAME(ns[0], "Boolean"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_47_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_49_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 1)
 );
@@ -41856,13 +43534,10 @@ UA_NODEID_NUMERIC(ns[0], 1)
 
 /* XmlElement - ns=0;i=16 */
 
-static UA_StatusCode function_namespace0_generated_48_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_50_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_DataTypeAttributes attr = UA_DataTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "XmlElement");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes a value that is an XML element.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_DATATYPE,
 UA_NODEID_NUMERIC(ns[0], 16),
 UA_NODEID_NUMERIC(ns[0], 24),
@@ -41873,7 +43548,7 @@ UA_QUALIFIEDNAME(ns[0], "XmlElement"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_48_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_50_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 16)
 );
@@ -41881,13 +43556,10 @@ UA_NODEID_NUMERIC(ns[0], 16)
 
 /* ServerDiagnosticsType - ns=0;i=2020 */
 
-static UA_StatusCode function_namespace0_generated_49_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_51_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerDiagnosticsType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The diagnostics information for a server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 2020),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -41898,7 +43570,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerDiagnosticsType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_49_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_51_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2020)
 );
@@ -41906,13 +43578,10 @@ UA_NODEID_NUMERIC(ns[0], 2020)
 
 /* Default Binary - ns=0;i=3062 */
 
-static UA_StatusCode function_namespace0_generated_50_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_52_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Default Binary");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The default binary encoding for a data type.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 3062),
 UA_NODEID_NUMERIC(ns[0], 0),
@@ -41923,7 +43592,7 @@ UA_NODEID_NUMERIC(ns[0], 58),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_50_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_52_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3062)
 );
@@ -41931,13 +43600,10 @@ UA_NODEID_NUMERIC(ns[0], 3062)
 
 /* Default XML - ns=0;i=3063 */
 
-static UA_StatusCode function_namespace0_generated_51_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_53_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Default XML");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The default XML encoding for a data type.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 3063),
 UA_NODEID_NUMERIC(ns[0], 0),
@@ -41948,7 +43614,7 @@ UA_NODEID_NUMERIC(ns[0], 58),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_51_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_53_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3063)
 );
@@ -41956,11 +43622,12 @@ UA_NODEID_NUMERIC(ns[0], 3063)
 
 /* ServerStatusType - ns=0;i=2138 */
 
-static UA_StatusCode function_namespace0_generated_52_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_54_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableTypeAttributes attr = UA_VariableTypeAttributes_default;
-attr.valueRank = (UA_Int32)-2;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 24);
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 862);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerStatusType");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLETYPE,
 UA_NODEID_NUMERIC(ns[0], 2138),
@@ -41972,7 +43639,7 @@ UA_NODEID_NUMERIC(ns[0], 0),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_52_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_54_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2138)
 );
@@ -41980,13 +43647,10 @@ UA_NODEID_NUMERIC(ns[0], 2138)
 
 /* VendorServerInfoType - ns=0;i=2033 */
 
-static UA_StatusCode function_namespace0_generated_53_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_55_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "VendorServerInfoType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A base type for vendor specific server information.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 2033),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -41997,7 +43661,7 @@ UA_QUALIFIEDNAME(ns[0], "VendorServerInfoType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_53_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_55_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2033)
 );
@@ -42005,15 +43669,13 @@ UA_NODEID_NUMERIC(ns[0], 2033)
 
 /* DataTypeDescriptionType - ns=0;i=69 */
 
-static UA_StatusCode function_namespace0_generated_54_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_56_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableTypeAttributes attr = UA_VariableTypeAttributes_default;
-attr.valueRank = (UA_Int32)-2;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 24);
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeDescriptionType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for variable that represents the description of a data type encoding.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLETYPE,
 UA_NODEID_NUMERIC(ns[0], 69),
 UA_NODEID_NUMERIC(ns[0], 63),
@@ -42024,7 +43686,7 @@ UA_NODEID_NUMERIC(ns[0], 0),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_54_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_56_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 69)
 );
@@ -42032,21 +43694,16 @@ UA_NODEID_NUMERIC(ns[0], 69)
 
 /* DictionaryFragment - ns=0;i=105 */
 
-static UA_StatusCode function_namespace0_generated_55_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_57_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 15);
-UA_STACKARRAY(UA_ByteString, variablenode_ns_0_i_105_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_105_variant_DataContents, &UA_TYPES[UA_TYPES_BYTESTRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_105_variant_DataContents, &UA_TYPES[UA_TYPES_BYTESTRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "DictionaryFragment");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A fragment of a data type dictionary that defines the data type.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 105),
 UA_NODEID_NUMERIC(ns[0], 69),
@@ -42057,7 +43714,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_55_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_57_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 105)
 );
@@ -42065,21 +43722,16 @@ UA_NODEID_NUMERIC(ns[0], 105)
 
 /* DataTypeVersion - ns=0;i=104 */
 
-static UA_StatusCode function_namespace0_generated_56_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_58_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_104_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_104_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_104_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeVersion");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The version number for the data type description.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 104),
 UA_NODEID_NUMERIC(ns[0], 69),
@@ -42090,7 +43742,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_56_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_58_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 104)
 );
@@ -42098,15 +43750,13 @@ UA_NODEID_NUMERIC(ns[0], 104)
 
 /* DataTypeDictionaryType - ns=0;i=72 */
 
-static UA_StatusCode function_namespace0_generated_57_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_59_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableTypeAttributes attr = UA_VariableTypeAttributes_default;
-attr.valueRank = (UA_Int32)-2;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 24);
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 15);
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeDictionaryType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for variable that represents the collection of data type decriptions.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLETYPE,
 UA_NODEID_NUMERIC(ns[0], 72),
 UA_NODEID_NUMERIC(ns[0], 63),
@@ -42117,7 +43767,7 @@ UA_NODEID_NUMERIC(ns[0], 0),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_57_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_59_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 72)
 );
@@ -42125,17 +43775,15 @@ UA_NODEID_NUMERIC(ns[0], 72)
 
 /* NamespaceUri - ns=0;i=107 */
 
-static UA_StatusCode function_namespace0_generated_58_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_60_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_107_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_107_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_107_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "NamespaceUri");
 #ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
 attr.description = UA_LOCALIZEDTEXT("", "A URI that uniquely identifies the dictionary.");
@@ -42150,7 +43798,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_58_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_60_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 107)
 );
@@ -42158,21 +43806,16 @@ UA_NODEID_NUMERIC(ns[0], 107)
 
 /* DataTypeVersion - ns=0;i=106 */
 
-static UA_StatusCode function_namespace0_generated_59_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_61_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_106_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_106_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_106_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeVersion");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The version number for the data type dictionary.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 106),
 UA_NODEID_NUMERIC(ns[0], 72),
@@ -42183,7 +43826,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_59_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_61_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 106)
 );
@@ -42191,7 +43834,7 @@ UA_NODEID_NUMERIC(ns[0], 106)
 
 /* DataTypeSystemType - ns=0;i=75 */
 
-static UA_StatusCode function_namespace0_generated_60_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_62_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeSystemType");
@@ -42205,7 +43848,7 @@ UA_QUALIFIEDNAME(ns[0], "DataTypeSystemType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_60_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_62_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 75)
 );
@@ -42213,13 +43856,10 @@ UA_NODEID_NUMERIC(ns[0], 75)
 
 /* OPC Binary - ns=0;i=93 */
 
-static UA_StatusCode function_namespace0_generated_61_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_63_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "OPC Binary");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A type system which uses OPC binary schema to describe the encoding of data types.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 93),
 UA_NODEID_NUMERIC(ns[0], 90),
@@ -42230,7 +43870,7 @@ UA_NODEID_NUMERIC(ns[0], 75),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_61_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_63_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 93)
 );
@@ -42238,16 +43878,18 @@ UA_NODEID_NUMERIC(ns[0], 93)
 
 /* Opc.Ua - ns=0;i=7617 */
 
-static UA_StatusCode function_namespace0_generated_62_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_64_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 15);
 UA_ByteString *variablenode_ns_0_i_7617_variant_DataContents =  UA_ByteString_new();
 if (!variablenode_ns_0_i_7617_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_ByteString_init(variablenode_ns_0_i_7617_variant_DataContents);
 *variablenode_ns_0_i_7617_variant_DataContents = UA_BYTESTRING_NULL;
 UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_7617_variant_DataContents, &UA_TYPES[UA_TYPES_BYTESTRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "Opc.Ua");
@@ -42264,7 +43906,7 @@ UA_ByteString_delete(variablenode_ns_0_i_7617_variant_DataContents);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_62_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_64_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7617)
 );
@@ -42272,16 +43914,18 @@ UA_NODEID_NUMERIC(ns[0], 7617)
 
 /* Argument - ns=0;i=7650 */
 
-static UA_StatusCode function_namespace0_generated_63_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_65_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
 UA_String *variablenode_ns_0_i_7650_variant_DataContents =  UA_String_new();
 if (!variablenode_ns_0_i_7650_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_String_init(variablenode_ns_0_i_7650_variant_DataContents);
 *variablenode_ns_0_i_7650_variant_DataContents = UA_STRING_ALLOC("Argument");
 UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_7650_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "Argument");
@@ -42296,7 +43940,7 @@ UA_String_delete(variablenode_ns_0_i_7650_variant_DataContents);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_63_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_65_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7650)
 );
@@ -42304,16 +43948,18 @@ UA_NODEID_NUMERIC(ns[0], 7650)
 
 /* EnumValueType - ns=0;i=7656 */
 
-static UA_StatusCode function_namespace0_generated_64_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_66_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
 UA_String *variablenode_ns_0_i_7656_variant_DataContents =  UA_String_new();
 if (!variablenode_ns_0_i_7656_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_String_init(variablenode_ns_0_i_7656_variant_DataContents);
 *variablenode_ns_0_i_7656_variant_DataContents = UA_STRING_ALLOC("EnumValueType");
 UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_7656_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "EnumValueType");
@@ -42328,15 +43974,37 @@ UA_String_delete(variablenode_ns_0_i_7656_variant_DataContents);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_64_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_66_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 7656)
 );
 }
 
+/* XML Schema - ns=0;i=92 */
+
+static UA_StatusCode function_namespace0_generated_67_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ObjectAttributes attr = UA_ObjectAttributes_default;
+attr.displayName = UA_LOCALIZEDTEXT("", "XML Schema");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+UA_NODEID_NUMERIC(ns[0], 92),
+UA_NODEID_NUMERIC(ns[0], 90),
+UA_NODEID_NUMERIC(ns[0], 35),
+UA_QUALIFIEDNAME(ns[0], "XML Schema"),
+UA_NODEID_NUMERIC(ns[0], 75),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_67_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 92)
+);
+}
+
 /* DataTypeEncodingType - ns=0;i=76 */
 
-static UA_StatusCode function_namespace0_generated_65_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_68_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "DataTypeEncodingType");
@@ -42350,7 +44018,7 @@ UA_QUALIFIEDNAME(ns[0], "DataTypeEncodingType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_65_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_68_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 76)
 );
@@ -42358,7 +44026,7 @@ UA_NODEID_NUMERIC(ns[0], 76)
 
 /* Default Binary - ns=0;i=8251 */
 
-static UA_StatusCode function_namespace0_generated_66_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_69_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Default Binary");
@@ -42374,7 +44042,7 @@ retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 8251), UA_NODE
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_66_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_69_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 8251)
 );
@@ -42382,7 +44050,7 @@ UA_NODEID_NUMERIC(ns[0], 8251)
 
 /* Default Binary - ns=0;i=298 */
 
-static UA_StatusCode function_namespace0_generated_67_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_70_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "Default Binary");
@@ -42398,7 +44066,7 @@ retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 298), UA_NODEI
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_67_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_70_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 298)
 );
@@ -42406,13 +44074,10 @@ UA_NODEID_NUMERIC(ns[0], 298)
 
 /* ModellingRuleType - ns=0;i=77 */
 
-static UA_StatusCode function_namespace0_generated_68_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_71_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ModellingRuleType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The type for an object that describes how an instance declaration is used when a type is instantiated.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 77),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -42423,30 +44088,87 @@ UA_QUALIFIEDNAME(ns[0], "ModellingRuleType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_68_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_71_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 77)
 );
 }
 
-/* NamingRule - ns=0;i=111 */
+/* Mandatory - ns=0;i=78 */
 
-static UA_StatusCode function_namespace0_generated_69_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_72_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ObjectAttributes attr = UA_ObjectAttributes_default;
+attr.displayName = UA_LOCALIZEDTEXT("", "Mandatory");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+UA_NODEID_NUMERIC(ns[0], 78),
+UA_NODEID_NUMERIC(ns[0], 0),
+UA_NODEID_NUMERIC(ns[0], 0),
+UA_QUALIFIEDNAME(ns[0], "Mandatory"),
+UA_NODEID_NUMERIC(ns[0], 77),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 12169), false);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 7611), false);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_72_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 78)
+);
+}
+
+/* NamingRule - ns=0;i=112 */
+
+static UA_StatusCode function_namespace0_generated_73_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 120);
+UA_Int32 *variablenode_ns_0_i_112_variant_DataContents =  UA_Int32_new();
+if (!variablenode_ns_0_i_112_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_Int32_init(variablenode_ns_0_i_112_variant_DataContents);
+*variablenode_ns_0_i_112_variant_DataContents = (UA_Int32) 1;
+UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_112_variant_DataContents, &UA_TYPES[UA_TYPES_INT32]);
+attr.displayName = UA_LOCALIZEDTEXT("", "NamingRule");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
+UA_NODEID_NUMERIC(ns[0], 112),
+UA_NODEID_NUMERIC(ns[0], 78),
+UA_NODEID_NUMERIC(ns[0], 46),
+UA_QUALIFIEDNAME(ns[0], "NamingRule"),
+UA_NODEID_NUMERIC(ns[0], 68),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+UA_Int32_delete(variablenode_ns_0_i_112_variant_DataContents);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_73_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 112)
+);
+}
+
+/* NamingRule - ns=0;i=111 */
+
+static UA_StatusCode function_namespace0_generated_74_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_VariableAttributes attr = UA_VariableAttributes_default;
+attr.minimumSamplingInterval = 0.000000;
+attr.userAccessLevel = 1;
+attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 120);
 UA_Int32 *variablenode_ns_0_i_111_variant_DataContents =  UA_Int32_new();
 if (!variablenode_ns_0_i_111_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_Int32_init(variablenode_ns_0_i_111_variant_DataContents);
 *variablenode_ns_0_i_111_variant_DataContents = (UA_Int32) 1;
 UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_111_variant_DataContents, &UA_TYPES[UA_TYPES_INT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "NamingRule");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specified the significances of the BrowseName when a type is instantiated.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 111),
 UA_NODEID_NUMERIC(ns[0], 77),
@@ -42455,24 +44177,82 @@ UA_QUALIFIEDNAME(ns[0], "NamingRule"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
 UA_Int32_delete(variablenode_ns_0_i_111_variant_DataContents);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 111), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_69_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_74_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 111)
 );
 }
 
+/* Optional - ns=0;i=80 */
+
+static UA_StatusCode function_namespace0_generated_75_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ObjectAttributes attr = UA_ObjectAttributes_default;
+attr.displayName = UA_LOCALIZEDTEXT("", "Optional");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+UA_NODEID_NUMERIC(ns[0], 80),
+UA_NODEID_NUMERIC(ns[0], 0),
+UA_NODEID_NUMERIC(ns[0], 0),
+UA_QUALIFIEDNAME(ns[0], "Optional"),
+UA_NODEID_NUMERIC(ns[0], 77),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 104), false);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 105), false);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 107), false);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 106), false);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_75_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 80)
+);
+}
+
+/* NamingRule - ns=0;i=113 */
+
+static UA_StatusCode function_namespace0_generated_76_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_VariableAttributes attr = UA_VariableAttributes_default;
+attr.minimumSamplingInterval = 0.000000;
+attr.userAccessLevel = 1;
+attr.accessLevel = 1;
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 120);
+UA_Int32 *variablenode_ns_0_i_113_variant_DataContents =  UA_Int32_new();
+if (!variablenode_ns_0_i_113_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
+UA_Int32_init(variablenode_ns_0_i_113_variant_DataContents);
+*variablenode_ns_0_i_113_variant_DataContents = (UA_Int32) 2;
+UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_113_variant_DataContents, &UA_TYPES[UA_TYPES_INT32]);
+attr.displayName = UA_LOCALIZEDTEXT("", "NamingRule");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
+UA_NODEID_NUMERIC(ns[0], 113),
+UA_NODEID_NUMERIC(ns[0], 80),
+UA_NODEID_NUMERIC(ns[0], 46),
+UA_QUALIFIEDNAME(ns[0], "NamingRule"),
+UA_NODEID_NUMERIC(ns[0], 68),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+UA_Int32_delete(variablenode_ns_0_i_113_variant_DataContents);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_76_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 113)
+);
+}
+
 /* ServerRedundancyType - ns=0;i=2034 */
 
-static UA_StatusCode function_namespace0_generated_70_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_77_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerRedundancyType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A base type for an object that describe how a server supports redundancy.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 2034),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -42483,7 +44263,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerRedundancyType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_70_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_77_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2034)
 );
@@ -42491,21 +44271,16 @@ UA_NODEID_NUMERIC(ns[0], 2034)
 
 /* RedundancySupport - ns=0;i=2035 */
 
-static UA_StatusCode function_namespace0_generated_71_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_78_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 851);
-UA_STACKARRAY(UA_RedundancySupport, variablenode_ns_0_i_2035_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2035_variant_DataContents, &UA_TYPES[UA_TYPES_REDUNDANCYSUPPORT]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2035_variant_DataContents, &UA_TYPES[UA_TYPES_REDUNDANCYSUPPORT]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RedundancySupport");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Indicates what style of redundancy is supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2035),
 UA_NODEID_NUMERIC(ns[0], 2034),
@@ -42513,44 +44288,24 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "RedundancySupport"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2035), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_71_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_78_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2035)
 );
 }
 
-/* HistoryServerCapabilitiesType - ns=0;i=2330 */
-
-static UA_StatusCode function_namespace0_generated_72_begin(UA_Server *server, UA_UInt16* ns) {
-UA_StatusCode retVal = UA_STATUSCODE_GOOD;
-UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
-attr.displayName = UA_LOCALIZEDTEXT("", "HistoryServerCapabilitiesType");
-retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
-UA_NODEID_NUMERIC(ns[0], 2330),
-UA_NODEID_NUMERIC(ns[0], 58),
-UA_NODEID_NUMERIC(ns[0], 45),
-UA_QUALIFIEDNAME(ns[0], "HistoryServerCapabilitiesType"),
- UA_NODEID_NULL,
-(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTTYPEATTRIBUTES],NULL, NULL);
-return retVal;
-}
-
-static UA_StatusCode function_namespace0_generated_72_finish(UA_Server *server, UA_UInt16* ns) {
-return UA_Server_addNode_finish(server, 
-UA_NODEID_NUMERIC(ns[0], 2330)
-);
-}
-
 /* BuildInfoType - ns=0;i=3051 */
 
-static UA_StatusCode function_namespace0_generated_73_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_79_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableTypeAttributes attr = UA_VariableTypeAttributes_default;
-attr.valueRank = (UA_Int32)-2;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 24);
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 338);
 attr.displayName = UA_LOCALIZEDTEXT("", "BuildInfoType");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLETYPE,
 UA_NODEID_NUMERIC(ns[0], 3051),
@@ -42562,7 +44317,7 @@ UA_NODEID_NUMERIC(ns[0], 0),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_73_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_79_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3051)
 );
@@ -42570,11 +44325,12 @@ UA_NODEID_NUMERIC(ns[0], 3051)
 
 /* ServerDiagnosticsSummaryType - ns=0;i=2150 */
 
-static UA_StatusCode function_namespace0_generated_74_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_80_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableTypeAttributes attr = UA_VariableTypeAttributes_default;
-attr.valueRank = (UA_Int32)-2;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 24);
+/* Value rank inherited */
+attr.valueRank = -1;
+attr.dataType = UA_NODEID_NUMERIC(ns[0], 859);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerDiagnosticsSummaryType");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLETYPE,
 UA_NODEID_NUMERIC(ns[0], 2150),
@@ -42586,7 +44342,7 @@ UA_NODEID_NUMERIC(ns[0], 0),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_74_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_80_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2150)
 );
@@ -42594,17 +44350,15 @@ UA_NODEID_NUMERIC(ns[0], 2150)
 
 /* PublishingIntervalCount - ns=0;i=2159 */
 
-static UA_StatusCode function_namespace0_generated_75_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_81_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2159_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2159_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2159_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "PublishingIntervalCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2159),
@@ -42613,10 +44367,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "PublishingIntervalCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2159), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_75_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_81_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2159)
 );
@@ -42624,17 +44379,15 @@ UA_NODEID_NUMERIC(ns[0], 2159)
 
 /* SecurityRejectedSessionCount - ns=0;i=2154 */
 
-static UA_StatusCode function_namespace0_generated_76_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_82_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2154_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2154_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2154_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SecurityRejectedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2154),
@@ -42643,10 +44396,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "SecurityRejectedSessionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2154), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_76_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_82_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2154)
 );
@@ -42654,17 +44408,15 @@ UA_NODEID_NUMERIC(ns[0], 2154)
 
 /* SecurityRejectedRequestsCount - ns=0;i=2162 */
 
-static UA_StatusCode function_namespace0_generated_77_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_83_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2162_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2162_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2162_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SecurityRejectedRequestsCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2162),
@@ -42673,10 +44425,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "SecurityRejectedRequestsCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2162), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_77_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_83_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2162)
 );
@@ -42684,17 +44437,15 @@ UA_NODEID_NUMERIC(ns[0], 2162)
 
 /* RejectedRequestsCount - ns=0;i=2163 */
 
-static UA_StatusCode function_namespace0_generated_78_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_84_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2163_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2163_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2163_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RejectedRequestsCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2163),
@@ -42703,10 +44454,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "RejectedRequestsCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2163), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_78_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_84_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2163)
 );
@@ -42714,17 +44466,15 @@ UA_NODEID_NUMERIC(ns[0], 2163)
 
 /* RejectedSessionCount - ns=0;i=2155 */
 
-static UA_StatusCode function_namespace0_generated_79_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_85_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2155_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2155_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2155_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RejectedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2155),
@@ -42733,10 +44483,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "RejectedSessionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2155), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_79_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_85_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2155)
 );
@@ -42744,17 +44495,15 @@ UA_NODEID_NUMERIC(ns[0], 2155)
 
 /* CumulatedSubscriptionCount - ns=0;i=2161 */
 
-static UA_StatusCode function_namespace0_generated_80_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_86_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2161_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2161_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2161_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CumulatedSubscriptionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2161),
@@ -42763,10 +44512,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "CumulatedSubscriptionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2161), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_80_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_86_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2161)
 );
@@ -42774,17 +44524,15 @@ UA_NODEID_NUMERIC(ns[0], 2161)
 
 /* CumulatedSessionCount - ns=0;i=2153 */
 
-static UA_StatusCode function_namespace0_generated_81_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_87_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2153_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2153_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2153_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CumulatedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2153),
@@ -42793,10 +44541,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "CumulatedSessionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2153), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_81_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_87_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2153)
 );
@@ -42804,17 +44553,15 @@ UA_NODEID_NUMERIC(ns[0], 2153)
 
 /* CurrentSessionCount - ns=0;i=2152 */
 
-static UA_StatusCode function_namespace0_generated_82_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_88_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2152_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2152_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2152_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CurrentSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2152),
@@ -42823,10 +44570,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "CurrentSessionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2152), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_82_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_88_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2152)
 );
@@ -42834,17 +44582,15 @@ UA_NODEID_NUMERIC(ns[0], 2152)
 
 /* ServerViewCount - ns=0;i=2151 */
 
-static UA_StatusCode function_namespace0_generated_83_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_89_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2151_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2151_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2151_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerViewCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2151),
@@ -42853,10 +44599,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "ServerViewCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2151), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_83_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_89_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2151)
 );
@@ -42864,17 +44611,15 @@ UA_NODEID_NUMERIC(ns[0], 2151)
 
 /* SessionTimeoutCount - ns=0;i=2156 */
 
-static UA_StatusCode function_namespace0_generated_84_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_90_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2156_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2156_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2156_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SessionTimeoutCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2156),
@@ -42883,10 +44628,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "SessionTimeoutCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2156), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_84_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_90_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2156)
 );
@@ -42894,17 +44640,15 @@ UA_NODEID_NUMERIC(ns[0], 2156)
 
 /* CurrentSubscriptionCount - ns=0;i=2160 */
 
-static UA_StatusCode function_namespace0_generated_85_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_91_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2160_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2160_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2160_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CurrentSubscriptionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2160),
@@ -42913,10 +44657,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "CurrentSubscriptionCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2160), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_85_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_91_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2160)
 );
@@ -42924,17 +44669,15 @@ UA_NODEID_NUMERIC(ns[0], 2160)
 
 /* SessionAbortCount - ns=0;i=2157 */
 
-static UA_StatusCode function_namespace0_generated_86_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_92_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2157_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2157_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2157_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SessionAbortCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2157),
@@ -42943,10 +44686,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "SessionAbortCount"),
 UA_NODEID_NUMERIC(ns[0], 63),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2157), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_86_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_92_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2157)
 );
@@ -42954,13 +44698,10 @@ UA_NODEID_NUMERIC(ns[0], 2157)
 
 /* ServerType - ns=0;i=2004 */
 
-static UA_StatusCode function_namespace0_generated_87_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_93_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specifies the current status and capabilities of the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 2004),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -42971,7 +44712,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_87_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_93_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2004)
 );
@@ -42979,7 +44720,7 @@ UA_NODEID_NUMERIC(ns[0], 2004)
 
 /* Server - ns=0;i=2253 */
 
-static UA_StatusCode function_namespace0_generated_88_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_94_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.eventNotifier = true;
@@ -42994,7 +44735,7 @@ UA_NODEID_NUMERIC(ns[0], 2004),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_88_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_94_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2253)
 );
@@ -43002,21 +44743,16 @@ UA_NODEID_NUMERIC(ns[0], 2253)
 
 /* Auditing - ns=0;i=2994 */
 
-static UA_StatusCode function_namespace0_generated_89_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_95_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 1);
-UA_STACKARRAY(UA_Boolean, variablenode_ns_0_i_2994_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2994_variant_DataContents, &UA_TYPES[UA_TYPES_BOOLEAN]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2994_variant_DataContents, &UA_TYPES[UA_TYPES_BOOLEAN]);
 attr.displayName = UA_LOCALIZEDTEXT("", "Auditing");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A flag indicating whether the server is currently generating audit events.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2994),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -43027,7 +44763,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_89_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_95_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2994)
 );
@@ -43035,7 +44771,7 @@ UA_NODEID_NUMERIC(ns[0], 2994)
 
 /* GetMonitoredItems - ns=0;i=11492 */
 
-static UA_StatusCode function_namespace0_generated_90_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_96_begin(UA_Server *server, UA_UInt16* ns) {
 #ifdef UA_ENABLE_METHODCALLS
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_MethodAttributes attr = UA_MethodAttributes_default;
@@ -43055,7 +44791,7 @@ return UA_STATUSCODE_GOOD;
 #endif /* UA_ENABLE_METHODCALLS */
 }
 
-static UA_StatusCode function_namespace0_generated_90_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_96_finish(UA_Server *server, UA_UInt16* ns) {
 #ifdef UA_ENABLE_METHODCALLS
 return UA_Server_addMethodNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11492)
@@ -43067,7 +44803,7 @@ return UA_STATUSCODE_GOOD;
 
 /* OutputArguments - ns=0;i=11494 */
 
-static UA_StatusCode function_namespace0_generated_91_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_97_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -43085,13 +44821,19 @@ UA_init(&variablenode_ns_0_i_11494_variant_DataContents[0], &UA_TYPES[UA_TYPES_A
 variablenode_ns_0_i_11494_variant_DataContents[0].name = UA_STRING("ServerHandles");
 variablenode_ns_0_i_11494_variant_DataContents[0].dataType = UA_NODEID_NUMERIC(ns[0], 7);
 variablenode_ns_0_i_11494_variant_DataContents[0].valueRank = (UA_Int32) 1;
-variablenode_ns_0_i_11494_variant_DataContents[0].description = UA_LOCALIZEDTEXT("", "");
+UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11494_variant_DataContents0_arrayDimensions, 1);
+UA_init(variablenode_ns_0_i_11494_variant_DataContents0_arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
+variablenode_ns_0_i_11494_variant_DataContents0_arrayDimensions[0] = (UA_UInt32) 0;
+variablenode_ns_0_i_11494_variant_DataContents[0].arrayDimensions = variablenode_ns_0_i_11494_variant_DataContents0_arrayDimensions;
 
 UA_init(&variablenode_ns_0_i_11494_variant_DataContents[1], &UA_TYPES[UA_TYPES_ARGUMENT]);
 variablenode_ns_0_i_11494_variant_DataContents[1].name = UA_STRING("ClientHandles");
 variablenode_ns_0_i_11494_variant_DataContents[1].dataType = UA_NODEID_NUMERIC(ns[0], 7);
 variablenode_ns_0_i_11494_variant_DataContents[1].valueRank = (UA_Int32) 1;
-variablenode_ns_0_i_11494_variant_DataContents[1].description = UA_LOCALIZEDTEXT("", "");
+UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11494_variant_DataContents1_arrayDimensions, 1);
+UA_init(variablenode_ns_0_i_11494_variant_DataContents1_arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
+variablenode_ns_0_i_11494_variant_DataContents1_arrayDimensions[0] = (UA_UInt32) 0;
+variablenode_ns_0_i_11494_variant_DataContents[1].arrayDimensions = variablenode_ns_0_i_11494_variant_DataContents1_arrayDimensions;
 UA_Variant_setArray(&attr.value, &variablenode_ns_0_i_11494_variant_DataContents, (UA_Int32) 2, &UA_TYPES[UA_TYPES_ARGUMENT]);
 attr.displayName = UA_LOCALIZEDTEXT("", "OutputArguments");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
@@ -43106,7 +44848,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_91_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_97_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11494)
 );
@@ -43114,7 +44856,7 @@ UA_NODEID_NUMERIC(ns[0], 11494)
 
 /* InputArguments - ns=0;i=11493 */
 
-static UA_StatusCode function_namespace0_generated_92_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_98_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -43132,7 +44874,6 @@ UA_init(&variablenode_ns_0_i_11493_variant_DataContents[0], &UA_TYPES[UA_TYPES_A
 variablenode_ns_0_i_11493_variant_DataContents[0].name = UA_STRING("SubscriptionId");
 variablenode_ns_0_i_11493_variant_DataContents[0].dataType = UA_NODEID_NUMERIC(ns[0], 7);
 variablenode_ns_0_i_11493_variant_DataContents[0].valueRank = (UA_Int32) -1;
-variablenode_ns_0_i_11493_variant_DataContents[0].description = UA_LOCALIZEDTEXT("", "");
 UA_Variant_setArray(&attr.value, &variablenode_ns_0_i_11493_variant_DataContents, (UA_Int32) 1, &UA_TYPES[UA_TYPES_ARGUMENT]);
 attr.displayName = UA_LOCALIZEDTEXT("", "InputArguments");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
@@ -43146,7 +44887,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_92_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_98_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11493)
 );
@@ -43154,21 +44895,16 @@ UA_NODEID_NUMERIC(ns[0], 11493)
 
 /* ServerStatus - ns=0;i=2256 */
 
-static UA_StatusCode function_namespace0_generated_93_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_99_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 862);
-UA_STACKARRAY(UA_ServerStatusDataType, variablenode_ns_0_i_2256_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2256_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERSTATUSDATATYPE]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2256_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERSTATUSDATATYPE]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerStatus");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The current status of the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2256),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -43179,7 +44915,7 @@ UA_NODEID_NUMERIC(ns[0], 2138),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_93_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_99_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2256)
 );
@@ -43187,17 +44923,15 @@ UA_NODEID_NUMERIC(ns[0], 2256)
 
 /* BuildInfo - ns=0;i=2260 */
 
-static UA_StatusCode function_namespace0_generated_94_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_100_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 338);
-UA_STACKARRAY(UA_BuildInfo, variablenode_ns_0_i_2260_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2260_variant_DataContents, &UA_TYPES[UA_TYPES_BUILDINFO]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2260_variant_DataContents, &UA_TYPES[UA_TYPES_BUILDINFO]);
 attr.displayName = UA_LOCALIZEDTEXT("", "BuildInfo");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2260),
@@ -43209,7 +44943,7 @@ UA_NODEID_NUMERIC(ns[0], 3051),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_94_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_100_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2260)
 );
@@ -43217,17 +44951,15 @@ UA_NODEID_NUMERIC(ns[0], 2260)
 
 /* BuildDate - ns=0;i=2266 */
 
-static UA_StatusCode function_namespace0_generated_95_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_101_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 294);
-UA_STACKARRAY(UA_UtcTime, variablenode_ns_0_i_2266_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2266_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2266_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
 attr.displayName = UA_LOCALIZEDTEXT("", "BuildDate");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2266),
@@ -43239,7 +44971,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_95_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_101_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2266)
 );
@@ -43247,17 +44979,15 @@ UA_NODEID_NUMERIC(ns[0], 2266)
 
 /* BuildNumber - ns=0;i=2265 */
 
-static UA_StatusCode function_namespace0_generated_96_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_102_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_2265_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2265_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2265_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "BuildNumber");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2265),
@@ -43269,7 +44999,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_96_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_102_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2265)
 );
@@ -43277,17 +45007,15 @@ UA_NODEID_NUMERIC(ns[0], 2265)
 
 /* SoftwareVersion - ns=0;i=2264 */
 
-static UA_StatusCode function_namespace0_generated_97_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_103_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_2264_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2264_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2264_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SoftwareVersion");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2264),
@@ -43299,7 +45027,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_97_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_103_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2264)
 );
@@ -43307,17 +45035,15 @@ UA_NODEID_NUMERIC(ns[0], 2264)
 
 /* ManufacturerName - ns=0;i=2263 */
 
-static UA_StatusCode function_namespace0_generated_98_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_104_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_2263_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2263_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2263_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ManufacturerName");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2263),
@@ -43329,7 +45055,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_98_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_104_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2263)
 );
@@ -43337,17 +45063,15 @@ UA_NODEID_NUMERIC(ns[0], 2263)
 
 /* ProductUri - ns=0;i=2262 */
 
-static UA_StatusCode function_namespace0_generated_99_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_105_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_2262_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2262_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2262_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ProductUri");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2262),
@@ -43359,7 +45083,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_99_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_105_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2262)
 );
@@ -43367,17 +45091,15 @@ UA_NODEID_NUMERIC(ns[0], 2262)
 
 /* ProductName - ns=0;i=2261 */
 
-static UA_StatusCode function_namespace0_generated_100_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_106_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_STACKARRAY(UA_String, variablenode_ns_0_i_2261_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2261_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2261_variant_DataContents, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ProductName");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2261),
@@ -43389,7 +45111,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_100_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_106_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2261)
 );
@@ -43397,17 +45119,15 @@ UA_NODEID_NUMERIC(ns[0], 2261)
 
 /* ShutdownReason - ns=0;i=2993 */
 
-static UA_StatusCode function_namespace0_generated_101_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_107_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 21);
-UA_STACKARRAY(UA_LocalizedText, variablenode_ns_0_i_2993_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2993_variant_DataContents, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2993_variant_DataContents, &UA_TYPES[UA_TYPES_LOCALIZEDTEXT]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ShutdownReason");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2993),
@@ -43419,7 +45139,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_101_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_107_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2993)
 );
@@ -43427,17 +45147,15 @@ UA_NODEID_NUMERIC(ns[0], 2993)
 
 /* State - ns=0;i=2259 */
 
-static UA_StatusCode function_namespace0_generated_102_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_108_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 852);
-UA_STACKARRAY(UA_ServerState, variablenode_ns_0_i_2259_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2259_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERSTATE]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2259_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERSTATE]);
 attr.displayName = UA_LOCALIZEDTEXT("", "State");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2259),
@@ -43449,7 +45167,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_102_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_108_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2259)
 );
@@ -43457,17 +45175,15 @@ UA_NODEID_NUMERIC(ns[0], 2259)
 
 /* CurrentTime - ns=0;i=2258 */
 
-static UA_StatusCode function_namespace0_generated_103_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_109_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 294);
-UA_STACKARRAY(UA_UtcTime, variablenode_ns_0_i_2258_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2258_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2258_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CurrentTime");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2258),
@@ -43479,7 +45195,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_103_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_109_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2258)
 );
@@ -43487,17 +45203,15 @@ UA_NODEID_NUMERIC(ns[0], 2258)
 
 /* StartTime - ns=0;i=2257 */
 
-static UA_StatusCode function_namespace0_generated_104_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_110_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 294);
-UA_STACKARRAY(UA_UtcTime, variablenode_ns_0_i_2257_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2257_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2257_variant_DataContents, &UA_TYPES[UA_TYPES_UTCTIME]);
 attr.displayName = UA_LOCALIZEDTEXT("", "StartTime");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2257),
@@ -43509,7 +45223,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_104_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_110_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2257)
 );
@@ -43517,17 +45231,15 @@ UA_NODEID_NUMERIC(ns[0], 2257)
 
 /* SecondsTillShutdown - ns=0;i=2992 */
 
-static UA_StatusCode function_namespace0_generated_105_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_111_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2992_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2992_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2992_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SecondsTillShutdown");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2992),
@@ -43539,7 +45251,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_105_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_111_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2992)
 );
@@ -43547,13 +45259,10 @@ UA_NODEID_NUMERIC(ns[0], 2992)
 
 /* ServerDiagnostics - ns=0;i=2274 */
 
-static UA_StatusCode function_namespace0_generated_106_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_112_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerDiagnostics");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Reports diagnostics about the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2274),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -43564,7 +45273,7 @@ UA_NODEID_NUMERIC(ns[0], 2020),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_106_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_112_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2274)
 );
@@ -43572,21 +45281,16 @@ UA_NODEID_NUMERIC(ns[0], 2274)
 
 /* ServerDiagnosticsSummary - ns=0;i=2275 */
 
-static UA_StatusCode function_namespace0_generated_107_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_113_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 859);
-UA_STACKARRAY(UA_ServerDiagnosticsSummaryDataType, variablenode_ns_0_i_2275_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2275_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERDIAGNOSTICSSUMMARYDATATYPE]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2275_variant_DataContents, &UA_TYPES[UA_TYPES_SERVERDIAGNOSTICSSUMMARYDATATYPE]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerDiagnosticsSummary");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A summary of server level diagnostics.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2275),
 UA_NODEID_NUMERIC(ns[0], 2274),
@@ -43597,7 +45301,7 @@ UA_NODEID_NUMERIC(ns[0], 2150),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_107_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_113_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2275)
 );
@@ -43605,17 +45309,15 @@ UA_NODEID_NUMERIC(ns[0], 2275)
 
 /* SecurityRejectedRequestsCount - ns=0;i=2287 */
 
-static UA_StatusCode function_namespace0_generated_108_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_114_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2287_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2287_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2287_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SecurityRejectedRequestsCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2287),
@@ -43627,7 +45329,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_108_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_114_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2287)
 );
@@ -43635,17 +45337,15 @@ UA_NODEID_NUMERIC(ns[0], 2287)
 
 /* CumulatedSubscriptionCount - ns=0;i=2286 */
 
-static UA_StatusCode function_namespace0_generated_109_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_115_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2286_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2286_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2286_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CumulatedSubscriptionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2286),
@@ -43657,7 +45357,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_109_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_115_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2286)
 );
@@ -43665,17 +45365,15 @@ UA_NODEID_NUMERIC(ns[0], 2286)
 
 /* CurrentSubscriptionCount - ns=0;i=2285 */
 
-static UA_StatusCode function_namespace0_generated_110_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_116_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2285_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2285_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2285_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CurrentSubscriptionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2285),
@@ -43687,7 +45385,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_110_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_116_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2285)
 );
@@ -43695,17 +45393,15 @@ UA_NODEID_NUMERIC(ns[0], 2285)
 
 /* PublishingIntervalCount - ns=0;i=2284 */
 
-static UA_StatusCode function_namespace0_generated_111_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_117_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2284_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2284_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2284_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "PublishingIntervalCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2284),
@@ -43717,7 +45413,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_111_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_117_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2284)
 );
@@ -43725,17 +45421,15 @@ UA_NODEID_NUMERIC(ns[0], 2284)
 
 /* SessionAbortCount - ns=0;i=2282 */
 
-static UA_StatusCode function_namespace0_generated_112_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_118_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2282_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2282_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2282_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SessionAbortCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2282),
@@ -43747,7 +45441,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_112_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_118_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2282)
 );
@@ -43755,17 +45449,15 @@ UA_NODEID_NUMERIC(ns[0], 2282)
 
 /* SessionTimeoutCount - ns=0;i=2281 */
 
-static UA_StatusCode function_namespace0_generated_113_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_119_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2281_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2281_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2281_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SessionTimeoutCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2281),
@@ -43777,7 +45469,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_113_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_119_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2281)
 );
@@ -43785,17 +45477,15 @@ UA_NODEID_NUMERIC(ns[0], 2281)
 
 /* RejectedSessionCount - ns=0;i=3705 */
 
-static UA_StatusCode function_namespace0_generated_114_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_120_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_3705_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_3705_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_3705_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RejectedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 3705),
@@ -43807,7 +45497,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_114_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_120_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3705)
 );
@@ -43815,17 +45505,15 @@ UA_NODEID_NUMERIC(ns[0], 3705)
 
 /* RejectedRequestsCount - ns=0;i=2288 */
 
-static UA_StatusCode function_namespace0_generated_115_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_121_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2288_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2288_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2288_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RejectedRequestsCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2288),
@@ -43837,7 +45525,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_115_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_121_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2288)
 );
@@ -43845,17 +45533,15 @@ UA_NODEID_NUMERIC(ns[0], 2288)
 
 /* ServerViewCount - ns=0;i=2276 */
 
-static UA_StatusCode function_namespace0_generated_116_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_122_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2276_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2276_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2276_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerViewCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2276),
@@ -43867,7 +45553,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_116_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_122_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2276)
 );
@@ -43875,17 +45561,15 @@ UA_NODEID_NUMERIC(ns[0], 2276)
 
 /* CurrentSessionCount - ns=0;i=2277 */
 
-static UA_StatusCode function_namespace0_generated_117_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_123_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2277_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2277_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2277_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CurrentSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2277),
@@ -43897,7 +45581,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_117_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_123_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2277)
 );
@@ -43905,17 +45589,15 @@ UA_NODEID_NUMERIC(ns[0], 2277)
 
 /* CumulatedSessionCount - ns=0;i=2278 */
 
-static UA_StatusCode function_namespace0_generated_118_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_124_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2278_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2278_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2278_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "CumulatedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2278),
@@ -43927,7 +45609,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_118_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_124_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2278)
 );
@@ -43935,17 +45617,15 @@ UA_NODEID_NUMERIC(ns[0], 2278)
 
 /* SecurityRejectedSessionCount - ns=0;i=2279 */
 
-static UA_StatusCode function_namespace0_generated_119_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_125_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_2279_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2279_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2279_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SecurityRejectedSessionCount");
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2279),
@@ -43957,7 +45637,7 @@ UA_NODEID_NUMERIC(ns[0], 63),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_119_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_125_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2279)
 );
@@ -43965,21 +45645,16 @@ UA_NODEID_NUMERIC(ns[0], 2279)
 
 /* EnabledFlag - ns=0;i=2294 */
 
-static UA_StatusCode function_namespace0_generated_120_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_126_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 3;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 1);
-UA_STACKARRAY(UA_Boolean, variablenode_ns_0_i_2294_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2294_variant_DataContents, &UA_TYPES[UA_TYPES_BOOLEAN]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2294_variant_DataContents, &UA_TYPES[UA_TYPES_BOOLEAN]);
 attr.displayName = UA_LOCALIZEDTEXT("", "EnabledFlag");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "If TRUE the diagnostics collection is enabled.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2294),
 UA_NODEID_NUMERIC(ns[0], 2274),
@@ -43990,7 +45665,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_120_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_126_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2294)
 );
@@ -43998,13 +45673,10 @@ UA_NODEID_NUMERIC(ns[0], 2294)
 
 /* VendorServerInfo - ns=0;i=2295 */
 
-static UA_StatusCode function_namespace0_generated_121_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_127_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "VendorServerInfo");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Server information provided by the vendor.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2295),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44015,7 +45687,7 @@ UA_NODEID_NUMERIC(ns[0], 2033),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_121_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_127_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2295)
 );
@@ -44023,7 +45695,7 @@ UA_NODEID_NUMERIC(ns[0], 2295)
 
 /* NamespaceArray - ns=0;i=2255 */
 
-static UA_StatusCode function_namespace0_generated_122_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_128_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
@@ -44035,11 +45707,7 @@ UA_UInt32 arrayDimensions[1];
 arrayDimensions[0] = 0;
 attr.arrayDimensions = &arrayDimensions[0];
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_Variant_setArray(&attr.value, NULL, (UA_Int32) 0, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "NamespaceArray");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The list of namespace URIs used by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2255),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44050,7 +45718,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_122_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_128_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2255)
 );
@@ -44058,7 +45726,7 @@ UA_NODEID_NUMERIC(ns[0], 2255)
 
 /* ServerArray - ns=0;i=2254 */
 
-static UA_StatusCode function_namespace0_generated_123_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_129_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
@@ -44070,11 +45738,7 @@ UA_UInt32 arrayDimensions[1];
 arrayDimensions[0] = 0;
 attr.arrayDimensions = &arrayDimensions[0];
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_Variant_setArray(&attr.value, NULL, (UA_Int32) 0, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerArray");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The list of server URIs used by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2254),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44085,7 +45749,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_123_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_129_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2254)
 );
@@ -44093,21 +45757,16 @@ UA_NODEID_NUMERIC(ns[0], 2254)
 
 /* ServiceLevel - ns=0;i=2267 */
 
-static UA_StatusCode function_namespace0_generated_124_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_130_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 1000.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 3);
-UA_STACKARRAY(UA_Byte, variablenode_ns_0_i_2267_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2267_variant_DataContents, &UA_TYPES[UA_TYPES_BYTE]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2267_variant_DataContents, &UA_TYPES[UA_TYPES_BYTE]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServiceLevel");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A value indicating the level of service the server can provide. 255 indicates the best.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2267),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44118,7 +45777,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_124_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_130_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2267)
 );
@@ -44126,13 +45785,10 @@ UA_NODEID_NUMERIC(ns[0], 2267)
 
 /* ServerRedundancy - ns=0;i=2296 */
 
-static UA_StatusCode function_namespace0_generated_125_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_131_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerRedundancy");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes the redundancy capabilities of the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2296),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44143,7 +45799,7 @@ UA_NODEID_NUMERIC(ns[0], 2034),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_125_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_131_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2296)
 );
@@ -44151,21 +45807,16 @@ UA_NODEID_NUMERIC(ns[0], 2296)
 
 /* RedundancySupport - ns=0;i=3709 */
 
-static UA_StatusCode function_namespace0_generated_126_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_132_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 851);
-UA_STACKARRAY(UA_RedundancySupport, variablenode_ns_0_i_3709_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_3709_variant_DataContents, &UA_TYPES[UA_TYPES_REDUNDANCYSUPPORT]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_3709_variant_DataContents, &UA_TYPES[UA_TYPES_REDUNDANCYSUPPORT]);
 attr.displayName = UA_LOCALIZEDTEXT("", "RedundancySupport");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Indicates what style of redundancy is supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 3709),
 UA_NODEID_NUMERIC(ns[0], 2296),
@@ -44176,7 +45827,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_126_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_132_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3709)
 );
@@ -44184,13 +45835,10 @@ UA_NODEID_NUMERIC(ns[0], 3709)
 
 /* VendorServerInfo - ns=0;i=2011 */
 
-static UA_StatusCode function_namespace0_generated_127_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_133_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "VendorServerInfo");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Server information provided by the vendor.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2011),
 UA_NODEID_NUMERIC(ns[0], 2004),
@@ -44198,24 +45846,68 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "VendorServerInfo"),
 UA_NODEID_NUMERIC(ns[0], 2033),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 2011), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 78), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_127_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_133_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2011)
 );
 }
 
+/* InterfaceTypes - ns=0;i=17708 */
+
+static UA_StatusCode function_namespace0_generated_134_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ObjectAttributes attr = UA_ObjectAttributes_default;
+attr.displayName = UA_LOCALIZEDTEXT("", "InterfaceTypes");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
+UA_NODEID_NUMERIC(ns[0], 17708),
+UA_NODEID_NUMERIC(ns[0], 86),
+UA_NODEID_NUMERIC(ns[0], 35),
+UA_QUALIFIEDNAME(ns[0], "InterfaceTypes"),
+UA_NODEID_NUMERIC(ns[0], 61),
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_134_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 17708)
+);
+}
+
+/* BaseInterfaceType - ns=0;i=17602 */
+
+static UA_StatusCode function_namespace0_generated_135_begin(UA_Server *server, UA_UInt16* ns) {
+UA_StatusCode retVal = UA_STATUSCODE_GOOD;
+UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
+attr.isAbstract = true;
+attr.displayName = UA_LOCALIZEDTEXT("", "BaseInterfaceType");
+retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
+UA_NODEID_NUMERIC(ns[0], 17602),
+UA_NODEID_NUMERIC(ns[0], 58),
+UA_NODEID_NUMERIC(ns[0], 45),
+UA_QUALIFIEDNAME(ns[0], "BaseInterfaceType"),
+ UA_NODEID_NULL,
+(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTTYPEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 17602), UA_NODEID_NUMERIC(ns[0], 35), UA_EXPANDEDNODEID_NUMERIC(ns[0], 17708), false);
+return retVal;
+}
+
+static UA_StatusCode function_namespace0_generated_135_finish(UA_Server *server, UA_UInt16* ns) {
+return UA_Server_addNode_finish(server, 
+UA_NODEID_NUMERIC(ns[0], 17602)
+);
+}
+
 /* OperationLimitsType - ns=0;i=11564 */
 
-static UA_StatusCode function_namespace0_generated_128_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_136_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "OperationLimitsType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Identifies the operation limits imposed by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 11564),
 UA_NODEID_NUMERIC(ns[0], 61),
@@ -44226,7 +45918,7 @@ UA_QUALIFIEDNAME(ns[0], "OperationLimitsType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_128_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_136_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11564)
 );
@@ -44234,21 +45926,16 @@ UA_NODEID_NUMERIC(ns[0], 11564)
 
 /* MaxNodesPerWrite - ns=0;i=11567 */
 
-static UA_StatusCode function_namespace0_generated_129_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_137_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11567_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11567_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11567_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerWrite");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Write request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11567),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44256,10 +45943,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerWrite"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11567), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_129_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_137_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11567)
 );
@@ -44267,21 +45955,16 @@ UA_NODEID_NUMERIC(ns[0], 11567)
 
 /* MaxNodesPerRead - ns=0;i=11565 */
 
-static UA_StatusCode function_namespace0_generated_130_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_138_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11565_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11565_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11565_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerRead");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Read request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11565),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44289,10 +45972,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerRead"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11565), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_130_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_138_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11565)
 );
@@ -44300,21 +45984,16 @@ UA_NODEID_NUMERIC(ns[0], 11565)
 
 /* MaxNodesPerMethodCall - ns=0;i=11569 */
 
-static UA_StatusCode function_namespace0_generated_131_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_139_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11569_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11569_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11569_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerMethodCall");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Call request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11569),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44322,10 +46001,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerMethodCall"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11569), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_131_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_139_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11569)
 );
@@ -44333,21 +46013,16 @@ UA_NODEID_NUMERIC(ns[0], 11569)
 
 /* MaxNodesPerRegisterNodes - ns=0;i=11571 */
 
-static UA_StatusCode function_namespace0_generated_132_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_140_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11571_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11571_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11571_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerRegisterNodes");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single RegisterNodes request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11571),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44355,10 +46030,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerRegisterNodes"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11571), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_132_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_140_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11571)
 );
@@ -44366,21 +46042,16 @@ UA_NODEID_NUMERIC(ns[0], 11571)
 
 /* MaxNodesPerBrowse - ns=0;i=11570 */
 
-static UA_StatusCode function_namespace0_generated_133_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_141_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11570_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11570_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11570_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerBrowse");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Browse request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11570),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44388,10 +46059,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerBrowse"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11570), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_133_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_141_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11570)
 );
@@ -44399,21 +46071,16 @@ UA_NODEID_NUMERIC(ns[0], 11570)
 
 /* MaxNodesPerNodeManagement - ns=0;i=11573 */
 
-static UA_StatusCode function_namespace0_generated_134_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_142_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11573_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11573_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11573_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerNodeManagement");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single AddNodes, AddReferences, DeleteNodes or DeleteReferences request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11573),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44421,10 +46088,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerNodeManagement"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11573), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_134_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_142_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11573)
 );
@@ -44432,21 +46100,16 @@ UA_NODEID_NUMERIC(ns[0], 11573)
 
 /* MaxNodesPerTranslateBrowsePathsToNodeIds - ns=0;i=11572 */
 
-static UA_StatusCode function_namespace0_generated_135_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_143_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11572_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11572_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11572_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerTranslateBrowsePathsToNodeIds");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single TranslateBrowsePathsToNodeIds request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11572),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44454,10 +46117,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxNodesPerTranslateBrowsePathsToNodeIds"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11572), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_135_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_143_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11572)
 );
@@ -44465,21 +46129,16 @@ UA_NODEID_NUMERIC(ns[0], 11572)
 
 /* MaxMonitoredItemsPerCall - ns=0;i=11574 */
 
-static UA_StatusCode function_namespace0_generated_136_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_144_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11574_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11574_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11574_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxMonitoredItemsPerCall");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single MonitoredItem related request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11574),
 UA_NODEID_NUMERIC(ns[0], 11564),
@@ -44487,10 +46146,11 @@ UA_NODEID_NUMERIC(ns[0], 46),
 UA_QUALIFIEDNAME(ns[0], "MaxMonitoredItemsPerCall"),
 UA_NODEID_NUMERIC(ns[0], 68),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11574), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_136_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_144_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11574)
 );
@@ -44498,13 +46158,10 @@ UA_NODEID_NUMERIC(ns[0], 11574)
 
 /* ServerCapabilitiesType - ns=0;i=2013 */
 
-static UA_StatusCode function_namespace0_generated_137_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_145_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectTypeAttributes attr = UA_ObjectTypeAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerCapabilitiesType");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes the capabilities supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECTTYPE,
 UA_NODEID_NUMERIC(ns[0], 2013),
 UA_NODEID_NUMERIC(ns[0], 58),
@@ -44515,7 +46172,7 @@ UA_QUALIFIEDNAME(ns[0], "ServerCapabilitiesType"),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_137_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_145_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2013)
 );
@@ -44523,13 +46180,10 @@ UA_NODEID_NUMERIC(ns[0], 2013)
 
 /* OperationLimits - ns=0;i=11551 */
 
-static UA_StatusCode function_namespace0_generated_138_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_146_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "OperationLimits");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Defines the limits supported by the server for different operations.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 11551),
 UA_NODEID_NUMERIC(ns[0], 2013),
@@ -44537,10 +46191,11 @@ UA_NODEID_NUMERIC(ns[0], 47),
 UA_QUALIFIEDNAME(ns[0], "OperationLimits"),
 UA_NODEID_NUMERIC(ns[0], 11564),
 (const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
+retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 11551), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 80), true);
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_138_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_146_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11551)
 );
@@ -44548,13 +46203,10 @@ UA_NODEID_NUMERIC(ns[0], 11551)
 
 /* ServerCapabilities - ns=0;i=2268 */
 
-static UA_StatusCode function_namespace0_generated_139_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_147_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerCapabilities");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Describes capabilities supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2268),
 UA_NODEID_NUMERIC(ns[0], 2253),
@@ -44565,7 +46217,7 @@ UA_NODEID_NUMERIC(ns[0], 2013),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_139_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_147_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2268)
 );
@@ -44573,7 +46225,7 @@ UA_NODEID_NUMERIC(ns[0], 2268)
 
 /* ServerProfileArray - ns=0;i=2269 */
 
-static UA_StatusCode function_namespace0_generated_140_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_148_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -44585,11 +46237,7 @@ UA_UInt32 arrayDimensions[1];
 arrayDimensions[0] = 0;
 attr.arrayDimensions = &arrayDimensions[0];
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 12);
-UA_Variant_setArray(&attr.value, NULL, (UA_Int32) 0, &UA_TYPES[UA_TYPES_STRING]);
 attr.displayName = UA_LOCALIZEDTEXT("", "ServerProfileArray");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A list of profiles supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2269),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -44600,7 +46248,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_140_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_148_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2269)
 );
@@ -44608,13 +46256,10 @@ UA_NODEID_NUMERIC(ns[0], 2269)
 
 /* AggregateFunctions - ns=0;i=2997 */
 
-static UA_StatusCode function_namespace0_generated_141_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_149_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "AggregateFunctions");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A folder for the real time aggregates supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2997),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -44625,7 +46270,7 @@ UA_NODEID_NUMERIC(ns[0], 61),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_141_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_149_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2997)
 );
@@ -44633,13 +46278,10 @@ UA_NODEID_NUMERIC(ns[0], 2997)
 
 /* ModellingRules - ns=0;i=2996 */
 
-static UA_StatusCode function_namespace0_generated_142_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_150_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "ModellingRules");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A folder for the modelling rules supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 2996),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -44650,171 +46292,18 @@ UA_NODEID_NUMERIC(ns[0], 61),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_142_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_150_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2996)
 );
 }
 
-/* Mandatory - ns=0;i=78 */
-
-static UA_StatusCode function_namespace0_generated_143_begin(UA_Server *server, UA_UInt16* ns) {
-UA_StatusCode retVal = UA_STATUSCODE_GOOD;
-UA_ObjectAttributes attr = UA_ObjectAttributes_default;
-attr.displayName = UA_LOCALIZEDTEXT("", "Mandatory");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specifies that an instance with the attributes and references of the instance declaration must appear when a type is instantiated.");
-#endif
-retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
-UA_NODEID_NUMERIC(ns[0], 78),
-UA_NODEID_NUMERIC(ns[0], 2996),
-UA_NODEID_NUMERIC(ns[0], 35),
-UA_QUALIFIEDNAME(ns[0], "Mandatory"),
-UA_NODEID_NUMERIC(ns[0], 77),
-(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2159), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2035), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2154), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2155), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2152), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2153), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 12169), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2151), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2163), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2162), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2161), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2160), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2156), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2011), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 7611), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 111), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 78), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 2157), false);
-return retVal;
-}
-
-static UA_StatusCode function_namespace0_generated_143_finish(UA_Server *server, UA_UInt16* ns) {
-return UA_Server_addNode_finish(server, 
-UA_NODEID_NUMERIC(ns[0], 78)
-);
-}
-
-/* NamingRule - ns=0;i=112 */
-
-static UA_StatusCode function_namespace0_generated_144_begin(UA_Server *server, UA_UInt16* ns) {
-UA_StatusCode retVal = UA_STATUSCODE_GOOD;
-UA_VariableAttributes attr = UA_VariableAttributes_default;
-attr.minimumSamplingInterval = 0.000000;
-attr.userAccessLevel = 1;
-attr.accessLevel = 1;
-attr.valueRank = -1;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 120);
-UA_Int32 *variablenode_ns_0_i_112_variant_DataContents =  UA_Int32_new();
-if (!variablenode_ns_0_i_112_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
-*variablenode_ns_0_i_112_variant_DataContents = (UA_Int32) 1;
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_112_variant_DataContents, &UA_TYPES[UA_TYPES_INT32]);
-attr.displayName = UA_LOCALIZEDTEXT("", "NamingRule");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specified the significances of the BrowseName when a type is instantiated.");
-#endif
-retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
-UA_NODEID_NUMERIC(ns[0], 112),
-UA_NODEID_NUMERIC(ns[0], 78),
-UA_NODEID_NUMERIC(ns[0], 46),
-UA_QUALIFIEDNAME(ns[0], "NamingRule"),
-UA_NODEID_NUMERIC(ns[0], 68),
-(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
-UA_Int32_delete(variablenode_ns_0_i_112_variant_DataContents);
-return retVal;
-}
-
-static UA_StatusCode function_namespace0_generated_144_finish(UA_Server *server, UA_UInt16* ns) {
-return UA_Server_addNode_finish(server, 
-UA_NODEID_NUMERIC(ns[0], 112)
-);
-}
-
-/* Optional - ns=0;i=80 */
-
-static UA_StatusCode function_namespace0_generated_145_begin(UA_Server *server, UA_UInt16* ns) {
-UA_StatusCode retVal = UA_STATUSCODE_GOOD;
-UA_ObjectAttributes attr = UA_ObjectAttributes_default;
-attr.displayName = UA_LOCALIZEDTEXT("", "Optional");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specifies that an instance with the attributes and references of the instance declaration may appear when a type is instantiated.");
-#endif
-retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
-UA_NODEID_NUMERIC(ns[0], 80),
-UA_NODEID_NUMERIC(ns[0], 2996),
-UA_NODEID_NUMERIC(ns[0], 35),
-UA_QUALIFIEDNAME(ns[0], "Optional"),
-UA_NODEID_NUMERIC(ns[0], 77),
-(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],NULL, NULL);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 104), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 105), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 107), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11567), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11565), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11551), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11574), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11569), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11573), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11570), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11571), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 11572), false);
-retVal |= UA_Server_addReference(server, UA_NODEID_NUMERIC(ns[0], 80), UA_NODEID_NUMERIC(ns[0], 37), UA_EXPANDEDNODEID_NUMERIC(ns[0], 106), false);
-return retVal;
-}
-
-static UA_StatusCode function_namespace0_generated_145_finish(UA_Server *server, UA_UInt16* ns) {
-return UA_Server_addNode_finish(server, 
-UA_NODEID_NUMERIC(ns[0], 80)
-);
-}
-
-/* NamingRule - ns=0;i=113 */
-
-static UA_StatusCode function_namespace0_generated_146_begin(UA_Server *server, UA_UInt16* ns) {
-UA_StatusCode retVal = UA_STATUSCODE_GOOD;
-UA_VariableAttributes attr = UA_VariableAttributes_default;
-attr.minimumSamplingInterval = 0.000000;
-attr.userAccessLevel = 1;
-attr.accessLevel = 1;
-attr.valueRank = -1;
-attr.dataType = UA_NODEID_NUMERIC(ns[0], 120);
-UA_Int32 *variablenode_ns_0_i_113_variant_DataContents =  UA_Int32_new();
-if (!variablenode_ns_0_i_113_variant_DataContents) return UA_STATUSCODE_BADOUTOFMEMORY;
-*variablenode_ns_0_i_113_variant_DataContents = (UA_Int32) 2;
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_113_variant_DataContents, &UA_TYPES[UA_TYPES_INT32]);
-attr.displayName = UA_LOCALIZEDTEXT("", "NamingRule");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Specified the significances of the BrowseName when a type is instantiated.");
-#endif
-retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
-UA_NODEID_NUMERIC(ns[0], 113),
-UA_NODEID_NUMERIC(ns[0], 80),
-UA_NODEID_NUMERIC(ns[0], 46),
-UA_QUALIFIEDNAME(ns[0], "NamingRule"),
-UA_NODEID_NUMERIC(ns[0], 68),
-(const UA_NodeAttributes*)&attr, &UA_TYPES[UA_TYPES_VARIABLEATTRIBUTES],NULL, NULL);
-UA_Int32_delete(variablenode_ns_0_i_113_variant_DataContents);
-return retVal;
-}
-
-static UA_StatusCode function_namespace0_generated_146_finish(UA_Server *server, UA_UInt16* ns) {
-return UA_Server_addNode_finish(server, 
-UA_NODEID_NUMERIC(ns[0], 113)
-);
-}
-
 /* OperationLimits - ns=0;i=11704 */
 
-static UA_StatusCode function_namespace0_generated_147_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_151_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_ObjectAttributes attr = UA_ObjectAttributes_default;
 attr.displayName = UA_LOCALIZEDTEXT("", "OperationLimits");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "Defines the limits supported by the server for different operations.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_OBJECT,
 UA_NODEID_NUMERIC(ns[0], 11704),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -44825,7 +46314,7 @@ UA_NODEID_NUMERIC(ns[0], 11564),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_147_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_151_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11704)
 );
@@ -44833,21 +46322,16 @@ UA_NODEID_NUMERIC(ns[0], 11704)
 
 /* MaxNodesPerWrite - ns=0;i=11707 */
 
-static UA_StatusCode function_namespace0_generated_148_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_152_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11707_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11707_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11707_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerWrite");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Write request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11707),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -44858,7 +46342,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_148_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_152_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11707)
 );
@@ -44866,21 +46350,16 @@ UA_NODEID_NUMERIC(ns[0], 11707)
 
 /* MaxNodesPerRead - ns=0;i=11705 */
 
-static UA_StatusCode function_namespace0_generated_149_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_153_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11705_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11705_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11705_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerRead");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Read request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11705),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -44891,7 +46370,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_149_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_153_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11705)
 );
@@ -44899,21 +46378,16 @@ UA_NODEID_NUMERIC(ns[0], 11705)
 
 /* MaxMonitoredItemsPerCall - ns=0;i=11714 */
 
-static UA_StatusCode function_namespace0_generated_150_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_154_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11714_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11714_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11714_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxMonitoredItemsPerCall");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single MonitoredItem related request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11714),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -44924,7 +46398,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_150_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_154_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11714)
 );
@@ -44932,21 +46406,16 @@ UA_NODEID_NUMERIC(ns[0], 11714)
 
 /* MaxNodesPerRegisterNodes - ns=0;i=11711 */
 
-static UA_StatusCode function_namespace0_generated_151_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_155_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11711_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11711_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11711_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerRegisterNodes");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single RegisterNodes request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11711),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -44957,7 +46426,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_151_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_155_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11711)
 );
@@ -44965,21 +46434,16 @@ UA_NODEID_NUMERIC(ns[0], 11711)
 
 /* MaxNodesPerBrowse - ns=0;i=11710 */
 
-static UA_StatusCode function_namespace0_generated_152_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_156_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11710_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11710_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11710_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerBrowse");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Browse request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11710),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -44990,7 +46454,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_152_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_156_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11710)
 );
@@ -44998,21 +46462,16 @@ UA_NODEID_NUMERIC(ns[0], 11710)
 
 /* MaxNodesPerNodeManagement - ns=0;i=11713 */
 
-static UA_StatusCode function_namespace0_generated_153_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_157_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11713_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11713_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11713_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerNodeManagement");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single AddNodes, AddReferences, DeleteNodes or DeleteReferences request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11713),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -45023,7 +46482,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_153_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_157_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11713)
 );
@@ -45031,21 +46490,16 @@ UA_NODEID_NUMERIC(ns[0], 11713)
 
 /* MaxNodesPerTranslateBrowsePathsToNodeIds - ns=0;i=11712 */
 
-static UA_StatusCode function_namespace0_generated_154_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_158_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11712_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11712_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11712_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerTranslateBrowsePathsToNodeIds");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single TranslateBrowsePathsToNodeIds request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11712),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -45056,7 +46510,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_154_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_158_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11712)
 );
@@ -45064,21 +46518,16 @@ UA_NODEID_NUMERIC(ns[0], 11712)
 
 /* MaxNodesPerMethodCall - ns=0;i=11709 */
 
-static UA_StatusCode function_namespace0_generated_155_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_159_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 7);
-UA_STACKARRAY(UA_UInt32, variablenode_ns_0_i_11709_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_11709_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_11709_variant_DataContents, &UA_TYPES[UA_TYPES_UINT32]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxNodesPerMethodCall");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of operations in a single Call request.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 11709),
 UA_NODEID_NUMERIC(ns[0], 11704),
@@ -45089,7 +46538,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_155_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_159_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 11709)
 );
@@ -45097,7 +46546,7 @@ UA_NODEID_NUMERIC(ns[0], 11709)
 
 /* SoftwareCertificates - ns=0;i=3704 */
 
-static UA_StatusCode function_namespace0_generated_156_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_160_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -45109,11 +46558,7 @@ UA_UInt32 arrayDimensions[1];
 arrayDimensions[0] = 0;
 attr.arrayDimensions = &arrayDimensions[0];
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 344);
-UA_Variant_setArray(&attr.value, NULL, (UA_Int32) 0, &UA_TYPES[UA_TYPES_SIGNEDSOFTWARECERTIFICATE]);
 attr.displayName = UA_LOCALIZEDTEXT("", "SoftwareCertificates");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The software certificates owned by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 3704),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45124,7 +46569,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_156_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_160_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 3704)
 );
@@ -45132,21 +46577,16 @@ UA_NODEID_NUMERIC(ns[0], 3704)
 
 /* MinSupportedSampleRate - ns=0;i=2272 */
 
-static UA_StatusCode function_namespace0_generated_157_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_161_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 290);
-UA_STACKARRAY(UA_Duration, variablenode_ns_0_i_2272_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2272_variant_DataContents, &UA_TYPES[UA_TYPES_DURATION]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2272_variant_DataContents, &UA_TYPES[UA_TYPES_DURATION]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MinSupportedSampleRate");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The minimum sampling interval supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2272),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45157,7 +46597,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_157_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_161_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2272)
 );
@@ -45165,7 +46605,7 @@ UA_NODEID_NUMERIC(ns[0], 2272)
 
 /* LocaleIdArray - ns=0;i=2271 */
 
-static UA_StatusCode function_namespace0_generated_158_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_162_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
@@ -45177,11 +46617,7 @@ UA_UInt32 arrayDimensions[1];
 arrayDimensions[0] = 0;
 attr.arrayDimensions = &arrayDimensions[0];
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 295);
-UA_Variant_setArray(&attr.value, NULL, (UA_Int32) 0, &UA_TYPES[UA_TYPES_LOCALEID]);
 attr.displayName = UA_LOCALIZEDTEXT("", "LocaleIdArray");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "A list of locales supported by the server.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2271),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45192,7 +46628,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_158_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_162_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2271)
 );
@@ -45200,21 +46636,16 @@ UA_NODEID_NUMERIC(ns[0], 2271)
 
 /* MaxQueryContinuationPoints - ns=0;i=2736 */
 
-static UA_StatusCode function_namespace0_generated_159_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_163_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 5);
-UA_STACKARRAY(UA_UInt16, variablenode_ns_0_i_2736_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2736_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2736_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxQueryContinuationPoints");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of continuation points for Query operations per session.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2736),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45225,7 +46656,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_159_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_163_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2736)
 );
@@ -45233,21 +46664,16 @@ UA_NODEID_NUMERIC(ns[0], 2736)
 
 /* MaxHistoryContinuationPoints - ns=0;i=2737 */
 
-static UA_StatusCode function_namespace0_generated_160_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_164_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 5);
-UA_STACKARRAY(UA_UInt16, variablenode_ns_0_i_2737_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2737_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2737_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxHistoryContinuationPoints");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of continuation points for ReadHistory operations per session.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2737),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45258,7 +46684,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_160_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_164_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2737)
 );
@@ -45266,21 +46692,16 @@ UA_NODEID_NUMERIC(ns[0], 2737)
 
 /* MaxBrowseContinuationPoints - ns=0;i=2735 */
 
-static UA_StatusCode function_namespace0_generated_161_begin(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_165_begin(UA_Server *server, UA_UInt16* ns) {
 UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 UA_VariableAttributes attr = UA_VariableAttributes_default;
 attr.minimumSamplingInterval = 0.000000;
 attr.userAccessLevel = 1;
 attr.accessLevel = 1;
+/* Value rank inherited */
 attr.valueRank = -1;
 attr.dataType = UA_NODEID_NUMERIC(ns[0], 5);
-UA_STACKARRAY(UA_UInt16, variablenode_ns_0_i_2735_variant_DataContents, 1);
-UA_init(variablenode_ns_0_i_2735_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
-UA_Variant_setScalar(&attr.value, variablenode_ns_0_i_2735_variant_DataContents, &UA_TYPES[UA_TYPES_UINT16]);
 attr.displayName = UA_LOCALIZEDTEXT("", "MaxBrowseContinuationPoints");
-#ifdef UA_ENABLE_NODESET_COMPILER_DESCRIPTIONS
-attr.description = UA_LOCALIZEDTEXT("", "The maximum number of continuation points for Browse operations per session.");
-#endif
 retVal |= UA_Server_addNode_begin(server, UA_NODECLASS_VARIABLE,
 UA_NODEID_NUMERIC(ns[0], 2735),
 UA_NODEID_NUMERIC(ns[0], 2268),
@@ -45291,7 +46712,7 @@ UA_NODEID_NUMERIC(ns[0], 68),
 return retVal;
 }
 
-static UA_StatusCode function_namespace0_generated_161_finish(UA_Server *server, UA_UInt16* ns) {
+static UA_StatusCode function_namespace0_generated_165_finish(UA_Server *server, UA_UInt16* ns) {
 return UA_Server_addNode_finish(server, 
 UA_NODEID_NUMERIC(ns[0], 2735)
 );
@@ -45302,330 +46723,340 @@ UA_StatusCode retVal = UA_STATUSCODE_GOOD;
 /* Use namespace ids generated by the server */
 UA_UInt16 ns[1];
 ns[0] = UA_Server_addNamespace(server, "http://opcfoundation.org/UA/");
-retVal |= function_namespace0_generated_0_begin(server, ns);
-retVal |= function_namespace0_generated_1_begin(server, ns);
-retVal |= function_namespace0_generated_2_begin(server, ns);
-retVal |= function_namespace0_generated_3_begin(server, ns);
-retVal |= function_namespace0_generated_4_begin(server, ns);
-retVal |= function_namespace0_generated_5_begin(server, ns);
-retVal |= function_namespace0_generated_6_begin(server, ns);
-retVal |= function_namespace0_generated_7_begin(server, ns);
-retVal |= function_namespace0_generated_8_begin(server, ns);
-retVal |= function_namespace0_generated_9_begin(server, ns);
-retVal |= function_namespace0_generated_10_begin(server, ns);
-retVal |= function_namespace0_generated_11_begin(server, ns);
-retVal |= function_namespace0_generated_12_begin(server, ns);
-retVal |= function_namespace0_generated_13_begin(server, ns);
-retVal |= function_namespace0_generated_14_begin(server, ns);
-retVal |= function_namespace0_generated_15_begin(server, ns);
-retVal |= function_namespace0_generated_16_begin(server, ns);
-retVal |= function_namespace0_generated_17_begin(server, ns);
-retVal |= function_namespace0_generated_18_begin(server, ns);
-retVal |= function_namespace0_generated_19_begin(server, ns);
-retVal |= function_namespace0_generated_20_begin(server, ns);
-retVal |= function_namespace0_generated_21_begin(server, ns);
-retVal |= function_namespace0_generated_22_begin(server, ns);
-retVal |= function_namespace0_generated_23_begin(server, ns);
-retVal |= function_namespace0_generated_24_begin(server, ns);
-retVal |= function_namespace0_generated_25_begin(server, ns);
-retVal |= function_namespace0_generated_26_begin(server, ns);
-retVal |= function_namespace0_generated_27_begin(server, ns);
-retVal |= function_namespace0_generated_28_begin(server, ns);
-retVal |= function_namespace0_generated_29_begin(server, ns);
-retVal |= function_namespace0_generated_30_begin(server, ns);
-retVal |= function_namespace0_generated_31_begin(server, ns);
-retVal |= function_namespace0_generated_32_begin(server, ns);
-retVal |= function_namespace0_generated_33_begin(server, ns);
-retVal |= function_namespace0_generated_34_begin(server, ns);
-retVal |= function_namespace0_generated_35_begin(server, ns);
-retVal |= function_namespace0_generated_36_begin(server, ns);
-retVal |= function_namespace0_generated_37_begin(server, ns);
-retVal |= function_namespace0_generated_38_begin(server, ns);
-retVal |= function_namespace0_generated_39_begin(server, ns);
-retVal |= function_namespace0_generated_40_begin(server, ns);
-retVal |= function_namespace0_generated_41_begin(server, ns);
-retVal |= function_namespace0_generated_42_begin(server, ns);
-retVal |= function_namespace0_generated_43_begin(server, ns);
-retVal |= function_namespace0_generated_44_begin(server, ns);
-retVal |= function_namespace0_generated_45_begin(server, ns);
-retVal |= function_namespace0_generated_46_begin(server, ns);
-retVal |= function_namespace0_generated_47_begin(server, ns);
-retVal |= function_namespace0_generated_48_begin(server, ns);
-retVal |= function_namespace0_generated_49_begin(server, ns);
-retVal |= function_namespace0_generated_50_begin(server, ns);
-retVal |= function_namespace0_generated_51_begin(server, ns);
-retVal |= function_namespace0_generated_52_begin(server, ns);
-retVal |= function_namespace0_generated_53_begin(server, ns);
-retVal |= function_namespace0_generated_54_begin(server, ns);
-retVal |= function_namespace0_generated_55_begin(server, ns);
-retVal |= function_namespace0_generated_56_begin(server, ns);
-retVal |= function_namespace0_generated_57_begin(server, ns);
-retVal |= function_namespace0_generated_58_begin(server, ns);
-retVal |= function_namespace0_generated_59_begin(server, ns);
-retVal |= function_namespace0_generated_60_begin(server, ns);
-retVal |= function_namespace0_generated_61_begin(server, ns);
-retVal |= function_namespace0_generated_62_begin(server, ns);
-retVal |= function_namespace0_generated_63_begin(server, ns);
-retVal |= function_namespace0_generated_64_begin(server, ns);
-retVal |= function_namespace0_generated_65_begin(server, ns);
-retVal |= function_namespace0_generated_66_begin(server, ns);
-retVal |= function_namespace0_generated_67_begin(server, ns);
-retVal |= function_namespace0_generated_68_begin(server, ns);
-retVal |= function_namespace0_generated_69_begin(server, ns);
-retVal |= function_namespace0_generated_70_begin(server, ns);
-retVal |= function_namespace0_generated_71_begin(server, ns);
-retVal |= function_namespace0_generated_72_begin(server, ns);
-retVal |= function_namespace0_generated_73_begin(server, ns);
-retVal |= function_namespace0_generated_74_begin(server, ns);
-retVal |= function_namespace0_generated_75_begin(server, ns);
-retVal |= function_namespace0_generated_76_begin(server, ns);
-retVal |= function_namespace0_generated_77_begin(server, ns);
-retVal |= function_namespace0_generated_78_begin(server, ns);
-retVal |= function_namespace0_generated_79_begin(server, ns);
-retVal |= function_namespace0_generated_80_begin(server, ns);
-retVal |= function_namespace0_generated_81_begin(server, ns);
-retVal |= function_namespace0_generated_82_begin(server, ns);
-retVal |= function_namespace0_generated_83_begin(server, ns);
-retVal |= function_namespace0_generated_84_begin(server, ns);
-retVal |= function_namespace0_generated_85_begin(server, ns);
-retVal |= function_namespace0_generated_86_begin(server, ns);
-retVal |= function_namespace0_generated_87_begin(server, ns);
-retVal |= function_namespace0_generated_88_begin(server, ns);
-retVal |= function_namespace0_generated_89_begin(server, ns);
-retVal |= function_namespace0_generated_90_begin(server, ns);
-retVal |= function_namespace0_generated_91_begin(server, ns);
-retVal |= function_namespace0_generated_92_begin(server, ns);
-retVal |= function_namespace0_generated_93_begin(server, ns);
-retVal |= function_namespace0_generated_94_begin(server, ns);
-retVal |= function_namespace0_generated_95_begin(server, ns);
-retVal |= function_namespace0_generated_96_begin(server, ns);
-retVal |= function_namespace0_generated_97_begin(server, ns);
-retVal |= function_namespace0_generated_98_begin(server, ns);
-retVal |= function_namespace0_generated_99_begin(server, ns);
-retVal |= function_namespace0_generated_100_begin(server, ns);
-retVal |= function_namespace0_generated_101_begin(server, ns);
-retVal |= function_namespace0_generated_102_begin(server, ns);
-retVal |= function_namespace0_generated_103_begin(server, ns);
-retVal |= function_namespace0_generated_104_begin(server, ns);
-retVal |= function_namespace0_generated_105_begin(server, ns);
-retVal |= function_namespace0_generated_106_begin(server, ns);
-retVal |= function_namespace0_generated_107_begin(server, ns);
-retVal |= function_namespace0_generated_108_begin(server, ns);
-retVal |= function_namespace0_generated_109_begin(server, ns);
-retVal |= function_namespace0_generated_110_begin(server, ns);
-retVal |= function_namespace0_generated_111_begin(server, ns);
-retVal |= function_namespace0_generated_112_begin(server, ns);
-retVal |= function_namespace0_generated_113_begin(server, ns);
-retVal |= function_namespace0_generated_114_begin(server, ns);
-retVal |= function_namespace0_generated_115_begin(server, ns);
-retVal |= function_namespace0_generated_116_begin(server, ns);
-retVal |= function_namespace0_generated_117_begin(server, ns);
-retVal |= function_namespace0_generated_118_begin(server, ns);
-retVal |= function_namespace0_generated_119_begin(server, ns);
-retVal |= function_namespace0_generated_120_begin(server, ns);
-retVal |= function_namespace0_generated_121_begin(server, ns);
-retVal |= function_namespace0_generated_122_begin(server, ns);
-retVal |= function_namespace0_generated_123_begin(server, ns);
-retVal |= function_namespace0_generated_124_begin(server, ns);
-retVal |= function_namespace0_generated_125_begin(server, ns);
-retVal |= function_namespace0_generated_126_begin(server, ns);
-retVal |= function_namespace0_generated_127_begin(server, ns);
-retVal |= function_namespace0_generated_128_begin(server, ns);
-retVal |= function_namespace0_generated_129_begin(server, ns);
-retVal |= function_namespace0_generated_130_begin(server, ns);
-retVal |= function_namespace0_generated_131_begin(server, ns);
-retVal |= function_namespace0_generated_132_begin(server, ns);
-retVal |= function_namespace0_generated_133_begin(server, ns);
-retVal |= function_namespace0_generated_134_begin(server, ns);
-retVal |= function_namespace0_generated_135_begin(server, ns);
-retVal |= function_namespace0_generated_136_begin(server, ns);
-retVal |= function_namespace0_generated_137_begin(server, ns);
-retVal |= function_namespace0_generated_138_begin(server, ns);
-retVal |= function_namespace0_generated_139_begin(server, ns);
-retVal |= function_namespace0_generated_140_begin(server, ns);
-retVal |= function_namespace0_generated_141_begin(server, ns);
-retVal |= function_namespace0_generated_142_begin(server, ns);
-retVal |= function_namespace0_generated_143_begin(server, ns);
-retVal |= function_namespace0_generated_144_begin(server, ns);
-retVal |= function_namespace0_generated_145_begin(server, ns);
-retVal |= function_namespace0_generated_146_begin(server, ns);
-retVal |= function_namespace0_generated_147_begin(server, ns);
-retVal |= function_namespace0_generated_148_begin(server, ns);
-retVal |= function_namespace0_generated_149_begin(server, ns);
-retVal |= function_namespace0_generated_150_begin(server, ns);
-retVal |= function_namespace0_generated_151_begin(server, ns);
-retVal |= function_namespace0_generated_152_begin(server, ns);
-retVal |= function_namespace0_generated_153_begin(server, ns);
-retVal |= function_namespace0_generated_154_begin(server, ns);
-retVal |= function_namespace0_generated_155_begin(server, ns);
-retVal |= function_namespace0_generated_156_begin(server, ns);
-retVal |= function_namespace0_generated_157_begin(server, ns);
-retVal |= function_namespace0_generated_158_begin(server, ns);
-retVal |= function_namespace0_generated_159_begin(server, ns);
-retVal |= function_namespace0_generated_160_begin(server, ns);
-retVal |= function_namespace0_generated_161_begin(server, ns);
-retVal |= function_namespace0_generated_161_finish(server, ns);
-retVal |= function_namespace0_generated_160_finish(server, ns);
-retVal |= function_namespace0_generated_159_finish(server, ns);
-retVal |= function_namespace0_generated_158_finish(server, ns);
-retVal |= function_namespace0_generated_157_finish(server, ns);
-retVal |= function_namespace0_generated_156_finish(server, ns);
-retVal |= function_namespace0_generated_155_finish(server, ns);
-retVal |= function_namespace0_generated_154_finish(server, ns);
-retVal |= function_namespace0_generated_153_finish(server, ns);
-retVal |= function_namespace0_generated_152_finish(server, ns);
-retVal |= function_namespace0_generated_151_finish(server, ns);
-retVal |= function_namespace0_generated_150_finish(server, ns);
-retVal |= function_namespace0_generated_149_finish(server, ns);
-retVal |= function_namespace0_generated_148_finish(server, ns);
-retVal |= function_namespace0_generated_147_finish(server, ns);
-retVal |= function_namespace0_generated_146_finish(server, ns);
-retVal |= function_namespace0_generated_145_finish(server, ns);
-retVal |= function_namespace0_generated_144_finish(server, ns);
-retVal |= function_namespace0_generated_143_finish(server, ns);
-retVal |= function_namespace0_generated_142_finish(server, ns);
-retVal |= function_namespace0_generated_141_finish(server, ns);
-retVal |= function_namespace0_generated_140_finish(server, ns);
-retVal |= function_namespace0_generated_139_finish(server, ns);
-retVal |= function_namespace0_generated_138_finish(server, ns);
-retVal |= function_namespace0_generated_137_finish(server, ns);
-retVal |= function_namespace0_generated_136_finish(server, ns);
-retVal |= function_namespace0_generated_135_finish(server, ns);
-retVal |= function_namespace0_generated_134_finish(server, ns);
-retVal |= function_namespace0_generated_133_finish(server, ns);
-retVal |= function_namespace0_generated_132_finish(server, ns);
-retVal |= function_namespace0_generated_131_finish(server, ns);
-retVal |= function_namespace0_generated_130_finish(server, ns);
-retVal |= function_namespace0_generated_129_finish(server, ns);
-retVal |= function_namespace0_generated_128_finish(server, ns);
-retVal |= function_namespace0_generated_127_finish(server, ns);
-retVal |= function_namespace0_generated_126_finish(server, ns);
-retVal |= function_namespace0_generated_125_finish(server, ns);
-retVal |= function_namespace0_generated_124_finish(server, ns);
-retVal |= function_namespace0_generated_123_finish(server, ns);
-retVal |= function_namespace0_generated_122_finish(server, ns);
-retVal |= function_namespace0_generated_121_finish(server, ns);
-retVal |= function_namespace0_generated_120_finish(server, ns);
-retVal |= function_namespace0_generated_119_finish(server, ns);
-retVal |= function_namespace0_generated_118_finish(server, ns);
-retVal |= function_namespace0_generated_117_finish(server, ns);
-retVal |= function_namespace0_generated_116_finish(server, ns);
-retVal |= function_namespace0_generated_115_finish(server, ns);
-retVal |= function_namespace0_generated_114_finish(server, ns);
-retVal |= function_namespace0_generated_113_finish(server, ns);
-retVal |= function_namespace0_generated_112_finish(server, ns);
-retVal |= function_namespace0_generated_111_finish(server, ns);
-retVal |= function_namespace0_generated_110_finish(server, ns);
-retVal |= function_namespace0_generated_109_finish(server, ns);
-retVal |= function_namespace0_generated_108_finish(server, ns);
-retVal |= function_namespace0_generated_107_finish(server, ns);
-retVal |= function_namespace0_generated_106_finish(server, ns);
-retVal |= function_namespace0_generated_105_finish(server, ns);
-retVal |= function_namespace0_generated_104_finish(server, ns);
-retVal |= function_namespace0_generated_103_finish(server, ns);
-retVal |= function_namespace0_generated_102_finish(server, ns);
-retVal |= function_namespace0_generated_101_finish(server, ns);
-retVal |= function_namespace0_generated_100_finish(server, ns);
-retVal |= function_namespace0_generated_99_finish(server, ns);
-retVal |= function_namespace0_generated_98_finish(server, ns);
-retVal |= function_namespace0_generated_97_finish(server, ns);
-retVal |= function_namespace0_generated_96_finish(server, ns);
-retVal |= function_namespace0_generated_95_finish(server, ns);
-retVal |= function_namespace0_generated_94_finish(server, ns);
-retVal |= function_namespace0_generated_93_finish(server, ns);
-retVal |= function_namespace0_generated_92_finish(server, ns);
-retVal |= function_namespace0_generated_91_finish(server, ns);
-retVal |= function_namespace0_generated_90_finish(server, ns);
-retVal |= function_namespace0_generated_89_finish(server, ns);
-retVal |= function_namespace0_generated_88_finish(server, ns);
-retVal |= function_namespace0_generated_87_finish(server, ns);
-retVal |= function_namespace0_generated_86_finish(server, ns);
-retVal |= function_namespace0_generated_85_finish(server, ns);
-retVal |= function_namespace0_generated_84_finish(server, ns);
-retVal |= function_namespace0_generated_83_finish(server, ns);
-retVal |= function_namespace0_generated_82_finish(server, ns);
-retVal |= function_namespace0_generated_81_finish(server, ns);
-retVal |= function_namespace0_generated_80_finish(server, ns);
-retVal |= function_namespace0_generated_79_finish(server, ns);
-retVal |= function_namespace0_generated_78_finish(server, ns);
-retVal |= function_namespace0_generated_77_finish(server, ns);
-retVal |= function_namespace0_generated_76_finish(server, ns);
-retVal |= function_namespace0_generated_75_finish(server, ns);
-retVal |= function_namespace0_generated_74_finish(server, ns);
-retVal |= function_namespace0_generated_73_finish(server, ns);
-retVal |= function_namespace0_generated_72_finish(server, ns);
-retVal |= function_namespace0_generated_71_finish(server, ns);
-retVal |= function_namespace0_generated_70_finish(server, ns);
-retVal |= function_namespace0_generated_69_finish(server, ns);
-retVal |= function_namespace0_generated_68_finish(server, ns);
-retVal |= function_namespace0_generated_67_finish(server, ns);
-retVal |= function_namespace0_generated_66_finish(server, ns);
-retVal |= function_namespace0_generated_65_finish(server, ns);
-retVal |= function_namespace0_generated_64_finish(server, ns);
-retVal |= function_namespace0_generated_63_finish(server, ns);
-retVal |= function_namespace0_generated_62_finish(server, ns);
-retVal |= function_namespace0_generated_61_finish(server, ns);
-retVal |= function_namespace0_generated_60_finish(server, ns);
-retVal |= function_namespace0_generated_59_finish(server, ns);
-retVal |= function_namespace0_generated_58_finish(server, ns);
-retVal |= function_namespace0_generated_57_finish(server, ns);
-retVal |= function_namespace0_generated_56_finish(server, ns);
-retVal |= function_namespace0_generated_55_finish(server, ns);
-retVal |= function_namespace0_generated_54_finish(server, ns);
-retVal |= function_namespace0_generated_53_finish(server, ns);
-retVal |= function_namespace0_generated_52_finish(server, ns);
-retVal |= function_namespace0_generated_51_finish(server, ns);
-retVal |= function_namespace0_generated_50_finish(server, ns);
-retVal |= function_namespace0_generated_49_finish(server, ns);
-retVal |= function_namespace0_generated_48_finish(server, ns);
-retVal |= function_namespace0_generated_47_finish(server, ns);
-retVal |= function_namespace0_generated_46_finish(server, ns);
-retVal |= function_namespace0_generated_45_finish(server, ns);
-retVal |= function_namespace0_generated_44_finish(server, ns);
-retVal |= function_namespace0_generated_43_finish(server, ns);
-retVal |= function_namespace0_generated_42_finish(server, ns);
-retVal |= function_namespace0_generated_41_finish(server, ns);
-retVal |= function_namespace0_generated_40_finish(server, ns);
-retVal |= function_namespace0_generated_39_finish(server, ns);
-retVal |= function_namespace0_generated_38_finish(server, ns);
-retVal |= function_namespace0_generated_37_finish(server, ns);
-retVal |= function_namespace0_generated_36_finish(server, ns);
-retVal |= function_namespace0_generated_35_finish(server, ns);
-retVal |= function_namespace0_generated_34_finish(server, ns);
-retVal |= function_namespace0_generated_33_finish(server, ns);
-retVal |= function_namespace0_generated_32_finish(server, ns);
-retVal |= function_namespace0_generated_31_finish(server, ns);
-retVal |= function_namespace0_generated_30_finish(server, ns);
-retVal |= function_namespace0_generated_29_finish(server, ns);
-retVal |= function_namespace0_generated_28_finish(server, ns);
-retVal |= function_namespace0_generated_27_finish(server, ns);
-retVal |= function_namespace0_generated_26_finish(server, ns);
-retVal |= function_namespace0_generated_25_finish(server, ns);
-retVal |= function_namespace0_generated_24_finish(server, ns);
-retVal |= function_namespace0_generated_23_finish(server, ns);
-retVal |= function_namespace0_generated_22_finish(server, ns);
-retVal |= function_namespace0_generated_21_finish(server, ns);
-retVal |= function_namespace0_generated_20_finish(server, ns);
-retVal |= function_namespace0_generated_19_finish(server, ns);
-retVal |= function_namespace0_generated_18_finish(server, ns);
-retVal |= function_namespace0_generated_17_finish(server, ns);
-retVal |= function_namespace0_generated_16_finish(server, ns);
-retVal |= function_namespace0_generated_15_finish(server, ns);
-retVal |= function_namespace0_generated_14_finish(server, ns);
-retVal |= function_namespace0_generated_13_finish(server, ns);
-retVal |= function_namespace0_generated_12_finish(server, ns);
-retVal |= function_namespace0_generated_11_finish(server, ns);
-retVal |= function_namespace0_generated_10_finish(server, ns);
-retVal |= function_namespace0_generated_9_finish(server, ns);
-retVal |= function_namespace0_generated_8_finish(server, ns);
-retVal |= function_namespace0_generated_7_finish(server, ns);
-retVal |= function_namespace0_generated_6_finish(server, ns);
-retVal |= function_namespace0_generated_5_finish(server, ns);
-retVal |= function_namespace0_generated_4_finish(server, ns);
-retVal |= function_namespace0_generated_3_finish(server, ns);
-retVal |= function_namespace0_generated_2_finish(server, ns);
-retVal |= function_namespace0_generated_1_finish(server, ns);
-retVal |= function_namespace0_generated_0_finish(server, ns);
+bool dummy = (
+!(retVal = function_namespace0_generated_0_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_1_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_2_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_3_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_4_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_5_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_6_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_7_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_8_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_9_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_10_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_11_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_12_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_13_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_14_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_15_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_16_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_17_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_18_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_19_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_20_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_21_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_22_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_23_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_24_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_25_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_26_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_27_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_28_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_29_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_30_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_31_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_32_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_33_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_34_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_35_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_36_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_37_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_38_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_39_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_40_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_41_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_42_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_43_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_44_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_45_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_46_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_47_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_48_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_49_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_50_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_51_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_52_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_53_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_54_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_55_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_56_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_57_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_58_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_59_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_60_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_61_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_62_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_63_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_64_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_65_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_66_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_67_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_68_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_69_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_70_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_71_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_72_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_73_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_74_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_75_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_76_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_77_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_78_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_79_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_80_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_81_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_82_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_83_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_84_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_85_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_86_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_87_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_88_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_89_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_90_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_91_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_92_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_93_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_94_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_95_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_96_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_97_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_98_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_99_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_100_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_101_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_102_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_103_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_104_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_105_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_106_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_107_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_108_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_109_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_110_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_111_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_112_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_113_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_114_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_115_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_116_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_117_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_118_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_119_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_120_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_121_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_122_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_123_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_124_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_125_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_126_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_127_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_128_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_129_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_130_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_131_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_132_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_133_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_134_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_135_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_136_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_137_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_138_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_139_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_140_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_141_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_142_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_143_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_144_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_145_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_146_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_147_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_148_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_149_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_150_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_151_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_152_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_153_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_154_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_155_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_156_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_157_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_158_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_159_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_160_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_161_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_162_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_163_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_164_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_165_begin(server, ns)) &&
+!(retVal = function_namespace0_generated_165_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_164_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_163_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_162_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_161_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_160_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_159_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_158_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_157_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_156_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_155_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_154_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_153_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_152_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_151_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_150_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_149_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_148_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_147_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_146_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_145_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_144_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_143_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_142_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_141_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_140_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_139_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_138_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_137_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_136_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_135_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_134_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_133_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_132_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_131_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_130_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_129_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_128_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_127_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_126_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_125_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_124_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_123_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_122_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_121_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_120_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_119_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_118_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_117_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_116_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_115_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_114_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_113_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_112_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_111_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_110_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_109_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_108_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_107_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_106_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_105_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_104_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_103_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_102_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_101_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_100_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_99_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_98_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_97_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_96_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_95_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_94_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_93_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_92_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_91_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_90_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_89_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_88_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_87_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_86_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_85_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_84_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_83_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_82_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_81_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_80_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_79_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_78_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_77_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_76_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_75_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_74_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_73_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_72_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_71_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_70_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_69_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_68_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_67_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_66_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_65_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_64_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_63_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_62_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_61_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_60_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_59_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_58_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_57_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_56_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_55_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_54_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_53_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_52_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_51_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_50_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_49_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_48_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_47_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_46_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_45_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_44_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_43_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_42_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_41_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_40_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_39_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_38_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_37_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_36_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_35_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_34_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_33_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_32_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_31_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_30_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_29_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_28_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_27_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_26_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_25_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_24_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_23_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_22_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_21_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_20_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_19_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_18_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_17_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_16_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_15_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_14_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_13_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_12_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_11_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_10_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_9_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_8_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_7_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_6_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_5_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_4_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_3_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_2_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_1_finish(server, ns)) &&
+!(retVal = function_namespace0_generated_0_finish(server, ns)) 
+); (void)(dummy);
 return retVal;
 }
 
@@ -45704,8 +47135,12 @@ initMulticastDiscoveryServer(UA_DiscoveryManager *dm, UA_Server* server) {
 
 static void
 destroyMulticastDiscoveryServer(UA_DiscoveryManager *dm) {
+    if (!dm->mdnsDaemon)
+        return;
+
     mdnsd_shutdown(dm->mdnsDaemon);
     mdnsd_free(dm->mdnsDaemon);
+
     if(dm->mdnsSocket != UA_INVALID_SOCKET) {
         UA_close(dm->mdnsSocket);
         dm->mdnsSocket = UA_INVALID_SOCKET;
@@ -45726,7 +47161,7 @@ UA_DiscoveryManager_init(UA_DiscoveryManager *dm, UA_Server *server) {
     dm->mdnsDaemon = NULL;
     dm->mdnsSocket = UA_INVALID_SOCKET;
     dm->mdnsMainSrvAdded = false;
-    if(server->config.applicationDescription.applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER)
+    if(server->config.discovery.mdnsEnable)
         initMulticastDiscoveryServer(dm, server);
 
     LIST_INIT(&dm->serverOnNetwork);
@@ -45757,7 +47192,7 @@ UA_DiscoveryManager_deleteMembers(UA_DiscoveryManager *dm, UA_Server *server) {
     }
 
 # ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    if(server->config.applicationDescription.applicationType == UA_APPLICATIONTYPE_DISCOVERYSERVER)
+    if(server->config.discovery.mdnsEnable)
         destroyMulticastDiscoveryServer(dm);
 
     serverOnNetwork_list_entry *son, *son_tmp;
@@ -46067,20 +47502,9 @@ prepareNotificationMessage(UA_Server *server, UA_Subscription *sub,
         UA_Notification_dequeue(server, notification);
 
         /* Move the content to the response */
-        if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-            UA_assert(dcn != NULL); /* Have at least one change notification */
-            /* Move the content to the response */
-            UA_MonitoredItemNotification *min = &dcn->monitoredItems[dcnPos];
-            min->clientHandle = mon->clientHandle;
-            min->value = notification->data.value;
-            UA_DataValue_init(&notification->data.value); /* Reset after the value has been moved */
-            dcnPos++;
-        }
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-        else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_STATUSNOTIFY && scn) {
-            // TODO: Handling of StatusChangeNotifications
-            scn = NULL; /* At most one per PublishReponse */
-        } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY && enl) {
+        if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
+
             UA_assert(enl != NULL); /* Have at least one event notification */
 
             /* Move the content to the response */
@@ -46090,11 +47514,16 @@ prepareNotificationMessage(UA_Server *server, UA_Subscription *sub,
             efl->clientHandle = mon->clientHandle;
 
             enlPos++;
-        }
+        } else
 #endif
-        else {
-            UA_Notification_delete(notification);
-            continue; /* Unknown type. Nothing to do */
+        {
+            UA_assert(dcn != NULL); /* Have at least one change notification */
+            /* Move the content to the response */
+            UA_MonitoredItemNotification *min = &dcn->monitoredItems[dcnPos];
+            min->clientHandle = mon->clientHandle;
+            min->value = notification->data.value;
+            UA_DataValue_init(&notification->data.value); /* Reset after the value has been moved */
+            dcnPos++;
         }
 
         UA_Notification_delete(notification);
@@ -46428,11 +47857,11 @@ static const UA_NodeId simpleOverflowEventType =
 static UA_Boolean
 UA_Notification_isOverflowEvent(UA_Server *server, UA_Notification *n) {
     UA_MonitoredItem *mon = n->mon;
-    if(mon->monitoredItemType != UA_MONITOREDITEMTYPE_EVENTNOTIFY)
+    if(mon->attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER)
         return false;
 
     UA_EventFieldList *efl = &n->data.event.fields;
-    if(efl->eventFieldsSize == 1 &&
+    if(efl->eventFieldsSize >= 1 &&
        efl->eventFields[0].type == &UA_TYPES[UA_TYPES_NODEID] &&
        isNodeInTree(server->nsCtx, (const UA_NodeId *)efl->eventFields[0].data,
                     &overflowEventType, &subtypeId, 1)) {
@@ -46442,21 +47871,34 @@ UA_Notification_isOverflowEvent(UA_Server *server, UA_Notification *n) {
     return false;
 }
 
-static UA_Notification *
-createEventOverflowNotification(UA_MonitoredItem *mon) {
-    UA_Notification *overflowNotification = (UA_Notification *) UA_malloc(sizeof(UA_Notification));
-    if(!overflowNotification)
-        return NULL;
+/* The specification states in Part 4 5.12.1.5 that an EventQueueOverflowEvent
+ * "is generated when the first Event has to be discarded [...] without
+ * discarding any other event". So only generate one for all deleted events. */
+static UA_StatusCode
+createEventOverflowNotification(UA_Server *server, UA_Subscription *sub,
+                                UA_MonitoredItem *mon, UA_Notification *indicator) {
+    /* Avoid two redundant overflow events in a row */
+    if(UA_Notification_isOverflowEvent(server, indicator))
+        return UA_STATUSCODE_GOOD;
 
+    /* A notification is inserted into the queue which includes only the
+     * NodeId of the overflowEventType. It is up to the client to check for
+     * possible overflows. */
+
+    /* Allocate the notification */
+    UA_Notification *overflowNotification = (UA_Notification *)
+        UA_malloc(sizeof(UA_Notification));
+    if(!overflowNotification)
+        return UA_STATUSCODE_BADOUTOFMEMORY;;
+
+    /* Set the notification fields */
     overflowNotification->mon = mon;
     UA_EventFieldList_init(&overflowNotification->data.event.fields);
     overflowNotification->data.event.fields.eventFields = UA_Variant_new();
     if(!overflowNotification->data.event.fields.eventFields) {
-        UA_EventFieldList_deleteMembers(&overflowNotification->data.event.fields);
         UA_free(overflowNotification);
-        return NULL;
+        return UA_STATUSCODE_BADOUTOFMEMORY;;
     }
-
     overflowNotification->data.event.fields.eventFieldsSize = 1;
     UA_StatusCode retval =
         UA_Variant_setScalarCopy(overflowNotification->data.event.fields.eventFields,
@@ -46464,10 +47906,19 @@ createEventOverflowNotification(UA_MonitoredItem *mon) {
     if(retval != UA_STATUSCODE_GOOD) {
         UA_EventFieldList_deleteMembers(&overflowNotification->data.event.fields);
         UA_free(overflowNotification);
-        return NULL;
+        return retval;
     }
 
-    return overflowNotification;
+    /* Insert before the "indicator notification". This is either first in
+     * the queue (if the oldest notification was removed) or before the new
+     * event that remains the last element of the queue. */
+    TAILQ_INSERT_BEFORE(indicator, overflowNotification, listEntry);
+    TAILQ_INSERT_BEFORE(indicator, overflowNotification, globalEntry);
+    ++mon->eventOverflows;
+    ++mon->queueSize;
+    ++sub->notificationQueueSize;
+    ++sub->eventNotifications;
+    return UA_STATUSCODE_GOOD;
 }
 
 #endif
@@ -46483,16 +47934,15 @@ UA_Notification_enqueue(UA_Server *server, UA_Subscription *sub,
     TAILQ_INSERT_TAIL(&sub->notificationQueue, n, globalEntry);
     ++sub->notificationQueueSize;
 
-    if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        ++sub->dataChangeNotifications;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
         ++sub->eventNotifications;
         if(UA_Notification_isOverflowEvent(server, n))
             ++mon->eventOverflows;
+    } else
 #endif
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_STATUSNOTIFY) {
-        ++sub->statusChangeNotifications;
+    {
+        ++sub->dataChangeNotifications;
     }
 
     /* Ensure enough space is available in the MonitoredItem. Do this only after
@@ -46505,16 +47955,15 @@ UA_Notification_dequeue(UA_Server *server, UA_Notification *n) {
     UA_MonitoredItem *mon = n->mon;
     UA_Subscription *sub = mon->subscription;
 
-    if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        --sub->dataChangeNotifications;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
         --sub->eventNotifications;
         if(UA_Notification_isOverflowEvent(server, n))
             --mon->eventOverflows;
+    } else
 #endif
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_STATUSNOTIFY) {
-        --sub->statusChangeNotifications;
+    {
+        --sub->dataChangeNotifications;
     }
 
     TAILQ_REMOVE(&mon->queue, n, listEntry);
@@ -46526,20 +47975,17 @@ UA_Notification_dequeue(UA_Server *server, UA_Notification *n) {
 
 void
 UA_Notification_delete(UA_Notification *n) {
-    UA_MonitoredItem *mon = n->mon;
-
-    if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        UA_DataValue_deleteMembers(&n->data.value);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+    UA_MonitoredItem *mon = n->mon;
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
         UA_EventFieldList_deleteMembers(&n->data.event.fields);
         /* EventFilterResult currently isn't being used
          * UA_EventFilterResult_delete(notification->data.event->result); */
+    } else
 #endif
-    } else if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_STATUSNOTIFY) {
-        /* Nothing to do */
+    {
+        UA_DataValue_deleteMembers(&n->data.value);
     }
-
     UA_free(n);
 }
 
@@ -46556,15 +48002,8 @@ UA_MonitoredItem_init(UA_MonitoredItem *mon, UA_Subscription *sub) {
 
 void
 UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
-    if(monitoredItem->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        /* Remove the sampling callback */
-        UA_MonitoredItem_unregisterSampleCallback(server, monitoredItem);
-    } else if (monitoredItem->monitoredItemType != UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
-        /* TODO: Access val data.event */
-        UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                     "MonitoredItemTypes other than ChangeNotify or EventNotify "
-                     "are not supported yet");
-    }
+    /* Remove the sampling callback */
+    UA_MonitoredItem_unregisterSampleCallback(server, monitoredItem);
 
     /* Remove the queued notifications if attached to a subscription (not a
      * local MonitoredItem) */
@@ -46578,18 +48017,18 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
         }
     }
 
-    /* if(monitoredItem->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY)
-     * -> UA_DataChangeFilter does not hold dynamic content we need to free */
-
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    if(monitoredItem->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
+    if(monitoredItem->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
         /* Remove the monitored item from the node queue */
         UA_Server_editNode(server, NULL, &monitoredItem->monitoredNodeId,
                            UA_MonitoredItem_removeNodeEventCallback, monitoredItem);
-        /* Delete the event filter */
-        UA_EventFilter_deleteMembers(&monitoredItem->filter.eventFilter);
+        UA_EventFilter_clear(&monitoredItem->filter.eventFilter);
+    } else
+#endif
+    {
+        /* UA_DataChangeFilter does not hold dynamic content we need to free */
+        /* UA_DataChangeFilter_clear(&monitoredItem->filter.dataChangeFilter); */
     }
-#endif /* UA_ENABLE_SUBSCRIPTIONS_EVENTS */
 
     /* Deregister MonitoredItem in userland */
     if(server->config.monitoredItemRegisterCallback && monitoredItem->registered) {
@@ -46606,7 +48045,8 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
 
         /* Deregister */
         server->config.monitoredItemRegisterCallback(server, &session->sessionId,
-                                                     session->sessionHandle, &monitoredItem->monitoredNodeId,
+                                                     session->sessionHandle,
+                                                     &monitoredItem->monitoredNodeId,
                                                      targetContext, monitoredItem->attributeId, true);
     }
 
@@ -46623,70 +48063,58 @@ UA_MonitoredItem_delete(UA_Server *server, UA_MonitoredItem *monitoredItem) {
     UA_WorkQueue_enqueueDelayed(&server->workQueue, &monitoredItem->delayedFreePointers);
 }
 
-#ifdef __clang_analyzer__
-# define UA_CA_assert(clause) UA_assert(clause)
-#else
-# define UA_CA_assert(clause)
-#endif
-
 UA_StatusCode
 UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon) {
+    /* Assert: The eventoverflow are counted in the queue size; There can be
+     * only one eventoverflow more than normal entries */
+    UA_assert(mon->queueSize >= mon->eventOverflows);
+    UA_assert(mon->eventOverflows <= mon->queueSize - mon->eventOverflows + 1);
+
+    /* Nothing to do */
     if(mon->queueSize - mon->eventOverflows <= mon->maxQueueSize)
         return UA_STATUSCODE_GOOD;
 
+#ifdef __clang_analyzer__
+    return UA_STATUSCODE_GOOD;
+#endif
+    
     /* Remove notifications until the queue size is reached */
     UA_Subscription *sub = mon->subscription;
-#ifdef __clang_analyzer__
-    UA_Notification *last = NULL;
-#endif
-
     while(mon->queueSize - mon->eventOverflows > mon->maxQueueSize) {
         /* At least two notifications that are not eventOverflows in the queue */
         UA_assert(mon->queueSize - mon->eventOverflows >= 2);
 
         /* Select the next notification to delete. Skip over overflow events. */
-        UA_Notification *del;
+        UA_Notification *del = NULL;
         if(mon->discardOldest) {
             /* Remove the oldest */
             del = TAILQ_FIRST(&mon->queue);
-            UA_CA_assert(del != last);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-            while(UA_Notification_isOverflowEvent(server, del)) {
+            while(UA_Notification_isOverflowEvent(server, del))
                 del = TAILQ_NEXT(del, listEntry); /* skip overflow events */
-                UA_CA_assert(del != last);
-            }
 #endif
         } else {
-            /* Remove the second newest (to keep the up-to-date notification) */
+            /* Remove the second newest (to keep the up-to-date notification).
+             * The last entry is not an OverflowEvent -- we just added it. */
             del = TAILQ_LAST(&mon->queue, NotificationQueue);
             del = TAILQ_PREV(del, NotificationQueue, listEntry);
-            UA_CA_assert(del != last);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-            while(UA_Notification_isOverflowEvent(server, del)) {
+            while(UA_Notification_isOverflowEvent(server, del))
                 del = TAILQ_PREV(del, NotificationQueue, listEntry); /* skip overflow events */
-                UA_CA_assert(del != last);
-            }
 #endif
         }
 
-        // NOLINTNEXTLINE
-        UA_assert(del && del->mon == mon);
+        UA_assert(del); /* There must have been one entry that can be deleted */
 
-        /* Move after_del right after del in the global queue. (It is already
-         * right after del in the per-MonitoredItem queue.) This is required so
-         * we don't starve MonitoredItems with a high sampling interval by
-         * always removing their first appearance in the gloal queue for the
-         * Subscription. */
+        /* Move the entry after del in the per-MonitoredItem queue right after
+         * del in the global queue. (It is already right after del in the
+         * per-MonitoredItem queue.) This is required so we don't starve
+         * MonitoredItems with a high sampling interval by always removing their
+         * first appearance in the gloal queue for the Subscription. */
         UA_Notification *after_del = TAILQ_NEXT(del, listEntry);
-        UA_CA_assert(after_del != last);
-        if(after_del) {
-            TAILQ_REMOVE(&sub->notificationQueue, after_del, globalEntry);
-            TAILQ_INSERT_AFTER(&sub->notificationQueue, del, after_del, globalEntry);
-        }
-
-#ifdef __clang_analyzer__
-        last = del;
-#endif
+        UA_assert(after_del); /* There must be one remaining element after del */
+        TAILQ_REMOVE(&sub->notificationQueue, after_del, globalEntry);
+        TAILQ_INSERT_AFTER(&sub->notificationQueue, del, after_del, globalEntry);
 
         /* Delete the notification */
         UA_Notification_dequeue(server, del);
@@ -46701,57 +48129,22 @@ UA_MonitoredItem_ensureQueueSpace(UA_Server *server, UA_MonitoredItem *mon) {
     else
         indicator = TAILQ_LAST(&mon->queue, NotificationQueue);
     UA_assert(indicator);
-    UA_CA_assert(indicator != last);
 
     /* Create an overflow notification */
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    /* The specification states in Part 4 5.12.1.5 that an EventQueueOverflowEvent
-     * "is generated when the first Event has to be discarded [...] without discarding
-     * any other event". So only generate one for all deleted events. */
-    if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_EVENTNOTIFY) {
-        /* Avoid two redundant overflow events in a row */
-        if(UA_Notification_isOverflowEvent(server, indicator)) {
-            if(mon->discardOldest)
-                return UA_STATUSCODE_GOOD;
-            UA_Notification *prev = TAILQ_PREV(indicator, NotificationQueue, listEntry);
-            UA_CA_assert(prev != last);
-            if(prev && UA_Notification_isOverflowEvent(server, prev))
-                return UA_STATUSCODE_GOOD;
-        }
-
-        /* A notification is inserted into the queue which includes only the
-         * NodeId of the overflowEventType. It is up to the client to check for
-         * possible overflows. */
-        UA_Notification *overflowNotification = createEventOverflowNotification(mon);
-        if(!overflowNotification)
-            return UA_STATUSCODE_BADOUTOFMEMORY;
-
-        /* Insert before the "indicator notification". This is either first in
-         * the queue (if the oldest notification was removed) or before the new
-         * event that remains the last element of the queue. */
-        TAILQ_INSERT_BEFORE(indicator, overflowNotification, listEntry);
-        TAILQ_INSERT_BEFORE(indicator, overflowNotification, globalEntry);
-        ++mon->eventOverflows;
-        ++mon->queueSize;
-        ++sub->notificationQueueSize;
-        ++sub->eventNotifications;
-    }
-#endif /* UA_ENABLE_SUBSCRIPTIONS_EVENTS */
-
-    /* Set the infobits of a datachange notification */
-    if(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        /* Set the infobits */
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER) {
+        return createEventOverflowNotification(server, sub, mon, indicator);
+    } else
+#endif
+    {
+        /* Set the infobits of a datachange notification */
         if(mon->maxQueueSize > 1) {
             /* Add the infobits either to the newest or the new last entry */
-            indicator->data.value.hasStatus = true;  // NOLINT
-            indicator->data.value.status |= (UA_STATUSCODE_INFOTYPE_DATAVALUE | UA_STATUSCODE_INFOBITS_OVERFLOW);
-        } else {
-            /* If the queue size is reduced to one, remove the infobits */
-            indicator->data.value.status &=  // NOLINT
-                ~(UA_StatusCode)(UA_STATUSCODE_INFOTYPE_DATAVALUE | UA_STATUSCODE_INFOBITS_OVERFLOW);  // NOLINT
+            indicator->data.value.hasStatus = true;
+            indicator->data.value.status |=
+                (UA_STATUSCODE_INFOTYPE_DATAVALUE | UA_STATUSCODE_INFOBITS_OVERFLOW);
         }
     }
-
     return UA_STATUSCODE_GOOD;
 }
 
@@ -46761,7 +48154,7 @@ UA_MonitoredItem_registerSampleCallback(UA_Server *server, UA_MonitoredItem *mon
         return UA_STATUSCODE_GOOD;
 
     /* Only DataChange MonitoredItems have a callback with a sampling interval */
-    if(mon->monitoredItemType != UA_MONITOREDITEMTYPE_CHANGENOTIFY)
+    if(mon->attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER)
         return UA_STATUSCODE_GOOD;
 
     UA_StatusCode retval =
@@ -47079,7 +48472,7 @@ static UA_StatusCode
 sampleCallbackWithValue(UA_Server *server, UA_Session *session,
                         UA_Subscription *sub, UA_MonitoredItem *mon,
                         UA_DataValue *value, UA_Boolean *movedValue) {
-    UA_assert(mon->monitoredItemType == UA_MONITOREDITEMTYPE_CHANGENOTIFY);
+    UA_assert(mon->attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER);
 
     /* Contains heap-allocated binary encoding of the value if a change was detected */
     UA_ByteString binValueEncoding = UA_BYTESTRING_NULL;
@@ -47184,12 +48577,7 @@ UA_MonitoredItem_sampleCallback(UA_Server *server, UA_MonitoredItem *monitoredIt
                          "MonitoredItem %i | Sample callback called",
                          sub ? sub->subscriptionId : 0, monitoredItem->monitoredItemId);
 
-    if(monitoredItem->monitoredItemType != UA_MONITOREDITEMTYPE_CHANGENOTIFY) {
-        UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Subscription %u | "
-                             "MonitoredItem %i | Not a data change notification",
-                             sub ? sub->subscriptionId : 0, monitoredItem->monitoredItemId);
-        return;
-    }
+    UA_assert(monitoredItem->attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER);
 
     /* Get the node */
     const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &monitoredItem->monitoredNodeId);
@@ -47506,6 +48894,8 @@ static void deleteMembers_default(UA_AccessControl *ac) {
     UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
                     ac->userTokenPoliciesSize,
                     &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+    ac->userTokenPolicies = NULL;
+    ac->userTokenPoliciesSize = 0;
 
     AccessControlContext *context = (AccessControlContext*)ac->context;
 
@@ -47607,6 +48997,7 @@ UA_AccessControl_default(UA_AccessControl *ac,
  * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
  *
  *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -47683,6 +49074,18 @@ certificateVerification_verify(void *verificationContext,
                                                    &crtProfile, NULL, &flags, NULL, NULL);
 
     // TODO: Extend verification
+
+    /* This condition will check whether the certificate is a User certificate
+     * or a CA certificate. If the MBEDTLS_X509_KU_KEY_CERT_SIGN and
+     * MBEDTLS_X509_KU_CRL_SIGN of key_usage are set, then the certificate
+     * shall be condidered as CA Certificate and cannot be used to establish a
+     * connection. Refer the test case CTT/Security/Security Certificate Validation/029.js
+     * for more details */
+    if((remoteCertificate.key_usage & MBEDTLS_X509_KU_KEY_CERT_SIGN) &&
+       (remoteCertificate.key_usage & MBEDTLS_X509_KU_CRL_SIGN)) {
+        return UA_STATUSCODE_BADCERTIFICATEUSENOTALLOWED;
+    }
+
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     if(mbedErr) {
         /* char buff[100]; */
@@ -47880,69 +49283,15 @@ static enum ZIP_CMP
 cmpNodeId(const void *a, const void *b) {
     const NodeEntry *aa = (const NodeEntry*)a;
     const NodeEntry *bb = (const NodeEntry*)b;
+
     /* Compare hash */
     if(aa->nodeIdHash < bb->nodeIdHash)
         return ZIP_CMP_LESS;
     if(aa->nodeIdHash > bb->nodeIdHash)
         return ZIP_CMP_MORE;
 
-    if(UA_NodeId_equal(&aa->nodeId, &bb->nodeId))
-        return ZIP_CMP_EQ;
-
-    /* Compare namespaceIndex */
-    if(aa->nodeId.namespaceIndex < bb->nodeId.namespaceIndex)
-        return ZIP_CMP_LESS;
-    if(aa->nodeId.namespaceIndex > bb->nodeId.namespaceIndex)
-        return ZIP_CMP_MORE;
-
-    /* Compare identifierType */
-    if(aa->nodeId.identifierType < bb->nodeId.identifierType)
-        return ZIP_CMP_LESS;
-    if(aa->nodeId.identifierType > bb->nodeId.identifierType)
-        return ZIP_CMP_MORE;
-
-    /* Compare the identifier */
-    switch(aa->nodeId.identifierType) {
-    case UA_NODEIDTYPE_NUMERIC:
-        if(aa->nodeId.identifier.numeric < bb->nodeId.identifier.numeric)
-            return ZIP_CMP_LESS;
-        if(aa->nodeId.identifier.numeric > bb->nodeId.identifier.numeric)
-            return ZIP_CMP_MORE;
-        break;
-    case UA_NODEIDTYPE_GUID:
-        if(aa->nodeId.identifier.guid.data1 < bb->nodeId.identifier.guid.data1 ||
-           aa->nodeId.identifier.guid.data2 < bb->nodeId.identifier.guid.data2 ||
-           aa->nodeId.identifier.guid.data3 < bb->nodeId.identifier.guid.data3 ||
-           strncmp((const char*)aa->nodeId.identifier.guid.data4,
-                   (const char*)bb->nodeId.identifier.guid.data4, 8) < 0)
-            return ZIP_CMP_LESS;
-        if(aa->nodeId.identifier.guid.data1 > bb->nodeId.identifier.guid.data1 ||
-           aa->nodeId.identifier.guid.data2 > bb->nodeId.identifier.guid.data2 ||
-           aa->nodeId.identifier.guid.data3 > bb->nodeId.identifier.guid.data3 ||
-           strncmp((const char*)aa->nodeId.identifier.guid.data4,
-                   (const char*)bb->nodeId.identifier.guid.data4, 8) > 0)
-            return ZIP_CMP_MORE;
-        break;
-    case UA_NODEIDTYPE_STRING:
-    case UA_NODEIDTYPE_BYTESTRING: {
-        if(aa->nodeId.identifier.string.length < bb->nodeId.identifier.string.length)
-            return ZIP_CMP_LESS;
-        if(aa->nodeId.identifier.string.length > bb->nodeId.identifier.string.length)
-            return ZIP_CMP_MORE;
-        int cmp = strncmp((const char*)aa->nodeId.identifier.string.data,
-                          (const char*)bb->nodeId.identifier.string.data,
-                          aa->nodeId.identifier.string.length);
-        if(cmp < 0)
-            return ZIP_CMP_LESS;
-        if(cmp > 0)
-            return ZIP_CMP_MORE;
-        break;
-    }
-    default:
-        break;
-    }
-
-    return ZIP_CMP_EQ;
+    /* Compore nodes in detail */
+    return (enum ZIP_CMP)UA_NodeId_order(&aa->nodeId, &bb->nodeId);
 }
 
 ZIP_HEAD(NodeTree, NodeEntry);
@@ -48233,6 +49582,9 @@ UA_Nodestore_new(void **nsCtx) {
 
 void
 UA_Nodestore_delete(void *nsCtx) {
+    if (!nsCtx)
+        return;
+
     NodeMap *ns = (NodeMap*)nsCtx;
 #ifdef UA_ENABLE_MULTITHREADING
     pthread_mutex_destroy(&ns->mutex);
@@ -48255,6 +49607,7 @@ UA_Nodestore_delete(void *nsCtx) {
  *    Copyright 2017 (c) Thomas Stalder, Blue Time Concept SA
  *    Copyright 2018 (c) Daniel Feist, Precitec GmbH & Co. KG
  *    Copyright 2018 (c) Fabian Arndt, Root-Core
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
  */
 
 
@@ -48310,6 +49663,9 @@ createEndpoint(UA_ServerConfig *conf, UA_EndpointDescription *endpoint,
     endpoint->transportProfileUri =
         UA_STRING_ALLOC("http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary");
 
+    /* Add security level value for the corresponding message security mode */
+    endpoint->securityLevel = (UA_Byte) securityMode;
+
     /* Enable all login mechanisms from the access control plugin  */
     UA_StatusCode retval = UA_Array_copy(conf->accessControl.userTokenPolicies,
                                          conf->accessControl.userTokenPoliciesSize,
@@ -48334,6 +49690,9 @@ static UA_UsernamePasswordLogin usernamePasswords[2] = {
 
 static UA_StatusCode
 setDefaultConfig(UA_ServerConfig *conf) {
+    if (!conf)
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+
     /* Zero out.. All members have a valid initial value */
     UA_ServerConfig_clean(conf);
     memset(conf, 0, sizeof(UA_ServerConfig));
@@ -48366,10 +49725,8 @@ setDefaultConfig(UA_ServerConfig *conf) {
     /* conf->applicationDescription.discoveryUrlsSize = 0; */
     /* conf->applicationDescription.discoveryUrls = NULL; */
 
-#ifdef UA_ENABLE_DISCOVERY
-    /* conf->mdnsServerName = UA_STRING_NULL; */
-    /* conf->serverCapabilitiesSize = 0; */
-    /* conf->serverCapabilities = NULL; */
+#ifdef UA_ENABLE_DISCOVERY_MULTICAST
+    UA_MdnsDiscoveryConfiguration_init(&conf->discovery.mdns);
 #endif
 
     /* Custom DataTypes */
@@ -48427,7 +49784,7 @@ setDefaultConfig(UA_ServerConfig *conf) {
     conf->queueSizeLimits = UA_UINT32RANGE(1, 100);
 
 #ifdef UA_ENABLE_DISCOVERY
-    conf->discoveryCleanupTimeout = 60 * 60;
+    conf->discovery.cleanupTimeout = 60 * 60;
 #endif
 
 #ifdef UA_ENABLE_HISTORIZING
@@ -48457,14 +49814,26 @@ setDefaultConfig(UA_ServerConfig *conf) {
     return UA_STATUSCODE_GOOD;
 }
 
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_setBasics(UA_ServerConfig* conf) {
+    return setDefaultConfig(conf);
+}
+
 static UA_StatusCode
 addDefaultNetworkLayers(UA_ServerConfig *conf, UA_UInt16 portNumber,
                         UA_UInt32 sendBufferSize, UA_UInt32 recvBufferSize) {
+    return UA_ServerConfig_addNetworkLayerTCP(conf, portNumber, sendBufferSize, recvBufferSize);
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addNetworkLayerTCP(UA_ServerConfig *conf, UA_UInt16 portNumber,
+                                   UA_UInt32 sendBufferSize, UA_UInt32 recvBufferSize) {
     /* Add a network layer */
-    conf->networkLayers = (UA_ServerNetworkLayer *)
-        UA_malloc(sizeof(UA_ServerNetworkLayer));
-    if(!conf->networkLayers)
+    UA_ServerNetworkLayer *tmp = (UA_ServerNetworkLayer *)
+        UA_realloc(conf->networkLayers, sizeof(UA_ServerNetworkLayer) * (1 + conf->networkLayersSize));
+    if(!tmp)
         return UA_STATUSCODE_BADOUTOFMEMORY;
+    conf->networkLayers = tmp;
 
     UA_ConnectionConfig config = UA_ConnectionConfig_default;
     if (sendBufferSize > 0)
@@ -48472,11 +49841,109 @@ addDefaultNetworkLayers(UA_ServerConfig *conf, UA_UInt16 portNumber,
     if (recvBufferSize > 0)
         config.recvBufferSize = recvBufferSize;
 
-    conf->networkLayers[0] =
+    conf->networkLayers[conf->networkLayersSize] =
         UA_ServerNetworkLayerTCP(config, portNumber, &conf->logger);
-    if (!conf->networkLayers[0].handle)
+    if (!conf->networkLayers[conf->networkLayersSize].handle)
         return UA_STATUSCODE_BADOUTOFMEMORY;
-    conf->networkLayersSize = 1;
+    conf->networkLayersSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyNone(UA_ServerConfig *config, 
+                                      const UA_ByteString *certificate) {
+    UA_StatusCode retval;
+
+    /* Allocate the SecurityPolicies */
+    UA_SecurityPolicy *tmp = (UA_SecurityPolicy *)
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * (1 + config->securityPoliciesSize));
+    if(!tmp)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    config->securityPolicies = tmp;
+    
+    /* Populate the SecurityPolicies */
+    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
+    if(certificate)
+        localCertificate = *certificate;
+    retval = UA_SecurityPolicy_None(&config->securityPolicies[config->securityPoliciesSize], NULL,
+                                    localCertificate, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addEndpoint(UA_ServerConfig *config, const UA_String securityPolicyUri, 
+                            UA_MessageSecurityMode securityMode)
+{
+    UA_StatusCode retval;
+
+    /* Allocate the endpoint */
+    UA_EndpointDescription * tmp = (UA_EndpointDescription *)
+        UA_realloc(config->endpoints, sizeof(UA_EndpointDescription) * (1 + config->endpointsSize));
+    if(!tmp) {
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
+    config->endpoints = tmp;
+
+    /* Lookup the security policy */
+    const UA_SecurityPolicy *policy = NULL;
+    for (size_t i = 0; i < config->securityPoliciesSize; ++i) {
+        if (UA_String_equal(&securityPolicyUri, &config->securityPolicies[i].policyUri)) {
+            policy = &config->securityPolicies[i];
+            break;
+        }
+    }
+    if (!policy)
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+
+    /* Populate the endpoint */
+    retval = createEndpoint(config, &config->endpoints[config->endpointsSize],
+                            policy, securityMode);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->endpointsSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addAllEndpoints(UA_ServerConfig *config) {
+    UA_StatusCode retval;
+
+    /* Allocate the endpoints */
+    UA_EndpointDescription * tmp = (UA_EndpointDescription *)
+        UA_realloc(config->endpoints, sizeof(UA_EndpointDescription) * (2 * config->securityPoliciesSize + config->endpointsSize));
+    if(!tmp) {
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    }
+    config->endpoints = tmp;
+
+    /* Populate the endpoints */
+    for (size_t i = 0; i < config->securityPoliciesSize; ++i) {
+        if (UA_String_equal(&UA_SECURITY_POLICY_NONE_URI, &config->securityPolicies[i].policyUri)) {
+            retval = createEndpoint(config, &config->endpoints[config->endpointsSize],
+                                    &config->securityPolicies[i], UA_MESSAGESECURITYMODE_NONE);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+            config->endpointsSize++;
+        } else {
+            retval = createEndpoint(config, &config->endpoints[config->endpointsSize],
+                                    &config->securityPolicies[i], UA_MESSAGESECURITYMODE_SIGN);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+            config->endpointsSize++;
+
+            retval = createEndpoint(config, &config->endpoints[config->endpointsSize],
+                                    &config->securityPolicies[i], UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
+            if(retval != UA_STATUSCODE_GOOD)
+                return retval;
+            config->endpointsSize++;
+        }
+    }
 
     return UA_STATUSCODE_GOOD;
 }
@@ -48486,6 +49953,9 @@ UA_ServerConfig_setMinimalCustomBuffer(UA_ServerConfig *config, UA_UInt16 portNu
                                        const UA_ByteString *certificate,
                                        UA_UInt32 sendBufferSize,
                                        UA_UInt32 recvBufferSize) {
+    if (!config)
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+
     UA_StatusCode retval = setDefaultConfig(config);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(config);
@@ -48499,37 +49969,14 @@ UA_ServerConfig_setMinimalCustomBuffer(UA_ServerConfig *config, UA_UInt16 portNu
     }
 
     /* Allocate the SecurityPolicies */
-    config->securityPolicies = (UA_SecurityPolicy *)UA_malloc(sizeof(UA_SecurityPolicy));
-    if(!config->securityPolicies) {
-        UA_ServerConfig_clean(config);
-        return retval;
-    }
-    config->securityPoliciesSize = 1;
-
-    /* Populate the SecurityPolicies */
-    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
-    if(certificate)
-        localCertificate = *certificate;
-    retval = UA_SecurityPolicy_None(&config->securityPolicies[0], NULL,
-                                    localCertificate, &config->logger);
+    retval = UA_ServerConfig_addSecurityPolicyNone(config, certificate);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(config);
         return retval;
     }
 
     /* Allocate the endpoint */
-    config->endpoints = (UA_EndpointDescription *)
-        UA_malloc(sizeof(UA_EndpointDescription));
-    if(!config->endpoints) {
-        UA_ServerConfig_clean(config);
-        return retval;
-    }
-    config->endpointsSize = 1;
-
-    /* Populate the endpoint */
-    retval = createEndpoint(config, &config->endpoints[0],
-                            &config->securityPolicies[0],
-                            UA_MESSAGESECURITYMODE_NONE);
+    retval = UA_ServerConfig_addEndpoint(config, UA_SECURITY_POLICY_NONE_URI, UA_MESSAGESECURITYMODE_NONE);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(config);
         return retval;
@@ -48539,6 +49986,147 @@ UA_ServerConfig_setMinimalCustomBuffer(UA_ServerConfig *config, UA_UInt16 portNu
 }
 
 #ifdef UA_ENABLE_ENCRYPTION
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic128Rsa15(UA_ServerConfig *config, 
+                                               const UA_ByteString *certificate,
+                                               const UA_ByteString *privateKey) {
+    UA_StatusCode retval;
+
+    /* Allocate the SecurityPolicies */
+    UA_SecurityPolicy *tmp = (UA_SecurityPolicy *)
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * (1 + config->securityPoliciesSize));
+    if(!tmp)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    config->securityPolicies = tmp;
+    
+    /* Populate the SecurityPolicies */
+    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
+    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
+    if(certificate)
+        localCertificate = *certificate;
+    if(privateKey)
+       localPrivateKey = *privateKey;
+    retval = UA_SecurityPolicy_Basic128Rsa15(&config->securityPolicies[config->securityPoliciesSize],
+                                             &config->certificateVerification,
+                                             localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic256(UA_ServerConfig *config, 
+                                          const UA_ByteString *certificate,
+                                          const UA_ByteString *privateKey) {
+    UA_StatusCode retval;
+
+    /* Allocate the SecurityPolicies */
+    UA_SecurityPolicy *tmp = (UA_SecurityPolicy *)
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * (1 + config->securityPoliciesSize));
+    if(!tmp)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    config->securityPolicies = tmp;
+    
+    /* Populate the SecurityPolicies */
+    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
+    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
+    if(certificate)
+        localCertificate = *certificate;
+    if(privateKey)
+       localPrivateKey = *privateKey;
+    retval = UA_SecurityPolicy_Basic256(&config->securityPolicies[config->securityPoliciesSize],
+                                        &config->certificateVerification,
+                                        localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addSecurityPolicyBasic256Sha256(UA_ServerConfig *config, 
+                                                const UA_ByteString *certificate,
+                                                const UA_ByteString *privateKey) {
+    UA_StatusCode retval;
+
+    /* Allocate the SecurityPolicies */
+    UA_SecurityPolicy *tmp = (UA_SecurityPolicy *)
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * (1 + config->securityPoliciesSize));
+    if(!tmp)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    config->securityPolicies = tmp;
+    
+    /* Populate the SecurityPolicies */
+    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
+    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
+    if(certificate)
+        localCertificate = *certificate;
+    if(privateKey)
+       localPrivateKey = *privateKey;
+    retval = UA_SecurityPolicy_Basic256Sha256(&config->securityPolicies[config->securityPoliciesSize],
+                                              &config->certificateVerification,
+                                              localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    return UA_STATUSCODE_GOOD;
+}
+
+UA_EXPORT UA_StatusCode
+UA_ServerConfig_addAllSecurityPolicies(UA_ServerConfig *config,
+                                       const UA_ByteString *certificate,
+                                       const UA_ByteString *privateKey) {
+    UA_StatusCode retval;
+
+    /* Allocate the SecurityPolicies */
+    UA_SecurityPolicy *tmp = (UA_SecurityPolicy *)
+        UA_realloc(config->securityPolicies, sizeof(UA_SecurityPolicy) * (4 + config->securityPoliciesSize));
+    if(!tmp)
+        return UA_STATUSCODE_BADOUTOFMEMORY;
+    config->securityPolicies = tmp;
+    
+    /* Populate the SecurityPolicies */
+    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
+    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
+    if(certificate)
+        localCertificate = *certificate;
+    if(privateKey)
+       localPrivateKey = *privateKey;
+
+    retval = UA_SecurityPolicy_None(&config->securityPolicies[config->securityPoliciesSize], NULL,
+                                    localCertificate, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    retval = UA_SecurityPolicy_Basic128Rsa15(&config->securityPolicies[config->securityPoliciesSize],
+                                             &config->certificateVerification,
+                                             localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    retval = UA_SecurityPolicy_Basic256(&config->securityPolicies[config->securityPoliciesSize],
+                                        &config->certificateVerification,
+                                        localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    retval = UA_SecurityPolicy_Basic256Sha256(&config->securityPolicies[config->securityPoliciesSize],
+                                              &config->certificateVerification,
+                                              localCertificate, localPrivateKey, &config->logger);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+    config->securityPoliciesSize++;
+
+    return retval;
+}
 
 UA_EXPORT UA_StatusCode
 UA_ServerConfig_setDefaultWithSecurityPolicies(UA_ServerConfig *conf,
@@ -48558,10 +50146,13 @@ UA_ServerConfig_setDefaultWithSecurityPolicies(UA_ServerConfig *conf,
     retval = UA_CertificateVerification_Trustlist(&conf->certificateVerification,
                                                   trustList, trustListSize,
                                                   revocationList, revocationListSize);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
+    if (retval != UA_STATUSCODE_GOOD)
         return retval;
-    }
+
+    if(trustListSize == 0)
+        UA_LOG_WARNING(&conf->logger, UA_LOGCATEGORY_USERLAND,
+                       "No CA trust-list provided. "
+                       "Any remote certificate will be accepted.");
 
     retval = addDefaultNetworkLayers(conf, portNumber, 0, 0);
     if(retval != UA_STATUSCODE_GOOD) {
@@ -48569,131 +50160,17 @@ UA_ServerConfig_setDefaultWithSecurityPolicies(UA_ServerConfig *conf,
         return retval;
     }
 
-    if(trustListSize == 0)
-        UA_LOG_WARNING(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                       "No CA trust-list provided. "
-                       "Any remote certificate will be accepted.");
-
-    /* Allocate the SecurityPolicies */
-    conf->securityPoliciesSize = 0;
-    conf->securityPolicies = (UA_SecurityPolicy *)
-        UA_malloc(sizeof(UA_SecurityPolicy) * 4);
-    if(!conf->securityPolicies) {
-       UA_ServerConfig_clean(conf);
-       return retval;
-    }
-
-    /* Populate the SecurityPolicies */
-    UA_ByteString localCertificate = UA_BYTESTRING_NULL;
-    UA_ByteString localPrivateKey  = UA_BYTESTRING_NULL;
-    if(certificate)
-        localCertificate = *certificate;
-    if(privateKey)
-       localPrivateKey = *privateKey;
-
-    retval = UA_SecurityPolicy_None(&conf->securityPolicies[0], NULL,
-                                    localCertificate, &conf->logger);
+    retval = UA_ServerConfig_addAllSecurityPolicies(conf, certificate, privateKey);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(conf);
         return retval;
     }
-    ++conf->securityPoliciesSize;
 
-    retval = UA_SecurityPolicy_Basic128Rsa15(&conf->securityPolicies[1],
-                                             &conf->certificateVerification,
-                                             localCertificate, localPrivateKey,
-                                             &conf->logger);
+    retval = UA_ServerConfig_addAllEndpoints(conf);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(conf);
         return retval;
     }
-    ++conf->securityPoliciesSize;
-
-    retval = UA_SecurityPolicy_Basic256(&conf->securityPolicies[2],
-                                        &conf->certificateVerification,
-                                        localCertificate, localPrivateKey,
-                                        &conf->logger);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->securityPoliciesSize;
-
-    retval = UA_SecurityPolicy_Basic256Sha256(&conf->securityPolicies[3],
-                                              &conf->certificateVerification,
-                                              localCertificate, localPrivateKey,
-                                              &conf->logger);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->securityPoliciesSize;
-
-    /* Allocate the endpoints */
-    conf->endpointsSize = 0;
-    conf->endpoints = (UA_EndpointDescription *)
-        UA_malloc(sizeof(UA_EndpointDescription) * 7);
-    if(!conf->endpoints) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-
-    /* Populate the endpoints */
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[0], UA_MESSAGESECURITYMODE_NONE);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[1], UA_MESSAGESECURITYMODE_SIGN);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[1], UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[2], UA_MESSAGESECURITYMODE_SIGN);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[2], UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[3], UA_MESSAGESECURITYMODE_SIGN);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
-
-    retval = createEndpoint(conf, &conf->endpoints[conf->endpointsSize],
-                            &conf->securityPolicies[3], UA_MESSAGESECURITYMODE_SIGNANDENCRYPT);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
-    ++conf->endpointsSize;
 
     return UA_STATUSCODE_GOOD;
 }
@@ -49255,6 +50732,8 @@ mbedtls_decrypt_rsaOaep(mbedtls_pk_context *localPrivateKey,
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
+ *
  */
 
 
@@ -49284,7 +50763,7 @@ mbedtls_decrypt_rsaOaep(mbedtls_pk_context *localPrivateKey,
 #define UA_SECURITYPOLICY_BASIC128RSA15_SYM_ENCRYPTION_BLOCK_SIZE 16
 #define UA_SECURITYPOLICY_BASIC128RSA15_SYM_PLAIN_TEXT_BLOCK_SIZE 16
 #define UA_SECURITYPOLICY_BASIC128RSA15_MINASYMKEYLENGTH 128
-#define UA_SECURITYPOLICY_BASIC128RSA15_MAXASYMKEYLENGTH 256
+#define UA_SECURITYPOLICY_BASIC128RSA15_MAXASYMKEYLENGTH 512
 
 typedef struct {
     const UA_SecurityPolicy *securityPolicy;
@@ -50125,6 +51604,8 @@ UA_SecurityPolicy_Basic128Rsa15(UA_SecurityPolicy *policy,
  *
  *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
  *    Copyright 2018 (c) Daniel Feist, Precitec GmbH & Co. KG
+ *    Copyright 2019 (c) Kalycito Infotech Private Limited
+ *
  */
 
 
@@ -50152,7 +51633,7 @@ UA_SecurityPolicy_Basic128Rsa15(UA_SecurityPolicy *policy,
 #define UA_SECURITYPOLICY_BASIC256_SYM_ENCRYPTION_BLOCK_SIZE 16
 #define UA_SECURITYPOLICY_BASIC256_SYM_PLAIN_TEXT_BLOCK_SIZE 16
 #define UA_SECURITYPOLICY_BASIC256_MINASYMKEYLENGTH 128
-#define UA_SECURITYPOLICY_BASIC256_MAXASYMKEYLENGTH 256
+#define UA_SECURITYPOLICY_BASIC256_MAXASYMKEYLENGTH 512
 
 typedef struct {
     const UA_SecurityPolicy *securityPolicy;
@@ -52119,8 +53600,14 @@ connection_recv(UA_Connection *connection, UA_ByteString *response,
         return UA_STATUSCODE_BADOUTOFMEMORY; /* not enough memory retry */
     }
 
+#ifdef _WIN32
+    // windows requires int parameter for length
+    int offset = (int)connection->incompleteChunk.length;
+    int remaining = connection->config.recvBufferSize - offset;
+#else
     size_t offset = connection->incompleteChunk.length;
     size_t remaining = connection->config.recvBufferSize - offset;
+#endif
 
     /* Get the received packet(s) */
     ssize_t ret = UA_recv(connection->sockfd, (char*)&response->data[offset],
@@ -52318,6 +53805,15 @@ addServerSocket(ServerNetworkLayerTCP *layer, struct addrinfo *ai) {
         return;
     }
 
+    if (layer->port == 0) {
+        /* Port was automatically chosen. Read it from the OS */
+        struct sockaddr_in returned_addr;
+        memset(&returned_addr, 0, sizeof(returned_addr));
+        socklen_t len = sizeof(returned_addr);
+        UA_getsockname(newsock, (struct sockaddr *)&returned_addr, &len);
+        layer->port = ntohs(returned_addr.sin_port);
+    }
+
     layer->serverSockets[layer->serverSocketsSize] = newsock;
     layer->serverSocketsSize++;
 }
@@ -52327,27 +53823,6 @@ ServerNetworkLayerTCP_start(UA_ServerNetworkLayer *nl, const UA_String *customHo
   UA_initialize_architecture_network();
 
     ServerNetworkLayerTCP *layer = (ServerNetworkLayerTCP *)nl->handle;
-
-    /* Get the discovery url from the hostname */
-    UA_String du = UA_STRING_NULL;
-    char discoveryUrlBuffer[256];
-    char hostnameBuffer[256];
-    if (customHostname->length) {
-        du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%.*s:%d/",
-                                     (int)customHostname->length,
-                                     customHostname->data,
-                                     layer->port);
-        du.data = (UA_Byte*)discoveryUrlBuffer;
-    }else{
-        if(UA_gethostname(hostnameBuffer, 255) == 0) {
-            du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%s:%d/",
-                                         hostnameBuffer, layer->port);
-            du.data = (UA_Byte*)discoveryUrlBuffer;
-        } else {
-            UA_LOG_ERROR(layer->logger, UA_LOGCATEGORY_NETWORK, "Could not get the hostname");
-        }
-    }
-    UA_String_copy(&du, &nl->discoveryUrl);
 
     /* Get addrinfo of the server and create server sockets */
     char portno[6];
@@ -52369,6 +53844,27 @@ ServerNetworkLayerTCP_start(UA_ServerNetworkLayer *nl, const UA_String *customHo
         ai = ai->ai_next)
         addServerSocket(layer, ai);
     UA_freeaddrinfo(res);
+
+    /* Get the discovery url from the hostname */
+    UA_String du = UA_STRING_NULL;
+    char discoveryUrlBuffer[256];
+    char hostnameBuffer[256];
+    if (customHostname->length) {
+        du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%.*s:%d/",
+                                        (int)customHostname->length,
+                                        customHostname->data,
+                                        layer->port);
+        du.data = (UA_Byte*)discoveryUrlBuffer;
+    }else{
+        if(UA_gethostname(hostnameBuffer, 255) == 0) {
+            du.length = (size_t)UA_snprintf(discoveryUrlBuffer, 255, "opc.tcp://%s:%d/",
+                                            hostnameBuffer, layer->port);
+            du.data = (UA_Byte*)discoveryUrlBuffer;
+        } else {
+            UA_LOG_ERROR(layer->logger, UA_LOGCATEGORY_NETWORK, "Could not get the hostname");
+        }
+    }
+    UA_String_copy(&du, &nl->discoveryUrl);
 
     UA_LOG_INFO(layer->logger, UA_LOGCATEGORY_NETWORK,
                 "TCP network layer listening on %.*s",
@@ -52652,9 +54148,8 @@ UA_StatusCode UA_ClientConnectionTCP_poll(UA_Client *client, void *data) {
     if (error == -1 && (UA_ERRNO == UA_ERR_CONNECTION_PROGRESS)) {
         /* connection in progress. Wait until connected using select */
 
-        UA_UInt32 timeSinceStart =
-                        (UA_UInt32) ((UA_Double) (UA_DateTime_nowMonotonic() - connStart)
-                                        * UA_DATETIME_MSEC);
+        UA_UInt32 timeSinceStart = (UA_UInt32)
+            ((UA_Double) (UA_DateTime_nowMonotonic() - connStart) / UA_DATETIME_MSEC);
 #ifdef _OS9000
         /* OS-9 can't use select for checking write sockets.
          * Therefore, we need to use connect until success or failed

@@ -286,11 +286,6 @@ private:
 		                                        const UA_NodeId  *objectId, 
 		                                        void             *objectContext);
 
-	static void writeBuildInfo(UA_Server         *server, 
-		                       const UA_NodeId    nodeId, 
-		                       void * UA_RESTRICT pField, 
-		                       void * UA_RESTRICT pBuild);
-
 	// NOTE : temporary values needed to instantiate node, used to simplify user API
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newNodeNodeId;

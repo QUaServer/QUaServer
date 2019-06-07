@@ -873,7 +873,7 @@ cp ca/ca.der.crl $SOME_PATH/unifiedautomation/uaexpert/PKI/trusted/crl/ca.der.cr
 Now the *server certificate* must be copied next to the *QUaServer* application:
 
 ```bash
-cp server/server.key.der $SERVER_PATH/server.key.der
+cp server/server.crt.der $SERVER_PATH/server.crt.der
 ```
 
 And in the C++ code the server's certificate contents need to be passed to the `QUaServer` constructor:
