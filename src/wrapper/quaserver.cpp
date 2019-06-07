@@ -637,6 +637,7 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 	                 QObject          *parent         /* = 0*/) 
 	: QObject(parent)
 {
+	m_port = intPort;
 	// convert cert if valid
 	UA_ByteString cert;
 	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
@@ -653,6 +654,7 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	                 QObject          * parent         /* = 0*/)
 	: QObject(parent)
 {
+	m_port = intPort;
 	this->m_server = UA_Server_new();
 	// convert cert if valid (should contain public key)
 	UA_ByteString cert;
@@ -811,6 +813,11 @@ QUaServer::~QUaServer()
 	}
 	// Cleanup library objects
 	UA_Server_delete(this->m_server);
+}
+
+quint16 QUaServer::port() const
+{
+	return m_port;
 }
 
 QString QUaServer::applicationName() const
@@ -980,7 +987,38 @@ void QUaServer::start()
 	// start iterations
 	// NOTE : using a 1ms delay seems to have the best trade-off (so far) between
 	//        not blocking Qt's event loop, OPC server's resposiveness, and not overloading the CPU.
+	//        I made some tests changing the system's local time on winows and QTimer does not
+	//        seem affected by it at least in Qt 5.12, don't know if using QTimer for this
+	//        will come back bite me in the ass some time later.
 	m_iterWaitTimer.start(1);
+}
+
+// NOTE : copied from open62541 to help resolve QUaServer::stop/start issue
+static UA_StatusCode addDefaultNetworkLayers(
+	UA_ServerConfig *conf, 
+	UA_UInt16 portNumber,
+	UA_UInt32 sendBufferSize, 
+	UA_UInt32 recvBufferSize) 
+{
+	/* Add a network layer */
+	conf->networkLayers = (UA_ServerNetworkLayer *)
+		UA_malloc(sizeof(UA_ServerNetworkLayer));
+	if (!conf->networkLayers)
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+
+	UA_ConnectionConfig config = UA_ConnectionConfig_default;
+	if (sendBufferSize > 0)
+		config.sendBufferSize = sendBufferSize;
+	if (recvBufferSize > 0)
+		config.recvBufferSize = recvBufferSize;
+
+	conf->networkLayers[0] =
+		UA_ServerNetworkLayerTCP(config, portNumber, &conf->logger);
+	if (!conf->networkLayers[0].handle)
+		return UA_STATUSCODE_BADOUTOFMEMORY;
+	conf->networkLayersSize = 1;
+
+	return UA_STATUSCODE_GOOD;
 }
 
 void QUaServer::stop()
@@ -989,6 +1027,21 @@ void QUaServer::stop()
 	m_iterWaitTimer.stop();
 	m_iterWaitTimer.disconnect();
 	UA_Server_run_shutdown(m_server);
+	// NOTE : there is a bug in open62541, if server is shutdown while a client still connected
+	//        then after starting server again, clients cannot connect to it anymore.
+	//        the issue seems to be in *ServerNetworkLayerTCP_listen*, where the server gets
+	//        stucked in the "Socket select failed with %s" error.
+	//        the code below helps, but sometimes crashes when calling UA_Server_delete (i.e. ~QUaServer)
+	// cleanup network layers
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	for (size_t i = 0; i < config->networkLayersSize; ++i) {
+		UA_ServerNetworkLayer *nl = &config->networkLayers[i];
+		nl->deleteMembers(nl);
+	}
+	UA_free(config->networkLayers);
+	// recreate network layers (as in UA_ServerConfig_setMinimalCustomBuffer)
+	auto retval = addDefaultNetworkLayers(config, m_port, 0, 0);
+	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 }
 
 bool QUaServer::isRunning() const

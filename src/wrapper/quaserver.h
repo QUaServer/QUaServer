@@ -41,6 +41,8 @@ public:
 	
 	~QUaServer();
 
+	quint16 port() const;
+
 	// Server Description API
 
 	QString applicationName() const;
@@ -136,6 +138,7 @@ public slots:
 
 private:
 	UA_Server             * m_server;
+	quint16                 m_port;
 	UA_Boolean              m_running;
 	QTimer                  m_iterWaitTimer;
 	QByteArray              m_byteCertificate; // NOTE : needs to exists as long as server instance
