@@ -88,6 +88,7 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	if (newValue.canConvert<QVariantList>())
 	{
 		auto iter = newValue.value<QSequentialIterable>();
+		// TODO : [BUG] what happens if iter size is zero !?
 		auto type = (QMetaType::Type)iter.at(0).type();
 		if (iter.size() > 0)
 		{

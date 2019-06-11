@@ -151,11 +151,6 @@ namespace QUaTypesConverter {
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);
 		}
-		// TODO : ?
-		//else if (std::is_same<T, QVariantList>::value)
-		//{
-		//	return ;
-		//}
 		Q_ASSERT_X(false, "uaTypeNodeIdFromCpp", "Unsupported type");
 		return UA_NodeId();
 	}

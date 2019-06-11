@@ -239,8 +239,6 @@ private:
 
 	static QUaServer * getServerNodeContext(UA_Server * server);
 
-	static UA_StatusCode createEnumValue(const QOpcUaEnumValue * enumVal, UA_ExtensionObject * outExtObj);
-
 	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
 
 	static UA_StatusCode activateSession(UA_Server                    *server, 
@@ -380,6 +378,22 @@ inline void QUaBaseVariable::setDataTypeEnum()
 	this->setDataTypeEnum(QMetaEnum::fromType<T>());
 }
 
+// https://stackoverflow.com/questions/13919234/is-there-a-way-using-c-type-traits-to-check-if-a-type-is-a-template-and-any-pr
+template <typename> 
+struct is_template : std::false_type {};
+
+template <template<typename> typename H, typename S>
+struct is_template<H<S>> : std::true_type {};
+
+template <typename T>
+struct template_traits;
+
+template <template<typename> typename H, typename S>
+struct template_traits<H<S>>
+{
+	using inner_type = S;
+};
+
 template <typename ClassType, typename R, bool IsMutable, typename... Args>
 struct QUaMethodTraitsBase
 {
@@ -409,15 +423,30 @@ struct QUaMethodTraitsBase
         return { getTypeName<Args>()... };
     }
 
-    // https://stackoverflow.com/questions/6627651/enable-if-method-specialization
-    template<typename T>
-    inline static UA_Argument getTypeUaArgument(QUaServer * uaServer, const int &iArg = 0)
-    {
-        return getTypeUaArgumentInternal<T>(std::is_enum<T>(), uaServer, iArg);
-    }
+	// https://stackoverflow.com/questions/6627651/enable-if-method-specialization
+	template<typename T>
+	inline static UA_Argument getTypeUaArgument(QUaServer * uaServer, const int &iArg = 0)
+	{
+		return getTypeUaArgumentInternalArray<T>(is_template<T>(), uaServer, iArg);
+	}
+
+	template<typename T>
+	inline static UA_Argument getTypeUaArgumentInternalArray(std::false_type, QUaServer * uaServer, const int &iArg = 0)
+	{
+		return getTypeUaArgumentInternalEnum<T>(std::is_enum<T>(), uaServer, iArg);
+	}
+
+	template<typename T>
+	inline static UA_Argument getTypeUaArgumentInternalArray(std::true_type, QUaServer * uaServer, const int &iArg = 0)
+	{
+		UA_Argument arg = getTypeUaArgumentInternalEnum<template_traits<T>::inner_type>
+			(std::is_enum<template_traits<T>::inner_type>(), uaServer, iArg);
+		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
+		return arg;
+	}
 
     template<typename T>
-    inline static UA_Argument getTypeUaArgumentInternal(std::false_type, QUaServer * uaServer, const int &iArg = 0)
+    inline static UA_Argument getTypeUaArgumentInternalEnum(std::false_type, QUaServer * uaServer, const int &iArg = 0)
     {
         Q_UNUSED(uaServer);
         UA_NodeId nodeId = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
@@ -425,7 +454,7 @@ struct QUaMethodTraitsBase
     }
 
     template<typename T>
-    inline static UA_Argument getTypeUaArgumentInternal(std::true_type, QUaServer * uaServer, const int &iArg = 0)
+    inline static UA_Argument getTypeUaArgumentInternalEnum(std::true_type, QUaServer * uaServer, const int &iArg = 0)
     {
         QMetaEnum metaEnum = QMetaEnum::fromType<T>();
         // compose enum name
@@ -450,7 +479,7 @@ struct QUaMethodTraitsBase
         inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
         inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
         inputArgument.dataType    = nodeId;
-        inputArgument.valueRank   = UA_VALUERANK_SCALAR; // TODO : support arrays UA_VALUERANK_ANY?
+        inputArgument.valueRank   = UA_VALUERANK_SCALAR;
         // return
         return inputArgument;
     }
@@ -460,7 +489,13 @@ struct QUaMethodTraitsBase
         return std::is_same<R, void>::value;
     }
 
-    inline static UA_Argument getRetUaArgument()
+	inline static UA_Argument getRetUaArgument()
+	{
+		return getRetUaArgumentArray<R>(is_template<R>());
+	}
+
+	template<typename T>
+    inline static UA_Argument getRetUaArgumentArray(std::false_type)
     {
         if (isRetUaArgumentVoid()) return UA_Argument();
         // create output argument
@@ -469,10 +504,18 @@ struct QUaMethodTraitsBase
         outputArgument.description = UA_LOCALIZEDTEXT((char *)"",
                                                       (char *)"Result Value");
         outputArgument.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
-        outputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<R>();
+        outputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
         outputArgument.valueRank   = UA_VALUERANK_SCALAR;
         return outputArgument;
     }
+
+	template<typename T>
+	inline static UA_Argument getRetUaArgumentArray(std::true_type)
+	{
+		UA_Argument arg = getRetUaArgumentArray<template_traits<T>::inner_type>(is_template<template_traits<T>::inner_type>());
+		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
+		return arg;
+	}
 
     inline static QVector<UA_Argument> getArgsUaArguments(QUaServer * uaServer)
     {
@@ -485,9 +528,27 @@ struct QUaMethodTraitsBase
     template<typename T>
     inline static T convertArgType(const UA_Variant * input, const int &iArg)
     {
-        QVariant varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]);
-        return varQt.value<T>();
+		return convertArgTypeArray<T>(is_template<T>(), input, iArg);
     }
+
+	template<typename T>
+	inline static T convertArgTypeArray(std::false_type, const UA_Variant * input, const int &iArg)
+	{
+		QVariant varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]);
+		return varQt.value<T>();
+	}
+
+	template<typename T>
+	inline static T convertArgTypeArray(std::true_type, const UA_Variant * input, const int &iArg)
+	{
+		T retArr;
+		auto varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]).toList();
+		for (size_t i = 0; i < varQt.count(); i++)
+		{
+			retArr << varQt.at(i).value<template_traits<T>::inner_type>();
+		}
+		return retArr;
+	}
 
     template<typename M>
     inline static UA_Variant execCallback(const M &methodCallback, const UA_Variant * input)
@@ -496,7 +557,7 @@ struct QUaMethodTraitsBase
         // NOTE : arguments inverted when calling "methodCallback"? only x++ and x-- work (i.e. not --x)?
         int iArg = (int)getNumArgs() - 1;
         // call method
-        QVariant varResult = methodCallback(convertArgType<Args>(input, iArg--)...);
+        QVariant varResult = QVariant::fromValue(methodCallback(convertArgType<Args>(input, iArg--)...));
         // set result
         UA_Variant retVar = QUaTypesConverter::uaVariantFromQVariant(varResult);
 

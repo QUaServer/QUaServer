@@ -47,6 +47,22 @@ int main(int argc, char *argv[])
 		varNumber = nullptr;
 	});
 
+	// use QList<T> or QVector<T> as arguments or return types
+	// NOTE : only works with supported types T
+
+	objsFolder->addMethod("addNumbersArray", [](QList<int> listInts) {
+		int total = 0;
+		for (int i = 0; i < listInts.count(); i++)
+		{
+			total += listInts.at(i);
+		}
+		return total;
+	});
+
+	objsFolder->addMethod("getNames", []() {
+		return QVector<QString>() << "arturo" << "juan" << "miguel";
+	});
+
 	// temperature sensor model
 
 	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject();
