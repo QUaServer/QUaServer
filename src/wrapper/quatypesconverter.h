@@ -37,7 +37,9 @@ namespace QUaTypesConverter {
 	UA_String uaStringFromQString(const QString &uaString);
 
 	// qt supported
-	bool isSupportedQType(const QMetaType::Type &type);
+	bool            isQTypeArray    (const QMetaType::Type &type);
+	QMetaType::Type getQArrayType   (const QMetaType::Type &type);
+	bool            isSupportedQType(const QMetaType::Type &type);
 	// ua from c++
 	template<typename T>
 	UA_NodeId uaTypeNodeIdFromCpp();
@@ -75,10 +77,18 @@ namespace QUaTypesConverter {
 	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	TARGETTYPE uaVariantToQVariantScalar(const UATYPE *data);
 	// ua to qt : array
-	QVariant uaVariantToQVariantArray(const UA_Variant  &uaVariant);
-	template<typename TARGETTYPE, typename UATYPE> // has specializations
-	QVariant uaVariantToQVariantArray(const UA_Variant &var, QMetaType::Type type);
-
+	enum class ArrayType
+	{
+		QList   = 0,
+		QVector = 1,
+		Invalid = 2
+	};
+	QVariant uaVariantToQVariantArray (const UA_Variant &uaVariant, 
+		                               const ArrayType  &arrType = ArrayType::QList);
+	QVariant uaVariantToQVariantList  (const UA_Variant &uaVariant);
+	QVariant uaVariantToQVariantVector(const UA_Variant &uaVariant);
+	template <template<typename> typename ARRAYTYPE, typename TARGETTYPE, typename UATYPE>
+	QVariant uaVariantToQVariantArray (const UA_Variant &var, QMetaType::Type type);
 
 	template<typename T>
 	UA_NodeId uaTypeNodeIdFromCpp()

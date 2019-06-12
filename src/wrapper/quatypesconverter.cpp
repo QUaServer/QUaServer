@@ -177,9 +177,38 @@ namespace QUaTypesConverter {
 		return UA_STRING_ALLOC(uaString.toUtf8().constData());
 	}
 
+	bool isQTypeArray(const QMetaType::Type & type)
+	{
+		auto strTypeName = QString(QMetaType::typeName(type));
+		if (strTypeName.contains("QList"  , Qt::CaseInsensitive) ||
+			strTypeName.contains("QVector", Qt::CaseInsensitive))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	QMetaType::Type getQArrayType(const QMetaType::Type & type)
+	{
+		if (!QUaTypesConverter::isQTypeArray(type))
+		{
+			return QMetaType::UnknownType;
+		}
+		auto strTypeName = QString(QMetaType::typeName(type));
+		strTypeName      = strTypeName.split("<").at(1);
+		strTypeName      = strTypeName.split(">").at(0);
+		auto byteName    = strTypeName.toUtf8();
+		return (QMetaType::Type)QMetaType::type(byteName.constData());
+	}
+
 	bool isSupportedQType(const QMetaType::Type & type)
 	{
-		switch (type)
+		auto typeCopy = type;
+		if (QUaTypesConverter::isQTypeArray(type))
+		{
+			typeCopy = QUaTypesConverter::getQArrayType(type);
+		}
+		switch (typeCopy)
 		{
 		case QMetaType::UnknownType:
 		case QMetaType::Bool:
@@ -202,7 +231,6 @@ namespace QUaTypesConverter {
 		case QMetaType::QByteArray:
 		case QMetaType::Void:
 			return true;
-		// TODO : QMetaType::QVariantList ???
 		default:
 			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return false;
@@ -254,8 +282,6 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 		case METATYPE_LOCALIZEDTEXT:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
-		// TODO : QMetaType::QVariantList ???
-		
 		default:
 			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
@@ -797,7 +823,24 @@ namespace QUaTypesConverter {
 		return QVariant();
 	}
 
-	QVariant uaVariantToQVariantArray(const UA_Variant & uaVariant)
+	QVariant uaVariantToQVariantArray(const UA_Variant  &uaVariant, const ArrayType &arrType/* = ArrayType::QList*/)
+	{
+		switch (arrType)
+		{
+		case ArrayType::QList:
+			return uaVariantToQVariantList(uaVariant);
+			break;
+		case ArrayType::QVector:
+			return uaVariantToQVariantVector(uaVariant);
+			break;
+		default:
+			Q_ASSERT(false);
+			return QVariant();
+			break;
+		}
+	}
+
+	QVariant uaVariantToQVariantList(const UA_Variant & uaVariant)
 	{
 		Q_ASSERT(!UA_Variant_isScalar(&uaVariant));
 		if (uaVariant.type == nullptr) {
@@ -806,37 +849,37 @@ namespace QUaTypesConverter {
 		// handle array
 		switch (uaVariant.type->typeIndex) {
 		case UA_TYPES_VARIANT:
-			return uaVariantToQVariantArray<QVariant   , UA_Variant   >(uaVariant, QMetaType::UnknownType);
+			return uaVariantToQVariantArray<QList, QVariant   , UA_Variant   >(uaVariant, QMetaType::UnknownType);
 		case UA_TYPES_BOOLEAN:
-			return uaVariantToQVariantArray<bool       , UA_Boolean   >(uaVariant, QMetaType::Bool);
+			return uaVariantToQVariantArray<QList, bool       , UA_Boolean   >(uaVariant, QMetaType::Bool);
 		case UA_TYPES_SBYTE:										   
-			return uaVariantToQVariantArray<signed char, UA_SByte     >(uaVariant, QMetaType::SChar);
+			return uaVariantToQVariantArray<QList, signed char, UA_SByte     >(uaVariant, QMetaType::SChar);
 		case UA_TYPES_BYTE:											   
-			return uaVariantToQVariantArray<uchar      , UA_Byte      >(uaVariant, QMetaType::UChar);
+			return uaVariantToQVariantArray<QList, uchar      , UA_Byte      >(uaVariant, QMetaType::UChar);
 		case UA_TYPES_INT16:										   
-			return uaVariantToQVariantArray<qint16     , UA_Int16     >(uaVariant, QMetaType::Short);
+			return uaVariantToQVariantArray<QList, qint16     , UA_Int16     >(uaVariant, QMetaType::Short);
 		case UA_TYPES_UINT16:										   
-			return uaVariantToQVariantArray<quint16    , UA_UInt16    >(uaVariant, QMetaType::UShort);
+			return uaVariantToQVariantArray<QList, quint16    , UA_UInt16    >(uaVariant, QMetaType::UShort);
 		case UA_TYPES_INT32:										   
-			return uaVariantToQVariantArray<qint32     , UA_Int32     >(uaVariant, QMetaType::Int);
+			return uaVariantToQVariantArray<QList, qint32     , UA_Int32     >(uaVariant, QMetaType::Int);
 		case UA_TYPES_UINT32:										   
-			return uaVariantToQVariantArray<quint32    , UA_UInt32    >(uaVariant, QMetaType::UInt);
+			return uaVariantToQVariantArray<QList, quint32    , UA_UInt32    >(uaVariant, QMetaType::UInt);
 		case UA_TYPES_INT64:										   
-			return uaVariantToQVariantArray<int64_t    , UA_Int64     >(uaVariant, QMetaType::LongLong);
+			return uaVariantToQVariantArray<QList, int64_t    , UA_Int64     >(uaVariant, QMetaType::LongLong);
 		case UA_TYPES_UINT64:										   
-			return uaVariantToQVariantArray<uint64_t   , UA_UInt64    >(uaVariant, QMetaType::ULongLong);
+			return uaVariantToQVariantArray<QList, uint64_t   , UA_UInt64    >(uaVariant, QMetaType::ULongLong);
 		case UA_TYPES_FLOAT:										   
-			return uaVariantToQVariantArray<float      , UA_Float     >(uaVariant, QMetaType::Float);
+			return uaVariantToQVariantArray<QList, float      , UA_Float     >(uaVariant, QMetaType::Float);
 		case UA_TYPES_DOUBLE:										   
-			return uaVariantToQVariantArray<double     , UA_Double    >(uaVariant, QMetaType::Double);
+			return uaVariantToQVariantArray<QList, double     , UA_Double    >(uaVariant, QMetaType::Double);
 		case UA_TYPES_STRING:										   
-			return uaVariantToQVariantArray<QString    , UA_String    >(uaVariant, QMetaType::QString);
+			return uaVariantToQVariantArray<QList, QString    , UA_String    >(uaVariant, QMetaType::QString);
 		case UA_TYPES_DATETIME:										   
-			return uaVariantToQVariantArray<QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
+			return uaVariantToQVariantArray<QList, QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
 		case UA_TYPES_GUID:											   
-			return uaVariantToQVariantArray<QUuid      , UA_Guid      >(uaVariant, QMetaType::QUuid);
+			return uaVariantToQVariantArray<QList, QUuid      , UA_Guid      >(uaVariant, QMetaType::QUuid);
 		case UA_TYPES_BYTESTRING:
-			return uaVariantToQVariantArray<QByteArray , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+			return uaVariantToQVariantArray<QList, QByteArray , UA_ByteString>(uaVariant, QMetaType::QByteArray);
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariantArray", "Unsupported datatype");
 			return QVariant();
@@ -844,29 +887,79 @@ namespace QUaTypesConverter {
 		return QVariant();
 	}
 
-	template<typename TARGETTYPE, typename UATYPE>
+	QVariant uaVariantToQVariantVector(const UA_Variant & uaVariant)
+	{
+		Q_ASSERT(!UA_Variant_isScalar(&uaVariant));
+		if (uaVariant.type == nullptr) {
+			return QVariant();
+		}
+		// handle array
+		switch (uaVariant.type->typeIndex) {
+		case UA_TYPES_VARIANT:
+			return uaVariantToQVariantArray<QVector, QVariant   , UA_Variant   >(uaVariant, QMetaType::UnknownType);
+		case UA_TYPES_BOOLEAN:
+			return uaVariantToQVariantArray<QVector, bool       , UA_Boolean   >(uaVariant, QMetaType::Bool);
+		case UA_TYPES_SBYTE:										   
+			return uaVariantToQVariantArray<QVector, signed char, UA_SByte     >(uaVariant, QMetaType::SChar);
+		case UA_TYPES_BYTE:											   
+			return uaVariantToQVariantArray<QVector, uchar      , UA_Byte      >(uaVariant, QMetaType::UChar);
+		case UA_TYPES_INT16:										   
+			return uaVariantToQVariantArray<QVector, qint16     , UA_Int16     >(uaVariant, QMetaType::Short);
+		case UA_TYPES_UINT16:										   
+			return uaVariantToQVariantArray<QVector, quint16    , UA_UInt16    >(uaVariant, QMetaType::UShort);
+		case UA_TYPES_INT32:										   
+			return uaVariantToQVariantArray<QVector, qint32     , UA_Int32     >(uaVariant, QMetaType::Int);
+		case UA_TYPES_UINT32:										   
+			return uaVariantToQVariantArray<QVector, quint32    , UA_UInt32    >(uaVariant, QMetaType::UInt);
+		case UA_TYPES_INT64:										   
+			return uaVariantToQVariantArray<QVector, int64_t    , UA_Int64     >(uaVariant, QMetaType::LongLong);
+		case UA_TYPES_UINT64:										   
+			return uaVariantToQVariantArray<QVector, uint64_t   , UA_UInt64    >(uaVariant, QMetaType::ULongLong);
+		case UA_TYPES_FLOAT:										   
+			return uaVariantToQVariantArray<QVector, float      , UA_Float     >(uaVariant, QMetaType::Float);
+		case UA_TYPES_DOUBLE:										   
+			return uaVariantToQVariantArray<QVector, double     , UA_Double    >(uaVariant, QMetaType::Double);
+		case UA_TYPES_STRING:										   
+			return uaVariantToQVariantArray<QVector, QString    , UA_String    >(uaVariant, QMetaType::QString);
+		case UA_TYPES_DATETIME:										   
+			return uaVariantToQVariantArray<QVector, QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
+		case UA_TYPES_GUID:											   
+			return uaVariantToQVariantArray<QVector, QUuid      , UA_Guid      >(uaVariant, QMetaType::QUuid);
+		case UA_TYPES_BYTESTRING:
+			return uaVariantToQVariantArray<QVector, QByteArray , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+		default:
+			Q_ASSERT_X(false, "uaVariantToQVariantVector", "Unsupported datatype");
+			return QVariant();
+		}
+		return QVariant();
+	}
+
+	template <template<typename> typename ARRAYTYPE, typename TARGETTYPE, typename UATYPE>
 	QVariant uaVariantToQVariantArray(const UA_Variant & var, QMetaType::Type type)
 	{
+		ARRAYTYPE<TARGETTYPE> retList;
 		// if empty
 		if (var.arrayLength == 0 && var.data == UA_EMPTY_ARRAY_SENTINEL)
 		{
-			return QVariantList();
+			return QVariant::fromValue(retList);
 		}
 		// get start of array
-		UATYPE *temp = static_cast<UATYPE *>(var.data);
+		UATYPE *tempSrc = static_cast<UATYPE *>(var.data);
 		// copy array data
-		QVariantList list;
 		for (size_t i = 0; i < var.arrayLength; i++) 
 		{
-			QVariant tempVar = QVariant::fromValue(uaVariantToQVariantScalar<TARGETTYPE, UATYPE>(&temp[i]));
+			TARGETTYPE tempTarg = uaVariantToQVariantScalar<TARGETTYPE, UATYPE>(&tempSrc[i]);
+			QVariant   tempVar  = QVariant::fromValue(tempTarg);
+			// convert if necessary
 			if (type != QMetaType::UnknownType && type != static_cast<QMetaType::Type>(tempVar.type()))
 			{
 				tempVar.convert(type);
+				tempTarg = tempVar.value<TARGETTYPE>();
 			}
-			list.append(tempVar);
+			retList.append(tempTarg);
 		}
 		// return variant list
-		return list;
+		return QVariant::fromValue(retList);
 	}
 
 	template<typename TARGETTYPE, typename UATYPE>

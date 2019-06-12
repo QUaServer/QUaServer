@@ -1292,11 +1292,24 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		}
 		// validate return type
 		auto returnType  = (QMetaType::Type)metamethod.returnType();
+		// NOTE : enums are QMetaType::UnknownType
+		Q_ASSERT_X(returnType != QMetaType::UnknownType || 
+			this->m_hashEnums.contains(metamethod.typeName()),
+			"QUaServer::addMetaMethods", 
+			"Return type is not registered. Try using qRegisterMetaType.");
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
-		Q_ASSERT_X(isSupported, "QUaServer::addMetaMethods", "Return type not supported in MetaMethod.");
+		Q_ASSERT_X(isSupported, 
+			"QUaServer::addMetaMethods", 
+			"Return type not supported in MetaMethod.");
 		if (!isSupported)
 		{
 			continue;
+		}
+		// check if array
+		bool isArray = QUaTypesConverter::isQTypeArray(returnType);
+		if (isArray)
+		{
+			returnType = QUaTypesConverter::getQArrayType(returnType);
 		}
 		// create return type
 		UA_Argument   outputArgumentInstance;
@@ -1309,10 +1322,16 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			outputArgumentInstance.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
 			outputArgumentInstance.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
 			outputArgumentInstance.valueRank   = UA_VALUERANK_SCALAR;
+			if (isArray)
+			{
+				outputArgumentInstance.valueRank = UA_VALUERANK_ONE_DIMENSION;
+			}
 			outputArgument = &outputArgumentInstance;
 		}
 		// validate argument types and create them
-		Q_ASSERT_X(metamethod.parameterCount() <= 10, "QUaServer::addMetaMethods", "No more than 10 arguments supported in MetaMethod.");
+		Q_ASSERT_X(metamethod.parameterCount() <= 10, 
+			"QUaServer::addMetaMethods", 
+			"No more than 10 arguments supported in MetaMethod.");
 		if (metamethod.parameterCount() > 10)
 		{
 			continue;
@@ -1323,12 +1342,27 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		auto listTypeNames = metamethod.parameterTypes();
 		for (int k = 0; k < metamethod.parameterCount(); k++)
 		{
-			isSupported = QUaTypesConverter::isSupportedQType((QMetaType::Type)metamethod.parameterType(k));
-			Q_ASSERT_X(isSupported, "QUaServer::addMetaMethods", "Argument type not supported in MetaMethod.");
+			auto metaType = (QMetaType::Type)metamethod.parameterType(k);
+			// NOTE : enums are QMetaType::UnknownType
+			Q_ASSERT_X(metaType != QMetaType::UnknownType ||
+				this->m_hashEnums.contains(listTypeNames[k]),
+				"QUaServer::addMetaMethods",
+				"Return type is not registered. Try using qRegisterMetaType.");
+			isSupported   = QUaTypesConverter::isSupportedQType(metaType);
+			Q_ASSERT_X(isSupported, 
+				"QUaServer::addMetaMethods", 
+				"Argument type not supported in MetaMethod.");
 			if (!isSupported)
 			{
 				break;
 			}
+			// check if array
+			isArray = QUaTypesConverter::isQTypeArray(metaType);
+			if (isArray)
+			{
+				metaType = QUaTypesConverter::getQArrayType(metaType);
+			}
+			// get ua type
 			UA_Argument inputArgument;
 			UA_Argument_init(&inputArgument);
 			// check if type is registered enum
@@ -1339,15 +1373,20 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			}
 			else
 			{
-				uaType = QUaTypesConverter::uaTypeNodeIdFromQType((QMetaType::Type)metamethod.parameterType(k));
+				uaType = QUaTypesConverter::uaTypeNodeIdFromQType(metaType);
 			}
 			// create n-th argument
 			inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
 			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames[k]);
 			inputArgument.dataType    = uaType;
 			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
+			if (isArray)
+			{
+				inputArgument.valueRank = UA_VALUERANK_ONE_DIMENSION;
+			}
 			vectArgs.append(inputArgument);
 		}
+		// skip if any othe args is not supported
 		if (!isSupported)
 		{
 			continue;
@@ -1388,11 +1427,15 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 		// store method with node id hash as key
-		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaServer::addMetaMethods", "Method already exists, callback will be overwritten.");
-		m_hashMethods[methNodeId] = [i](void * objectContext, const UA_Variant * input, UA_Variant * output) {
+		Q_ASSERT_X(!m_hashMethods.contains(methNodeId), 
+			"QUaServer::addMetaMethods", 
+			"Method already exists, callback will be overwritten.");
+		m_hashMethods[methNodeId] = [i, this](void * objectContext, const UA_Variant * input, UA_Variant * output) {
 			// get object instance that owns method
 			QUaBaseObject * object = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
-			Q_ASSERT_X(object, "QUaServer::addMetaMethods", "Cannot call method on invalid C++ object.");
+			Q_ASSERT_X(object, 
+				"QUaServer::addMetaMethods", 
+				"Cannot call method on invalid C++ object.");
 			if (!object)
 			{
 				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -1403,16 +1446,56 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			// convert input arguments to QVariants
 			QVariantList varListArgs;
 			QList<QGenericArgument> genListArgs;
+			auto listTypeNames = metamethod.parameterTypes();
 			for (int k = 0; k < metamethod.parameterCount(); k++)
 			{
-				varListArgs.append(QUaTypesConverter::uaVariantToQVariant(input[k]));
+				QVariant varArg;
+				auto metaType    = (QMetaType::Type)metamethod.parameterType(k);
+				auto strTypeName = QString(listTypeNames.at(k));
+				// NOTE : enums are QMetaType::UnknownType
+				Q_ASSERT_X(metaType != QMetaType::UnknownType ||
+					this->m_hashEnums.contains(strTypeName),
+					"QUaServer::addMetaMethods",
+					"Argumant type is not registered. Try using qRegisterMetaType.");
+				if (metaType == QMetaType::UnknownType &&
+				   !this->m_hashEnums.contains(strTypeName))
+				{
+					return (UA_StatusCode)UA_STATUSCODE_BADINTERNALERROR;
+				}
+				if (strTypeName.contains("QList", Qt::CaseInsensitive))
+				{
+					varArg = QUaTypesConverter::uaVariantToQVariantArray(input[k], 
+						QUaTypesConverter::ArrayType::QList);
+				}
+				else if (strTypeName.contains("QVector", Qt::CaseInsensitive))
+				{
+					varArg = QUaTypesConverter::uaVariantToQVariantArray(input[k],
+						QUaTypesConverter::ArrayType::QVector);
+				}
+				else
+				{
+					varArg = QUaTypesConverter::uaVariantToQVariant(input[k]);
+				}
+				// NOTE : need to keep in stack while method is being called
+				varListArgs.append(varArg);
+				// create generic argument only with reference to data
 				genListArgs.append(QGenericArgument(
 					QMetaType::typeName(varListArgs[k].userType()),
 					const_cast<void*>(varListArgs[k].constData())
 				));
 			}
 			// create return QVariant
-			QVariant returnValue(QMetaType::type(metamethod.typeName()), static_cast<void*>(NULL));
+			int retType = metamethod.returnType();
+			// NOTE : enums are QMetaType::UnknownType
+			Q_ASSERT_X(retType != QMetaType::UnknownType ||
+				this->m_hashEnums.contains(metamethod.typeName()),
+				"QUaServer::addMetaMethods",
+				"Return type is not registered. Try using qRegisterMetaType.");
+			if (retType == QMetaType::UnknownType)
+			{
+				return (UA_StatusCode)UA_STATUSCODE_BADINTERNALERROR;
+			}
+			QVariant returnValue(retType, static_cast<void*>(NULL));
 			QGenericReturnArgument returnArgument(
 				metamethod.typeName(),
 				const_cast<void*>(returnValue.constData())
@@ -1436,12 +1519,10 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			Q_ASSERT(ok);
 			Q_UNUSED(ok);
 			// set return value if any
-			if ((QMetaType::Type)metamethod.returnType() != QMetaType::Void)
+			if (retType != QMetaType::Void)
 			{
 				UA_Variant tmpVar = QUaTypesConverter::uaVariantFromQVariant(returnValue);
-
 				// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
-
 				*output = tmpVar;
 			}
 			// return success status
