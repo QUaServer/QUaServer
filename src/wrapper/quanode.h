@@ -43,6 +43,7 @@ struct QUaReference
 	QString strForwardName;
 	QString strInverseName;
 };
+Q_DECLARE_METATYPE(QUaReference);
 
 // to have QUaReference as a hash key
 inline bool operator==(const QUaReference &e1, const QUaReference &e2)
@@ -255,14 +256,14 @@ public:
 
 	// Reference API
 
-	void addReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
+	void addReference(const QUaReference &ref, QUaNode * nodeTarget, const bool &isForward = true);
 
-	void removeReference(const QUaReference &ref, const QUaNode * nodeTarget, const bool &isForward = true);
+	void removeReference(const QUaReference &ref, QUaNode * nodeTarget, const bool &isForward = true);
 
 	template<typename T>
-	QList<T*>       findReferences(const QUaReference &ref, const bool &isForward = true);
+	QList<T*>       findReferences(const QUaReference &ref, const bool &isForward = true) const;
 	// specialization
-	QList<QUaNode*> findReferences(const QUaReference &ref, const bool &isForward = true);
+	QList<QUaNode*> findReferences(const QUaReference &ref, const bool &isForward = true) const;
 
 	// Access Control API
 
@@ -307,6 +308,8 @@ signals:
 	void browseNameChanged (const QString &browseName );
 	
 	void childAdded(QUaNode * childNode);
+	void referenceAdded  (const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
+	void referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
 
 private:
 
@@ -332,7 +335,7 @@ private:
 
 	static int getPropsOffsetHelper(const QMetaObject &metaObject);
 
-	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true);
+	QSet<UA_NodeId> getRefsInternal(const QUaReference &ref, const bool &isForward = true) const;
 	// NOTE : need internal because user might reimplement public
 	QUaWriteMask   userWriteMaskInternal  (const QString &strUserName);
 	QUaAccessLevel userAccessLevelInternal(const QString &strUserName);
@@ -374,7 +377,7 @@ inline T* QUaNode::browsePath(const QStringList &strBrowsePath)
 }
 
 template<typename T>
-inline QList<T*> QUaNode::findReferences(const QUaReference &ref, const bool &isForward/* = true*/)
+inline QList<T*> QUaNode::findReferences(const QUaReference &ref, const bool &isForward/* = true*/) const
 {
 	QList<T*> retList;
 	QList<QUaNode*> nodeList = findReferences(ref, isForward);

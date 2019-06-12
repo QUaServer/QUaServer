@@ -652,6 +652,12 @@ UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
 
 void QUaServer::setupServer()
 {
+	// Qt Stuff
+	if (QMetaType::type("QUaReference") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaReference>("QUaReference");
+	}
+	// Server stuff
 	UA_StatusCode st;
 	m_running = false;
 	// Create "Objects" folder using special constructor

@@ -378,7 +378,7 @@ QStringList QUaNode::nodeBrowsePath() const
 	return parent->nodeBrowsePath() << this->browseName();
 }
 
-void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
+void QUaNode::addReference(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward/* = true*/)
 {
 	// first check if reference type is registered
 	if (!m_qUaServer->m_hashRefs.contains(ref))
@@ -408,9 +408,23 @@ void QUaNode::addReference(const QUaReference & ref, const QUaNode * nodeTarget,
 		isForward
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// emit events
+	emit this->referenceAdded(ref, nodeTarget, isForward);
+	emit nodeTarget->referenceAdded(ref, this, !isForward);
+	// subscribe node destructions
+	QObject::connect(nodeTarget, &QObject::destroyed, this, 
+	[this, ref, nodeTarget, isForward]() {
+		// emit event
+		emit this->referenceRemoved(ref, nodeTarget, isForward);
+	});
+	QObject::connect(this, &QObject::destroyed, nodeTarget,
+	[this, ref, nodeTarget, isForward]() {
+		// emit event
+		emit nodeTarget->referenceRemoved(ref, this, !isForward);
+	});
 }
 
-void QUaNode::removeReference(const QUaReference & ref, const QUaNode * nodeTarget, const bool & isForward/* = true*/)
+void QUaNode::removeReference(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward/* = true*/)
 {
 	// first check if reference type is removeReference
 	Q_ASSERT_X(m_qUaServer->m_hashRefs.contains(ref), "QUaNode::addReference", "Reference not registered.");
@@ -441,9 +455,15 @@ void QUaNode::removeReference(const QUaReference & ref, const QUaNode * nodeTarg
 		true
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// emit event
+	emit this->referenceRemoved(ref, nodeTarget, isForward);
+	emit nodeTarget->referenceRemoved(ref, this, !isForward);
+	// unsubscribe node destructions
+	QObject::disconnect(nodeTarget, &QObject::destroyed, this, 0);
+	QObject::disconnect(this, &QObject::destroyed, nodeTarget, 0);
 }
 
-QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & isForward)
+QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & isForward) const
 {
 	QList<QUaNode*> retRefList;
 	// call internal method
@@ -463,7 +483,7 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & i
 	return retRefList;
 }
 
-QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & isForward)
+QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & isForward) const
 {
 	QSet<UA_NodeId> retRefSet;
 	// first check if reference type is registered

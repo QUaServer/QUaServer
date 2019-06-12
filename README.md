@@ -212,6 +212,22 @@ if(!varProp)
 }
 ```
 
+To notify changed, the *QUaNode* API provides the following *Qt signals*:
+
+```c++
+void displayNameChanged(const QString &displayName);
+void descriptionChanged(const QString &description);
+void writeMaskChanged  (const quint32 &writeMask  );
+void browseNameChanged (const QString &browseName );
+```
+
+Furthermore, the API also notifies when a child is added to an *QUaBaseObject* or *addBaseDataVariable* instance:
+
+```c++
+void childAdded(QUaNode * childNode);
+```
+
+
 ### For Variable Types
 
 Both `QUaBaseDataVariable` and `QUaProperty` derive from the abstract C++ class `QUaBaseVariable` which provides the following methods to access attributes:
@@ -496,6 +512,13 @@ qDebug() << listSuppliers.first()->displayName();
 ```
 
 Note that when a *QUaNode* derived instance is deleted, all its references are removed.
+
+To notify when a reference has been added or removed the *QUaNode* API has the following *Qt signals*:
+
+```c++
+void referenceAdded  (const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
+void referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
+```
 
 ### References Example
 
