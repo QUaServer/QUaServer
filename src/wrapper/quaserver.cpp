@@ -1094,7 +1094,7 @@ void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeI
 	QUaEnumMap mapEnum;
 	for (int i = 0; i < metaEnum.keyCount(); i++)
 	{
-		mapEnum.insert(metaEnum.value(i), metaEnum.key(i));			
+		mapEnum.insert(metaEnum.value(i), { metaEnum.key(i), "" });
 	}
 	// call other method
 	this->registerEnum(strBrowseName, mapEnum, strNodeId);
@@ -1730,14 +1730,14 @@ void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapE
 	pattr.arrayDimensions        = arrayDimensions;
 	// create vector of enum values
 	QVector<QOpcUaEnumValue> vectEnumValues;
-	QMapIterator<int, QByteArray> i(mapEnum);
+	QMapIterator<QUaEnumKey, QUaEnumEntry> i(mapEnum);
 	while (i.hasNext()) 
 	{
 		i.next();
 		vectEnumValues.append({
 			(UA_Int64)i.key(),
-			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().data()),
-			UA_LOCALIZEDTEXT((char*)"", (char*)"")
+			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().strDisplayName.data()),
+			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().strDescription.data())
 			});
 	}
 	st = QUaServer::addEnumValues(m_server, &reqNodeId, vectEnumValues.count(), vectEnumValues.data());
@@ -1764,7 +1764,8 @@ QUaEnumMap QUaServer::enumMap(const QString & strEnumName)
 	{
 		UA_EnumValueType * enumVal = &enumArr[i];
 		QString strDisplayName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->displayName);
-		retMap.insert(enumVal->value, strDisplayName.toUtf8());
+		QString strDescription = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->description);
+		retMap.insert(enumVal->value, { strDisplayName.toUtf8(), strDescription.toUtf8() });
 	}
 	return retMap;
 }
@@ -1848,14 +1849,16 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 	// re-create array of enum values
 	UA_EnumValueType * valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * mapEnum.count());
 	auto listKeys = mapEnum.keys();
-	for (size_t i = 0; i < mapEnum.count(); i++)
+	for (int i = 0; i < mapEnum.count(); i++)
 	{
 		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
-		valueEnum[i].value       = listKeys.at(i);
+		valueEnum[i].value = (UA_Int64)listKeys.at(i);
 		QUaTypesConverter::uaVariantFromQVariantScalar
 			<UA_LocalizedText, QString>
-			(mapEnum[listKeys.at(i)], &valueEnum[i].displayName);
-		valueEnum[i].description = UA_LOCALIZEDTEXT((char*)"", (char*)"");
+			(mapEnum[listKeys.at(i)].strDisplayName, &valueEnum[i].displayName);
+		QUaTypesConverter::uaVariantFromQVariantScalar
+			<UA_LocalizedText, QString>
+			(mapEnum[listKeys.at(i)].strDescription, &valueEnum[i].description);
 	}
 	// create variant with array of enum values
 	UA_Variant_setArray(&enumValues, valueEnum, (UA_Int32)mapEnum.count(), &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);

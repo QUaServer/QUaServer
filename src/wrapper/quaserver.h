@@ -14,8 +14,14 @@
 #include <QUaBaseEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-typedef int QUaEnumKey;
-typedef QByteArray QUaEnumEntry;
+typedef qint64 QUaEnumKey;
+//typedef QByteArray QUaEnumEntry;
+struct QUaEnumEntry
+{
+	QByteArray strDisplayName;
+	QByteArray strDescription;
+};
+Q_DECLARE_METATYPE(QUaEnumEntry);
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
 
 class QUaServer : public QObject
