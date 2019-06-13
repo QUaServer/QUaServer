@@ -1091,7 +1091,7 @@ void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeI
 	// compose enum name
 	QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 	// compose values
-	QMap<int, QByteArray> mapEnum;
+	QUaEnumMap mapEnum;
 	for (int i = 0; i < metaEnum.keyCount(); i++)
 	{
 		mapEnum.insert(metaEnum.value(i), metaEnum.key(i));			
@@ -1676,7 +1676,7 @@ void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & no
 	nodeInstance->m_nodeId = nodeId;
 }
 
-void QUaServer::registerEnum(const QString & strEnumName, const QMap<int, QByteArray>& mapEnum, const QString & strNodeId)
+void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapEnum, const QString & strNodeId)
 {
 	// check if already exists
 	if (m_hashEnums.contains(strEnumName))
@@ -1744,6 +1744,125 @@ void QUaServer::registerEnum(const QString & strEnumName, const QMap<int, QByteA
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// finally append to map
 	m_hashEnums.insert(strEnumName, reqNodeId);
+}
+
+QUaEnumMap QUaServer::enumMap(const QString & strEnumName)
+{
+	auto retMap = QUaEnumMap();
+	// if it does not exist, return empty
+	if (!m_hashEnums.contains(strEnumName))
+	{
+		return retMap;
+	}
+	// read enum map
+	auto enumNodeId = m_hashEnums[strEnumName];
+	// get enum values as ua variant
+	auto enumValues = this->enumValues(enumNodeId);
+	// get start of array
+	UA_EnumValueType *enumArr = static_cast<UA_EnumValueType *>(enumValues.data);
+	for (size_t i = 0; i < enumValues.arrayLength; i++)
+	{
+		UA_EnumValueType * enumVal = &enumArr[i];
+		QString strDisplayName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->displayName);
+		retMap.insert(enumVal->value, strDisplayName.toUtf8());
+	}
+	return retMap;
+}
+
+void QUaServer::updateEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry)
+{
+	// if it does not exist, create it with one entry
+	if (!m_hashEnums.contains(strEnumName))
+	{
+		this->registerEnum(strEnumName, { {enumValue, enumEntry} });
+		return;
+	}
+	// else update enum
+	auto enumNodeId = m_hashEnums[strEnumName];
+	// get old map
+	auto mapValues = this->enumMap(strEnumName);
+	// update old map
+	mapValues[enumValue] = enumEntry;
+	this->updateEnum(enumNodeId, mapValues);
+}
+
+void QUaServer::removeEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue)
+{
+	// if it does not exist, do nothing
+	if (!m_hashEnums.contains(strEnumName))
+	{
+		return;
+	}
+	// else update enum
+	auto enumNodeId = m_hashEnums[strEnumName];
+	// get old map
+	auto mapValues = this->enumMap(strEnumName);
+	// update old map
+	mapValues.remove(enumValue);
+	this->updateEnum(enumNodeId, mapValues);
+}
+
+UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId)
+{
+	// make ua browse
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&enumNodeId, &bDesc->nodeId); // from child
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;
+	bDesc->includeSubtypes = true;
+	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(m_server, 0, bDesc);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT(bRes.referencesSize == 1);
+	UA_ReferenceDescription rDesc = bRes.references[0];
+	UA_NodeId valuesNodeId = rDesc.nodeId.nodeId;
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return valuesNodeId;
+}
+
+UA_Variant QUaServer::enumValues(const UA_NodeId &enumNodeId)
+{
+	UA_NodeId valuesNodeId = this->enumValuesNodeId(enumNodeId);
+	// read value
+	UA_Variant outValue;
+	auto st = UA_Server_readValue(m_server, valuesNodeId, &outValue);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	Q_ASSERT(!UA_Variant_isScalar(&outValue));
+	// return
+	return outValue;
+}
+
+void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapEnum)
+{
+	// get enum values as ua variant
+	auto enumValuesNodeId = this->enumValuesNodeId(enumNodeId);
+	auto enumValues       = this->enumValues(enumNodeId);
+	// delete old ua enum
+	UA_EnumValueType *enumArr = static_cast<UA_EnumValueType *>(enumValues.data);
+	UA_free(enumArr);
+	// re-create array of enum values
+	UA_EnumValueType * valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * mapEnum.count());
+	auto listKeys = mapEnum.keys();
+	for (size_t i = 0; i < mapEnum.count(); i++)
+	{
+		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
+		valueEnum[i].value       = listKeys.at(i);
+		QUaTypesConverter::uaVariantFromQVariantScalar
+			<UA_LocalizedText, QString>
+			(mapEnum[listKeys.at(i)], &valueEnum[i].displayName);
+		valueEnum[i].description = UA_LOCALIZEDTEXT((char*)"", (char*)"");
+	}
+	// create variant with array of enum values
+	UA_Variant_setArray(&enumValues, valueEnum, (UA_Int32)mapEnum.count(), &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
+	// set new ua enum value
+	auto st = UA_Server_writeValue(m_server, enumValuesNodeId, enumValues);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
 }
 
 void QUaServer::registerReference(const QUaReference & ref)

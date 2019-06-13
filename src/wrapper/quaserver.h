@@ -14,6 +14,10 @@
 #include <QUaBaseEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+typedef int QUaEnumKey;
+typedef QByteArray QUaEnumEntry;
+typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
+
 class QUaServer : public QObject
 {
 	friend class QUaNode;
@@ -82,7 +86,11 @@ public:
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QString &strNodeId = "");
-	void registerEnum(const QString &strEnumName, const QMap<int, QByteArray> &mapEnum, const QString &strNodeId = "");
+	void registerEnum(const QString &strEnumName, const QUaEnumMap &mapEnum, const QString &strNodeId = "");
+	// enum helpers
+	QUaEnumMap enumMap(const QString &strEnumName);
+	void updateEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
+	void removeEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue);
 	// register reference to get a respective refTypeId
 	void registerReference(const QUaReference &ref);
 
@@ -171,6 +179,9 @@ private:
 
 	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
 	void registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
+	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId);
+	UA_Variant enumValues(const UA_NodeId &enumNodeId);
+	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
 
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
