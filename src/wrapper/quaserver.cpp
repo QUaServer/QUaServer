@@ -657,6 +657,10 @@ void QUaServer::setupServer()
 	{
 		qRegisterMetaType<QUaReference>("QUaReference");
 	}
+	if (QMetaType::type("QUaEnumEntry") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaEnumEntry>("QUaEnumEntry");
+	}
 	// Server stuff
 	UA_StatusCode st;
 	m_running = false;

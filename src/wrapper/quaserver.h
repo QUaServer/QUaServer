@@ -15,13 +15,17 @@
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 typedef qint64 QUaEnumKey;
-//typedef QByteArray QUaEnumEntry;
 struct QUaEnumEntry
 {
 	QByteArray strDisplayName;
 	QByteArray strDescription;
 };
 Q_DECLARE_METATYPE(QUaEnumEntry);
+inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs) 
+{ 
+	return lhs.strDisplayName == rhs.strDisplayName && lhs.strDescription == rhs.strDescription;
+}
+
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
 
 class QUaServer : public QObject
