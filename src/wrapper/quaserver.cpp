@@ -1750,6 +1750,11 @@ void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapE
 	m_hashEnums.insert(strEnumName, reqNodeId);
 }
 
+bool QUaServer::isEnumRegistered(const QString & strEnumName)
+{
+	return m_hashEnums.contains(strEnumName);
+}
+
 QUaEnumMap QUaServer::enumMap(const QString & strEnumName)
 {
 	auto retMap = QUaEnumMap();

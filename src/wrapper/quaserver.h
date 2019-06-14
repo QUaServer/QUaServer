@@ -98,6 +98,7 @@ public:
 	void registerEnum(const QString &strNodeId = "");
 	void registerEnum(const QString &strEnumName, const QUaEnumMap &mapEnum, const QString &strNodeId = "");
 	// enum helpers
+	bool isEnumRegistered(const QString &strEnumName);
 	QUaEnumMap enumMap(const QString &strEnumName);
 	void updateEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
 	void removeEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue);
