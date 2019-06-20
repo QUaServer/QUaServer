@@ -480,7 +480,11 @@ struct QUaMethodTraitsBase
     {
         QMetaEnum metaEnum = QMetaEnum::fromType<T>();
         // compose enum name
-        QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+        #if QT_VERSION >= 0x051200
+            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+        #else
+            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+        #endif
         // register if not exists
         if (!uaServer->m_hashEnums.contains(strEnumName))
         {
