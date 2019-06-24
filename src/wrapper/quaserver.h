@@ -461,8 +461,8 @@ struct QUaMethodTraitsBase
 	template<typename T>
 	inline static UA_Argument getTypeUaArgumentInternalArray(std::true_type, QUaServer * uaServer, const int &iArg = 0)
 	{
-		UA_Argument arg = getTypeUaArgumentInternalEnum<template_traits<T>::inner_type>
-			(std::is_enum<template_traits<T>::inner_type>(), uaServer, iArg);
+		UA_Argument arg = getTypeUaArgumentInternalEnum<typename template_traits<T>::inner_type>
+			(std::is_enum<typename template_traits<T>::inner_type>(), uaServer, iArg);
 		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
 		return arg;
 	}
@@ -480,7 +480,11 @@ struct QUaMethodTraitsBase
     {
         QMetaEnum metaEnum = QMetaEnum::fromType<T>();
         // compose enum name
-        QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+        #if QT_VERSION >= 0x051200
+            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+        #else
+            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+        #endif
         // register if not exists
         if (!uaServer->m_hashEnums.contains(strEnumName))
         {
@@ -534,7 +538,7 @@ struct QUaMethodTraitsBase
 	template<typename T>
 	inline static UA_Argument getRetUaArgumentArray(std::true_type)
 	{
-		UA_Argument arg = getRetUaArgumentArray<template_traits<T>::inner_type>(is_template<template_traits<T>::inner_type>());
+		UA_Argument arg = getRetUaArgumentArray<typename template_traits<T>::inner_type>(is_template<typename template_traits<T>::inner_type>());
 		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
 		return arg;
 	}

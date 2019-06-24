@@ -1093,7 +1093,11 @@ void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNo
 void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeId/* = ""*/)
 {
 	// compose enum name
-	QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	#if QT_VERSION >= 0x051200
+		QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	#else
+		QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+	#endif
 	// compose values
 	QUaEnumMap mapEnum;
 	for (int i = 0; i < metaEnum.keyCount(); i++)
@@ -1165,7 +1169,11 @@ void QUaServer::addMetaProperties(const QMetaObject & parentMetaObject)
 		{
 			QMetaEnum metaEnum = metaProperty.enumerator();
 			// compose enum name
-			QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+			#if QT_VERSION >= 0x051200
+				QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+			#else
+				QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+			#endif
 			// must already be registered by now
 			Q_ASSERT(m_hashEnums.contains(strEnumName));
 			// get enum data type

@@ -263,7 +263,11 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// compose enum name
-	QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	#if QT_VERSION >= 0x051200
+		QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	#else
+		QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+	#endif
 	// register if not exists
 	if (!m_qUaServer->m_hashEnums.contains(strEnumName))
 	{
