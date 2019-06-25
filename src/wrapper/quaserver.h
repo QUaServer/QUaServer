@@ -28,6 +28,8 @@ inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs)
 
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
 
+typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;
+
 class QUaServer : public QObject
 {
 	friend class QUaNode;
