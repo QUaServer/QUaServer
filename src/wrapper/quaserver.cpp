@@ -1090,6 +1090,61 @@ void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNo
 	}
 }
 
+QList<QUaNode*> QUaServer::typeInstances(const QMetaObject & metaObject)
+{
+	QList<QUaNode*> retList;
+	// check if OPC UA relevant
+	if (!metaObject.inherits(&QUaNode::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QUaServer::typeInstances", "Unsupported base class. It must derive from QUaNode");
+		return retList;
+	}
+	// try to get typeNodeId, if null, then register it
+	QString   strClassName = QString(metaObject.className());
+	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (UA_NodeId_isNull(&typeNodeId))
+	{
+		this->registerType(metaObject);
+		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	}
+	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
+
+	// make ua browse
+	auto refTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
+	QList<UA_NodeId> retRefSet;
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&typeNodeId, &bDesc->nodeId); 
+	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE; //TypeDefinitionOf
+	bDesc->includeSubtypes = true;
+	bDesc->referenceTypeId = refTypeId;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(m_server, 0, bDesc);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			Q_ASSERT(UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId));
+			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			retRefSet<< nodeId;
+		}
+		UA_BrowseResult_deleteMembers(&bRes);
+		bRes = UA_Server_browseNext(m_server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// get QUaNode references
+	for (int i = 0; i < retRefSet.count(); i++)
+	{
+		retList << QUaNode::getNodeContext(retRefSet[i], m_server);
+	}
+	return retList;
+}
+
 void QUaServer::registerEnum(const QMetaEnum & metaEnum, const QString &strNodeId/* = ""*/)
 {
 	// compose enum name

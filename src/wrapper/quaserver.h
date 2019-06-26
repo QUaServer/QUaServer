@@ -95,6 +95,9 @@ public:
 	// register type in order to assign it a typeNodeId
 	template<typename T>
 	void registerType(const QString &strNodeId = "");
+	// get all instances of a type
+	template<typename T>
+	QList<T*> typeInstances();
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QString &strNodeId = "");
@@ -189,16 +192,18 @@ private:
 		                                    UA_ByteString    &outUaCert, 
 		                                    QByteArray       &outByteCert);
 	void setupServer();
-
+	// types
 	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
-	void registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
+	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
+	// enums
+	void       registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
 	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId);
 	UA_Variant enumValues(const UA_NodeId &enumNodeId);
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
-
+	// lifecycle
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
-
+	// meta
 	void registerMetaEnums(const QMetaObject &parentMetaObject);
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
@@ -321,6 +326,20 @@ inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)
 {
 	// call internal method
 	this->registerType(T::staticMetaObject, strNodeId);
+}
+
+template<typename T>
+inline QList<T*> QUaServer::typeInstances()
+{
+	QList<T*> retList;
+	auto nodeList = this->typeInstances(T::staticMetaObject);
+	for (int i = 0; i < nodeList.count(); i++)
+	{
+		auto instance = dynamic_cast<T*>(nodeList.at(i));
+		Q_CHECK_PTR(instance);
+		retList << instance;
+	}
+	return retList;
 }
 
 template<typename T>
