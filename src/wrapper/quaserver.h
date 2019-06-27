@@ -108,6 +108,9 @@ public:
 	template<typename T>
 	QList<T*> typeInstances();
 	// subscribe to instance of a type added
+	template<typename T, typename M>
+	QMetaObject::Connection instanceCreated(const M &callback);
+	// same but pass a QObject pointer and member function as a callback
 	template<typename T, typename TFunc1>
 	QMetaObject::Connection instanceCreated(typename QtPrivate::FunctionPointer<TFunc1>::Object* pObj,
 		                                    TFunc1 callback);
@@ -362,6 +365,12 @@ inline QList<T*> QUaServer::typeInstances()
 	return retList;
 }
 
+template<typename T, typename M>
+inline QMetaObject::Connection QUaServer::instanceCreated(const M & callback)
+{
+	return this->instanceCreated<T>(T::staticMetaObject, nullptr, callback);
+}
+
 template<typename T, typename TFunc1>
 inline QMetaObject::Connection QUaServer::instanceCreated(
 	typename QtPrivate::FunctionPointer<TFunc1>::Object * pObj, 
@@ -403,7 +412,7 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 	}
 	Q_CHECK_PTR(signaler);
 	// connect to signal
-	return QObject::connect(signaler, &QUaSignaler::signalNewInstance, targetObject,
+	return QObject::connect(signaler, &QUaSignaler::signalNewInstance, targetObject ? targetObject : this,
 	[callback](QUaNode * node) {
 		auto specializedNode = dynamic_cast<T*>(node);
 		Q_CHECK_PTR(specializedNode);
