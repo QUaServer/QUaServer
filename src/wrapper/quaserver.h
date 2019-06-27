@@ -110,6 +110,9 @@ public:
 	// subscribe to instance of a type added
 	template<typename T, typename M>
 	QMetaObject::Connection instanceCreated(const M &callback);
+	// same but pass a QObject pointer to disconnect callback when the QObject is deleted
+	template<typename T, typename M>
+	QMetaObject::Connection instanceCreated(const QObject * pObj, const M &callback);
 	// same but pass a QObject pointer and member function as a callback
 	template<typename T, typename TFunc1>
 	QMetaObject::Connection instanceCreated(typename QtPrivate::FunctionPointer<TFunc1>::Object* pObj,
@@ -369,6 +372,12 @@ template<typename T, typename M>
 inline QMetaObject::Connection QUaServer::instanceCreated(const M & callback)
 {
 	return this->instanceCreated<T>(T::staticMetaObject, nullptr, callback);
+}
+
+template<typename T, typename M>
+inline QMetaObject::Connection QUaServer::instanceCreated(const QObject * pObj, const M & callback)
+{
+	return this->instanceCreated<T>(T::staticMetaObject, pObj, callback);
 }
 
 template<typename T, typename TFunc1>
