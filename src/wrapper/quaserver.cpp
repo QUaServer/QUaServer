@@ -34,7 +34,16 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	}
 	Q_ASSERT(srv->m_hashConstructors.contains(*typeNodeId));
 	// get method from type constructors map and call it
-	return srv->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
+	auto st = srv->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
+	// emit new instance signal if appropriate
+	if (srv->m_hashSignalers.contains(*typeNodeId))
+	{
+		auto signaler = srv->m_hashSignalers.value(*typeNodeId);
+		auto newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(*nodeContext));
+		Q_CHECK_PTR(newInstance);
+		emit signaler->signalNewInstance(newInstance);
+	}
+	return st;
 }
 
 void QUaServer::uaDestructor(UA_Server       * server, 

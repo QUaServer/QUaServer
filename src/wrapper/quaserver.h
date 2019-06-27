@@ -14,6 +14,7 @@
 #include <QUaBaseEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+// Enum Stuff
 typedef qint64 QUaEnumKey;
 struct QUaEnumEntry
 {
@@ -25,10 +26,18 @@ inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs)
 { 
 	return lhs.strDisplayName == rhs.strDisplayName && lhs.strDescription == rhs.strDescription;
 }
-
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
-
 typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;
+
+// Class whose only pupose is emit signals
+class QUaSignaler : public QObject
+{
+	Q_OBJECT
+public:
+	explicit QUaSignaler(QObject *parent = 0) : QObject(parent) { };
+signals:
+	void signalNewInstance(QUaNode *node);
+};
 
 class QUaServer : public QObject
 {
@@ -98,6 +107,10 @@ public:
 	// get all instances of a type
 	template<typename T>
 	QList<T*> typeInstances();
+	// subscribe to instance of a type added
+	template<typename T, typename TFunc1>
+	QMetaObject::Connection instanceCreated(typename QtPrivate::FunctionPointer<TFunc1>::Object* pObj,
+		                                    TFunc1 callback);
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QString &strNodeId = "");
@@ -186,6 +199,7 @@ private:
 	QMap <QString     , UA_NodeId> m_mapTypes;
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
+	QHash<UA_NodeId, QUaSignaler*> m_hashSignalers;
 
 	// only call once on constructor
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
@@ -195,6 +209,12 @@ private:
 	// types
 	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
+	template<typename T, typename M>
+	QMetaObject::Connection instanceCreated(
+		const QMetaObject &metaObject,
+		const QObject * targetObject,
+		const M &callback
+	);
 	// enums
 	void       registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
 	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId);
@@ -340,6 +360,55 @@ inline QList<T*> QUaServer::typeInstances()
 		retList << instance;
 	}
 	return retList;
+}
+
+template<typename T, typename TFunc1>
+inline QMetaObject::Connection QUaServer::instanceCreated(
+	typename QtPrivate::FunctionPointer<TFunc1>::Object * pObj, 
+	TFunc1 callback)
+{
+	// create callback as std::function and bind
+	std::function<void(T*)> f = std::bind(callback, pObj, std::placeholders::_1);
+	return this->instanceCreated<T>(T::staticMetaObject, pObj, f);
+}
+
+template<typename T, typename M>
+inline QMetaObject::Connection QUaServer::instanceCreated(
+	const QMetaObject & metaObject, 
+	const QObject * targetObject, 
+	const M & callback)
+{
+	// check if OPC UA relevant
+	if (!metaObject.inherits(&QUaNode::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QUaServer::instanceCreated", "Unsupported base class. It must derive from QUaNode");
+		return QMetaObject::Connection();
+	}
+	// try to get typeNodeId, if null, then register it
+	QString   strClassName = QString(metaObject.className());
+	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (UA_NodeId_isNull(&typeNodeId))
+	{
+		this->registerType(metaObject);
+		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	}
+	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
+	// check if there is already a signaler
+	// NOTE : one signaler per registered ua type
+	auto signaler = m_hashSignalers.value(typeNodeId, nullptr);
+	if (!signaler)
+	{
+		m_hashSignalers[typeNodeId] = new QUaSignaler(this);
+		signaler = m_hashSignalers.value(typeNodeId, nullptr);
+	}
+	Q_CHECK_PTR(signaler);
+	// connect to signal
+	return QObject::connect(signaler, &QUaSignaler::signalNewInstance, targetObject,
+	[callback](QUaNode * node) {
+		auto specializedNode = dynamic_cast<T*>(node);
+		Q_CHECK_PTR(specializedNode);
+		callback(specializedNode);
+	}, Qt::QueuedConnection);
 }
 
 template<typename T>
