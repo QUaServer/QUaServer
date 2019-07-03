@@ -1928,7 +1928,11 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 	UA_EnumValueType *enumArr = static_cast<UA_EnumValueType *>(enumValues.data);
 	UA_free(enumArr);
 	// re-create array of enum values
-	UA_EnumValueType * valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * mapEnum.count());
+	UA_EnumValueType * valueEnum = nullptr;
+	if (mapEnum.count() > 0)
+	{
+		valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * mapEnum.count());
+	}
 	auto listKeys = mapEnum.keys();
 	for (int i = 0; i < mapEnum.count(); i++)
 	{
