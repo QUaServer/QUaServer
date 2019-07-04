@@ -1,6 +1,6 @@
 /* THIS IS A SINGLE-FILE DISTRIBUTION CONCATENATED FROM THE OPEN62541 SOURCES
  * visit http://open62541.org/ for information about this software
- * Git-Revision: 0.3-rc2-1038-g2e14f900
+ * Git-Revision: 0.3-rc2-1074-g5afcb642
  */
 
 /*
@@ -1162,7 +1162,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -3777,7 +3777,7 @@ UA_EventFilter_decodeBinary(const UA_ByteString *src, size_t *offset, UA_EventFi
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 
 #ifdef UA_ENABLE_AMALGAMATION
@@ -3951,7 +3951,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_handling.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 
 
@@ -4353,7 +4353,7 @@ _UA_END_DECLS
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated_encoding_binary.h" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 #ifdef UA_ENABLE_AMALGAMATION
 #else
@@ -5457,6 +5457,12 @@ _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 
+#define UA_BOUNDEDVALUE_SETWBOUNDS(BOUNDS, SRC, DST) { \
+        if(SRC > BOUNDS.max) DST = BOUNDS.max;         \
+        else if(SRC < BOUNDS.min) DST = BOUNDS.min;    \
+        else DST = SRC;                                \
+    }
+
 /**
  * MonitoredItems create Notifications. Subscriptions collect Notifications from
  * (several) MonitoredItems and publish them to the client.
@@ -6538,14 +6544,14 @@ UA_Server_writeWithSession(UA_Server *server, UA_Session *session,
 /* Many services come as an array of operations. This function generalizes the
  * processing of the operations. */
 typedef void (*UA_ServiceOperation)(UA_Server *server, UA_Session *session,
-                                    void *context,
+                                    const void *context,
                                     const void *requestOperation,
                                     void *responseOperation);
 
 UA_StatusCode
 UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
                                    UA_ServiceOperation operationCallback,
-                                   void *context,
+                                   const void *context,
                                    const size_t *requestOperations,
                                    const UA_DataType *requestOperationsType,
                                    size_t *responseOperations,
@@ -6693,9 +6699,6 @@ _UA_BEGIN_DECLS
 
 typedef void (*UA_Service)(UA_Server*, UA_Session*,
                            const void *request, void *response);
-
-typedef UA_StatusCode (*UA_InSituService)(UA_Server*, UA_Session*, UA_MessageContext *mc,
-                                          const void *request, UA_ResponseHeader *rh);
 
 /**
  * Discovery Service Set
@@ -6952,8 +6955,8 @@ void Service_UnregisterNodes(UA_Server *server, UA_Session *session,
  * elements are indexed, such as an array, this Service allows Clients to read
  * the entire set of indexed values as a composite, to read individual elements
  * or to read ranges of elements of the composite. */
-UA_StatusCode Service_Read(UA_Server *server, UA_Session *session, UA_MessageContext *mc,
-                           const UA_ReadRequest *request, UA_ResponseHeader *responseHeader);
+void Service_Read(UA_Server *server, UA_Session *session,
+                  const UA_ReadRequest *request, UA_ReadResponse *response);
 
 /**
  * Write Service
@@ -6963,8 +6966,7 @@ UA_StatusCode Service_Read(UA_Server *server, UA_Session *session, UA_MessageCon
  * the entire set of indexed values as a composite, to write individual elements
  * or to write ranges of elements of the composite. */
 void Service_Write(UA_Server *server, UA_Session *session,
-                   const UA_WriteRequest *request,
-                   UA_WriteResponse *response);
+                   const UA_WriteRequest *request, UA_WriteResponse *response);
 
 /**
  * HistoryRead Service
@@ -10421,7 +10423,7 @@ UA_calcSizeBinary(const void *p, const UA_DataType *type) {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/types_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 
 /* Boolean */
@@ -17125,7 +17127,7 @@ const UA_DataType UA_TYPES[UA_TYPES_COUNT] = {
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/build/src_generated/open62541/transport_generated.c" ***********************************/
 
 /* Generated from Opc.Ua.Types.bsd, Custom.Opc.Ua.Transport.bsd with script C:/Users/User/Desktop/Repos/open62541.git/tools/generate_datatypes.py
- * on host PPIC09 by user User at 2019-06-07 01:35:32 */
+ * on host PPIC09 by user User at 2019-07-04 03:10:14 */
 
 
 /* SecureConversationMessageAbortBody */
@@ -19741,13 +19743,8 @@ UA_MessageContext_encode(UA_MessageContext *mc, const void *content,
                          const UA_DataType *contentType) {
     UA_StatusCode retval = UA_encodeBinary(content, contentType, &mc->buf_pos, &mc->buf_end,
                                            sendSymmetricEncodingCallback, mc);
-    if(retval != UA_STATUSCODE_GOOD) {
-        /* TODO: Send the abort message */
-        if(mc->messageBuffer.length > 0) {
-            UA_Connection *connection = mc->channel->connection;
-            connection->releaseSendBuffer(connection, &mc->messageBuffer);
-        }
-    }
+    if(retval != UA_STATUSCODE_GOOD && mc->messageBuffer.length > 0)
+        UA_MessageContext_abort(mc);
     return retval;
 }
 
@@ -21529,12 +21526,10 @@ UA_Server_updateCertificate(UA_Server *server,
 
 UA_SecurityPolicy *
 UA_SecurityPolicy_getSecurityPolicyByUri(const UA_Server *server,
-                                         UA_ByteString *securityPolicyUri)
-{
+                                         const UA_ByteString *securityPolicyUri) {
     for(size_t i = 0; i < server->config.securityPoliciesSize; i++) {
         UA_SecurityPolicy *securityPolicyCandidate = &server->config.securityPolicies[i];
-        if(UA_ByteString_equal(securityPolicyUri,
-                               &securityPolicyCandidate->policyUri))
+        if(UA_ByteString_equal(securityPolicyUri, &securityPolicyCandidate->policyUri))
             return securityPolicyCandidate;
     }
     return NULL;
@@ -22745,6 +22740,7 @@ UA_ServerConfig_clean(UA_ServerConfig *config) {
     UA_ApplicationDescription_deleteMembers(&config->applicationDescription);
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
     UA_MdnsDiscoveryConfiguration_clear(&config->discovery.mdns);
+    UA_String_clear(&config->discovery.mdnsInterfaceIP);
 #endif
 
     /* Custom DataTypes */
@@ -22853,18 +22849,40 @@ UA_ServerConfig_addPubSubTransportLayer(UA_ServerConfig *config,
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 // store the authentication token and session ID so we can help fuzzing by setting
 // these values in the next request automatically
-UA_NodeId unsafe_fuzz_authenticationToken = {
-        0, UA_NODEIDTYPE_NUMERIC, {0}
-};
+UA_NodeId unsafe_fuzz_authenticationToken = {0, UA_NODEIDTYPE_NUMERIC, {0}};
 #endif
 
 #ifdef UA_DEBUG_DUMP_PKGS_FILE
-void UA_debug_dumpCompleteChunk(UA_Server *const server, UA_Connection *const connection, UA_ByteString *messageBuffer);
+void UA_debug_dumpCompleteChunk(UA_Server *const server, UA_Connection *const connection,
+                                UA_ByteString *messageBuffer);
 #endif
 
 /********************/
 /* Helper Functions */
 /********************/
+
+static UA_StatusCode
+sendServiceFaultWithRequest(UA_SecureChannel *channel,
+                            const UA_RequestHeader *requestHeader,
+                            const UA_DataType *responseType,
+                            UA_UInt32 requestId, UA_StatusCode error) {
+    UA_STACKARRAY(UA_Byte, response, responseType->memSize);
+    UA_init(response, responseType);
+    UA_ResponseHeader *responseHeader = (UA_ResponseHeader*)response;
+    responseHeader->requestHandle = requestHeader->requestHandle;
+    responseHeader->timestamp = UA_DateTime_now();
+    responseHeader->serviceResult = error;
+
+    /* Send error message. Message type is MSG and not ERR, since we are on a
+     * SecureChannel! */
+    UA_StatusCode retval =
+        UA_SecureChannel_sendSymmetricMessage(channel, requestId, UA_MESSAGETYPE_MSG,
+                                              response, responseType);
+
+    UA_LOG_DEBUG(channel->securityPolicy->logger, UA_LOGCATEGORY_SERVER,
+                 "Sent ServiceFault with error code %s", UA_StatusCode_name(error));
+    return retval;
+}
 
  /* This is not an ERR message, the connection is not closed afterwards */
 static UA_StatusCode
@@ -22875,34 +22893,16 @@ sendServiceFault(UA_SecureChannel *channel, const UA_ByteString *msg,
     UA_StatusCode retval = UA_RequestHeader_decodeBinary(msg, &offset, &requestHeader);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
-    UA_STACKARRAY(UA_Byte, response, responseType->memSize);
-    UA_init(response, responseType);
-    UA_ResponseHeader *responseHeader = (UA_ResponseHeader*)response;
-    responseHeader->requestHandle = requestHeader.requestHandle;
-    responseHeader->timestamp = UA_DateTime_now();
-    responseHeader->serviceResult = error;
-
-    // Send error message. Message type is MSG and not ERR, since we are on a securechannel!
-    retval = UA_SecureChannel_sendSymmetricMessage(channel, requestId, UA_MESSAGETYPE_MSG,
-                                                   response, responseType);
-
+    retval = sendServiceFaultWithRequest(channel, &requestHeader, responseType,
+                                         requestId, error);
     UA_RequestHeader_deleteMembers(&requestHeader);
-    UA_LOG_DEBUG(channel->securityPolicy->logger, UA_LOGCATEGORY_SERVER,
-                 "Sent ServiceFault with error code %s", UA_StatusCode_name(error));
     return retval;
 }
-
-typedef enum {
-    UA_SERVICETYPE_NORMAL,
-    UA_SERVICETYPE_INSITU,
-    UA_SERVICETYPE_CUSTOM
-} UA_ServiceType;
 
 static void
 getServicePointers(UA_UInt32 requestTypeId, const UA_DataType **requestType,
                    const UA_DataType **responseType, UA_Service *service,
-                   UA_InSituService *serviceInsitu,
-                   UA_Boolean *requiresSession, UA_ServiceType *serviceType) {
+                   UA_Boolean *requiresSession) {
     switch(requestTypeId) {
     case UA_NS0ID_GETENDPOINTSREQUEST_ENCODING_DEFAULTBINARY:
         *service = (UA_Service)Service_GetEndpoints;
@@ -22943,13 +22943,11 @@ getServicePointers(UA_UInt32 requestTypeId, const UA_DataType **requestType,
         *requestType = &UA_TYPES[UA_TYPES_CREATESESSIONREQUEST];
         *responseType = &UA_TYPES[UA_TYPES_CREATESESSIONRESPONSE];
         *requiresSession = false;
-        *serviceType = UA_SERVICETYPE_CUSTOM;
         break;
     case UA_NS0ID_ACTIVATESESSIONREQUEST_ENCODING_DEFAULTBINARY:
         *service = NULL; //(UA_Service)Service_ActivateSession;
         *requestType = &UA_TYPES[UA_TYPES_ACTIVATESESSIONREQUEST];
         *responseType = &UA_TYPES[UA_TYPES_ACTIVATESESSIONRESPONSE];
-        *serviceType = UA_SERVICETYPE_CUSTOM;
         break;
     case UA_NS0ID_CLOSESESSIONREQUEST_ENCODING_DEFAULTBINARY:
         *service = (UA_Service)Service_CloseSession;
@@ -22958,10 +22956,9 @@ getServicePointers(UA_UInt32 requestTypeId, const UA_DataType **requestType,
         break;
     case UA_NS0ID_READREQUEST_ENCODING_DEFAULTBINARY:
         *service = NULL;
-        *serviceInsitu = (UA_InSituService)Service_Read;
+        *service = (UA_Service)Service_Read;
         *requestType = &UA_TYPES[UA_TYPES_READREQUEST];
         *responseType = &UA_TYPES[UA_TYPES_READRESPONSE];
-        *serviceType = UA_SERVICETYPE_INSITU;
         break;
     case UA_NS0ID_WRITEREQUEST_ENCODING_DEFAULTBINARY:
         *service = (UA_Service)Service_Write;
@@ -23226,12 +23223,152 @@ processOPN(UA_Server *server, UA_SecureChannel *channel,
 }
 
 static UA_StatusCode
+sendResponse(UA_SecureChannel *channel, UA_UInt32 requestId, UA_UInt32 requestHandle,
+             UA_ResponseHeader *responseHeader, const UA_DataType *responseType) {
+    /* Prepare the ResponseHeader */
+    responseHeader->requestHandle = requestHandle;
+    responseHeader->timestamp = UA_DateTime_now();
+
+    /* Start the message context */
+    UA_MessageContext mc;
+    UA_StatusCode retval = UA_MessageContext_begin(&mc, channel, requestId, UA_MESSAGETYPE_MSG);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    /* Assert's required for clang-analyzer */
+    UA_assert(mc.buf_pos == &mc.messageBuffer.data[UA_SECURE_MESSAGE_HEADER_LENGTH]);
+    UA_assert(mc.buf_end <= &mc.messageBuffer.data[mc.messageBuffer.length]);
+
+    /* Encode the response type */
+    UA_NodeId typeId = UA_NODEID_NUMERIC(0, responseType->binaryEncodingId);
+    retval = UA_MessageContext_encode(&mc, &typeId, &UA_TYPES[UA_TYPES_NODEID]);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    /* Encode the response */
+    retval = UA_MessageContext_encode(&mc, responseHeader, responseType);
+    if(retval != UA_STATUSCODE_GOOD)
+        return retval;
+
+    /* Finish / send out */
+    return UA_MessageContext_finish(&mc);
+}
+
+static UA_StatusCode
+processMSGDecoded(UA_Server *server, UA_SecureChannel *channel, UA_UInt32 requestId,
+                  UA_Service service, const UA_RequestHeader *requestHeader,
+                  const UA_DataType *requestType, UA_ResponseHeader *responseHeader,
+                  const UA_DataType *responseType, UA_Boolean sessionRequired) {
+    /* CreateSession doesn't need a session */
+    if(requestType == &UA_TYPES[UA_TYPES_CREATESESSIONREQUEST]) {
+        Service_CreateSession(server, channel,
+                              (const UA_CreateSessionRequest *)requestHeader,
+                              (UA_CreateSessionResponse *)responseHeader);
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+        /* Store the authentication token and session ID so we can help fuzzing
+         * by setting these values in the next request automatically */
+        UA_CreateSessionResponse *res = (UA_CreateSessionResponse *)responseHeader;
+        UA_NodeId_copy(&res->authenticationToken, &unsafe_fuzz_authenticationToken);
+#endif
+        return sendResponse(channel, requestId, requestHeader->requestHandle,
+                            responseHeader, responseType);
+    }
+
+    /* Find the matching session */
+    UA_Session *session = (UA_Session*)
+        UA_SecureChannel_getSession(channel, &requestHeader->authenticationToken);
+    if(!session && !UA_NodeId_isNull(&requestHeader->authenticationToken))
+        session = UA_SessionManager_getSessionByToken(&server->sessionManager,
+                                                      &requestHeader->authenticationToken);
+
+    if(requestType == &UA_TYPES[UA_TYPES_ACTIVATESESSIONREQUEST]) {
+        if(!session) {
+            UA_LOG_DEBUG_CHANNEL(&server->config.logger, channel,
+                                 "Trying to activate a session that is " \
+                                 "not known in the server");
+            return sendServiceFaultWithRequest(channel, requestHeader, responseType,
+                                    requestId, UA_STATUSCODE_BADSESSIONIDINVALID);
+        }
+        Service_ActivateSession(server, channel, session,
+                                (const UA_ActivateSessionRequest*)requestHeader,
+                                (UA_ActivateSessionResponse*)responseHeader);
+        return sendResponse(channel, requestId, requestHeader->requestHandle,
+                            responseHeader, responseType);
+    }
+
+    /* Set an anonymous, inactive session for services that need no session */
+    UA_Session anonymousSession;
+    if(!session) {
+        if(sessionRequired) {
+#ifdef UA_ENABLE_TYPENAMES
+            UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
+                                   "%s refused without a valid session",
+                                   requestType->typeName);
+#else
+            UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
+                                   "Service %i refused without a valid session",
+                                   requestType->binaryEncodingId);
+#endif
+            return sendServiceFaultWithRequest(channel, requestHeader, responseType,
+                                               requestId, UA_STATUSCODE_BADSESSIONIDINVALID);
+        }
+
+        UA_Session_init(&anonymousSession);
+        anonymousSession.sessionId = UA_NODEID_GUID(0, UA_GUID_NULL);
+        anonymousSession.header.channel = channel;
+        session = &anonymousSession;
+    }
+
+    /* Trying to use a non-activated session? Do not allow if request is of type
+     * CloseSessionRequest */
+    if(sessionRequired && !session->activated &&
+       requestType != &UA_TYPES[UA_TYPES_CLOSESESSIONREQUEST]) {
+#ifdef UA_ENABLE_TYPENAMES
+        UA_LOG_WARNING_SESSION(&server->config.logger, session,
+                               "%s refused on a non-activated session",
+                               requestType->typeName);
+#else
+        UA_LOG_WARNING_SESSION(&server->config.logger, session,
+                               "Service %i refused on a non-activated session",
+                               requestType->binaryEncodingId);
+#endif
+        UA_SessionManager_removeSession(&server->sessionManager,
+                                        &session->header.authenticationToken);
+        return sendServiceFaultWithRequest(channel, requestHeader, responseType,
+                                           requestId, UA_STATUSCODE_BADSESSIONNOTACTIVATED);
+    }
+
+    /* The session is bound to another channel */
+    if(session != &anonymousSession && session->header.channel != channel) {
+        UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
+                               "Client tries to use a Session that is not "
+                               "bound to this SecureChannel");
+        return sendServiceFaultWithRequest(channel, requestHeader, responseType,
+                                           requestId, UA_STATUSCODE_BADSECURECHANNELIDINVALID);
+    }
+
+    /* Update the session lifetime */
+    UA_Session_updateLifetime(session);
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS
+    /* The publish request is not answered immediately */
+    if(requestType == &UA_TYPES[UA_TYPES_PUBLISHREQUEST]) {
+        Service_Publish(server, session, (const UA_PublishRequest*)requestHeader, requestId);
+        return UA_STATUSCODE_GOOD;
+    }
+#endif
+
+    /* Dispatch the synchronous service call and send the response */
+    service(server, session, requestHeader, responseHeader);
+    return sendResponse(channel, requestId, requestHeader->requestHandle,
+                        responseHeader, responseType);
+}
+
+static UA_StatusCode
 processMSG(UA_Server *server, UA_SecureChannel *channel,
            UA_UInt32 requestId, const UA_ByteString *msg) {
-    /* At 0, the nodeid starts... */
-    size_t offset = 0;
-
     /* Decode the nodeid */
+    size_t offset = 0;
     UA_NodeId requestTypeId;
     UA_StatusCode retval = UA_NodeId_decodeBinary(msg, &offset, &requestTypeId);
     if(retval != UA_STATUSCODE_GOOD)
@@ -23240,18 +23377,15 @@ processMSG(UA_Server *server, UA_SecureChannel *channel,
        requestTypeId.identifierType != UA_NODEIDTYPE_NUMERIC)
         UA_NodeId_deleteMembers(&requestTypeId); /* leads to badserviceunsupported */
 
-    /* Store the start-position of the request */
-    size_t requestPos = offset;
+    size_t requestPos = offset; /* Store the offset (for sendServiceFault) */
 
     /* Get the service pointers */
     UA_Service service = NULL;
-    UA_InSituService serviceInsitu = NULL;
+    UA_Boolean sessionRequired = true;
     const UA_DataType *requestType = NULL;
     const UA_DataType *responseType = NULL;
-    UA_Boolean sessionRequired = true;
-    UA_ServiceType serviceType = UA_SERVICETYPE_NORMAL;
     getServicePointers(requestTypeId.identifier.numeric, &requestType,
-                       &responseType, &service, &serviceInsitu, &sessionRequired, &serviceType);
+                       &responseType, &service, &sessionRequired);
     if(!requestType) {
         if(requestTypeId.identifier.numeric == 787) {
             UA_LOG_INFO_CHANNEL(&server->config.logger, channel,
@@ -23269,7 +23403,6 @@ processMSG(UA_Server *server, UA_SecureChannel *channel,
 
     /* Decode the request */
     UA_STACKARRAY(UA_Byte, request, requestType->memSize);
-    UA_RequestHeader *requestHeader = (UA_RequestHeader*)request;
     retval = UA_decodeBinary(msg, &offset, request, requestType, server->config.customDataTypes);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_DEBUG_CHANNEL(&server->config.logger, channel,
@@ -23277,179 +23410,42 @@ processMSG(UA_Server *server, UA_SecureChannel *channel,
         return sendServiceFault(channel, msg, requestPos, responseType, requestId, retval);
     }
 
-    /* Prepare the respone */
-    UA_STACKARRAY(UA_Byte, responseBuf, responseType->memSize);
-    void *response = (void*)(uintptr_t)&responseBuf[0]; /* Get around aliasing rules */
-    UA_init(response, responseType);
-    UA_Session *session = NULL; /* must be initialized before goto send_response */
-
-    /* CreateSession doesn't need a session */
-    if(requestType == &UA_TYPES[UA_TYPES_CREATESESSIONREQUEST]) {
-        Service_CreateSession(server, channel,
-            (const UA_CreateSessionRequest *)request,
-                              (UA_CreateSessionResponse *)response);
-        #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-        // store the authentication token and session ID so we can help fuzzing by setting
-        // these values in the next request automatically
-        UA_CreateSessionResponse *res = (UA_CreateSessionResponse *)response;
-        UA_NodeId_copy(&res->authenticationToken, &unsafe_fuzz_authenticationToken);
-        #endif
-        goto send_response;
-    }
-
-    #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    // set the authenticationToken from the create session request to help fuzzing cover more lines
-    UA_NodeId_deleteMembers(&requestHeader->authenticationToken);
-    if(!UA_NodeId_isNull(&unsafe_fuzz_authenticationToken))
-        UA_NodeId_copy(&unsafe_fuzz_authenticationToken, &requestHeader->authenticationToken);
-    #endif
-
-    /* Find the matching session */
-    session = (UA_Session*)UA_SecureChannel_getSession(channel, &requestHeader->authenticationToken);
-    if(!session && !UA_NodeId_isNull(&requestHeader->authenticationToken))
-        session = UA_SessionManager_getSessionByToken(&server->sessionManager,
-                                                      &requestHeader->authenticationToken);
-
-    if(requestType == &UA_TYPES[UA_TYPES_ACTIVATESESSIONREQUEST]) {
-        if(!session) {
-            UA_LOG_DEBUG_CHANNEL(&server->config.logger, channel,
-                                 "Trying to activate a session that is " \
-                                 "not known in the server");
-            UA_deleteMembers(request, requestType);
-            return sendServiceFault(channel, msg, requestPos, responseType,
-                                    requestId, UA_STATUSCODE_BADSESSIONIDINVALID);
-        }
-        Service_ActivateSession(server, channel, session,
-            (const UA_ActivateSessionRequest*)request,
-                                (UA_ActivateSessionResponse*)response);
-        goto send_response;
-    }
-
-    /* Set an anonymous, inactive session for services that need no session */
-    UA_Session anonymousSession;
-    if(!session) {
-        if(sessionRequired) {
-            UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
-                                   "Service request %i without a valid session",
-                                   requestType->binaryEncodingId);
-            UA_deleteMembers(request, requestType);
-            return sendServiceFault(channel, msg, requestPos, responseType,
-                                    requestId, UA_STATUSCODE_BADSESSIONIDINVALID);
-        }
-
-        UA_Session_init(&anonymousSession);
-        anonymousSession.sessionId = UA_NODEID_GUID(0, UA_GUID_NULL);
-        anonymousSession.header.channel = channel;
-        session = &anonymousSession;
-    }
-
-    /* Trying to use a non-activated session?
-     * Do not allow if request is of type CloseSessionRequest */
-    if(sessionRequired && !session->activated && requestType != &UA_TYPES[UA_TYPES_CLOSESESSIONREQUEST]) {
-        UA_LOG_WARNING_SESSION(&server->config.logger, session,
-                               "Calling service %i on a non-activated session",
-                               requestType->binaryEncodingId);
-        UA_SessionManager_removeSession(&server->sessionManager,
-                                        &session->header.authenticationToken);
-        UA_deleteMembers(request, requestType);
-        return sendServiceFault(channel, msg, requestPos, responseType,
-                                requestId, UA_STATUSCODE_BADSESSIONNOTACTIVATED);
-    }
-
-    /* The session is bound to another channel */
-    if(session != &anonymousSession && session->header.channel != channel) {
-        UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
-                               "Client tries to use a Session that is not "
-                               "bound to this SecureChannel");
-        UA_deleteMembers(request, requestType);
-        return sendServiceFault(channel, msg, requestPos, responseType,
-                                requestId, UA_STATUSCODE_BADSECURECHANNELIDINVALID);
-    }
-
-    /* Update the session lifetime */
-    UA_Session_updateLifetime(session);
-
-#ifdef UA_ENABLE_SUBSCRIPTIONS
-    /* The publish request is not answered immediately */
-    if(requestType == &UA_TYPES[UA_TYPES_PUBLISHREQUEST]) {
-        Service_Publish(server, session,
-            (const UA_PublishRequest*)request, requestId);
-        UA_deleteMembers(request, requestType);
-        return UA_STATUSCODE_GOOD;
-    }
-#endif
-
-    send_response:
-
-    /* Prepare the ResponseHeader */
-    ((UA_ResponseHeader*)response)->requestHandle = requestHeader->requestHandle;
-    ((UA_ResponseHeader*)response)->timestamp = UA_DateTime_now();
-
     /* Check timestamp in the request header */
+    UA_RequestHeader *requestHeader = (UA_RequestHeader*)request;
     if(requestHeader->timestamp == 0) {
         if(server->config.verifyRequestTimestamp <= UA_RULEHANDLING_WARN) {
             UA_LOG_WARNING_CHANNEL(&server->config.logger, channel,
                                    "The server sends no timestamp in the request header. "
                                    "See the 'verifyRequestTimestamp' setting.");
-            if(server->config.verifyRequestTimestamp <= UA_RULEHANDLING_ABORT)
-                return sendServiceFault(channel, msg, requestPos, responseType,
-                                        requestId, UA_STATUSCODE_BADINVALIDTIMESTAMP);
+            if(server->config.verifyRequestTimestamp <= UA_RULEHANDLING_ABORT) {
+                retval = sendServiceFaultWithRequest(channel, requestHeader, responseType,
+                                                     requestId, UA_STATUSCODE_BADINVALIDTIMESTAMP);
+                UA_deleteMembers(request, requestType);
+                return retval;
+            }
         }
     }
 
-    /* Process normal services before initializing the message context.
-     * Some services may initialize new message contexts and to support network
-     * layers only providing one send buffer, only one message context can be
-     * initialized concurrently. */
-    if(serviceType == UA_SERVICETYPE_NORMAL)
-        service(server, session, request, response);
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    /* Set the authenticationToken from the create session request to help
+     * fuzzing cover more lines */
+    UA_NodeId_deleteMembers(&requestHeader->authenticationToken);
+    if(!UA_NodeId_isNull(&unsafe_fuzz_authenticationToken))
+        UA_NodeId_copy(&unsafe_fuzz_authenticationToken, &requestHeader->authenticationToken);
+#endif
 
-    /* Start the message */
-    UA_NodeId typeId = UA_NODEID_NUMERIC(0, responseType->binaryEncodingId);
-    UA_MessageContext mc;
-    retval = UA_MessageContext_begin(&mc, channel, requestId, UA_MESSAGETYPE_MSG);
-    if(retval != UA_STATUSCODE_GOOD)
-        goto cleanup;
+    /* Prepare the respone */
+    UA_STACKARRAY(UA_Byte, response, responseType->memSize);
+    UA_ResponseHeader *responseHeader = (UA_ResponseHeader*)response;
+    UA_init(response, responseType);
 
-    /* Assert's required for clang-analyzer */
-    UA_assert(mc.buf_pos == &mc.messageBuffer.data[UA_SECURE_MESSAGE_HEADER_LENGTH]);
-    UA_assert(mc.buf_end <= &mc.messageBuffer.data[mc.messageBuffer.length]);
+    /* Continue with the decoded Request */
+    retval = processMSGDecoded(server, channel, requestId, service, requestHeader, requestType,
+                               responseHeader, responseType, sessionRequired);
 
-    retval = UA_MessageContext_encode(&mc, &typeId, &UA_TYPES[UA_TYPES_NODEID]);
-    if(retval != UA_STATUSCODE_GOOD)
-        goto cleanup;
-
-    switch(serviceType) {
-    case UA_SERVICETYPE_CUSTOM:
-        /* Was processed before...*/
-        retval = UA_MessageContext_encode(&mc, response, responseType);
-        break;
-    case UA_SERVICETYPE_INSITU:
-        retval = serviceInsitu
-            (server, session, &mc, request, (UA_ResponseHeader*)response);
-        break;
-    case UA_SERVICETYPE_NORMAL:
-    default:
-        retval = UA_MessageContext_encode(&mc, response, responseType);
-        break;
-    }
-
-    /* Finish sending the message */
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_MessageContext_abort(&mc);
-        goto cleanup;
-    }
-
-    retval = UA_MessageContext_finish(&mc);
-
- cleanup:
-    if(retval != UA_STATUSCODE_GOOD)
-        UA_LOG_INFO_CHANNEL(&server->config.logger, channel,
-                            "Could not send the message over the SecureChannel "
-                            "with StatusCode %s", UA_StatusCode_name(retval));
     /* Clean up */
     UA_deleteMembers(request, requestType);
-    UA_deleteMembers(response, responseType);
+    UA_deleteMembers(responseHeader, responseType);
     return retval;
 }
 
@@ -23501,7 +23497,7 @@ createSecureChannel(void *application, UA_Connection *connection,
                                 &endpointCandidate->securityPolicyUri))
             continue;
         securityPolicy = UA_SecurityPolicy_getSecurityPolicyByUri(server,
-                                                                  (UA_ByteString*)&endpointCandidate->securityPolicyUri);
+                            (UA_ByteString*)&endpointCandidate->securityPolicyUri);
         if(!securityPolicy)
             return UA_STATUSCODE_BADINTERNALERROR;
 
@@ -23911,7 +23907,7 @@ UA_Server_editNode(UA_Server *server, UA_Session *session,
 UA_StatusCode
 UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
                                    UA_ServiceOperation operationCallback,
-                                   void *context, const size_t *requestOperations,
+                                   const void *context, const size_t *requestOperations,
                                    const UA_DataType *requestOperationsType,
                                    size_t *responseOperations,
                                    const UA_DataType *responseOperationsType) {
@@ -26280,6 +26276,68 @@ UA_ReaderGroupConfig_copy(const UA_ReaderGroupConfig *src,
     return UA_STATUSCODE_GOOD;
 }
 
+
+static UA_DataSetReader *
+getReaderFromIdentifier(UA_Server *server, UA_NetworkMessage *pMsg, UA_PubSubConnection *pConnection) {
+    if(pConnection->readerGroupsSize == 1) {
+        if(LIST_FIRST(&pConnection->readerGroups)->readersCount == 1) {
+            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "only 1 DataSetReader available. This one will be used.");
+            return LIST_FIRST(&LIST_FIRST(&pConnection->readerGroups)->readers);
+        }
+    }
+
+    if(!pMsg->publisherIdEnabled)
+        return NULL;
+
+    UA_ReaderGroup* readerGroup;
+    LIST_FOREACH(readerGroup, &pConnection->readerGroups, listEntry) {
+        UA_DataSetReader *tmpReader;
+        LIST_FOREACH(tmpReader, &readerGroup->readers, listEntry) {
+            switch (pMsg->publisherIdType) {
+            case UA_PUBLISHERDATATYPE_BYTE:
+                if(tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_BYTE] &&
+                   pMsg->publisherIdType == UA_PUBLISHERDATATYPE_BYTE &&
+                   pMsg->publisherId.publisherIdByte == *(UA_Byte*)tmpReader->config.publisherId.data) {
+                    return tmpReader;
+                }
+                break;
+            case UA_PUBLISHERDATATYPE_UINT16:
+                if(tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT16] &&
+                   pMsg->publisherIdType == UA_PUBLISHERDATATYPE_UINT16 &&
+                   pMsg->publisherId.publisherIdUInt16 == *(UA_UInt16*)tmpReader->config.publisherId.data) {
+                    return tmpReader;
+                }
+                break;
+            case UA_PUBLISHERDATATYPE_UINT32:
+                if(tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT32] &&
+                   pMsg->publisherIdType == UA_PUBLISHERDATATYPE_UINT32 &&
+                   pMsg->publisherId.publisherIdUInt32 == *(UA_UInt32*)tmpReader->config.publisherId.data) {
+                    return tmpReader;
+                }
+                break;
+            case UA_PUBLISHERDATATYPE_UINT64:
+                if(tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT64] &&
+                   pMsg->publisherIdType == UA_PUBLISHERDATATYPE_UINT64 &&
+                   pMsg->publisherId.publisherIdUInt64 == *(UA_UInt64*)tmpReader->config.publisherId.data) {
+                    return tmpReader;
+                }
+                break;
+            case UA_PUBLISHERDATATYPE_STRING:
+                if(tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_STRING] &&
+                   pMsg->publisherIdType == UA_PUBLISHERDATATYPE_STRING &&
+                   UA_String_equal(&pMsg->publisherId.publisherIdString, (UA_String*)tmpReader->config.publisherId.data)) {
+                    return tmpReader;
+                }
+                break;
+            default:
+                return NULL;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * Process NetworkMessage.
  *
@@ -26289,106 +26347,36 @@ UA_ReaderGroupConfig_copy(const UA_ReaderGroupConfig *src,
  */
 UA_StatusCode
 UA_Server_processNetworkMessage(UA_Server *server, UA_NetworkMessage *pMsg,
-                                          UA_PubSubConnection *pConnection) {
-    UA_StatusCode retval = UA_STATUSCODE_BADNOTIMPLEMENTED;
-    if((pMsg == NULL) || (pConnection == NULL)) {
+                                UA_PubSubConnection *pConnection) {
+    if(!pMsg || !pConnection)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
-    }
-
-    UA_Boolean publisherIdAvailable = false;
-    if(pMsg->publisherIdEnabled) {
-        publisherIdAvailable = true;
-    }
 
     /* To Do The condition with dataSetWriterIdAvailable and WriterGroupIdAvailable to be handled
      * when pMsg->groupHeaderEnabled, pMsg->dataSetClassIdEnabled, pMsg->payloadHeaderEnabled
      * Here some filtering is possible */
 
-    UA_Byte anzDataSets = 1;
-    if(pMsg->payloadHeaderEnabled) {
-        anzDataSets = pMsg->payloadHeader.dataSetPayloadHeader.count;
+    UA_DataSetReader* dataSetReaderErg = getReaderFromIdentifier(server, pMsg, pConnection);
+
+    /* No Reader with the specified id found */
+    if(!dataSetReaderErg) {
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "No DataSetReader found with PublisherId");
+        return UA_STATUSCODE_BADNOTFOUND; /* TODO: Check the return code */
     }
 
-    UA_DataSetReader* dataSetReaderErg = NULL;
-        if(pConnection->readerGroupsSize == 1) {
-            if(LIST_FIRST(&pConnection->readerGroups)->readersCount == 1) {
-            UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "only 1 DataSetReader available. This one will be used.");
-            dataSetReaderErg = LIST_FIRST(&LIST_FIRST(&pConnection->readerGroups)->readers);
-            }
+    UA_LOG_DEBUG(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
 
-        }
-        else {
-            UA_DataSetReader *tmpReader;
-            if(publisherIdAvailable) {
-                UA_ReaderGroup* readerGroup = NULL;
-                LIST_FOREACH(readerGroup, &pConnection->readerGroups, listEntry) {
-                    LIST_FOREACH(tmpReader, &readerGroup->readers, listEntry) {
-                        if(publisherIdAvailable && (tmpReader->config.publisherId.type != NULL)) {
-                            switch (pMsg->publisherIdType) {
-                                case UA_PUBLISHERDATATYPE_BYTE:
-                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_BYTE]) &&
-                                       (pMsg->publisherId.publisherIdByte == (*(UA_Byte*)tmpReader->config.publisherId.data))) {
-                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
-                                        dataSetReaderErg = tmpReader;
-                                    }
-                                    break;
+    UA_Byte anzDataSets = 1;
+    if(pMsg->payloadHeaderEnabled)
+        anzDataSets = pMsg->payloadHeader.dataSetPayloadHeader.count;
+    for(UA_Byte iterator = 0; iterator < anzDataSets; iterator++) {
+        UA_LOG_DEBUG(&server->config.logger, UA_LOGCATEGORY_SERVER, "Process Msg with DataSetReader!");
+        UA_Server_DataSetReader_process(server, dataSetReaderErg, &pMsg->payload.dataSetPayload.dataSetMessages[iterator]);
+    }
 
-                                case UA_PUBLISHERDATATYPE_UINT16:
-                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT16]) &&
-                                        (pMsg->publisherId.publisherIdByte == (*(UA_UInt16*)tmpReader->config.publisherId.data))) {
-                                         UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
-                                         dataSetReaderErg = tmpReader;
-                                    }
-                                    break;
+    /* To Do the condition with dataSetWriterId and WriterGroupId
+     * else condition for dataSetWriterIdAvailable and writerGroupIdAvailable) */
 
-                                case UA_PUBLISHERDATATYPE_UINT32:
-                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT32])&&
-                                        (pMsg->publisherId.publisherIdUInt32 == (*(UA_UInt32*)tmpReader->config.publisherId.data))) {
-                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
-                                        dataSetReaderErg = tmpReader;
-                                    }
-                                    break;
-
-                                case UA_PUBLISHERDATATYPE_UINT64:
-                                    if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_UINT64]) &&
-                                        (pMsg->publisherId.publisherIdUInt64 == (*(UA_UInt64*)tmpReader->config.publisherId.data))) {
-                                        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
-                                        dataSetReaderErg = tmpReader;
-                                    }
-                                    break;
-
-                                case UA_PUBLISHERDATATYPE_STRING:
-                                     if((tmpReader->config.publisherId.type == &UA_TYPES[UA_TYPES_STRING]) &&
-                                         (UA_String_equal(&pMsg->publisherId.publisherIdString, (UA_String*)tmpReader->config.publisherId.data))) {
-                                         UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "DataSetReader found with PublisherId");
-                                         dataSetReaderErg = tmpReader;
-                                     }
-                                     break;
-
-                            }
-                         }
-                         /* to break out of LIST_FOREACH loop */
-                         if(dataSetReaderErg!= NULL) {
-                             break;
-                         }
-
-                     }
-                 }
-             }
-         }
-
-        UA_Boolean processMsg = true;
-        if(processMsg) {
-           for(UA_Byte iterator = 0; iterator < anzDataSets; iterator++) {
-               UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_SERVER, "Process Msg with DataSetReader!");
-               UA_Server_DataSetReader_process(server, dataSetReaderErg, &pMsg->payload.dataSetPayload.dataSetMessages[iterator]);
-           }
-        }
-
-        /* To Do the condition with dataSetWriterId and WriterGroupId
-         * else condition for dataSetWriterIdAvailable and writerGroupIdAvailable) */
-
-    return retval;
+    return UA_STATUSCODE_GOOD;
 }
 
 /**
@@ -28698,7 +28686,7 @@ UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callb
 
 typedef struct{
     UA_NodeId parentNodeId;
-    UA_UInt32 parentCalssifier;
+    UA_UInt32 parentClassifier;
     UA_UInt32 elementClassiefier;
 } UA_NodePropertyContext;
 
@@ -28777,75 +28765,86 @@ findSingleChildNode(UA_Server *server, UA_QualifiedName targetName,
 
 static void
 onRead(UA_Server *server, const UA_NodeId *sessionId, void *sessionContext,
-       const UA_NodeId *nodeid, void *nodeContext,
+       const UA_NodeId *nodeid, void *context,
        const UA_NumericRange *range, const UA_DataValue *data) {
     UA_Variant value;
     UA_Variant_init(&value);
-    UA_NodeId myNodeId;
-    UA_WriterGroup *writerGroup = NULL;
-    UA_PubSubConnection *pubSubConnection = NULL;
-    UA_PublishedDataSet *publishedDataSet = NULL;
-    UA_PublishedVariableDataType *pvd = NULL;
-    size_t counter = 0;
+    const UA_NodePropertyContext *nodeContext = (const UA_NodePropertyContext*)context;
+    const UA_NodeId *myNodeId = &nodeContext->parentNodeId;
 
-    switch(((UA_NodePropertyContext *) nodeContext)->parentCalssifier){
-        case UA_NS0ID_PUBSUBCONNECTIONTYPE:
-            myNodeId = ((UA_NodePropertyContext *) nodeContext)->parentNodeId;
-            pubSubConnection = UA_PubSubConnection_findConnectionbyId(server, myNodeId);
-            switch(((UA_NodePropertyContext *) nodeContext)->elementClassiefier) {
-                case UA_NS0ID_PUBSUBCONNECTIONTYPE_PUBLISHERID:
-                    if(pubSubConnection->config->publisherIdType == UA_PUBSUB_PUBLISHERID_STRING) {
-                        UA_Variant_setScalar(&value, &pubSubConnection->config->publisherId.numeric,
-                                             &UA_TYPES[UA_TYPES_STRING]);
-                    }else
-                        UA_Variant_setScalar(&value, &pubSubConnection->config->publisherId.numeric, &UA_TYPES[UA_TYPES_UINT32]);
-                    break;
-                default:
-                    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                                   "Read error! Unknown property.");
-            }
-            break;
-        case UA_NS0ID_WRITERGROUPTYPE:
-            myNodeId = ((UA_NodePropertyContext *) nodeContext)->parentNodeId;
-            writerGroup = UA_WriterGroup_findWGbyId(server, myNodeId);
-            if(!writerGroup)
-                return;
-            switch(((UA_NodePropertyContext *) nodeContext)->elementClassiefier){
-                case UA_NS0ID_WRITERGROUPTYPE_PUBLISHINGINTERVAL:
-                    UA_Variant_setScalar(&value, &writerGroup->config.publishingInterval, &UA_TYPES[UA_TYPES_DURATION]);
-                    break;
-                default:
-                    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                                   "Read error! Unknown property.");
-            }
-            break;
-        case UA_NS0ID_PUBLISHEDDATAITEMSTYPE:
-            myNodeId = ((UA_NodePropertyContext *) nodeContext)->parentNodeId;
-            publishedDataSet = UA_PublishedDataSet_findPDSbyId(server, myNodeId);
-            if(!publishedDataSet)
-                return;
-            switch(((UA_NodePropertyContext *) nodeContext)->elementClassiefier) {
-                case UA_NS0ID_PUBLISHEDDATAITEMSTYPE_PUBLISHEDDATA:
-                    pvd = (UA_PublishedVariableDataType *)
-                            UA_calloc(publishedDataSet->fieldSize, sizeof(UA_PublishedVariableDataType));
-                    UA_DataSetField *field;
-                    LIST_FOREACH(field, &publishedDataSet->fields, listEntry) {
-                        pvd[counter].attributeId = UA_ATTRIBUTEID_VALUE;
-                        pvd[counter].publishedVariable = field->config.field.variable.publishParameters.publishedVariable;
-                        //UA_NodeId_copy(&field->config.field.variable.publishParameters.publishedVariable, &pvd[counter].publishedVariable);
-                        counter++;
-                    }
-                    UA_Variant_setArray(&value, pvd, publishedDataSet->fieldSize,
-                                        &UA_TYPES[UA_TYPES_PUBLISHEDVARIABLEDATATYPE]);
-                    break;
-                default:
-                    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                                   "Read error! Unknown property.");
+    switch(nodeContext->parentClassifier){
+    case UA_NS0ID_PUBSUBCONNECTIONTYPE: {
+        UA_PubSubConnection *pubSubConnection =
+            UA_PubSubConnection_findConnectionbyId(server, *myNodeId);
+        switch(nodeContext->elementClassiefier) {
+        case UA_NS0ID_PUBSUBCONNECTIONTYPE_PUBLISHERID:
+            if(pubSubConnection->config->publisherIdType == UA_PUBSUB_PUBLISHERID_STRING) {
+                UA_Variant_setScalar(&value, &pubSubConnection->config->publisherId.numeric,
+                                     &UA_TYPES[UA_TYPES_STRING]);
+            } else {
+                UA_Variant_setScalar(&value, &pubSubConnection->config->publisherId.numeric,
+                                     &UA_TYPES[UA_TYPES_UINT32]);
             }
             break;
         default:
             UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                           "Read error! Unknown parent element.");
+                           "Read error! Unknown property.");
+        }
+        break;
+    }
+    case UA_NS0ID_WRITERGROUPTYPE: {
+        UA_WriterGroup *writerGroup = UA_WriterGroup_findWGbyId(server, *myNodeId);
+        if(!writerGroup)
+            return;
+        switch(nodeContext->elementClassiefier){
+        case UA_NS0ID_WRITERGROUPTYPE_PUBLISHINGINTERVAL:
+            UA_Variant_setScalar(&value, &writerGroup->config.publishingInterval,
+                                 &UA_TYPES[UA_TYPES_DURATION]);
+            break;
+        default:
+            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                           "Read error! Unknown property.");
+        }
+        break;
+    }
+    case UA_NS0ID_PUBLISHEDDATAITEMSTYPE: {
+        UA_PublishedDataSet *publishedDataSet = UA_PublishedDataSet_findPDSbyId(server, *myNodeId);
+        if(!publishedDataSet)
+            return;
+        switch(nodeContext->elementClassiefier) {
+        case UA_NS0ID_PUBLISHEDDATAITEMSTYPE_PUBLISHEDDATA: {
+            UA_PublishedVariableDataType *pvd = (UA_PublishedVariableDataType *)
+                UA_calloc(publishedDataSet->fieldSize, sizeof(UA_PublishedVariableDataType));
+            size_t counter = 0;
+            UA_DataSetField *field;
+            LIST_FOREACH(field, &publishedDataSet->fields, listEntry) {
+                pvd[counter].attributeId = UA_ATTRIBUTEID_VALUE;
+                pvd[counter].publishedVariable = field->config.field.variable.publishParameters.publishedVariable;
+                //UA_NodeId_copy(&field->config.field.variable.publishParameters.publishedVariable, &pvd[counter].publishedVariable);
+                counter++;
+            }
+            UA_Variant_setArray(&value, pvd, publishedDataSet->fieldSize,
+                                &UA_TYPES[UA_TYPES_PUBLISHEDVARIABLEDATATYPE]);
+            break;
+        }
+        case UA_NS0ID_PUBLISHEDDATAITEMSTYPE_DATASETMETADATA: {
+            UA_Variant_setScalarCopy(&value, &publishedDataSet->dataSetMetaData, &UA_TYPES[UA_TYPES_DATASETMETADATATYPE]);
+            break;
+        }
+        case UA_NS0ID_PUBLISHEDDATAITEMSTYPE_CONFIGURATIONVERSION: {
+            UA_Variant_setScalarCopy(&value, &publishedDataSet->dataSetMetaData.configurationVersion,
+                                     &UA_TYPES[UA_TYPES_CONFIGURATIONVERSIONDATATYPE]);
+            break;
+        }
+        default:
+            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                           "Read error! Unknown property.");
+        }
+        break;
+    }
+    default:
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                       "Read error! Unknown parent element.");
     }
     UA_Server_writeValue(server, *nodeid, value);
 }
@@ -28857,7 +28856,7 @@ onWrite(UA_Server *server, const UA_NodeId *sessionId, void *sessionContext,
     UA_Variant value;
     UA_NodeId myNodeId;
     UA_WriterGroup *writerGroup = NULL;
-    switch(((UA_NodePropertyContext *) nodeContext)->parentCalssifier){
+    switch(((UA_NodePropertyContext *) nodeContext)->parentClassifier){
         case UA_NS0ID_PUBSUBCONNECTIONTYPE:
             //no runtime writable attributes
             break;
@@ -28942,12 +28941,12 @@ addPubSubConnectionRepresentation(UA_Server *server, UA_PubSubConnection *connec
                                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                           UA_NODEID_NUMERIC(0, connection->identifier.identifier.numeric));
 
-    if (UA_NodeId_equal(&addressNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&urlNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&interfaceNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&publisherIdNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&connectionPropertieNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&transportProfileUri, &UA_NODEID_NULL)) {
+    if(UA_NodeId_equal(&addressNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&urlNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&interfaceNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&publisherIdNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&connectionPropertieNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&transportProfileUri, &UA_NODEID_NULL)) {
         return UA_STATUSCODE_BADNOTFOUND;
     }
 
@@ -28968,7 +28967,7 @@ addPubSubConnectionRepresentation(UA_Server *server, UA_PubSubConnection *connec
 
     UA_NodePropertyContext *connectionPublisherIdContext = (UA_NodePropertyContext *) UA_malloc(sizeof(UA_NodePropertyContext));
     connectionPublisherIdContext->parentNodeId = connection->identifier;
-    connectionPublisherIdContext->parentCalssifier = UA_NS0ID_PUBSUBCONNECTIONTYPE;
+    connectionPublisherIdContext->parentClassifier = UA_NS0ID_PUBSUBCONNECTIONTYPE;
     connectionPublisherIdContext->elementClassiefier = UA_NS0ID_PUBSUBCONNECTIONTYPE_PUBLISHERID;
     UA_ValueCallback valueCallback;
     valueCallback.onRead = onRead;
@@ -29021,7 +29020,7 @@ addPubSubConnectionAction(UA_Server *server,
                          &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
     if(pubSubConnectionDataType.publisherId.type == &UA_TYPES[UA_TYPES_UINT32]){
         connectionConfig.publisherId.numeric = * ((UA_UInt32 *) pubSubConnectionDataType.publisherId.data);
-    } else if (pubSubConnectionDataType.publisherId.type == &UA_TYPES[UA_TYPES_STRING]){
+    } else if(pubSubConnectionDataType.publisherId.type == &UA_TYPES[UA_TYPES_STRING]){
         connectionConfig.publisherIdType = UA_PUBSUB_PUBLISHERID_STRING;
         UA_String_copy((UA_String *) pubSubConnectionDataType.publisherId.data, &connectionConfig.publisherId.string);
     } else {
@@ -29198,7 +29197,7 @@ removeDataSetFolderAction(UA_Server *server,
 #endif
 
 UA_StatusCode
-addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publishedDataSet){
+addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publishedDataSet) {
     UA_StatusCode retVal = UA_STATUSCODE_GOOD;
     if(publishedDataSet->config.name.length > 512)
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -29211,35 +29210,55 @@ addPublishedDataItemsRepresentation(UA_Server *server, UA_PublishedDataSet *publ
                                   UA_NS0ID_PUBLISHSUBSCRIBE_PUBLISHEDDATASETS,
                                   UA_NS0ID_HASPROPERTY, UA_NS0ID_PUBLISHEDDATAITEMSTYPE);
     //End lock zone
-    UA_NodeId configurationVersionNode, publishedDataNode;
-    configurationVersionNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "ConfigurationVersion"),
-                                                   UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                                                   UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
-    if (UA_NodeId_equal(&configurationVersionNode, &UA_NODEID_NULL)) {
-        return UA_STATUSCODE_BADNOTFOUND;
-    }
 
-    UA_Variant value;
-    UA_Variant_init(&value);
-    UA_Variant_setScalar(&value, &publishedDataSet->dataSetMetaData.configurationVersion,
-                         &UA_TYPES[UA_TYPES_CONFIGURATIONVERSIONDATATYPE]);
-    retVal |= UA_Server_writeValue(server, configurationVersionNode, value);
-
-    publishedDataNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishedData"),
-                                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                            UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
-    if (UA_NodeId_equal(&publishedDataNode, &UA_NODEID_NULL)) {
-        return UA_STATUSCODE_BADNOTFOUND;
-    }
-
-    UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *) UA_malloc(sizeof(UA_NodePropertyContext));
-    publishingIntervalContext->parentNodeId = publishedDataSet->identifier;
-    publishingIntervalContext->parentCalssifier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE;
-    publishingIntervalContext->elementClassiefier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE_PUBLISHEDDATA;
     UA_ValueCallback valueCallback;
     valueCallback.onRead = onRead;
     valueCallback.onWrite = NULL;
-    retVal |= addVariableValueSource(server, valueCallback, publishedDataNode, publishingIntervalContext);
+
+    UA_NodeId configurationVersionNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "ConfigurationVersion"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
+    if(UA_NodeId_equal(&configurationVersionNode, &UA_NODEID_NULL))
+        return UA_STATUSCODE_BADNOTFOUND;
+
+    UA_NodePropertyContext * configurationVersionContext = (UA_NodePropertyContext *)
+        UA_malloc(sizeof(UA_NodePropertyContext));
+    configurationVersionContext->parentNodeId = publishedDataSet->identifier;
+    configurationVersionContext->parentClassifier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE;
+    configurationVersionContext->elementClassiefier =
+        UA_NS0ID_PUBLISHEDDATAITEMSTYPE_CONFIGURATIONVERSION;
+    retVal |= addVariableValueSource(server, valueCallback, configurationVersionNode,
+                                     configurationVersionContext);
+
+    UA_NodeId publishedDataNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishedData"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
+    if(UA_NodeId_equal(&publishedDataNode, &UA_NODEID_NULL))
+        return UA_STATUSCODE_BADNOTFOUND;
+
+    UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *)
+        UA_malloc(sizeof(UA_NodePropertyContext));
+    publishingIntervalContext->parentNodeId = publishedDataSet->identifier;
+    publishingIntervalContext->parentClassifier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE;
+    publishingIntervalContext->elementClassiefier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE_PUBLISHEDDATA;
+    retVal |= addVariableValueSource(server, valueCallback, publishedDataNode,
+                                     publishingIntervalContext);
+
+    UA_NodeId dataSetMetaDataNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "DataSetMetaData"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, publishedDataSet->identifier.identifier.numeric));
+    if(UA_NodeId_equal(&dataSetMetaDataNode, &UA_NODEID_NULL))
+        return UA_STATUSCODE_BADNOTFOUND;
+
+    UA_NodePropertyContext *metaDataContext = (UA_NodePropertyContext *)
+        UA_malloc(sizeof(UA_NodePropertyContext));
+    metaDataContext->parentNodeId = publishedDataSet->identifier;
+    metaDataContext->parentClassifier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE;
+    metaDataContext->elementClassiefier = UA_NS0ID_PUBLISHEDDATAITEMSTYPE_DATASETMETADATA;
+    retVal |= addVariableValueSource(server, valueCallback, dataSetMetaDataNode, metaDataContext);
 
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL_METHODS
     retVal |= UA_Server_addReference(server, publishedDataSet->identifier,
@@ -29280,7 +29299,7 @@ addPublishedDataItemsAction(UA_Server *server,
     retVal |= UA_Server_addPublishedDataSet(server, &publishedDataSetConfig, &dataSetItemsNodeId).addResult;
 
     UA_DataSetFieldConfig dataSetFieldConfig;
-    for (size_t j = 0; j < variablesToAddSize; ++j) {
+    for(size_t j = 0; j < variablesToAddSize; ++j) {
         memset(&dataSetFieldConfig, 0, sizeof(dataSetFieldConfig));
         dataSetFieldConfig.dataSetFieldType = UA_PUBSUB_DATASETFIELD_VARIABLE;
         dataSetFieldConfig.field.variable.fieldNameAlias = fieldNameAliases[j];
@@ -29407,33 +29426,39 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup){
                                   writerGroup->linkedConnection.identifier.numeric,
                                   UA_NS0ID_HASCOMPONENT, UA_NS0ID_WRITERGROUPTYPE);
     //End lock zone
-    UA_NodeId keepAliveNode, publishingIntervalNode, priorityNode, writerGroupIdNode;
-    keepAliveNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "KeepAliveTime"),
-                                        UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                        UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
-    publishingIntervalNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishingInterval"),
-                                                 UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                                 UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
-    if (UA_NodeId_equal(&keepAliveNode, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&publishingIntervalNode, &UA_NODEID_NULL)) {
+    UA_NodeId keepAliveNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "KeepAliveTime"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    UA_NodeId publishingIntervalNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishingInterval"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    if(UA_NodeId_equal(&keepAliveNode, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&publishingIntervalNode, &UA_NODEID_NULL))
         return UA_STATUSCODE_BADNOTFOUND;
-    }
-    UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *) UA_malloc(sizeof(UA_NodePropertyContext));
+
+    UA_NodePropertyContext * publishingIntervalContext = (UA_NodePropertyContext *)
+        UA_malloc(sizeof(UA_NodePropertyContext));
     publishingIntervalContext->parentNodeId = writerGroup->identifier;
-    publishingIntervalContext->parentCalssifier = UA_NS0ID_WRITERGROUPTYPE;
+    publishingIntervalContext->parentClassifier = UA_NS0ID_WRITERGROUPTYPE;
     publishingIntervalContext->elementClassiefier = UA_NS0ID_WRITERGROUPTYPE_PUBLISHINGINTERVAL;
     UA_ValueCallback valueCallback;
     valueCallback.onRead = onRead;
     valueCallback.onWrite = onWrite;
-    retVal |= addVariableValueSource(server, valueCallback, publishingIntervalNode, publishingIntervalContext);
-    UA_Server_writeAccessLevel(server, publishingIntervalNode, (UA_ACCESSLEVELMASK_READ ^ UA_ACCESSLEVELMASK_WRITE));
+    retVal |= addVariableValueSource(server, valueCallback,
+                                     publishingIntervalNode, publishingIntervalContext);
+    UA_Server_writeAccessLevel(server, publishingIntervalNode,
+                               UA_ACCESSLEVELMASK_READ ^ UA_ACCESSLEVELMASK_WRITE);
 
-    priorityNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "Priority"),
-                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                       UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
-    writerGroupIdNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "WriterGroupId"),
-                                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    UA_NodeId priorityNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "Priority"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    UA_NodeId writerGroupIdNode =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "WriterGroupId"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
     UA_Variant value;
     UA_Variant_init(&value);
     UA_Variant_setScalar(&value, &writerGroup->config.publishingInterval, &UA_TYPES[UA_TYPES_DURATION]);
@@ -29451,17 +29476,18 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup){
 
     /* Find the variable with the content mask */
 
-    UA_NodeId messageSettingsId = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "MessageSettings"),
-                                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                                                       UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
-    UA_NodeId contentMaskId = findSingleChildNode(server,
-                                                  UA_QUALIFIEDNAME(0, "NetworkMessageContentMask"),
-                                                  UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
-                                                  messageSettingsId);
-    if (UA_NodeId_equal(&messageSettingsId, &UA_NODEID_NULL) ||
-        UA_NodeId_equal(&contentMaskId, &UA_NODEID_NULL)) {
+    UA_NodeId messageSettingsId =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "MessageSettings"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+                            UA_NODEID_NUMERIC(0, writerGroup->identifier.identifier.numeric));
+    UA_NodeId contentMaskId =
+        findSingleChildNode(server, UA_QUALIFIEDNAME(0, "NetworkMessageContentMask"),
+                            UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY), messageSettingsId);
+    if(UA_NodeId_equal(&messageSettingsId, &UA_NODEID_NULL) ||
+       UA_NodeId_equal(&contentMaskId, &UA_NODEID_NULL)) {
         return UA_STATUSCODE_BADNOTFOUND;
     }
+
     /* Set the callback */
     UA_DataSource ds;
     ds.read = readContentMask;
@@ -29470,8 +29496,8 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup){
     UA_Server_setNodeContext(server, contentMaskId, writerGroup);
 
     /* Make writable */
-    UA_Server_writeAccessLevel(server, contentMaskId, UA_ACCESSLEVELMASK_WRITE | UA_ACCESSLEVELMASK_READ);
-    //                           UA_ACCESSLEVELTYPE_CURRENTREAD | UA_ACCESSLEVELTYPE_CURRENTWRITE);
+    UA_Server_writeAccessLevel(server, contentMaskId,
+                               UA_ACCESSLEVELMASK_WRITE | UA_ACCESSLEVELMASK_READ);
 
     return retVal;
 }
@@ -29587,18 +29613,17 @@ addDataSetWriterAction(UA_Server *server,
                        const UA_NodeId *objectId, void *objectContext,
                        size_t inputSize, const UA_Variant *input,
                        size_t outputSize, UA_Variant *output){
-    UA_StatusCode retVal = UA_STATUSCODE_GOOD;
     UA_DataSetWriterDataType *dataSetWriterDataType = (UA_DataSetWriterDataType *) input[0].data;
 
     UA_NodeId targetPDS = UA_NODEID_NULL;
-    for (size_t i = 0; i < server->pubSubManager.publishedDataSetsSize; ++i) {
-        if(UA_String_equal(&dataSetWriterDataType->dataSetName, &server->pubSubManager.publishedDataSets[i].config.name)){
+    for(size_t i = 0; i < server->pubSubManager.publishedDataSetsSize; ++i) {
+        if(UA_String_equal(&dataSetWriterDataType->dataSetName,
+                           &server->pubSubManager.publishedDataSets[i].config.name)){
             targetPDS = server->pubSubManager.publishedDataSets[i].identifier;
         }
     }
-    if(UA_NodeId_isNull(&targetPDS)){
+    if(UA_NodeId_isNull(&targetPDS))
         return UA_STATUSCODE_BADPARENTNODEIDINVALID;
-    }
 
     UA_NodeId generatedId;
     UA_DataSetWriterConfig dataSetWriterConfig;
@@ -29610,7 +29635,7 @@ addDataSetWriterAction(UA_Server *server,
 
     UA_Server_addDataSetWriter(server, *objectId, targetPDS, &dataSetWriterConfig, &generatedId);
     UA_Variant_setScalarCopy(output, &generatedId, &UA_TYPES[UA_TYPES_NODEID]);
-    return retVal;
+    return UA_STATUSCODE_GOOD;
 }
 #endif
 
@@ -29703,15 +29728,27 @@ publishedDataItemsTypeDestructor(UA_Server *server,
                             const UA_NodeId *sessionId, void *sessionContext,
                             const UA_NodeId *typeId, void *typeContext,
                             const UA_NodeId *nodeId, void **nodeContext) {
-    UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND, "PublishedDataItems destructor called!");
-    UA_NodeId intervalNode;
-    UA_NodePropertyContext *internalConnectionContext;
-    intervalNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishedData"),
-                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY), *nodeId);
-    UA_Server_getNodeContext(server, intervalNode, (void **) &internalConnectionContext);
-    if(!UA_NodeId_equal(&UA_NODEID_NULL , &intervalNode)){
-        UA_free(internalConnectionContext);
-    }
+    UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+                "PublishedDataItems destructor called!");
+    void *childContext;
+    UA_NodeId node = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublishedData"),
+                                         UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY), *nodeId);
+    UA_Server_getNodeContext(server, node, (void**)&childContext);
+    if(!UA_NodeId_equal(&UA_NODEID_NULL , &node))
+        UA_free(childContext);
+
+    node = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "ConfigurationVersion"),
+                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
+                               *nodeId);
+    UA_Server_getNodeContext(server, node, (void**)&childContext);
+    if(!UA_NodeId_equal(&UA_NODEID_NULL , &node))
+        UA_free(childContext);
+
+    node = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "DataSetMetaData"),
+                               UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY), *nodeId);
+    UA_Server_getNodeContext(server, node, (void**)&childContext);
+    if(!UA_NodeId_equal(&node, &UA_NODEID_NULL))
+        UA_free(childContext);
 }
 
 UA_StatusCode
@@ -29860,7 +29897,7 @@ typedef struct {
     size_t size;     /* used space */
 } RefTree;
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 RefTree_init(RefTree *rt) {
     size_t space = (sizeof(UA_NodeId) + sizeof(RefEntry)) * UA_BROWSE_INITIAL_SIZE;
     rt->targets = (UA_NodeId*)UA_malloc(space);
@@ -29880,11 +29917,12 @@ void RefTree_clear(RefTree *rt) {
 }
 
 /* Double the capacity of the reftree */
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 RefTree_double(RefTree *rt) {
     size_t capacity = rt->capacity * 2;
+    UA_assert(capacity > 0);
     size_t space = (sizeof(UA_NodeId) + sizeof(RefEntry)) * capacity;
-    UA_NodeId *newTargets = (UA_NodeId*)realloc(rt->targets, space);
+    UA_NodeId *newTargets = (UA_NodeId*)UA_realloc(rt->targets, space);
     if(!newTargets)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
@@ -29911,7 +29949,7 @@ RefTree_double(RefTree *rt) {
     return UA_STATUSCODE_GOOD;
 }
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 RefTree_add(RefTree *rt, const UA_NodeId *target) {
     UA_StatusCode s = UA_STATUSCODE_GOOD;
     if(rt->capacity <= rt->size) {
@@ -29949,7 +29987,7 @@ struct ContinuationPoint {
     size_t nki;  /* Index of the reference in the ReferenceKind that is visited */
 };
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 ContinuationPoint_init(ContinuationPoint *cp, UA_UInt32 maxRefs,
                        UA_Boolean recursive) {
     memset(cp, 0, sizeof(ContinuationPoint));
@@ -29981,7 +30019,7 @@ typedef struct {
     UA_ReferenceDescription *descr;
 } RefResult;
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 RefResult_init(RefResult *rr, UA_UInt32 maxRefs) {
     UA_UInt32 initialRes = UA_BROWSE_INITIAL_SIZE;
     if(initialRes > maxRefs)
@@ -29996,7 +30034,7 @@ RefResult_init(RefResult *rr, UA_UInt32 maxRefs) {
     return UA_STATUSCODE_GOOD;
 }
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 RefResult_double(RefResult *rr, UA_UInt32 maxSize) {
     size_t newSize = rr->capacity * 2;
     if(newSize > maxSize)
@@ -30020,7 +30058,7 @@ RefResult_clear(RefResult *rr) {
 }
 
 /* Target node on top of the stack */
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 fillReferenceDescription(UA_Server *server, const UA_NodeReferenceKind *ref, UA_UInt32 mask,
                          const UA_ExpandedNodeId *nodeId, const UA_Node *curr,
                          UA_ReferenceDescription *descr) {
@@ -30073,7 +30111,7 @@ matchClassMask(const UA_Node *node, UA_UInt32 nodeClassMask) {
     return true;
 }
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 browseNodeRefKind(UA_Server *server, UA_Session *session, ContinuationPoint *cp,
                   RefResult *rr, UA_Boolean *maxed, const UA_NodeReferenceKind *rk,
                   const UA_ExpandedNodeId *target) {
@@ -30139,7 +30177,7 @@ browseNodeRefKind(UA_Server *server, UA_Session *session, ContinuationPoint *cp,
     return retval;
 }
 
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 browseNode(UA_Server *server, UA_Session *session,
            ContinuationPoint *cp, RefResult *rr, UA_Boolean *maxed,
            size_t referenceTypesSize, const UA_NodeId *referenceTypes,
@@ -30177,7 +30215,7 @@ browseNode(UA_Server *server, UA_Session *session,
  * Including the BrowseDescription. Returns whether there are remaining
  * references. */
 /* Results for a single browsedescription. Sets all NodeIds for the RefTree. */
-static UA_StatusCode
+static UA_StatusCode UA_FUNC_ATTR_WARN_UNUSED_RESULT
 browseWithCp(UA_Server *server, UA_Session *session, ContinuationPoint *cp,
              RefResult *rr, UA_Boolean *maxed) {
     /* Is the browsedirection valid? */
@@ -30256,6 +30294,14 @@ Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts
         }
     }
 
+    /* Does the original node exist? */
+    const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &descr->nodeId);
+    if(!node) {
+        result->statusCode = UA_STATUSCODE_BADNODEIDUNKNOWN;
+        return;
+    }
+    UA_Nodestore_releaseNode(server->nsCtx, node);
+
     /* Create the results array */
     RefResult rr;
     result->statusCode = RefResult_init(&rr, maxRefs);
@@ -30263,7 +30309,11 @@ Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts
         return;
 
     ContinuationPoint cp;
-    ContinuationPoint_init(&cp, maxRefs, bo->recursive);
+    result->statusCode = ContinuationPoint_init(&cp, maxRefs, bo->recursive);
+    if(result->statusCode != UA_STATUSCODE_GOOD) {
+        RefResult_clear(&rr);
+        return;
+    }
     cp.bd = *descr; /* Deep-copy only when the cp is persisted in the session */
 
     /* Add the initial node to the RefTree */
@@ -30301,17 +30351,24 @@ Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts
         return;
     }
 
+    /* Is there a ContinuationPoint available? */
+    if(session->availableContinuationPoints == 0) {
+        RefTree_clear(&cp.rt);
+        result->statusCode = UA_STATUSCODE_BADNOCONTINUATIONPOINTS;
+        return;
+    }
+
     /* Create a new continuation point. */
-    ContinuationPoint *newCp = (ContinuationPoint*)UA_malloc(sizeof(ContinuationPoint));
-    UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_ByteString tmp;
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    ContinuationPoint *newCp = (ContinuationPoint*)UA_malloc(sizeof(ContinuationPoint));
     if(!newCp) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
-    *newCp = cp;
 
-    /* Make a deep copy of the BrowseDescription */
+    /* Copy, make a deep copy of the BrowseDescription */
+    *newCp = cp;
     retval = UA_BrowseDescription_copy(descr, &newCp->bd);
     if(retval != UA_STATUSCODE_GOOD)
         goto cleanup;
@@ -30322,22 +30379,6 @@ Operation_Browse(UA_Server *server, UA_Session *session, const struct BrowseOpts
     retval = UA_ByteString_copy(&tmp, &result->continuationPoint);
     if(retval != UA_STATUSCODE_GOOD)
         goto cleanup;
-
-    /* Remove the oldest continuation point if required */
-    if(session->availableContinuationPoints <= 0) {
-        struct ContinuationPoint **prev = &session->continuationPoints;
-        struct ContinuationPoint *cp2 = session->continuationPoints;
-        while(cp2 && cp2->next) {
-            prev = &cp2->next;
-            cp2 = cp2->next;
-        }
-        if(cp2) {
-            *prev = NULL;
-            ContinuationPoint_clear(cp2);
-            UA_free(cp2);
-            ++session->availableContinuationPoints;
-        }
-    }
 
     /* Attach the cp to the session */
     newCp->next = session->continuationPoints;
@@ -30375,9 +30416,12 @@ void Service_Browse(UA_Server *server, UA_Session *session,
     bo.maxReferences = request->requestedMaxReferencesPerNode;
     bo.recursive = false;
     response->responseHeader.serviceResult =
-        UA_Server_processServiceOperations(server, session, (UA_ServiceOperation)Operation_Browse, &bo,
-                                           &request->nodesToBrowseSize, &UA_TYPES[UA_TYPES_BROWSEDESCRIPTION],
-                                           &response->resultsSize, &UA_TYPES[UA_TYPES_BROWSERESULT]);
+        UA_Server_processServiceOperations(server, session,
+                                           (UA_ServiceOperation)Operation_Browse, &bo,
+                                           &request->nodesToBrowseSize,
+                                           &UA_TYPES[UA_TYPES_BROWSEDESCRIPTION],
+                                           &response->resultsSize,
+                                           &UA_TYPES[UA_TYPES_BROWSERESULT]);
 }
 
 UA_BrowseResult
@@ -30476,16 +30520,14 @@ Operation_BrowseNext(UA_Server *server, UA_Session *session,
 
 void
 Service_BrowseNext(UA_Server *server, UA_Session *session,
-                   const UA_BrowseNextRequest *request,
-                   UA_BrowseNextResponse *response) {
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                         "Processing BrowseNextRequest");
-    UA_Boolean releaseContinuationPoints = request->releaseContinuationPoints; /* request is const */
+                   const UA_BrowseNextRequest *request, UA_BrowseNextResponse *response) {
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Processing BrowseNextRequest");
     response->responseHeader.serviceResult =
         UA_Server_processServiceOperations(server, session, (UA_ServiceOperation)Operation_BrowseNext,
-                                           &releaseContinuationPoints,
-                                           &request->continuationPointsSize, &UA_TYPES[UA_TYPES_BYTESTRING],
-                                           &response->resultsSize, &UA_TYPES[UA_TYPES_BROWSERESULT]);
+                                           &request->releaseContinuationPoints,
+                                           &request->continuationPointsSize,
+                                           &UA_TYPES[UA_TYPES_BYTESTRING], &response->resultsSize,
+                                           &UA_TYPES[UA_TYPES_BROWSERESULT]);
 }
 
 UA_BrowseResult
@@ -30951,7 +30993,7 @@ void Service_UnregisterNodes(UA_Server *server, UA_Session *session,
     }
 }
 
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/src/server/ua_services_call.c" ***********************************/
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/src/server/ua_services_method.c" ***********************************/
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -31480,6 +31522,64 @@ checkSignature(const UA_Server *server, const UA_SecureChannel *channel,
     return retval;
 }
 
+#ifdef UA_ENABLE_ENCRYPTION
+static UA_StatusCode
+decryptPassword(UA_SecurityPolicy *securityPolicy, void *tempChannelContext,
+                const UA_ByteString *serverNonce, UA_UserNameIdentityToken *userToken) {
+    UA_SecurityPolicyEncryptionAlgorithm *asymEnc =
+        &securityPolicy->asymmetricModule.cryptoModule.encryptionAlgorithm;
+    if(!UA_String_equal(&userToken->encryptionAlgorithm, &asymEnc->uri))
+        return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+    UA_UInt32 tokenSecretLength;
+    UA_ByteString decryptedTokenSecret, tokenServerNonce;
+    if(UA_ByteString_copy(&userToken->password, &decryptedTokenSecret) != UA_STATUSCODE_GOOD)
+        return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+    UA_StatusCode retval = UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+    if(asymEnc->decrypt(securityPolicy, tempChannelContext,
+                        &decryptedTokenSecret) != UA_STATUSCODE_GOOD)
+        goto cleanup;
+
+    memcpy(&tokenSecretLength, decryptedTokenSecret.data, sizeof(UA_UInt32));
+
+    /* The decrypted data must be large enough to include the Encrypted Token
+     * Secret Format and the length field must indicate enough data to include
+     * the server nonce. */
+    if(decryptedTokenSecret.length < sizeof(UA_UInt32) + serverNonce->length ||
+       decryptedTokenSecret.length < sizeof(UA_UInt32) + tokenSecretLength ||
+       tokenSecretLength < serverNonce->length)
+        goto cleanup;
+
+    /* If the Encrypted Token Secret contains padding, the padding must be
+     * zeroes according to the 1.04.1 specification errata, chapter 3. */
+    for(size_t i = sizeof(UA_UInt32) + tokenSecretLength; i < decryptedTokenSecret.length; i++) {
+        if(decryptedTokenSecret.data[i] != 0)
+            goto cleanup;
+    }
+
+    /* The server nonce must match according to the 1.04.1 specification errata,
+     * chapter 3. */
+    tokenServerNonce.length = serverNonce->length;
+    tokenServerNonce.data = &decryptedTokenSecret.data[sizeof(UA_UInt32) + tokenSecretLength - serverNonce->length];
+    if(!UA_ByteString_equal(serverNonce, &tokenServerNonce))
+        goto cleanup;
+
+    /* The password was decrypted successfully. Replace usertoken with the
+     * decrypted password. The encryptionAlgorithm and policyId fields are left
+     * in the UserToken as an indication for the AccessControl plugin that
+     * evaluates the decrypted content. */
+    memcpy(userToken->password.data, &decryptedTokenSecret.data[sizeof(UA_UInt32)],
+           tokenSecretLength - serverNonce->length);
+    userToken->password.length = tokenSecretLength - serverNonce->length;
+    retval = UA_STATUSCODE_GOOD;
+
+ cleanup:
+    UA_ByteString_deleteMembers(&decryptedTokenSecret);
+    return retval;
+}
+#endif
+
 /* TODO: Check all of the following:
  *
  * Part 4, §5.6.3: When the ActivateSession Service is called for the first time
@@ -31529,15 +31629,17 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
             continue;
 
         /* Match the SecurityPolicy */
-        if(!UA_String_equal(&e->securityPolicyUri,
-                            &channel->securityPolicy->policyUri))
+        if(!UA_String_equal(&e->securityPolicyUri, &channel->securityPolicy->policyUri))
             continue;
 
         /* Match the UserTokenType */
         for(size_t j = 0; j < e->userIdentityTokensSize; j++) {
             const UA_UserTokenPolicy *u = &e->userIdentityTokens[j];
             if(u->tokenType == UA_USERTOKENTYPE_ANONYMOUS) {
-                if(request->userIdentityToken.content.decoded.type != &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN])
+                /* Part 4, Section 5.6.3.2, Table 17: A NULL or empty
+                 * UserIdentityToken should be treated as Anonymous */
+                if(request->userIdentityToken.content.decoded.type != &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN] &&
+                   request->userIdentityToken.encoding != UA_EXTENSIONOBJECT_ENCODED_NOBODY)
                     continue;
             } else if(u->tokenType == UA_USERTOKENTYPE_USERNAME) {
                 if(request->userIdentityToken.content.decoded.type != &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN])
@@ -31565,6 +31667,80 @@ Service_ActivateSession(UA_Server *server, UA_SecureChannel *channel,
         response->responseHeader.serviceResult = UA_STATUSCODE_BADIDENTITYTOKENINVALID;
         return;
     }
+
+#ifdef UA_ENABLE_ENCRYPTION
+    /* If it is a UserNameIdentityToken, decrypt the password if encrypted */
+    if((request->userIdentityToken.encoding == UA_EXTENSIONOBJECT_DECODED) &&
+       (request->userIdentityToken.content.decoded.type == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN])) {
+       UA_UserNameIdentityToken *userToken = (UA_UserNameIdentityToken *)
+           request->userIdentityToken.content.decoded.data;
+
+       /* Find the UserTokenPolicy */
+       UA_Byte tokenIndex = 0;
+       for(; tokenIndex < ed->userIdentityTokensSize; tokenIndex++) {
+           if(ed->userIdentityTokens[tokenIndex].tokenType != UA_USERTOKENTYPE_USERNAME)
+               continue;
+           if(UA_String_equal(&userToken->policyId, &ed->userIdentityTokens[tokenIndex].policyId))
+               break;
+       }
+       if(tokenIndex == ed->userIdentityTokensSize) {
+           response->responseHeader.serviceResult = UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+           return;
+       }
+
+       /* Get the SecurityPolicy. If the userTokenPolicy doesn't specify a
+        * security policy the security policy of the secure channel is used. */
+       UA_SecurityPolicy* securityPolicy;
+       if(ed->userIdentityTokens[tokenIndex].securityPolicyUri.data == NULL)
+           securityPolicy = UA_SecurityPolicy_getSecurityPolicyByUri(server, &ed->securityPolicyUri);
+       else
+           securityPolicy = UA_SecurityPolicy_getSecurityPolicyByUri(server, &ed->userIdentityTokens[tokenIndex].securityPolicyUri);
+       if(!securityPolicy) {
+          response->responseHeader.serviceResult = UA_STATUSCODE_BADINTERNALERROR;
+          return;
+       }
+
+       /* Encrypted password? */
+       if(!UA_String_equal(&securityPolicy->policyUri, &UA_SECURITY_POLICY_NONE_URI)) {
+           /* Create a temporary channel context if a different SecurityPolicy is
+            * used for the password from the SecureChannel */
+           void *tempChannelContext = channel->channelContext;
+           if(securityPolicy != channel->securityPolicy) {
+               /* TODO: This is a hack. We use our own certificate to create a
+                * channel context. Because the client does not provide one in a
+                * #None SecureChannel. We should not need a ChannelContext at all
+                * for asymmetric decryption where the remote certificate is not
+                * used. */
+               response->responseHeader.serviceResult =
+                   securityPolicy->channelModule.newContext(securityPolicy,
+                                                            &securityPolicy->localCertificate,
+                                                            &tempChannelContext);
+               if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+                   UA_LOG_WARNING_SESSION(&server->config.logger, session, "ActivateSession: "
+                                          "Failed to create a context for the SecurityPolicy %.*s",
+                                          (int)securityPolicy->policyUri.length,
+                                          securityPolicy->policyUri.data);
+                   return;
+               }
+           }
+
+           /* Decrypt */
+           response->responseHeader.serviceResult =
+               decryptPassword(securityPolicy, tempChannelContext, &session->serverNonce, userToken);
+
+           /* Remove the temporary channel context */
+           if(securityPolicy != channel->securityPolicy)
+               securityPolicy->channelModule.deleteContext(tempChannelContext);
+       }
+
+       if(response->responseHeader.serviceResult != UA_STATUSCODE_GOOD) {
+           UA_LOG_INFO_SESSION(&server->config.logger, session, "ActivateSession: "
+                               "Failed to decrypt the password with the status code %s",
+                               UA_StatusCode_name(response->responseHeader.serviceResult));
+       }
+
+    }
+#endif
 
     /* Callback into userland access control */
     response->responseHeader.serviceResult =
@@ -32003,79 +32179,52 @@ ReadWithNode(const UA_Node *node, UA_Server *server, UA_Session *session,
     }
 }
 
-static UA_StatusCode
-Operation_Read(UA_Server *server, UA_Session *session, UA_MessageContext *mc,
-               UA_TimestampsToReturn timestampsToReturn, const UA_ReadValueId *id) {
-    UA_DataValue dv;
-    UA_DataValue_init(&dv);
-
+static void
+Operation_Read(UA_Server *server, UA_Session *session, UA_ReadRequest *request,
+               UA_ReadValueId *rvi, UA_DataValue *result) {
     /* Get the node */
-    const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &id->nodeId);
+    const UA_Node *node = UA_Nodestore_getNode(server->nsCtx, &rvi->nodeId);
 
     /* Perform the read operation */
     if(node) {
-        ReadWithNode(node, server, session, timestampsToReturn, id, &dv);
+        ReadWithNode(node, server, session, request->timestampsToReturn, rvi, result);
+        UA_Nodestore_releaseNode(server->nsCtx, node);
     } else {
-        dv.hasStatus = true;
-        dv.status = UA_STATUSCODE_BADNODEIDUNKNOWN;
+        result->hasStatus = true;
+        result->status = UA_STATUSCODE_BADNODEIDUNKNOWN;
     }
-
-    /* Encode (and send) the results */
-    UA_StatusCode retval = UA_MessageContext_encode(mc, &dv, &UA_TYPES[UA_TYPES_DATAVALUE]);
-
-    /* Free copied data and release the node */
-    UA_Variant_deleteMembers(&dv.value);
-    UA_Nodestore_releaseNode(server->nsCtx, node);
-    return retval;
 }
 
-UA_StatusCode Service_Read(UA_Server *server, UA_Session *session, UA_MessageContext *mc,
-                           const UA_ReadRequest *request, UA_ResponseHeader *responseHeader) {
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                         "Processing ReadRequest");
+void
+Service_Read(UA_Server *server, UA_Session *session,
+             const UA_ReadRequest *request, UA_ReadResponse *response) {
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Processing ReadRequest");
 
     /* Check if the timestampstoreturn is valid */
-    if(request->timestampsToReturn > UA_TIMESTAMPSTORETURN_NEITHER)
-        responseHeader->serviceResult = UA_STATUSCODE_BADTIMESTAMPSTORETURNINVALID;
-
-    if(request->nodesToReadSize == 0)
-        responseHeader->serviceResult = UA_STATUSCODE_BADNOTHINGTODO;
+    if(request->timestampsToReturn < 0 ||
+       request->timestampsToReturn > UA_TIMESTAMPSTORETURN_NEITHER) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADTIMESTAMPSTORETURNINVALID;
+        return;
+    }
 
     /* Check if maxAge is valid */
-    if(request->maxAge < 0)
-        responseHeader->serviceResult = UA_STATUSCODE_BADMAXAGEINVALID;
+    if(request->maxAge < 0) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADMAXAGEINVALID;
+        return;
+    }
 
     /* Check if there are too many operations */
     if(server->config.maxNodesPerRead != 0 &&
-       request->nodesToReadSize > server->config.maxNodesPerRead)
-        responseHeader->serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
-
-    /* Encode the response header */
-    UA_StatusCode retval =
-        UA_MessageContext_encode(mc, responseHeader, &UA_TYPES[UA_TYPES_RESPONSEHEADER]);
-    if(retval != UA_STATUSCODE_GOOD)
-        return retval;
-
-    /* Process nothing if we return an error code for the entire service */
-    UA_Int32 arraySize = (UA_Int32)request->nodesToReadSize;
-    if(responseHeader->serviceResult != UA_STATUSCODE_GOOD)
-        arraySize = 0;
-
-    /* Process all ReadValueIds */
-    retval = UA_MessageContext_encode(mc, &arraySize, &UA_TYPES[UA_TYPES_INT32]);
-    if(retval != UA_STATUSCODE_GOOD)
-        return retval;
-
-    for(UA_Int32 i = 0; i < arraySize; i++) {
-        retval = Operation_Read(server, session, mc, request->timestampsToReturn,
-                                &request->nodesToRead[i]);
-        if(retval != UA_STATUSCODE_GOOD)
-            return retval;
+       request->nodesToReadSize > server->config.maxNodesPerRead) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADTOOMANYOPERATIONS;
+        return;
     }
 
-    /* Don't return any DiagnosticInfo */
-    arraySize = -1;
-    return UA_MessageContext_encode(mc, &arraySize, &UA_TYPES[UA_TYPES_INT32]);
+    response->responseHeader.serviceResult =
+        UA_Server_processServiceOperations(server, session, (UA_ServiceOperation)Operation_Read,
+                                           request,
+                                           &request->nodesToReadSize, &UA_TYPES[UA_TYPES_READVALUEID],
+                                           &response->resultsSize, &UA_TYPES[UA_TYPES_DATAVALUE]);
 }
 
 UA_DataValue
@@ -33972,12 +34121,6 @@ UA_Server_setRegisterServerCallback(UA_Server *server,
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS /* conditional compilation */
 
-#define UA_BOUNDEDVALUE_SETWBOUNDS(BOUNDS, SRC, DST) { \
-        if(SRC > BOUNDS.max) DST = BOUNDS.max;         \
-        else if(SRC < BOUNDS.min) DST = BOUNDS.min;    \
-        else DST = SRC;                                \
-    }
-
 static UA_StatusCode
 setSubscriptionSettings(UA_Server *server, UA_Subscription *subscription,
                         UA_Double requestedPublishingInterval,
@@ -34115,6 +34258,235 @@ Service_SetPublishingMode(UA_Server *server, UA_Session *session,
                                            &request->subscriptionIdsSize, &UA_TYPES[UA_TYPES_UINT32],
                                            &response->resultsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
 }
+
+/* TODO: Unify with senderror in ua_server_binary.c */
+static void
+subscriptionSendError(UA_SecureChannel *channel, UA_UInt32 requestHandle,
+                      UA_UInt32 requestId, UA_StatusCode error) {
+    UA_PublishResponse err_response;
+    UA_PublishResponse_init(&err_response);
+    err_response.responseHeader.requestHandle = requestHandle;
+    err_response.responseHeader.timestamp = UA_DateTime_now();
+    err_response.responseHeader.serviceResult = error;
+    UA_SecureChannel_sendSymmetricMessage(channel, requestId, UA_MESSAGETYPE_MSG,
+                                          &err_response, &UA_TYPES[UA_TYPES_PUBLISHRESPONSE]);
+}
+
+void
+Service_Publish(UA_Server *server, UA_Session *session,
+                const UA_PublishRequest *request, UA_UInt32 requestId) {
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Processing PublishRequest");
+
+    /* Return an error if the session has no subscription */
+    if(LIST_EMPTY(&session->serverSubscriptions)) {
+        subscriptionSendError(session->header.channel, request->requestHeader.requestHandle,
+                              requestId, UA_STATUSCODE_BADNOSUBSCRIPTION);
+        return;
+    }
+
+    /* Handle too many subscriptions to free resources before trying to allocate
+     * resources for the new publish request. If the limit has been reached the
+     * oldest publish request shall be responded */
+    if((server->config.maxPublishReqPerSession != 0) &&
+       (session->numPublishReq >= server->config.maxPublishReqPerSession)) {
+        if(!UA_Subscription_reachedPublishReqLimit(server, session)) {
+            subscriptionSendError(session->header.channel, requestId,
+                                  request->requestHeader.requestHandle,
+                                  UA_STATUSCODE_BADINTERNALERROR);
+            return;
+        }
+    }
+
+    /* Allocate the response to store it in the retransmission queue */
+    UA_PublishResponseEntry *entry = (UA_PublishResponseEntry *)
+        UA_malloc(sizeof(UA_PublishResponseEntry));
+    if(!entry) {
+        subscriptionSendError(session->header.channel, requestId,
+                              request->requestHeader.requestHandle,
+                              UA_STATUSCODE_BADOUTOFMEMORY);
+        return;
+    }
+
+    /* Prepare the response */
+    entry->requestId = requestId;
+    UA_PublishResponse *response = &entry->response;
+    UA_PublishResponse_init(response);
+    response->responseHeader.requestHandle = request->requestHeader.requestHandle;
+
+    /* Allocate the results array to acknowledge the acknowledge */
+    if(request->subscriptionAcknowledgementsSize > 0) {
+        response->results = (UA_StatusCode *)
+            UA_Array_new(request->subscriptionAcknowledgementsSize,
+                         &UA_TYPES[UA_TYPES_STATUSCODE]);
+        if(!response->results) {
+            UA_free(entry);
+            subscriptionSendError(session->header.channel, requestId,
+                                  request->requestHeader.requestHandle,
+                                  UA_STATUSCODE_BADOUTOFMEMORY);
+            return;
+        }
+        response->resultsSize = request->subscriptionAcknowledgementsSize;
+    }
+
+    /* Delete Acknowledged Subscription Messages */
+    for(size_t i = 0; i < request->subscriptionAcknowledgementsSize; ++i) {
+        UA_SubscriptionAcknowledgement *ack = &request->subscriptionAcknowledgements[i];
+        UA_Subscription *sub = UA_Session_getSubscriptionById(session, ack->subscriptionId);
+        if(!sub) {
+            response->results[i] = UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
+            UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                                 "Cannot process acknowledgements subscription %u",
+                                 ack->subscriptionId);
+            continue;
+        }
+        /* Remove the acked transmission from the retransmission queue */
+        response->results[i] = UA_Subscription_removeRetransmissionMessage(sub, ack->sequenceNumber);
+    }
+
+    /* Queue the publish response. It will be dequeued in a repeated publish
+     * callback. This can also be triggered right now for a late
+     * subscription. */
+    UA_Session_queuePublishReq(session, entry, false);
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Queued a publication message");
+
+    /* If there are late subscriptions, the new publish request is used to
+     * answer them immediately. However, a single subscription that generates
+     * many notifications must not "starve" other late subscriptions. Therefore
+     * we keep track of the last subscription that got preferential treatment.
+     * We start searching for late subscriptions **after** the last one. */
+
+    UA_Subscription *immediate = NULL;
+    if(session->lastSeenSubscriptionId > 0) {
+        LIST_FOREACH(immediate, &session->serverSubscriptions, listEntry) {
+            if(immediate->subscriptionId == session->lastSeenSubscriptionId) {
+                immediate = LIST_NEXT(immediate, listEntry);
+                break;
+            }
+        }
+    }
+
+    /* If no entry was found, start at the beginning and don't restart  */
+    UA_Boolean found = false;
+    if(!immediate)
+        immediate = LIST_FIRST(&session->serverSubscriptions);
+    else
+        found = true;
+
+ repeat:
+    while(immediate) {
+        if(immediate->state == UA_SUBSCRIPTIONSTATE_LATE) {
+            session->lastSeenSubscriptionId = immediate->subscriptionId;
+            UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                                 "Subscription %u | Response on a late subscription",
+                                 immediate->subscriptionId);
+            UA_Subscription_publish(server, immediate);
+            return;
+        }
+        immediate = LIST_NEXT(immediate, listEntry);
+    }
+
+    /* Restart at the beginning of the list */
+    if(found) {
+        immediate = LIST_FIRST(&session->serverSubscriptions);
+        found = false;
+        goto repeat;
+    }
+
+    /* No late subscription this time */
+    session->lastSeenSubscriptionId = 0;
+}
+
+static void
+Operation_DeleteSubscription(UA_Server *server, UA_Session *session, void *_,
+                             const UA_UInt32 *subscriptionId, UA_StatusCode *result) {
+    *result = UA_Session_deleteSubscription(server, session, *subscriptionId);
+    if(*result == UA_STATUSCODE_GOOD) {
+        UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                             "Subscription %u | Subscription deleted",
+                             *subscriptionId);
+    } else {
+        UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                             "Deleting Subscription with Id %u failed with error code %s",
+                             *subscriptionId, UA_StatusCode_name(*result));
+    }
+}
+
+void
+Service_DeleteSubscriptions(UA_Server *server, UA_Session *session,
+                            const UA_DeleteSubscriptionsRequest *request,
+                            UA_DeleteSubscriptionsResponse *response) {
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                         "Processing DeleteSubscriptionsRequest");
+
+    response->responseHeader.serviceResult =
+        UA_Server_processServiceOperations(server, session,
+                  (UA_ServiceOperation)Operation_DeleteSubscription, NULL,
+                  &request->subscriptionIdsSize, &UA_TYPES[UA_TYPES_UINT32],
+                  &response->resultsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
+
+    /* The session has at least one subscription */
+    if(LIST_FIRST(&session->serverSubscriptions))
+        return;
+
+    /* Send remaining publish responses if the last subscription was removed */
+    UA_Subscription_answerPublishRequestsNoSubscription(server, session);
+}
+
+void
+Service_Republish(UA_Server *server, UA_Session *session,
+                  const UA_RepublishRequest *request,
+                  UA_RepublishResponse *response) {
+    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
+                         "Processing RepublishRequest");
+
+    /* Get the subscription */
+    UA_Subscription *sub = UA_Session_getSubscriptionById(session, request->subscriptionId);
+    if(!sub) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
+        return;
+    }
+
+    /* Reset the subscription lifetime */
+    sub->currentLifetimeCount = 0;
+
+    /* Find the notification in the retransmission queue  */
+    UA_NotificationMessageEntry *entry;
+    TAILQ_FOREACH(entry, &sub->retransmissionQueue, listEntry) {
+        if(entry->message.sequenceNumber == request->retransmitSequenceNumber)
+            break;
+    }
+    if(!entry) {
+        response->responseHeader.serviceResult = UA_STATUSCODE_BADMESSAGENOTAVAILABLE;
+        return;
+    }
+
+    response->responseHeader.serviceResult =
+        UA_NotificationMessage_copy(&entry->message, &response->notificationMessage);
+}
+
+#endif /* UA_ENABLE_SUBSCRIPTIONS */
+
+/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/src/server/ua_services_monitoreditem.c" ***********************************/
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ *    Copyright 2014-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
+ *    Copyright 2016-2017 (c) Florian Palm
+ *    Copyright 2015 (c) Chris Iatrou
+ *    Copyright 2015-2016 (c) Sten Grüner
+ *    Copyright 2015-2016 (c) Oleksiy Vasylyev
+ *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
+ *    Copyright 2018 (c) Ari Breitkreuz, fortiss GmbH
+ *    Copyright 2017 (c) Mattias Bornhager
+ *    Copyright 2017 (c) Henrik Norrman
+ *    Copyright 2017-2018 (c) Thomas Stalder, Blue Time Concept SA
+ *    Copyright 2018 (c) Fabian Arndt, Root-Core
+ */
+
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS /* conditional compilation */
 
 static UA_StatusCode
 setMonitoredItemSettings(UA_Server *server, UA_MonitoredItem *mon,
@@ -34564,179 +34936,6 @@ Service_SetMonitoringMode(UA_Server *server, UA_Session *session,
                   &response->resultsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
 }
 
-/* TODO: Unify with senderror in ua_server_binary.c */
-static void
-subscriptionSendError(UA_SecureChannel *channel, UA_UInt32 requestHandle,
-                      UA_UInt32 requestId, UA_StatusCode error) {
-    UA_PublishResponse err_response;
-    UA_PublishResponse_init(&err_response);
-    err_response.responseHeader.requestHandle = requestHandle;
-    err_response.responseHeader.timestamp = UA_DateTime_now();
-    err_response.responseHeader.serviceResult = error;
-    UA_SecureChannel_sendSymmetricMessage(channel, requestId, UA_MESSAGETYPE_MSG,
-                                          &err_response, &UA_TYPES[UA_TYPES_PUBLISHRESPONSE]);
-}
-
-void
-Service_Publish(UA_Server *server, UA_Session *session,
-                const UA_PublishRequest *request, UA_UInt32 requestId) {
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Processing PublishRequest");
-
-    /* Return an error if the session has no subscription */
-    if(LIST_EMPTY(&session->serverSubscriptions)) {
-        subscriptionSendError(session->header.channel, request->requestHeader.requestHandle,
-                              requestId, UA_STATUSCODE_BADNOSUBSCRIPTION);
-        return;
-    }
-
-    /* Handle too many subscriptions to free resources before trying to allocate
-     * resources for the new publish request. If the limit has been reached the
-     * oldest publish request shall be responded */
-    if((server->config.maxPublishReqPerSession != 0) &&
-       (session->numPublishReq >= server->config.maxPublishReqPerSession)) {
-        if(!UA_Subscription_reachedPublishReqLimit(server, session)) {
-            subscriptionSendError(session->header.channel, requestId,
-                                  request->requestHeader.requestHandle,
-                                  UA_STATUSCODE_BADINTERNALERROR);
-            return;
-        }
-    }
-
-    /* Allocate the response to store it in the retransmission queue */
-    UA_PublishResponseEntry *entry = (UA_PublishResponseEntry *)
-        UA_malloc(sizeof(UA_PublishResponseEntry));
-    if(!entry) {
-        subscriptionSendError(session->header.channel, requestId,
-                              request->requestHeader.requestHandle,
-                              UA_STATUSCODE_BADOUTOFMEMORY);
-        return;
-    }
-
-    /* Prepare the response */
-    entry->requestId = requestId;
-    UA_PublishResponse *response = &entry->response;
-    UA_PublishResponse_init(response);
-    response->responseHeader.requestHandle = request->requestHeader.requestHandle;
-
-    /* Allocate the results array to acknowledge the acknowledge */
-    if(request->subscriptionAcknowledgementsSize > 0) {
-        response->results = (UA_StatusCode *)
-            UA_Array_new(request->subscriptionAcknowledgementsSize,
-                         &UA_TYPES[UA_TYPES_STATUSCODE]);
-        if(!response->results) {
-            UA_free(entry);
-            subscriptionSendError(session->header.channel, requestId,
-                                  request->requestHeader.requestHandle,
-                                  UA_STATUSCODE_BADOUTOFMEMORY);
-            return;
-        }
-        response->resultsSize = request->subscriptionAcknowledgementsSize;
-    }
-
-    /* Delete Acknowledged Subscription Messages */
-    for(size_t i = 0; i < request->subscriptionAcknowledgementsSize; ++i) {
-        UA_SubscriptionAcknowledgement *ack = &request->subscriptionAcknowledgements[i];
-        UA_Subscription *sub = UA_Session_getSubscriptionById(session, ack->subscriptionId);
-        if(!sub) {
-            response->results[i] = UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
-            UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                                 "Cannot process acknowledgements subscription %u",
-                                 ack->subscriptionId);
-            continue;
-        }
-        /* Remove the acked transmission from the retransmission queue */
-        response->results[i] = UA_Subscription_removeRetransmissionMessage(sub, ack->sequenceNumber);
-    }
-
-    /* Queue the publish response. It will be dequeued in a repeated publish
-     * callback. This can also be triggered right now for a late
-     * subscription. */
-    UA_Session_queuePublishReq(session, entry, false);
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session, "Queued a publication message");
-
-    /* If there are late subscriptions, the new publish request is used to
-     * answer them immediately. However, a single subscription that generates
-     * many notifications must not "starve" other late subscriptions. Therefore
-     * we keep track of the last subscription that got preferential treatment.
-     * We start searching for late subscriptions **after** the last one. */
-
-    UA_Subscription *immediate = NULL;
-    if(session->lastSeenSubscriptionId > 0) {
-        LIST_FOREACH(immediate, &session->serverSubscriptions, listEntry) {
-            if(immediate->subscriptionId == session->lastSeenSubscriptionId) {
-                immediate = LIST_NEXT(immediate, listEntry);
-                break;
-            }
-        }
-    }
-
-    /* If no entry was found, start at the beginning and don't restart  */
-    UA_Boolean found = false;
-    if(!immediate)
-        immediate = LIST_FIRST(&session->serverSubscriptions);
-    else
-        found = true;
-
- repeat:
-    while(immediate) {
-        if(immediate->state == UA_SUBSCRIPTIONSTATE_LATE) {
-            session->lastSeenSubscriptionId = immediate->subscriptionId;
-            UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                                 "Subscription %u | Response on a late subscription",
-                                 immediate->subscriptionId);
-            UA_Subscription_publish(server, immediate);
-            return;
-        }
-        immediate = LIST_NEXT(immediate, listEntry);
-    }
-
-    /* Restart at the beginning of the list */
-    if(found) {
-        immediate = LIST_FIRST(&session->serverSubscriptions);
-        found = false;
-        goto repeat;
-    }
-
-    /* No late subscription this time */
-    session->lastSeenSubscriptionId = 0;
-}
-
-static void
-Operation_DeleteSubscription(UA_Server *server, UA_Session *session, void *_,
-                             const UA_UInt32 *subscriptionId, UA_StatusCode *result) {
-    *result = UA_Session_deleteSubscription(server, session, *subscriptionId);
-    if(*result == UA_STATUSCODE_GOOD) {
-        UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                             "Subscription %u | Subscription deleted",
-                             *subscriptionId);
-    } else {
-        UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                             "Deleting Subscription with Id %u failed with error code %s",
-                             *subscriptionId, UA_StatusCode_name(*result));
-    }
-}
-
-void
-Service_DeleteSubscriptions(UA_Server *server, UA_Session *session,
-                            const UA_DeleteSubscriptionsRequest *request,
-                            UA_DeleteSubscriptionsResponse *response) {
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                         "Processing DeleteSubscriptionsRequest");
-
-    response->responseHeader.serviceResult =
-        UA_Server_processServiceOperations(server, session,
-                  (UA_ServiceOperation)Operation_DeleteSubscription, NULL,
-                  &request->subscriptionIdsSize, &UA_TYPES[UA_TYPES_UINT32],
-                  &response->resultsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
-
-    /* The session has at least one subscription */
-    if(LIST_FIRST(&session->serverSubscriptions))
-        return;
-
-    /* Send remaining publish responses if the last subscription was removed */
-    UA_Subscription_answerPublishRequestsNoSubscription(server, session);
-}
-
 static void
 Operation_DeleteMonitoredItem(UA_Server *server, UA_Session *session, UA_Subscription *sub,
                               const UA_UInt32 *monitoredItemId, UA_StatusCode *result) {
@@ -34784,38 +34983,6 @@ UA_Server_deleteMonitoredItem(UA_Server *server, UA_UInt32 monitoredItemId) {
         return UA_STATUSCODE_GOOD;
     }
     return UA_STATUSCODE_BADMONITOREDITEMIDINVALID;
-}
-
-void
-Service_Republish(UA_Server *server, UA_Session *session,
-                  const UA_RepublishRequest *request,
-                  UA_RepublishResponse *response) {
-    UA_LOG_DEBUG_SESSION(&server->config.logger, session,
-                         "Processing RepublishRequest");
-
-    /* Get the subscription */
-    UA_Subscription *sub = UA_Session_getSubscriptionById(session, request->subscriptionId);
-    if(!sub) {
-        response->responseHeader.serviceResult = UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
-        return;
-    }
-
-    /* Reset the subscription lifetime */
-    sub->currentLifetimeCount = 0;
-
-    /* Find the notification in the retransmission queue  */
-    UA_NotificationMessageEntry *entry;
-    TAILQ_FOREACH(entry, &sub->retransmissionQueue, listEntry) {
-        if(entry->message.sequenceNumber == request->retransmitSequenceNumber)
-            break;
-    }
-    if(!entry) {
-        response->responseHeader.serviceResult = UA_STATUSCODE_BADMESSAGENOTAVAILABLE;
-        return;
-    }
-
-    response->responseHeader.serviceResult =
-        UA_NotificationMessage_copy(&entry->message, &response->notificationMessage);
 }
 
 #endif /* UA_ENABLE_SUBSCRIPTIONS */
@@ -47068,7 +47235,7 @@ return retVal;
  *
  *    Copyright 2014-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
  *    Copyright 2014, 2017 (c) Florian Palm
- *    Copyright 2015-2016 (c) Sten Grüner
+ *    Copyright 2015-2016, 2019 (c) Sten Grüner
  *    Copyright 2015 (c) Chris Iatrou
  *    Copyright 2015-2016 (c) Oleksiy Vasylyev
  *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
@@ -47080,9 +47247,13 @@ return retVal;
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
 
+#ifndef IN_ZERONET
+#define IN_ZERONET(addr) ((addr & IN_CLASSA_NET) == 0)
+#endif
+
 /* Create multicast 224.0.0.251:5353 socket */
 static UA_SOCKET
-discovery_createMulticastSocket(void) {
+discovery_createMulticastSocket(UA_Server* server) {
     UA_SOCKET s;
     int flag = 1, ittl = 255;
     struct sockaddr_in in;
@@ -47107,6 +47278,40 @@ discovery_createMulticastSocket(void) {
         return UA_INVALID_SOCKET;
     }
 
+    /* Custom outbound multicast interface */
+    size_t length = server->config.discovery.mdnsInterfaceIP.length;
+    if(length > 0){
+        char* interfaceName = (char*)UA_malloc(length+1);
+        if (!interfaceName) {
+            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_NETWORK, "Multicast DNS: cannot alloc memory for iface name");
+            return 0;
+        }
+        struct in_addr ina;
+        memset(&ina, 0, sizeof(ina));
+        memcpy(interfaceName, server->config.discovery.mdnsInterfaceIP.data, length);
+        interfaceName[length] = '\0';
+        inet_pton(AF_INET, interfaceName, &ina);
+        UA_free(interfaceName);
+        /* Set interface for outbound multicast */
+        if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, (char*)&ina, sizeof(ina)) < 0)
+            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER, "Multicast DNS: failed setting IP_MULTICAST_IF to %s: %s", inet_ntoa(ina), strerror(errno));
+    }
+
+    /* Check outbound multicast interface parameters */
+    struct in_addr interface_addr;
+    socklen_t addr_size = sizeof(struct in_addr);
+    if (getsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, (char*)&interface_addr, &addr_size) <  0) {
+        UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_NETWORK, "Multicast DNS: getsockopt(IP_MULTICAST_IF) failed");
+    }
+
+    if(IN_ZERONET(ntohl(interface_addr.s_addr))){
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_NETWORK, "Multicast DNS: outbound interface 0.0.0.0, it means that the first OS interface is used (you can explicitly set the interface by using 'discovery.mdnsInterfaceIP' config parameter)");
+    }else{
+        char buf[16];
+        inet_ntop(AF_INET, &interface_addr, buf, 16);
+        UA_LOG_INFO(&server->config.logger, UA_LOGCATEGORY_NETWORK, "Multicast DNS: outbound interface is %s", buf);
+    }
+
     mc.imr_multiaddr.s_addr = inet_addr("224.0.0.251");
     mc.imr_interface.s_addr = htonl(INADDR_ANY);
     UA_setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mc, sizeof(mc));
@@ -47122,7 +47327,7 @@ initMulticastDiscoveryServer(UA_DiscoveryManager *dm, UA_Server* server) {
     server->discoveryManager.mdnsDaemon = mdnsd_new(QCLASS_IN, 1000);
     UA_initialize_architecture_network();
 
-    if((server->discoveryManager.mdnsSocket = discovery_createMulticastSocket()) == UA_INVALID_SOCKET) {
+    if((server->discoveryManager.mdnsSocket = discovery_createMulticastSocket(server)) == UA_INVALID_SOCKET) {
         UA_LOG_SOCKET_ERRNO_WRAP(
                 UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_SERVER,
                      "Could not create multicast socket. Error: %s", errno_str));
@@ -48773,9 +48978,9 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         if(!UA_String_equal(&userToken->policyId, &username_policy))
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
-        /* TODO: Support encrypted username/password over unencrypted SecureChannels */
-        if(userToken->encryptionAlgorithm.length > 0)
-            return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+        /* The userToken has been decrypted by the server before forwarding
+         * it to the plugin. This information can be used here. */
+        /* if(userToken->encryptionAlgorithm.length > 0) {} */
 
         /* Empty username and password */
         if(userToken->userName.length == 0 && userToken->password.length == 0)
@@ -48911,9 +49116,11 @@ static void deleteMembers_default(UA_AccessControl *ac) {
 }
 
 UA_StatusCode
-UA_AccessControl_default(UA_AccessControl *ac,
-                         UA_Boolean allowAnonymous, size_t usernamePasswordLoginSize,
+UA_AccessControl_default(UA_ServerConfig *config, UA_Boolean allowAnonymous,
+                         const UA_ByteString *userTokenPolicyUri,
+                         size_t usernamePasswordLoginSize,
                          const UA_UsernamePasswordLogin *usernamePasswordLogin) {
+    UA_AccessControl *ac = &config->accessControl;
     ac->deleteMembers = deleteMembers_default;
     ac->activateSession = activateSession_default;
     ac->closeSession = closeSession_default;
@@ -48980,13 +49187,19 @@ UA_AccessControl_default(UA_AccessControl *ac,
     if(usernamePasswordLoginSize > 0) {
         ac->userTokenPolicies[policies].tokenType = UA_USERTOKENTYPE_USERNAME;
         ac->userTokenPolicies[policies].policyId = UA_STRING_ALLOC(USERNAME_POLICY);
-        if (!ac->userTokenPolicies[policies].policyId.data)
+        if(!ac->userTokenPolicies[policies].policyId.data)
             return UA_STATUSCODE_BADOUTOFMEMORY;
-        /* No encryption of username/password supported at the moment */
-        ac->userTokenPolicies[policies].securityPolicyUri =
-            UA_STRING_ALLOC("http://opcfoundation.org/UA/SecurityPolicy#None");
-        if (!ac->userTokenPolicies[policies].securityPolicyUri.data)
-            return UA_STATUSCODE_BADOUTOFMEMORY;
+
+#if UA_LOGLEVEL <= 400
+        const UA_String noneUri = UA_STRING("http://opcfoundation.org/UA/SecurityPolicy#None");
+        if(UA_ByteString_equal(userTokenPolicyUri, &noneUri)) {
+            UA_LOG_WARNING(&config->logger, UA_LOGCATEGORY_SERVER,
+                           "Username/Password configured, but no encrypting SecurityPolicy. "
+                           "This can leak credentials on the network.");
+        }
+#endif
+        return UA_ByteString_copy(userTokenPolicyUri,
+                                  &ac->userTokenPolicies[policies].securityPolicyUri);
     }
     return UA_STATUSCODE_GOOD;
 }
@@ -49673,12 +49886,10 @@ createEndpoint(UA_ServerConfig *conf, UA_EndpointDescription *endpoint,
                                          &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
-    endpoint->userIdentityTokensSize =
-        conf->accessControl.userTokenPoliciesSize;
+    endpoint->userIdentityTokensSize = conf->accessControl.userTokenPoliciesSize;
 
     UA_String_copy(&securityPolicy->localCertificate, &endpoint->serverCertificate);
-    UA_ApplicationDescription_copy(&conf->applicationDescription,
-                                   &endpoint->server);
+    UA_ApplicationDescription_copy(&conf->applicationDescription, &endpoint->server);
 
     return UA_STATUSCODE_GOOD;
 }
@@ -49727,6 +49938,7 @@ setDefaultConfig(UA_ServerConfig *conf) {
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
     UA_MdnsDiscoveryConfiguration_init(&conf->discovery.mdns);
+    conf->discovery.mdnsInterfaceIP = UA_STRING_NULL;
 #endif
 
     /* Custom DataTypes */
@@ -49748,14 +49960,6 @@ setDefaultConfig(UA_ServerConfig *conf) {
     /* Global Node Lifecycle */
     conf->nodeLifecycle.constructor = NULL;
     conf->nodeLifecycle.destructor = NULL;
-
-    UA_StatusCode retval = UA_AccessControl_default(&conf->accessControl, true,
-                                                    usernamePasswordsSize,
-                                                    usernamePasswords);
-    if(retval != UA_STATUSCODE_GOOD) {
-        UA_ServerConfig_clean(conf);
-        return retval;
-    }
 
     /* Relax constraints for the InformationModel */
     conf->relaxEmptyValueConstraint = true; /* Allow empty values */
@@ -49975,6 +50179,15 @@ UA_ServerConfig_setMinimalCustomBuffer(UA_ServerConfig *config, UA_UInt16 portNu
         return retval;
     }
 
+    /* Initialize the Access Control plugin */
+    retval = UA_AccessControl_default(config, true,
+                &config->securityPolicies[config->securityPoliciesSize-1].policyUri,
+                usernamePasswordsSize, usernamePasswords);
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_ServerConfig_clean(config);
+        return retval;
+    }
+
     /* Allocate the endpoint */
     retval = UA_ServerConfig_addEndpoint(config, UA_SECURITY_POLICY_NONE_URI, UA_MESSAGESECURITYMODE_NONE);
     if(retval != UA_STATUSCODE_GOOD) {
@@ -50161,6 +50374,14 @@ UA_ServerConfig_setDefaultWithSecurityPolicies(UA_ServerConfig *conf,
     }
 
     retval = UA_ServerConfig_addAllSecurityPolicies(conf, certificate, privateKey);
+    if(retval != UA_STATUSCODE_GOOD) {
+        UA_ServerConfig_clean(conf);
+        return retval;
+    }
+
+    retval = UA_AccessControl_default(conf, true,
+                &conf->securityPolicies[conf->securityPoliciesSize-1].policyUri,
+                usernamePasswordsSize, usernamePasswords);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_ServerConfig_clean(conf);
         return retval;
@@ -53274,109 +53495,6 @@ UA_SecurityPolicy_Basic256Sha256(UA_SecurityPolicy *policy,
 }
 
 #endif
-
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/posix/ua_clock.c" ***********************************/
-
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. 
- *
- *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Thomas Stalder, Blue Time Concept SA
- */
-
-#ifdef UA_ARCHITECTURE_POSIX
-
-
-#include <time.h>
-
-#include <sys/time.h>
-
-#if defined(__APPLE__) || defined(__MACH__)
-# include <mach/clock.h>
-# include <mach/mach.h>
-#endif
-
-UA_DateTime UA_DateTime_now(void) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (tv.tv_sec * UA_DATETIME_SEC) + (tv.tv_usec * UA_DATETIME_USEC) + UA_DATETIME_UNIX_EPOCH;
-}
-
-/* Credit to https://stackoverflow.com/questions/13804095/get-the-time-zone-gmt-offset-in-c */
-UA_Int64 UA_DateTime_localTimeUtcOffset(void) {
-    time_t gmt, rawtime = time(NULL);
-    struct tm *ptm;
-    struct tm gbuf;
-    ptm = gmtime_r(&rawtime, &gbuf);
-    // Request that mktime() looksup dst in timezone database
-    ptm->tm_isdst = -1;
-    gmt = mktime(ptm);
-    return (UA_Int64) (difftime(rawtime, gmt) * UA_DATETIME_SEC);
-}
-
-UA_DateTime UA_DateTime_nowMonotonic(void) {
-#if defined(__APPLE__) || defined(__MACH__)
-    /* OS X does not have clock_gettime, use clock_get_time */
-    clock_serv_t cclock;
-    mach_timespec_t mts;
-    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
-    clock_get_time(cclock, &mts);
-    mach_port_deallocate(mach_task_self(), cclock);
-    return (mts.tv_sec * UA_DATETIME_SEC) + (mts.tv_nsec / 100);
-#elif !defined(CLOCK_MONOTONIC_RAW)
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (ts.tv_sec * UA_DATETIME_SEC) + (ts.tv_nsec / 100);
-#else
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-    return (ts.tv_sec * UA_DATETIME_SEC) + (ts.tv_nsec / 100);
-#endif
-}
-
-#endif /* UA_ARCHITECTURE_POSIX */
-
-/*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/posix/ua_architecture_functions.c" ***********************************/
-
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2018 (c) Jose Cabral, fortiss GmbH
- */
-
-#ifdef UA_ARCHITECTURE_POSIX
-
-
-/* Global malloc singletons */
-#ifdef UA_ENABLE_MALLOC_SINGLETON
-void * (*UA_globalMalloc)(size_t size) = malloc;
-void (*UA_globalFree)(void *ptr) = free;
-void * (*UA_globalCalloc)(size_t nelem, size_t elsize) = calloc;
-void * (*UA_globalRealloc)(void *ptr, size_t size) = realloc;
-#endif
-
-unsigned int UA_socket_set_blocking(UA_SOCKET sockfd){
-  int opts = fcntl(sockfd, F_GETFL);
-  if(opts < 0 || fcntl(sockfd, F_SETFL, opts & (~O_NONBLOCK)) < 0)
-      return UA_STATUSCODE_BADINTERNALERROR;
-  return UA_STATUSCODE_GOOD;
-}
-
-unsigned int UA_socket_set_nonblocking(UA_SOCKET sockfd){
-  int opts = fcntl(sockfd, F_GETFL);
-  if(opts < 0 || fcntl(sockfd, F_SETFL, opts | O_NONBLOCK) < 0)
-    return UA_STATUSCODE_BADINTERNALERROR;
-  return UA_STATUSCODE_GOOD;
-}
-
-void UA_initialize_architecture_network(void){
-}
-
-void UA_deinitialize_architecture_network(void){
-}
-
-#endif /* UA_ARCHITECTURE_POSIX */
 
 /*********************************** amalgamated original file "C:/Users/User/Desktop/Repos/open62541.git/arch/win32/ua_clock.c" ***********************************/
 

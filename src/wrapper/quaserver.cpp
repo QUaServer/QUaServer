@@ -380,26 +380,14 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		if (userToken->userName.length == 0 && userToken->password.length == 0)
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
+		
 		/* Try to match username/pw */
-		UA_Boolean match = false;
 
 		// NOTE : custom code : check user and password
 		const QString userName = QString::fromUtf8((char*)userToken->userName.data, (int)userToken->userName.length);
 		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);	
-		QHashIterator<QString, QString> i(qServer->m_hashUsers);
-		while (i.hasNext()) 
-		{
-			i.next();
-			auto user = i.key();
-			auto pass = i.value();
-			if (user.compare(userName, Qt::CaseInsensitive) == 0 &&
-				pass.compare(password, Qt::CaseInsensitive) == 0)
-			{
-				match = true;
-				break;
-			}
-		}
-		
+		// Call validation callback
+		UA_Boolean match = qServer->m_validationCallback(userName, password);
 		if (!match)
 			return UA_STATUSCODE_BADUSERACCESSDENIED;
 
@@ -673,6 +661,14 @@ void QUaServer::setupServer()
 	// Server stuff
 	UA_StatusCode st;
 	m_running = false;
+	// Set default validation callback
+	m_validationCallback = [this](const QString &strUserName, const QString &strPassword) {
+		if (!m_hashUsers.contains(strUserName))
+		{
+			return false;
+		}
+		return m_hashUsers[strUserName].compare(strPassword, Qt::CaseInsensitive) == 0;
+	};
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
 	auto objectsNodeId        = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
@@ -2036,13 +2032,13 @@ void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed) con
 	context->allowAnonymous = anonymousLoginAllowed;
 }
 
-void QUaServer::addUser(const QString & strUserName, const QString & strPassword)
+void QUaServer::addUser(const QString & strUserName, const QString & strKey)
 {
 	if (strUserName.isEmpty())
 	{
 		return;
 	}
-	m_hashUsers[strUserName] = strPassword;
+	m_hashUsers[strUserName] = strKey;
 }
 
 void QUaServer::removeUser(const QString & strUserName)
@@ -2052,6 +2048,11 @@ void QUaServer::removeUser(const QString & strUserName)
 		return;
 	}
 	m_hashUsers.remove(strUserName);
+}
+
+QString QUaServer::userKey(const QString & strUserName) const
+{
+	return m_hashUsers.value(strUserName, QString());
 }
 
 int QUaServer::userCount()

@@ -29,6 +29,9 @@ inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs)
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
 typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;
 
+// User validation
+typedef std::function<bool(const QString &, const QString &)> QUaValidationCallback;
+
 // Class whose only pupose is emit signals
 class QUaSignaler : public QObject
 {
@@ -163,15 +166,20 @@ public:
 	bool        anonymousLoginAllowed() const;
 	void        setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
 	// if user already exists, it updates password
-	void        addUser(const QString &strUserName, const QString &strPassword);
+	void        addUser(const QString &strUserName, const QString & strKey);
 	// if user does not exist, it does nothing
 	void        removeUser(const QString &strUserName);
+	// get the key associated to the user
+	QString     userKey(const QString &strUserName) const;
 	// number of users
 	int         userCount();
 	// get all user names
 	QStringList userNames() const;
 	// check if user already exists
 	bool        userExists(const QString &strUserName) const;
+	// add a validation callback for user key, defaults checks key == password
+	template<typename M>
+	void        setKeyValidation(const M &callback);
 
 signals:
 	void iterateServer();
@@ -206,6 +214,7 @@ private:
 	QHash<QString     , UA_NodeId> m_hashEnums;
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
 	QHash<UA_NodeId, QUaSignaler*> m_hashSignalers;
+	QUaValidationCallback          m_validationCallback;
 
 	// only call once on constructor
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
@@ -484,6 +493,14 @@ template<typename T>
 inline T * QUaServer::browsePath(const QStringList & strBrowsePath)
 {
 	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
+}
+
+template<typename M>
+inline void QUaServer::setKeyValidation(const M & callback)
+{
+	m_validationCallback = [callback](const QString &strUserName, const QString &strPassword) {
+		return callback(strUserName, strPassword);
+	};
 }
 
 // -------- OTHER TYPES --------------------------------------------------
