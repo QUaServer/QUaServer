@@ -52,6 +52,11 @@ inline bool operator==(const QUaReference &e1, const QUaReference &e2)
 		&& e1.strInverseName.compare(e2.strInverseName, Qt::CaseSensitive) == 0;
 }
 
+inline bool operator!=(const QUaReference &e1, const QUaReference &e2)
+{
+	return !(e1 == e2);
+}
+
 inline uint qHash(const QUaReference &key, uint seed)
 {
 	return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
