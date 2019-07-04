@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 			return false;
 		}
 		QString strKey = server.userKey(strUserName);
-		return strKey.compare(strPassword, Qt::CaseInsensitive) == 0;
+		return strKey.compare(strPassword, Qt::CaseSensitive) == 0;
 	});
 	*/
 

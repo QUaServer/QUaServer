@@ -667,7 +667,7 @@ void QUaServer::setupServer()
 		{
 			return false;
 		}
-		return m_hashUsers[strUserName].compare(strPassword, Qt::CaseInsensitive) == 0;
+		return m_hashUsers[strUserName].compare(strPassword, Qt::CaseSensitive) == 0;
 	};
 	// Create "Objects" folder using special constructor
 	// Part 5 - 8.2.4 : Objects
