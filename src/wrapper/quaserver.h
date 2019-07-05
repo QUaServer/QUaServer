@@ -179,7 +179,7 @@ public:
 	bool        userExists(const QString &strUserName) const;
 	// add a validation callback for user key, defaults checks key == password
 	template<typename M>
-	void        setKeyValidation(const M &callback);
+	void        setUserValidationCallback(const M &callback);
 
 signals:
 	void iterateServer();
@@ -496,7 +496,7 @@ inline T * QUaServer::browsePath(const QStringList & strBrowsePath)
 }
 
 template<typename M>
-inline void QUaServer::setKeyValidation(const M & callback)
+inline void QUaServer::setUserValidationCallback(const M & callback)
 {
 	m_validationCallback = [callback](const QString &strUserName, const QString &strPassword) {
 		return callback(strUserName, strPassword);

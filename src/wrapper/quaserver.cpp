@@ -388,8 +388,20 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);	
 		// Call validation callback
 		UA_Boolean match = qServer->m_validationCallback(userName, password);
-		if (!match)
+		if (match)
+		{
+			// Server must be aware of user name otherwise it will kick user out of session
+			// in user access callbacks
+			if (!qServer->m_hashUsers.contains(userName))
+			{
+				// NOTE : do not keep password in memory for security
+				qServer->m_hashUsers.insert(userName, "");
+			}
+		}
+		else
+		{
 			return UA_STATUSCODE_BADUSERACCESSDENIED;
+		}
 
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
 		//Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));

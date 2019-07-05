@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 	// Overwriting this callback can be used to obtain a hash of the password sent by the client and
 	// compare it to a locally stored hash. In this way we avoid storing user's passwords which
 	// is considered an insecure practice. A function pointer can also be used as validation callback.
-	server.setKeyValidation(
+	server.setUserValidationCallback(
 	[&server](const QString &strUserName, const QString &strPassword) {
 		if (!server.userExists(strUserName))
 		{
