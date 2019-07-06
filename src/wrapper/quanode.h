@@ -316,10 +316,11 @@ signals:
 	void referenceAdded  (const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
 	void referenceRemoved(const QUaReference & ref, QUaNode * nodeTarget, const bool &isForward);
 
-private:
-
+protected:
 	// to be able to reuse methods in subclasses
 	QUaServer * m_qUaServer;
+
+private:
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
 
