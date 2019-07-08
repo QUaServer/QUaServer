@@ -693,10 +693,11 @@ struct QUaMethodTraitsBase
 	inline static T convertArgTypeArray(std::true_type, const UA_Variant * input, const int &iArg)
 	{
 		T retArr;
-		auto varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]).toList();
-		for (size_t i = 0; i < varQt.count(); i++)
+		auto varQt = QUaTypesConverter::uaVariantToQVariant(input[iArg]);
+		auto iter  = varQt.value<QSequentialIterable>();
+		for (const QVariant &v : iter)
 		{
-			retArr << varQt.at(i).value<template_traits<T>::inner_type>();
+			retArr << v.value<template_traits<T>::inner_type>();
 		}
 		return retArr;
 	}

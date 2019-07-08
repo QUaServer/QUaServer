@@ -2010,6 +2010,10 @@ QUaNode * QUaServer::nodeById(const QString & strNodeId)
 
 QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath)
 {
+	if (strBrowsePath.count() <= 0)
+	{
+		return nullptr;
+	}
 	QString strFirst = strBrowsePath.first();
 	// check if first is ObjectsFolder
 	if (strFirst.compare(this->objectsFolder()->browseName(), Qt::CaseSensitive) == 0)
