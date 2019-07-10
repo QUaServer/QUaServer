@@ -1997,7 +1997,7 @@ void QUaServer::registerReference(const QUaReference & ref)
 	m_hashRefs.insert(ref, outNewNodeId);
 }
 
-QUaFolderObject * QUaServer::objectsFolder()
+QUaFolderObject * QUaServer::objectsFolder() const
 {
 	return m_pobjectsFolder;
 }
@@ -2008,7 +2008,7 @@ QUaNode * QUaServer::nodeById(const QString & strNodeId)
 	return QUaNode::getNodeContext(nodeId, m_server);
 }
 
-QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath)
+QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath) const
 {
 	if (strBrowsePath.count() <= 0)
 	{

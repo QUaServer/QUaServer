@@ -351,9 +351,9 @@ bool QUaNode::hasChild(const QString & strBrowseName)
 	return !this->browseChildren(strBrowseName).isEmpty();
 }
 
-QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath)
+QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath) const
 {
-	QUaNode * currNode = this;
+	QUaNode * currNode = const_cast<QUaNode *>(this);
 	for (int i = 0; i < strBrowsePath.count(); i++)
 	{
 		currNode = currNode->browseChild(strBrowsePath.at(i));

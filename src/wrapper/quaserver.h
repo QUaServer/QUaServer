@@ -136,7 +136,7 @@ public:
 	template<typename T>
 	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
 	// get objects folder
-	QUaFolderObject * objectsFolder();
+	QUaFolderObject * objectsFolder() const;
 	// get node reference by node id and cast to type (nullptr if node id does not exist)
 	template<typename T>
 	T* nodeById(const QString &strNodeId);
@@ -147,9 +147,9 @@ public:
 	// (* actually browses using QObject tree)
 
 	template<typename T>
-	T* browsePath(const QStringList &strBrowsePath);
+	T* browsePath(const QStringList &strBrowsePath) const;
 	// specialization
-	QUaNode * browsePath(const QStringList &strBrowsePath);
+	QUaNode * browsePath(const QStringList &strBrowsePath) const;
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -490,7 +490,7 @@ inline T * QUaServer::nodeById(const QString &strNodeId)
 }
 
 template<typename T>
-inline T * QUaServer::browsePath(const QStringList & strBrowsePath)
+inline T * QUaServer::browsePath(const QStringList & strBrowsePath) const
 {
 	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }

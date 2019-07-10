@@ -252,9 +252,9 @@ public:
 	bool hasChild(const QString &strBrowseName);
 
 	template<typename T>
-	T* browsePath(const QStringList &strBrowsePath);
+	T* browsePath(const QStringList &strBrowsePath) const;
 	// specialization
-	QUaNode * browsePath(const QStringList &strBrowsePath);
+	QUaNode * browsePath(const QStringList &strBrowsePath) const;
 
 	// get node's browse path starting from ObjectsFolder
 	QStringList nodeBrowsePath() const;
@@ -377,7 +377,7 @@ inline T* QUaNode::browseChild(const QString &strBrowseName/* = QString()*/) con
 }
 
 template<typename T>
-inline T* QUaNode::browsePath(const QStringList &strBrowsePath)
+inline T* QUaNode::browsePath(const QStringList &strBrowsePath) const
 {
 	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
 }
