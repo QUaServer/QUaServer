@@ -388,19 +388,16 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);	
 		// Call validation callback
 		UA_Boolean match = qServer->m_validationCallback(userName, password);
-		if (match)
+		if (!match)
+		{
+			return UA_STATUSCODE_BADUSERACCESSDENIED;			
+		}
+		else if (match && !qServer->m_hashUsers.contains(userName))
 		{
 			// Server must be aware of user name otherwise it will kick user out of session
 			// in user access callbacks
-			if (!qServer->m_hashUsers.contains(userName))
-			{
-				// NOTE : do not keep password in memory for security
-				qServer->m_hashUsers.insert(userName, "");
-			}
-		}
-		else
-		{
-			return UA_STATUSCODE_BADUSERACCESSDENIED;
+			// NOTE : do not keep password in memory for security
+			qServer->m_hashUsers.insert(userName, "");
 		}
 
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
@@ -509,26 +506,21 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 		                                const UA_NodeId  *methodId, 
 		                                void             *methodContext)
 {
-	// TODO : the "cascading" approach might not be working properly for subtypes
-	//        because methods in this case are shared by all class instances
-	// TODO : fix, when https://github.com/open62541/open62541/pull/1812 is fixed
-	UA_NodeId parentNodeId = QUaNode::getParentNodeId(*methodId, server);
-	if (!UA_NodeId_isNull(&parentNodeId))
+	// overall execution permissions for method regardless of conntext object
+	// boils down to whether user exists
+	// get server
+	QUaServer *qServer = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	// get user
+	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	// check if user still exists
+	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
 	{
-		void * context = QUaNode::getVoidContext(parentNodeId, server);
-		if (context)
-		{
-			return QUaServer::getUserExecutableOnObject(
-				server, 
-				ac,
-				sessionId, 
-				sessionContext,
-				methodId, 
-				methodContext,
-				&parentNodeId,
-				context
-			);
-		}
+		// TODO : wait until officially supported
+		// https://github.com/open62541/open62541/issues/2617
+		//auto st = UA_Server_closeSession(server, sessionId);
+		//Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		return false;
 	}
 	return true;
 }
