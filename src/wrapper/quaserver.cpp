@@ -97,12 +97,14 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	{
 		st = UA_Server_setNodeContext(server, *nodeId, nullptr);
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		UA_NodeId_clear(&parentNodeId);
 		return;
 	}
 	// if we reach here it means case 2), so deleteLater (when nodeId not in store anymore)
 	// so we avoid calling UA_Server_deleteNode in ~QUaNode
 	node->deleteLater();
 	Q_UNUSED(st);
+	UA_NodeId_clear(&parentNodeId);
 }
 
 UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
@@ -136,8 +138,10 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// ignore if new instance is due to new type registration
 		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
+		Q_ASSERT_X(outNodeClass != UA_NODECLASS_UNSPECIFIED, "QUaServer::uaConstructor", "Something went wrong while getting parent info.");
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
+			UA_NodeId_clear(&parentNodeId);
 			return UA_STATUSCODE_GOOD;
 		}
 		lastParentNodeId = parentNodeId;
@@ -147,7 +151,9 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		{
 			break;
 		}
-		parentNodeId = QUaNode::getParentNodeId(parentNodeId, server->m_server);
+		auto tmpParentNodeId = QUaNode::getParentNodeId(parentNodeId, server->m_server);
+		UA_NodeId_clear(&parentNodeId); // clear old
+		parentNodeId = tmpParentNodeId;
 		// exit if null
 		if (UA_NodeId_isNull(&parentNodeId))
 		{
@@ -168,6 +174,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	Q_CHECK_PTR(newInstance);
 	if (!newInstance)
 	{
+		UA_NodeId_clear(&parentNodeId);
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
 	// need to bind again using the official (void ** nodeContext) of the UA constructor
@@ -176,6 +183,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
 	// need to set parent if direct parent is already bound bacause its constructor has already been called
+	UA_NodeId_clear(&parentNodeId);
 	parentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId) && parentContext)
 	{
@@ -185,6 +193,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		emit parentContext->childAdded(newInstance);
 	}
 	// success
+	UA_NodeId_clear(&parentNodeId);
 	return UA_STATUSCODE_GOOD;
 }
 
@@ -1136,8 +1145,9 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject & metaObject)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			Q_ASSERT(UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId));
-			UA_NodeId nodeId = rDesc.nodeId.nodeId;
-			retRefSet<< nodeId;
+			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
+			retRefSet << nodeId;
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(m_server, true, &bRes.continuationPoint);
@@ -1150,6 +1160,7 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject & metaObject)
 	for (int i = 0; i < retRefSet.count(); i++)
 	{
 		retList << QUaNode::getNodeContext(retRefSet[i], m_server);
+		UA_NodeId_clear(&retRefSet[i]);
 	}
 	return retList;
 }
@@ -1884,6 +1895,7 @@ void QUaServer::removeEnumEntry(const QString &strEnumName, const QUaEnumKey &en
 	this->updateEnum(enumNodeId, mapValues);
 }
 
+// NOTE : need to cleanup result after calling this method
 UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId)
 {
 	// make ua browse
@@ -1897,7 +1909,8 @@ UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId)
 	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
 	Q_ASSERT(bRes.referencesSize == 1);
 	UA_ReferenceDescription rDesc = bRes.references[0];
-	UA_NodeId valuesNodeId = rDesc.nodeId.nodeId;
+	UA_NodeId valuesNodeId/* = rDesc.nodeId.nodeId*/;
+	UA_NodeId_copy(&rDesc.nodeId.nodeId, &valuesNodeId);
 	// cleanup
 	UA_BrowseDescription_deleteMembers(bDesc);
 	UA_BrowseDescription_delete(bDesc);
@@ -1915,6 +1928,8 @@ UA_Variant QUaServer::enumValues(const UA_NodeId &enumNodeId)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	Q_ASSERT(!UA_Variant_isScalar(&outValue));
+	// cleanup
+	UA_NodeId_clear(&valuesNodeId);
 	// return
 	return outValue;
 }
@@ -1951,6 +1966,8 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 	auto st = UA_Server_writeValue(m_server, enumValuesNodeId, enumValues);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// cleanup
+	UA_NodeId_clear(&enumValuesNodeId);
 }
 
 void QUaServer::registerReference(const QUaReference & ref)

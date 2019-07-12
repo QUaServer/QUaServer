@@ -115,6 +115,11 @@ QUaNode::QUaNode(QUaServer *server)
 		return;
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// cleanup
+	for (int i = 0; i < chidrenNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&chidrenNodeIds[i]);
+	}
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count()      == 0        &&
 		       chidrenNodeIds.count()   == numProps &&
@@ -397,7 +402,21 @@ void QUaNode::addReference(const QUaReference & ref, QUaNode * nodeTarget, const
 	auto set = getRefsInternal(ref, isForward);
 	if (set.contains(nodeTarget->m_nodeId))
 	{
+		// cleanup set
+		QSetIterator<UA_NodeId> i(set);
+		while (i.hasNext())
+		{
+			UA_NodeId nodeId = i.next();
+			UA_NodeId_clear(&nodeId);
+		}
 		return;
+	}
+	// cleanup set
+	QSetIterator<UA_NodeId> i(set);
+	while (i.hasNext())
+	{
+		UA_NodeId nodeId = i.next();
+		UA_NodeId_clear(&nodeId);
 	}
 	// add the reference
 	auto st = UA_Server_addReference(
@@ -443,7 +462,21 @@ void QUaNode::removeReference(const QUaReference & ref, QUaNode * nodeTarget, co
 	auto set = getRefsInternal(ref, isForward);
 	if (!set.contains(nodeTarget->m_nodeId))
 	{
+		// cleanup set
+		QSetIterator<UA_NodeId> i(set);
+		while (i.hasNext())
+		{
+			UA_NodeId nodeId = i.next();
+			UA_NodeId_clear(&nodeId);
+		}
 		return;
+	}
+	// cleanup set
+	QSetIterator<UA_NodeId> i(set);
+	while (i.hasNext())
+	{
+		UA_NodeId nodeId = i.next();
+		UA_NodeId_clear(&nodeId);
 	}
 	// remove the reference
 	auto st = UA_Server_deleteReference(
@@ -472,17 +505,21 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & i
 	QSetIterator<UA_NodeId> i(set);
 	while (i.hasNext())
 	{
-		QUaNode * node = QUaNode::getNodeContext(i.next(), m_qUaServer);
+		UA_NodeId nodeId = i.next();
+		QUaNode * node = QUaNode::getNodeContext(nodeId, m_qUaServer);
 		Q_CHECK_PTR(node);
 		if (node)
 		{
 			retRefList.append(node);
 		}
+		// cleanup set
+		UA_NodeId_clear(&nodeId);
 	}	
 	// return
 	return retRefList;
 }
 
+// NOTE : need to cleanup result after calling this method
 QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & isForward) const
 {
 	QSet<UA_NodeId> retRefSet;
@@ -511,7 +548,8 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & 
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
 			{
-				UA_NodeId nodeId = rDesc.nodeId.nodeId;
+				UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
+				UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 				retRefSet.insert(nodeId);
 			}
 		}
@@ -595,11 +633,13 @@ bool QUaNode::userExecutable(const QString & strUserName)
 	return true;
 }
 
+// NOTE : need to cleanup result after calling this method
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)
 {
 	return QUaNode::getParentNodeId(childNodeId, server->m_server);
 }
 
+// NOTE : need to cleanup result after calling this method
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
@@ -616,7 +656,11 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
-			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			// NOTE : it seems cleanup below also deletes the strings of string nodeIds which creates a bug
+			//        this means we need to cleanup the result everytime we call QUaNode::getParentNodeId
+			//UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			UA_NodeId nodeId;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 			listParents.append(nodeId);
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
@@ -639,11 +683,13 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;
 }
 
+// NOTE : need to cleanup result after calling this method
 QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, QUaServer * server)
 {
 	return QUaNode::getChildrenNodeIds(parentNodeId, server->m_server);
 }
 
+// NOTE : need to cleanup result after calling this method
 QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_Server * server)
 {
 	QList<UA_NodeId> retListChildren;
@@ -661,11 +707,13 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
-			UA_NodeId nodeId = rDesc.nodeId.nodeId;
+			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 			// ignore modelling rules
             auto nodeIdMandatory = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY);
             if (UA_NodeId_equal(&nodeId, &nodeIdMandatory))
 			{
+				UA_NodeId_clear(&nodeId);
 				continue;
 			}
 			retListChildren.append(nodeId);
