@@ -515,6 +515,10 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 		                                const UA_NodeId  *methodId, 
 		                                void             *methodContext)
 {
+	Q_UNUSED(methodContext);
+	Q_UNUSED(methodId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(ac);
 	// overall execution permissions for method regardless of conntext object
 	// boils down to whether user exists
 	// get server
