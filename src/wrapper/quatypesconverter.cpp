@@ -338,7 +338,7 @@ namespace QUaTypesConverter {
 		case METATYPE_LOCALIZEDTEXT:
 			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 		case METATYPE_IMAGEJPG:
-			return &UA_TYPES[UA_TYPES_BYTESTRING];
+			return &UA_TYPES[UA_TYPES_IMAGEJPG];
 		default:
 			Q_ASSERT_X(false, "uaTypeFromQType", "Unsupported datatype");
 			return nullptr;

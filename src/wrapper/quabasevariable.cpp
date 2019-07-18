@@ -241,7 +241,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
 	// set converted or default value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue, dataType);
 	m_bInternalWrite = true;
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
