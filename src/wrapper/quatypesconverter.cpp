@@ -282,6 +282,8 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 		case METATYPE_LOCALIZEDTEXT:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+		case METATYPE_IMAGEJPG:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGEJPG);
 		default:
 			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
@@ -335,6 +337,8 @@ namespace QUaTypesConverter {
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_LOCALIZEDTEXT:
 			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
+		case METATYPE_IMAGEJPG:
+			return &UA_TYPES[UA_TYPES_BYTESTRING];
 		default:
 			Q_ASSERT_X(false, "uaTypeFromQType", "Unsupported datatype");
 			return nullptr;
@@ -407,6 +411,8 @@ namespace QUaTypesConverter {
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
 			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
+		case METATYPE_IMAGEJPG:
+			return uaVariantFromQVariantScalar<UA_ByteString  , QByteArray>(var, uaType);
 		case QMetaType::QVariantList:   // UA_Array
 			return uaVariantFromQVariantArray(var);
 		default:
@@ -699,6 +705,10 @@ namespace QUaTypesConverter {
 		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)))
 		{
 			return METATYPE_LOCALIZEDTEXT;
+		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGEJPG)))
+		{
+			return METATYPE_IMAGEJPG;
 		}
 		else
 		{
