@@ -30,12 +30,15 @@ inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
 {
 	return e1.namespaceIndex     == e2.namespaceIndex
 		&& e1.identifierType     == e2.identifierType
-		&& e1.identifier.numeric == e2.identifier.numeric;
+		&& (e1.identifierType == UA_NODEIDTYPE_NUMERIC    ? e1.identifier.numeric == e2.identifier.numeric :
+			e1.identifierType == UA_NODEIDTYPE_STRING     ? UA_String_equal    (&e1.identifier.string    , &e2.identifier.string    ) :
+			e1.identifierType == UA_NODEIDTYPE_GUID       ? UA_Guid_equal      (&e1.identifier.guid      , &e2.identifier.guid      ) :
+			e1.identifierType == UA_NODEIDTYPE_BYTESTRING ? UA_ByteString_equal(&e1.identifier.byteString, &e2.identifier.byteString) : false);
 }
 
 inline uint qHash(const UA_NodeId &key, uint seed)
 {
-	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ qHash(key.identifier.numeric, seed);
+	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ (key.identifierType == UA_NODEIDTYPE_NUMERIC ? qHash(key.identifier.numeric, seed) : UA_NodeId_hash(&key));
 }
 
 struct QUaReference
