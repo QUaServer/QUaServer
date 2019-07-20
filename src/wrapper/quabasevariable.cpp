@@ -360,6 +360,14 @@ qint32 QUaBaseVariable::valueRank() const
 	return outValueRank;
 }
 
+void QUaBaseVariable::setValueRank(const qint32& valueRank){
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	auto st = UA_Server_writeValueRank(m_qUaServer->m_server, m_nodeId, valueRank);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+}
+
 QVector<quint32> QUaBaseVariable::arrayDimensions() const
 {
 	Q_CHECK_PTR(m_qUaServer);
