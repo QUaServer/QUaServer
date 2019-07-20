@@ -377,7 +377,7 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	QVector<quint32> retArr;
 	Q_ASSERT(outArrayDimensions.type == &UA_TYPES[UA_TYPES_UINT32]);
 	auto data = (quint32*)outArrayDimensions.data;
-	for (int i = 0; i < outArrayDimensions.arrayLength; i++)
+	for (int i = 0; i < (int)outArrayDimensions.arrayLength; i++)
 	{
 		retArr.append(data[i]);
 	}

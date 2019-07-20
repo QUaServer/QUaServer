@@ -676,8 +676,8 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 	// NOTE : seems methods added to subtype have references to all instances created of the subtype
 	// TODO : fix, when https://github.com/open62541/open62541/pull/1812 is fixed
 	Q_ASSERT_X(
-		listParents.count() <= 1 && outNodeClass != UA_NODECLASS_METHOD ||
-		listParents.count() >= 1 && outNodeClass == UA_NODECLASS_METHOD,
+		(listParents.count() <= 1 && outNodeClass != UA_NODECLASS_METHOD) ||
+		(listParents.count() >= 1 && outNodeClass == UA_NODECLASS_METHOD),
 		"QUaServer::getParentNodeId", "Child code it not supposed to have more than one parent.");
 	// return
 	return listParents.count() > 0 ? listParents.at(0) : UA_NODEID_NULL;

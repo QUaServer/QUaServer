@@ -697,7 +697,7 @@ struct QUaMethodTraitsBase
 		auto iter  = varQt.value<QSequentialIterable>();
 		for (const QVariant &v : iter)
 		{
-			retArr << v.value<template_traits<T>::inner_type>();
+			retArr << v.value<typename template_traits<T>::inner_type>();
 		}
 		return retArr;
 	}
