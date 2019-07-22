@@ -746,7 +746,6 @@ void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
 	// get void context
 	void * context;
 	auto st = UA_Server_getNodeContext(server, nodeId, &context);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	if (st != UA_STATUSCODE_GOOD)
 	{
 		return nullptr;
