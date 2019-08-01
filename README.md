@@ -20,28 +20,38 @@ To test a *QUaServer* based application it is recommended to use the [UA Expert]
 
 This library requires at least `Qt 5.7` or higher and `C++ 11`.
 
-To use *QUaServer*, first a copy of the *open62541* shared library is needed. An amalgamation of the latest compatible *open62541* version is included in this repository for convenience in [./src/amalgamation](./src/amalgamation). 
+To use *QUaServer*, first a copy of the *open62541* shared library is needed. The [open62541 repo](https://github.com/open62541/open62541) is included in thes project as a **git submodule** (`./depends/open62541.git`). So don't forget to clone this repository **recursively**, or run `git submodule update --init --recursive` after cloning this repo.
 
-The amalgamation included in this repository was created using the following *CMake* command:
+The *open62541* amalgamation on can be created using the following *CMake* command on the [open62541 repo](./depends/open62541.git):
 
 ```bash
+git clone https://github.com/open62541/open62541.git open62541.git
 cd open62541.git
 mkdir build; cd build;
+# NOTE : commnads below are for Windows VS2017, adapt them to your platform
 cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
+msbuild open62541.sln
 ```
 
-The `open62541.pro` Qt project can be used to build the included amalgamation into the required shared library using the command:
+After generating the amalgamation (`open62541.h` and `open62541.c` files), the files must be copied to the `./src/amalgamation` folder of this repo. Then the [`open62541.pro`](./src/amalgamation/open62541.pro) Qt project can be used to build the included amalgamation into the required shared library using the command:
 
 ```bash
 cd ./src/amalgamation
 # Linux
 qmake open62541.pro
 make
-# Windows
-qmake -tp vc open62541.pro
 ```
 
-If it is desired to use a more recent version of *open62541*, it is possible to build the amalgamation using the soure code in the [open62541 git repository](https://github.com/open62541/open62541) and then replace [./src/amalgamation/open62541.h](./src/amalgamation/open62541.h) and [./src/amalgamation/open62541.c](./src/amalgamation/open62541.c). Though compatibility of *QUaServer* with the latest version of *open62541* is not guaranteed.
+Alternatively, on **Windows** using *Visual Studio*, the amalgamation is built automatically by running the following command from the Qt Command Line:
+
+```bash
+cd ./src/amalgamation
+# Windows
+qmake -tp vc open62541.pro
+msbuild open62541.vcxproj
+```
+
+The `./depends/open62541.git` submodule on this repo, tracks the latest compatible *open62541* version, which might not be the most recent version of their master branch. Compatibility of *QUaServer* with the latest version of *open62541* is not always guaranteed.
 
 Finally to include *QUaServer* in your project, just include [./src/wrapper/quaserver.pri](./src/wrapper/quaserver.pri) into your Qt project file (`*.pro` file). For example:
 
@@ -221,7 +231,7 @@ void writeMaskChanged  (const quint32 &writeMask  );
 void browseNameChanged (const QString &browseName );
 ```
 
-Furthermore, the API also notifies when a child is added to an *QUaBaseObject* or *addBaseDataVariable* instance:
+Furthermore, the API also notifies when a child is added to an *QUaBaseObject* or *QUaBaseDataVariable* instance:
 
 ```c++
 void childAdded(QUaNode * childNode);
@@ -1221,48 +1231,37 @@ Build and test the server example in [./examples/06_users](./examples/06_users/m
 
 In this section the *QUaServer* library is configured to encrypt communications. Before continuing, make sure to go through the *Server* section in detail and generate all the required certificates and keys.
 
-To support encryption, it is necessary to add the [mbedtls library](https://github.com/ARMmbed/mbedtls) to our project's dependencies. First start by cloning the repository and building the `mbedtls` library:
+To support encryption, it is necessary to add the [mbedtls library](https://github.com/ARMmbed/mbedtls) to the project's dependencies. A copy of a compatible version of the `mbedtls` library is included in this repo as a *git cubmodule* in [`./depends/mbedtls.git`](./depends/mbedtls.git):
 
 ```bash
 # Go to your repos path
-cd $REPOS_PATH
-# Clone the repo
-git clone https://github.com/ARMmbed/mbedtls mbedtls.git
-# Get in the repo
-cd mbedtls.git
-# Checkout some stable branch
-git checkout tags/mbedtls-2.17.0 -b mbedtls-2.17.0
+cd ./depends/mbedtls.git
 # Build the library
 mkdir build; cd build
 # Change your Cmake generator accordingly
 cmake .. -G "Visual Studio 15 2017 Win64"
 ```
 
-Build both *Debug* and *Release* versions of the library.
+On **Windows** the `mbedtls` library is built automatically when compiling the amalgamation project `./src/amalgamation/open62541.pro` passing the `ua_encryption` option as follows:
 
-Now to include the library in *QUaServer* first modify the header file of the amalgamation [`./src/amalgamation/open62541.h`](./src/amalgamation/open62541.h) to support encryption by defining `UA_ENABLE_ENCRYPTION` (around line `55`):
-
-<p align="center">
-  <img src="./res/img/07_encryption_01.jpg">
-</p>
-
-Then modify the *QMake* file [`./src/amalgamation/open62541opts.pri`](./src/amalgamation/open62541opts.pri) to read as follows:
-
-```cmake
-USE_ENCRYPTION = true
-MBEDTLS_PATH   = $$PWD/../../../mbedtls.git
+```bash
+qmake "CONFIG+=ua_encryption" -r -tp vc
 ```
 
-Note it is necessary to point the `MBEDTLS_PATH` to the path where the `mbedtls` was cloned. In the example above it is a relative path which assume both the *QUaServer* repo and the *mbedtls* repo were cloned side-by-side. Modify this path as necessary.
+On **Linux** we must build it (both *Debug* and *Release* versions) manually using `cmake` and `make` and then regenerate the Qt project passing the `ua_encryption` option:
 
-Now run `qmake` again over your project to load the new configuration. For example, to update the examples in this repo run:
+```bash
+qmake "CONFIG+=ua_encryption" -r
+```
+
+To compile the examples, run `qmake` again over your project to load the new configuration. For example, to update the examples in this repo run:
 
 ```bash
 cd ./examples
 # Linux
-qmake -r examples.pro
+qmake "CONFIG+=ua_encryption" -r examples.pro
 # Windows
-qmake -r -tp vc examples.pro
+qmake "CONFIG+=ua_encryption" -r -tp vc examples.pro
 ```
 
 After running `qmake` it is often necessary to **rebuild** the application to avoid *missing symbols* errors.
@@ -1325,7 +1324,7 @@ At the time of writing, events are considered an `EXPERIMENTAL` feature in the *
 To use events, the amalgamation included in this repository is not going to be useful. It is necessary to create a new amalgamation from the *open62541* source code that supports events. This can be done by building it with the following commands:
 
 ```bash
-cd $REPOS_PATH/open62541.git
+cd ./depends/open62541.git
 mkdir build; cd build
 # Adjust your Cmake generator accordingly
 cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON .. -G "Visual Studio 15 2017 Win64"
@@ -1342,23 +1341,36 @@ Now build the library using the Qt project included in this repo:
 ```bash
 cd ./src/amalgamation
 # Linux
-qmake open62541.pro
+qmake "CONFIG+=ua_events" open62541.pro
 make
-# Windows
-qmake -tp vc open62541.pro
 ```
 
-And finally update your project to load the new configuration. For example, to update the examples in this repo run:
+On **Windows** the amalgamation with full namespace and events enabled is automatically built when running *QMake*:
+
+```bash
+cd ./src/amalgamation
+# Windows
+qmake "CONFIG+=ua_events" -tp vc open62541.pro
+msbuild open62541.vcxproj
+```
+
+To update the examples to support events:
 
 ```bash
 cd ./examples
 # Linux
-qmake -r examples.pro
+qmake "CONFIG+=ua_events" -r examples.pro
 # Windows
-qmake -r -tp vc examples.pro
+qmake "CONFIG+=ua_events" -r -tp vc examples.pro
 ```
 
 After running `qmake` it is often necessary to **rebuild** the application to avoid *missing symbols* errors.
+
+The building process above is similar than the one described in the encryption section. To enable both events and encryption the we have to add both options to *QMake*:
+
+```bash
+qmake "CONFIG+=ua_encryption ua_events" -r -tp vc examples.pro
+```
 
 Events now can be used in the C++ code. To create an event, first is necessary to **subtype** the `QUaBaseEvent` class, for example:
 

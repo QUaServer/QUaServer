@@ -15,14 +15,18 @@ CONFIG(debug, debug|release) {
 	TARGET = open62541
 }	
 
+# generate and copy amalgamation if not exists
+include($$PWD/open62541amalgamation.pri)
+# build encryption dependencies
+include($$PWD/open62541encryption.pri)
+
 INCLUDEPATH += $$PWD
 
 HEADERS += $$PWD/open62541.h
 SOURCES += $$PWD/open62541.c
 
-include($$PWD/open62541opts.pri)
-
-# [ENCRYPTION]
-equals(USE_ENCRYPTION, true) {
-  INCLUDEPATH += $$MBEDTLS_PATH/build/include
+ua_encryption {
+	MBEDTLS_PATH = $$PWD/../../depends/mbedtls.git
+	INCLUDEPATH += $$MBEDTLS_PATH/build/include
+    DEFINES += UA_ENABLE_ENCRYPTION
 }

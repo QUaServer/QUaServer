@@ -14,17 +14,16 @@ INCLUDEPATH += $$PWD/
 # include header to project
 HEADERS += $$PWD/open62541.h
 
-include($$PWD/open62541opts.pri)
-
-# [ENCRYPTION]
-equals(USE_ENCRYPTION, true) {
-	# include mbedtls header directory
-	INCLUDEPATH += $$MBEDTLS_PATH/build/include
-	# include pre-compiled mbedtls library as a dependency
-	CONFIG(debug, debug|release) {
-		LIBS += -L$$MBEDTLS_PATH/build/library/Debug
-	} else {
-		LIBS += -L$$MBEDTLS_PATH/build/library/Release
-	}	
-	LIBS += -lmbedcrypto -lmbedtls -lmbedx509
+ua_encryption {
+    MBEDTLS_PATH = $$PWD/../../depends/mbedtls.git
+    # include mbedtls header directory
+    INCLUDEPATH += $$MBEDTLS_PATH/build/include
+    # include pre-compiled mbedtls library as a dependency
+    CONFIG(debug, debug|release) {
+        LIBS += -L$$MBEDTLS_PATH/build/library/Debug
+    } else {
+        LIBS += -L$$MBEDTLS_PATH/build/library/Release
+    }   
+    LIBS += -lmbedcrypto -lmbedtls -lmbedx509
+    DEFINES += UA_ENABLE_ENCRYPTION
 }

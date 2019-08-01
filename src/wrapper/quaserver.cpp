@@ -624,6 +624,8 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 			nullptr, 
 			0, 
 			nullptr, 
+			0,
+			nullptr,
 			0
 		);
 	}
