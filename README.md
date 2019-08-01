@@ -25,8 +25,7 @@ To use *QUaServer*, first a copy of the *open62541* shared library is needed. Th
 The *open62541* amalgamation on can be created using the following *CMake* command on the [open62541 repo](./depends/open62541.git):
 
 ```bash
-git clone https://github.com/open62541/open62541.git open62541.git
-cd open62541.git
+cd ./depends/open62541.git
 mkdir build; cd build;
 # NOTE : commnads below are for Windows VS2017, adapt them to your platform
 cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
