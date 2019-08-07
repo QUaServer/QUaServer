@@ -232,7 +232,7 @@ namespace QUaTypesConverter {
 		case QMetaType::Void:
 			return true;
 		default:
-			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
+			Q_ASSERT_X(typeCopy >= QMetaType::User, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return false;
 		}
 	}

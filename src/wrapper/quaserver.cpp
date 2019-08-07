@@ -1391,22 +1391,20 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		}
 		// validate return type
 		auto returnType  = (QMetaType::Type)metamethod.returnType();
-		// NOTE : enums are QMetaType::UnknownType
-		Q_ASSERT_X(returnType != QMetaType::UnknownType || 
-			this->m_hashEnums.contains(metamethod.typeName()),
-			"QUaServer::addMetaMethods", 
-			"Return type is not registered. Try using qRegisterMetaType.");
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
-		Q_ASSERT_X(isSupported, 
+		bool isEnumType  = this->m_hashEnums.contains(metamethod.typeName());
+		bool isArrayType = QUaTypesConverter::isQTypeArray(returnType);
+		bool isValidType = isSupported || isEnumType || isArrayType;
+		// NOTE : enums are QMetaType::UnknownType
+		Q_ASSERT_X(isValidType,
 			"QUaServer::addMetaMethods", 
 			"Return type not supported in MetaMethod.");
-		if (!isSupported)
+		if (!isValidType)
 		{
 			continue;
 		}
-		// check if array
-		bool isArray = QUaTypesConverter::isQTypeArray(returnType);
-		if (isArray)
+		// if array
+		if (isArrayType)
 		{
 			returnType = QUaTypesConverter::getQArrayType(returnType);
 		}
@@ -1418,13 +1416,13 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 			UA_Argument_init(&outputArgumentInstance);
 			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char *)"",
 														  (char *)"Result Value");
-			outputArgumentInstance.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
-			outputArgumentInstance.dataType    = QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
-			outputArgumentInstance.valueRank   = UA_VALUERANK_SCALAR;
-			if (isArray)
-			{
-				outputArgumentInstance.valueRank = UA_VALUERANK_ONE_DIMENSION;
-			}
+			outputArgumentInstance.name      = QUaTypesConverter::uaStringFromQString((char *)"Result");
+			outputArgumentInstance.dataType  = isEnumType ? 
+				this->m_hashEnums.value(QString(metamethod.typeName())) :
+				QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
+			outputArgumentInstance.valueRank = isArrayType ?
+				UA_VALUERANK_ONE_DIMENSION :
+				UA_VALUERANK_SCALAR;
 			outputArgument = &outputArgumentInstance;
 		}
 		// validate argument types and create them
@@ -1441,52 +1439,44 @@ void QUaServer::addMetaMethods(const QMetaObject & parentMetaObject)
 		auto listTypeNames = metamethod.parameterTypes();
 		for (int k = 0; k < metamethod.parameterCount(); k++)
 		{
-			auto metaType = (QMetaType::Type)metamethod.parameterType(k);
+			auto argType = (QMetaType::Type)metamethod.parameterType(k);
+			isSupported  = QUaTypesConverter::isSupportedQType(argType);
+			isEnumType   = this->m_hashEnums.contains(listTypeNames[k]);
+			isArrayType  = QUaTypesConverter::isQTypeArray(argType);
+			isValidType  = isSupported || isEnumType || isArrayType;
 			// NOTE : enums are QMetaType::UnknownType
-			Q_ASSERT_X(metaType != QMetaType::UnknownType ||
-				this->m_hashEnums.contains(listTypeNames[k]),
-				"QUaServer::addMetaMethods",
-				"Return type is not registered. Try using qRegisterMetaType.");
-			isSupported   = QUaTypesConverter::isSupportedQType(metaType);
-			Q_ASSERT_X(isSupported, 
+			Q_ASSERT_X(isValidType,
 				"QUaServer::addMetaMethods", 
 				"Argument type not supported in MetaMethod.");
-			if (!isSupported)
+			if (!isValidType)
 			{
 				break;
 			}
 			// check if array
-			isArray = QUaTypesConverter::isQTypeArray(metaType);
-			if (isArray)
+			if (isArrayType)
 			{
-				metaType = QUaTypesConverter::getQArrayType(metaType);
+				argType = QUaTypesConverter::getQArrayType(argType);
 			}
 			// get ua type
 			UA_Argument inputArgument;
 			UA_Argument_init(&inputArgument);
 			// check if type is registered enum
-			UA_NodeId uaType;
-			if (this->m_hashEnums.contains(listTypeNames[k]))
-			{
-				uaType = this->m_hashEnums.value(listTypeNames[k]);
-			}
-			else
-			{
-				uaType = QUaTypesConverter::uaTypeNodeIdFromQType(metaType);
-			}
+			UA_NodeId uaType = isEnumType ?
+				this->m_hashEnums.value(listTypeNames[k]) :
+				QUaTypesConverter::uaTypeNodeIdFromQType(argType);
 			// create n-th argument
 			inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
 			inputArgument.name        = QUaTypesConverter::uaStringFromQString(listArgNames[k]);
 			inputArgument.dataType    = uaType;
 			inputArgument.valueRank   = UA_VALUERANK_SCALAR;
-			if (isArray)
+			if (isArrayType)
 			{
 				inputArgument.valueRank = UA_VALUERANK_ONE_DIMENSION;
 			}
 			vectArgs.append(inputArgument);
 		}
-		// skip if any othe args is not supported
-		if (!isSupported)
+		// skip if any arg is not supported
+		if (!isValidType)
 		{
 			continue;
 		}
