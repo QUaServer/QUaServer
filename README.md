@@ -27,7 +27,7 @@ The *open62541* amalgamation on can be created using the following *CMake* comma
 ```bash
 cd ./depends/open62541.git
 mkdir build; cd build;
-# NOTE : commnads below are for Windows VS2017, adapt them to your platform
+# NOTE : commands below are for Windows VS2017, adapt them to your platform
 cmake -DUA_ENABLE_AMALGAMATION=ON .. -G "Visual Studio 15 2017 Win64"
 msbuild open62541.sln
 ```
