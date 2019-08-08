@@ -525,20 +525,13 @@ inline void QUaBaseVariable::setDataTypeEnum()
 	this->setDataTypeEnum(QMetaEnum::fromType<T>());
 }
 
-// https://stackoverflow.com/questions/13919234/is-there-a-way-using-c-type-traits-to-check-if-a-type-is-a-template-and-any-pr
-template <typename> 
-struct is_template : std::false_type {};
-
-template <template<typename> typename H, typename S>
-struct is_template<H<S>> : std::true_type {};
+template <typename T, typename = void>
+struct container_traits : std::false_type {};
 
 template <typename T>
-struct template_traits;
-
-template <template<typename> typename H, typename S>
-struct template_traits<H<S>>
+struct container_traits<T, decltype(T::value_type)> : std::true_type
 {
-	using inner_type = S;
+    using inner_type = decltype(T::value_type);
 };
 
 template <typename ClassType, typename R, bool IsMutable, typename... Args>
@@ -574,7 +567,7 @@ struct QUaMethodTraitsBase
 	template<typename T>
 	inline static UA_Argument getTypeUaArgument(QUaServer * uaServer, const int &iArg = 0)
 	{
-		return getTypeUaArgumentInternalArray<T>(is_template<T>(), uaServer, iArg);
+        return getTypeUaArgumentInternalArray<T>(container_traits<T>(), uaServer, iArg);
 	}
 
 	template<typename T>
@@ -586,8 +579,8 @@ struct QUaMethodTraitsBase
 	template<typename T>
 	inline static UA_Argument getTypeUaArgumentInternalArray(std::true_type, QUaServer * uaServer, const int &iArg = 0)
 	{
-		UA_Argument arg = getTypeUaArgumentInternalEnum<typename template_traits<T>::inner_type>
-			(std::is_enum<typename template_traits<T>::inner_type>(), uaServer, iArg);
+        UA_Argument arg = getTypeUaArgumentInternalEnum<typename container_traits<T>::inner_type>
+            (std::is_enum<typename container_traits<T>::inner_type>(), uaServer, iArg);
 		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
 		return arg;
 	}
@@ -642,7 +635,7 @@ struct QUaMethodTraitsBase
 
 	inline static UA_Argument getRetUaArgument()
 	{
-		return getRetUaArgumentArray<R>(is_template<R>());
+        return getRetUaArgumentArray<R>(container_traits<R>());
 	}
 
 	template<typename T>
@@ -663,7 +656,7 @@ struct QUaMethodTraitsBase
 	template<typename T>
 	inline static UA_Argument getRetUaArgumentArray(std::true_type)
 	{
-		UA_Argument arg = getRetUaArgumentArray<typename template_traits<T>::inner_type>(is_template<typename template_traits<T>::inner_type>());
+        UA_Argument arg = getRetUaArgumentArray<typename container_traits<T>::inner_type>(container_traits<typename container_traits<T>::inner_type>());
 		arg.valueRank = UA_VALUERANK_ONE_DIMENSION;
 		return arg;
 	}
@@ -679,7 +672,7 @@ struct QUaMethodTraitsBase
     template<typename T>
     inline static T convertArgType(const UA_Variant * input, const int &iArg)
     {
-		return convertArgTypeArray<T>(is_template<T>(), input, iArg);
+        return convertArgTypeArray<T>(container_traits<T>(), input, iArg);
     }
 
 	template<typename T>
@@ -697,7 +690,7 @@ struct QUaMethodTraitsBase
 		auto iter  = varQt.value<QSequentialIterable>();
 		for (const QVariant &v : iter)
 		{
-			retArr << v.value<template_traits<T>::inner_type>();
+            retArr << v.value<container_traits<T>::inner_type>();
 		}
 		return retArr;
 	}

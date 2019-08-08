@@ -1,6 +1,4 @@
-# TODO : handle other open62541 options (e.g. full namespace)
 # TODO : help needed for MINGW on Windows
-# TODO : help needed for LINUX
 # TODO : help needed for MAC
 
 # Options
@@ -141,9 +139,71 @@ if(!build_pass) {
 	}
 	# Linux
 	linux-g++ {
-		#message("Compiling Open62541 for Linux.")
-		if(!exists($${OPEN62541_H_LOCAL}) || !exists($${OPEN62541_C_LOCAL})) {
-			error("Automatic QMake build for open62541 amalgamation not yet supported on Linux. Please build it manually and move the files here.")
+		message("Compiling Open62541 for Linux.")
+		# Look for CMake
+		CMAKE_BIN = $$system(which cmake)
+		isEmpty(CMAKE_BIN) {
+			error("CMake not found. Cannot build open62541 amalgamation.")
+		}
+		else {
+			message("CMake found.")
+		}
+		# Look for make
+		MAKE_BIN = $$system(which make)
+		isEmpty(MAKE_BIN) {
+			error("Make not found. Cannot build open62541 amalgamation.")
+		}
+		else {
+			message("Make found.")
+		}
+		# Clean up old build if any
+		exists($${OPEN62541_BUILD_PATH}) {
+			system("rm -rf $${OPEN62541_BUILD_PATH}")
+		}
+		# Create build
+		BUILD_CREATED = FALSE
+		system("mkdir $${OPEN62541_BUILD_PATH}"): BUILD_CREATED = TRUE
+		equals(BUILD_CREATED, TRUE) {
+			message("Build directory created for open62541.")
+		}
+		else {
+			error("Build directory could not be created for open62541.")
+		}
+		# Generate CMake project
+		PROJECT_CREATED = FALSE
+		system("cmake $${OPEN62541_PATH} -B$${OPEN62541_BUILD_PATH} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_EVENTS}"): PROJECT_CREATED = TRUE
+		equals(BUILD_CREATED, TRUE) {
+			message("CMake generate open62541 successful.")
+		}
+		else {
+			error("CMake generate open62541 failed.")
+		}
+		# Build Visual Studio project
+		PROJECT_BUILT = FALSE
+		system("make -C $${OPEN62541_BUILD_PATH} all"): PROJECT_BUILT = TRUE
+		equals(BUILD_CREATED, TRUE) {
+			message("Open62541 build successful.")
+		}
+		else {
+			error("Open62541 build failed.")
+		}
+		# Copy header
+		H_COPY = FALSE
+		system("yes | cp -rf $${OPEN62541_H_PATH} $${OPEN62541_H_LOCAL}"): H_COPY = TRUE
+		equals(H_COPY, TRUE) {
+			message("Open62541 header file copied locally.")
+		}
+		else {
+			error("Failed to copy open62541 header file.")
+		}
+		# Copy source
+		C_COPY = FALSE
+		system("yes | cp -rf $${OPEN62541_C_PATH} $${OPEN62541_C_LOCAL}"): C_COPY = TRUE
+		equals(C_COPY, TRUE) {
+			message("Open62541 source file copied locally.")
+		}
+		else {
+			error("Failed to copy open62541 source file.")
 		}
 	}
 	# Mac OS

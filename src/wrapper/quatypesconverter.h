@@ -87,7 +87,7 @@ namespace QUaTypesConverter {
 		                               const ArrayType  &arrType = ArrayType::QList);
 	QVariant uaVariantToQVariantList  (const UA_Variant &uaVariant);
 	QVariant uaVariantToQVariantVector(const UA_Variant &uaVariant);
-	template <template<typename> typename ARRAYTYPE, typename TARGETTYPE, typename UATYPE>
+    template <typename ARRAYTYPE, typename UATYPE>
 	QVariant uaVariantToQVariantArray (const UA_Variant &var, QMetaType::Type type);
 
 	template<typename T>
