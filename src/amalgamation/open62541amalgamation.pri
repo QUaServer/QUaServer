@@ -178,7 +178,7 @@ if(!build_pass) {
 		else {
 			error("CMake generate open62541 failed.")
 		}
-		# Build Visual Studio project
+                # Build project
 		PROJECT_BUILT = FALSE
 		system("make -C $${OPEN62541_BUILD_PATH} all"): PROJECT_BUILT = TRUE
 		equals(BUILD_CREATED, TRUE) {

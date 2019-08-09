@@ -20,9 +20,19 @@ ua_encryption {
     INCLUDEPATH += $$MBEDTLS_PATH/build/include
     # include pre-compiled mbedtls library as a dependency
     CONFIG(debug, debug|release) {
-        LIBS += -L$$MBEDTLS_PATH/build/library/Debug
+        win32 {
+            LIBS += -L$$MBEDTLS_PATH/build/library/Debug
+        }
+        linux-g++ {
+            LIBS += -L$$MBEDTLS_PATH/build/library
+        }
     } else {
-        LIBS += -L$$MBEDTLS_PATH/build/library/Release
+        win32 {
+            LIBS += -L$$MBEDTLS_PATH/build/library/Release
+        }
+        linux-g++ {
+            LIBS += -L$$MBEDTLS_PATH/build/library
+        }
     }   
     LIBS += -lmbedcrypto -lmbedtls -lmbedx509
     DEFINES += UA_ENABLE_ENCRYPTION

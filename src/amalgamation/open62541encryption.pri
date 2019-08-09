@@ -96,8 +96,54 @@ ua_encryption {
 		}
 		# Linux
 		linux-g++ {
-			#message("Compiling MbedTLS for Linux.")
-			message("Automatic QMake build for MbedTLS not yet supported on Linux. Please build it manually.")
+                        message("Compiling MbedTLS for Linux.")
+                        # Look for CMake
+                        CMAKE_BIN = $$system(which cmake)
+                        isEmpty(CMAKE_BIN) {
+                                error("CMake not found. Cannot build MbedTLS.")
+                        }
+                        else {
+                                message("CMake found.")
+                        }
+                        # Look for make
+                        MAKE_BIN = $$system(which make)
+                        isEmpty(MAKE_BIN) {
+                                error("Make not found. Cannot build MbedTLS.")
+                        }
+                        else {
+                                message("Make found.")
+                        }
+                        # Clean up old build if any
+                        exists($${MBEDTLS_BUILD_PATH}) {
+                                system("rm -rf $${MBEDTLS_BUILD_PATH}")
+                        }
+                        # Create build
+                        BUILD_CREATED = FALSE
+                        system("mkdir $${MBEDTLS_BUILD_PATH}"): BUILD_CREATED = TRUE
+                        equals(BUILD_CREATED, TRUE) {
+                                message("Build directory created for MbedTLS.")
+                        }
+                        else {
+                                error("Build directory could not be created for MbedTLS.")
+                        }
+                        # Generate CMake project
+                        PROJECT_CREATED = FALSE
+                        system("cmake $${MBEDTLS_PATH} -B$${MBEDTLS_BUILD_PATH}"): PROJECT_CREATED = TRUE
+                        equals(BUILD_CREATED, TRUE) {
+                                message("CMake generate MbedTLS successful.")
+                        }
+                        else {
+                                error("CMake generate MbedTLS failed.")
+                        }
+                        # Build project
+                        PROJECT_BUILT = FALSE
+                        system("make -C $${MBEDTLS_BUILD_PATH} all"): PROJECT_BUILT = TRUE
+                        equals(BUILD_CREATED, TRUE) {
+                                message("MbedTLS build successful.")
+                        }
+                        else {
+                                error("MbedTLS build failed.")
+                        }
 		}
 		# Mac OS
 		mac {
