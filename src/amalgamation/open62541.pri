@@ -1,9 +1,9 @@
 # include pre-compiled open62541 library as a dependency
 LIBS += -L$$PWD/../../build/
 CONFIG(debug, debug|release) {
-	LIBS += -lopen62541d
+        LIBS += -lopen62541d
 } else {
-	LIBS += -lopen62541
+        LIBS += -lopen62541
 }	
 # include sockets dependency for windows
 win32 {

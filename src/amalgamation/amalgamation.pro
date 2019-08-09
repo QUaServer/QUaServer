@@ -9,10 +9,10 @@ DESTDIR  = $$PWD/../../build
 
 CONFIG(debug, debug|release) {
 	OBJECTS_DIR = $$DESTDIR/debug
-	TARGET = open62541d
+        TARGET = open62541d
 } else {
 	OBJECTS_DIR = $$DESTDIR/release
-	TARGET = open62541
+        TARGET = open62541
 }	
 
 # generate and copy amalgamation if not exists
