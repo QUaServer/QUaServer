@@ -525,13 +525,20 @@ inline void QUaBaseVariable::setDataTypeEnum()
 	this->setDataTypeEnum(QMetaEnum::fromType<T>());
 }
 
-template <typename T, typename = void>
+// NOTE : had to remove template template parameters because is c++17
+template <typename T>
 struct container_traits : std::false_type {};
 
 template <typename T>
-struct container_traits<T, decltype(T::value_type)> : std::true_type
+struct container_traits<QList<T>> : std::true_type
 {
-    using inner_type = decltype(T::value_type);
+	using inner_type = T;
+};
+
+template <typename T>
+struct container_traits<QVector<T>> : std::true_type
+{
+	using inner_type = T;
 };
 
 template <typename ClassType, typename R, bool IsMutable, typename... Args>
