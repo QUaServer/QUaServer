@@ -28,7 +28,8 @@ The *open62541* amalgamation on can be created using the following *QMake* comma
 cd ./src/amalgamation
 # Windows
 qmake -tp vc amalgamation.pro
-msbuild open62541.vcxproj
+msbuild open62541.vcxproj /p:Configuration=Debug
+msbuild open62541.vcxproj /p:Configuration=Release
 # Linux
 qmake amalgamation.pro
 make all
@@ -64,7 +65,7 @@ This library comes with examples in the `./examples` folder, which are explained
 ```bash
 # Windows
 qmake -r -tp vc examples.pro
-msbuild examples.sln
+msbuild examples.sln /p:Configuration=Debug
 # Linux
 qmake -r examples.pro
 make all
