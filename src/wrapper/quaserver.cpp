@@ -697,13 +697,14 @@ void QUaServer::setupServer()
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types (for all types)
-	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
+	m_mapTypes.insert(QString(QUaBaseVariable    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE    ));
 	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QUaProperty::staticMetaObject.className())        , UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
-	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject.className())      , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
-	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject.className())    , UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
+	m_mapTypes.insert(QString(QUaProperty        ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ));
+	m_mapTypes.insert(QString(QUaBaseObject      ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ));
+	m_mapTypes.insert(QString(QUaFolderObject    ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject.className())       , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
+	m_mapTypes.insert(QString(QUaBaseEvent              ::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE              ));
+	m_mapTypes.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)              , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -712,12 +713,18 @@ void QUaServer::setupServer()
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_UNUSED(st);
 	// register constructors (for instantiable types)
 	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE)        , QUaProperty        ::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)      , QUaBaseObject      ::staticMetaObject);
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE)          , QUaFolderObject    ::staticMetaObject);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), QUaGeneralModelChangeEvent::staticMetaObject);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// setup access control
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	// static methods to reimplement custom behaviour
@@ -1719,7 +1726,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject, const UA_NodeId &nodeIdOriginator)
+UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject, const UA_NodeId &nodeIdOriginator, const QStringList * defaultProperties)
 {
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
@@ -1729,7 +1736,7 @@ UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject, const UA_NodeId
 	}
 	// try to get typeEvtId, if null, then register it
 	QString   strClassName = QString(metaObject.className());
-	UA_NodeId typeEvtId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	UA_NodeId typeEvtId    = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeEvtId))
 	{
 		this->registerType(metaObject);
@@ -1737,7 +1744,8 @@ UA_NodeId QUaServer::createEvent(const QMetaObject & metaObject, const UA_NodeId
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
 	// set originator node id temporarily
-	m_newEventOriginatorNodeId = &nodeIdOriginator;
+	m_newEventOriginatorNodeId  = &nodeIdOriginator;
+	m_newEventDefaultProperties = defaultProperties;
 	// create event instance
 	UA_NodeId nodeIdNewEvent;
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);

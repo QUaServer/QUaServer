@@ -13,8 +13,13 @@ SOURCES += \
     $$PWD/quaproperty.cpp \
     $$PWD/quabasedatavariable.cpp \
     $$PWD/quabaseobject.cpp \
-    $$PWD/quafolderobject.cpp \
-    $$PWD/quabaseevent.cpp
+    $$PWD/quafolderobject.cpp
+
+ua_events {
+    SOURCES += \
+    $$PWD/quabaseevent.cpp \
+    $$PWD/quageneralmodelchangeevent.cpp
+}
 
 SOURCES += \   
     $$PWD/quatypesconverter.cpp
@@ -26,9 +31,14 @@ HEADERS += \
     $$PWD/quaproperty.h \
     $$PWD/quabasedatavariable.h \
     $$PWD/quabaseobject.h \
-    $$PWD/quafolderobject.h \
-    $$PWD/quabaseevent.h
+    $$PWD/quafolderobject.h
 
+ua_events {
+    HEADERS += \
+    $$PWD/quabaseevent.h \
+    $$PWD/quageneralmodelchangeevent.h
+}
+    
 HEADERS += \    
     $$PWD/quatypesconverter.h
 
@@ -39,8 +49,13 @@ DISTFILES += \
     $$PWD/QUaProperty \
     $$PWD/QUaBaseDataVariable \
     $$PWD/QUaBaseObject \
-    $$PWD/QUaFolderObject \
-    $$PWD/QUaBaseEvent
+    $$PWD/QUaFolderObject
+
+ua_events {
+    DISTFILES += \
+    $$PWD/QUaBaseEvent \
+    $$PWD/QUaGeneralModelChangeEvent
+}
 
 DISTFILES += \    
     $$PWD/QUaTypesConverter

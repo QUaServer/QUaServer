@@ -78,6 +78,9 @@ public:
 	// Triggers the event and updates eventId, sourceNode, eventType and receiveTime
 	void trigger();
 
+	// This is used in QUaNode constructor to add event properties defined in standard as children QObjects
+	static const QStringList DefaultProperties;
+
 private:
 	// ByteString : 
 	QUaProperty  * getEventId();
@@ -104,8 +107,6 @@ private:
 
 	// Used to trigger the event
 	UA_NodeId m_nodeIdOriginator;
-	// This is used in QUaNode constructor to add event properties defined in standard as children QObjects
-	static QStringList listDefaultProps;
 
 };
 

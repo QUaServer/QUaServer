@@ -308,6 +308,9 @@ public:
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
 
+	//
+	static const QStringList DefaultProperties;
+
 signals:
 
 	void displayNameChanged(const QString &displayName);
@@ -423,6 +426,32 @@ inline void QUaNode::setUserExecutableCallback(const M & callback)
 	m_userExecutableCallback = [callback](const QString &strUserName) {
 		return callback(strUserName);
 	};
+}
+
+// to check if has default props static method
+template <typename T, typename = void>
+struct HasStaticDefaultProperties
+	: std::false_type
+{};
+
+template <typename T>
+struct HasStaticDefaultProperties<T,
+	typename std::enable_if<std::is_same<decltype(T::DefaultProperties), const QStringList>::value>::type>
+	: std::true_type
+{};
+
+template<typename T>
+typename std::enable_if<HasStaticDefaultProperties<T>::value, const QStringList*>::type
+getDefaultPropertiesRef()
+{
+	return &(T::DefaultProperties);
+}
+
+template<typename T>
+typename std::enable_if<!HasStaticDefaultProperties<T>::value, const QStringList*>::type
+getDefaultPropertiesRef()
+{
+	return &(QUaNode::DefaultProperties);
 }
 
 #endif // QUASERVERNODE_H

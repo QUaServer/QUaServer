@@ -12,6 +12,7 @@
 #include <QUaBaseObject>
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #include <QUaBaseEvent>
+#include <QUaGeneralModelChangeEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 // Enum Stuff
@@ -248,7 +249,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// create instance of a given event type
-	UA_NodeId createEvent(const QMetaObject &metaObject, const UA_NodeId &nodeIdOriginator);
+	UA_NodeId createEvent(const QMetaObject &metaObject, const UA_NodeId &nodeIdOriginator, const QStringList * defaultProperties);
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -354,6 +355,7 @@ private:
 	const QMetaObject * m_newNodeMetaObject;
 	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent and used in QUaBaseEvent::QUaBaseEvent
 	const UA_NodeId   * m_newEventOriginatorNodeId;
+	const QStringList * m_newEventDefaultProperties;
 };
 
 template<typename T>
@@ -467,8 +469,10 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 template<typename T>
 inline T * QUaServer::createEvent()
 {
+	const QStringList * defaultProperties = getDefaultPropertiesRef<T>();
+	Q_ASSERT(defaultProperties);
 	// instantiate first in OPC UA
-	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
+	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), defaultProperties);
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
 		return nullptr;

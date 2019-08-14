@@ -5,6 +5,9 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
+//
+const QStringList QUaNode::DefaultProperties = QStringList();
+
 QUaNode::QUaNode(QUaServer *server)
 {
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
@@ -95,12 +98,13 @@ QUaNode::QUaNode(QUaServer *server)
 	} // for props
 	// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	auto listDefaultProps = server->m_newEventDefaultProperties;
 	// do not assert if event type
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
-		for (int i = 0; i < QUaBaseEvent::listDefaultProps.count(); i++)
+		for (int i = 0; i < listDefaultProps->count(); i++)
 		{
-			QString strBrowseName = QUaBaseEvent::listDefaultProps.at(i);
+			QString strBrowseName = listDefaultProps->at(i);
 			Q_ASSERT(mapChildren.contains(strBrowseName));
 			// get child nodeId for child
 			auto childNodeId = mapChildren.take(strBrowseName);

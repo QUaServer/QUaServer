@@ -110,8 +110,10 @@ private:
 template<typename T>
 inline T * QUaBaseObject::createEvent()
 {
+	const QStringList * defaultProperties = getDefaultPropertiesRef<T>();
+	Q_ASSERT(defaultProperties);
 	// instantiate first in OPC UA
-	UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId);
+	UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId, defaultProperties);
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
 		return nullptr;

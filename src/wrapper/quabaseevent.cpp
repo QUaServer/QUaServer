@@ -4,7 +4,7 @@
 
 #include <QUaServer>
 
-QStringList QUaBaseEvent::listDefaultProps = QStringList()
+const QStringList QUaBaseEvent::DefaultProperties = QStringList()
 << "EventId"
 << "EventType"
 << "SourceNode"
