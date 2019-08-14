@@ -93,7 +93,10 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 		if (iter.size() > 0)
 		{
 			QVariantList listOldType;
-			newType = (QMetaType::Type)iter.at(0).type();
+			if (newType == QMetaType::UnknownType)
+			{
+				newType = (QMetaType::Type)iter.at(0).type();
+			}
 			// check uniform type throughout array
 			for (int i = 0; i < iter.size(); i++)
 			{
@@ -241,7 +244,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
 	// set converted or default value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue, dataType);
 	m_bInternalWrite = true;
 	st = UA_Server_writeValue(m_qUaServer->m_server,
 		m_nodeId,
@@ -377,7 +380,7 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	QVector<quint32> retArr;
 	Q_ASSERT(outArrayDimensions.type == &UA_TYPES[UA_TYPES_UINT32]);
 	auto data = (quint32*)outArrayDimensions.data;
-	for (int i = 0; i < outArrayDimensions.arrayLength; i++)
+	for (int i = 0; i < (int)outArrayDimensions.arrayLength; i++)
 	{
 		retArr.append(data[i]);
 	}

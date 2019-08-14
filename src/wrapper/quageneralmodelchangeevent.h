@@ -15,6 +15,8 @@ To allow Event compression, a GeneralModelChangeEvent contains an array of this 
 
 */
 
+typedef QVector<QUaChangeStructureDataType> QUaChangesList;
+
 class QUaGeneralModelChangeEvent : public QUaBaseEvent
 {
     Q_OBJECT
@@ -24,12 +26,16 @@ friend class QUaServer;
 public:
 	Q_INVOKABLE explicit QUaGeneralModelChangeEvent(QUaServer *server);
 
+
+	QUaChangesList changes() const;
+	void           setChanges(const QUaChangesList &listVerbs);
+
 	// This is used in QUaNode constructor to add event properties defined in standard as children QObjects
 	static const QStringList DefaultProperties;
 
 private:
 	// ChangeStructureDataType (PArt 5 - 11.14) : UA_ModelChangeStructureDataType
-	QUaProperty * getChanges();
+	QUaProperty * getChanges() const;
 
 };
 

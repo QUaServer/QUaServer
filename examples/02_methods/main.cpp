@@ -85,6 +85,19 @@ int main(int argc, char *argv[])
 		obj->setDisplayName(strName);
 
 		// [TEST]
+		evtChange->setSourceName("FoldersObject");
+		evtChange->setMessage("Node has been added");
+		evtChange->setTime(QDateTime::currentDateTimeUtc());
+		evtChange->setSeverity(100);
+		evtChange->setChanges({
+			{
+				obj->nodeId(),
+				"ns=0;i=58",
+				QUaChangeVerb::ReferenceAdded
+			}
+		});
+		auto changes = evtChange->changes();
+		// NOTE : changes array of struct seems to be saved correctly but thing is sent through wireshark
 		evtChange->trigger();
 
 		// create delete method for each newly created object

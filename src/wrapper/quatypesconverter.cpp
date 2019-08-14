@@ -272,6 +272,10 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 		case METATYPE_LOCALIZEDTEXT:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		case METATYPE_CHANGESTRUCTUREDATATYPE:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE); // 267 : UA_ModelChangeStructureDataType { UA_NodeId affected; UA_NodeId affectedType; UA_Byte verb; }
+#endif
 		default:
 			Q_ASSERT_X(false, "uaTypeNodeIdFromQType", "Unsupported datatype");
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE);
@@ -319,12 +323,14 @@ namespace QUaTypesConverter {
 			return &UA_TYPES[UA_TYPES_BYTESTRING];    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 		case METATYPE_NODEID:
 			return &UA_TYPES[UA_TYPES_NODEID];        // 16 : UA_NodeId : { ... }
+		case METATYPE_LOCALIZEDTEXT:
+			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE:
 			return &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]; // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
+		case METATYPE_CHANGESTRUCTUREDATATYPE:
+			return &UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE]; // 267 : UA_ModelChangeStructureDataType { UA_NodeId affected; UA_NodeId affectedType; UA_Byte verb; }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-		case METATYPE_LOCALIZEDTEXT:
-			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 		default:
 			Q_ASSERT_X(false, "uaTypeFromQType", "Unsupported datatype");
 			return nullptr;
@@ -334,7 +340,8 @@ namespace QUaTypesConverter {
 	UA_Variant uaVariantFromQVariant(const QVariant & var, QMetaType::Type qtType/* = QMetaType::UnknownType*/)
 	{
 		// TODO : support multidimentional arrays
-
+		// copy input type before gets modified
+		QMetaType::Type qtTypeIn = qtType;
 		// get qt type from variant
 		if (qtType == QMetaType::UnknownType)
 		{
@@ -391,14 +398,16 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 		case METATYPE_NODEID:          // 16 : UA_NodeId : { ... }
 			return uaVariantFromQVariantScalar<UA_NodeId    , QString>(var, uaType);
+		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE: // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 			return uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(var, uaType);
+		case METATYPE_CHANGESTRUCTUREDATATYPE: // 267 : UA_ModelChangeStructureDataType { UA_NodeId affected; UA_NodeId affectedType; UA_Byte verb; }
+			return uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStructureDataType>(var, uaType);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
-			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
 		case QMetaType::QVariantList:   // UA_Array
-			return uaVariantFromQVariantArray(var);
+			return uaVariantFromQVariantArray(var, qtTypeIn);
 		default:
 			Q_ASSERT_X(false, "uaVariantFromQVariant", "Unsupported datatype");
 			return UA_Variant();
@@ -473,6 +482,12 @@ namespace QUaTypesConverter {
 	{
 		*ptr = nodeIdFromQString(value);
 	}
+	// specialization (LocalizedText)
+	template<>
+	void uaVariantFromQVariantScalar<UA_LocalizedText, QString>(const QString &value, UA_LocalizedText *ptr)
+	{
+		ptr->text = UA_STRING_ALLOC(value.toUtf8().constData());
+	}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (QTimeZone)
 	template<>
@@ -482,19 +497,25 @@ namespace QUaTypesConverter {
 		ptr->offset = value.offsetFromUtc(QDateTime::currentDateTime()) / 60;
 		ptr->daylightSavingInOffset = true;
 	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// specialization (LocalizedText)
+	// specialization (QUaChangeStructureDataType)
 	template<>
-	void uaVariantFromQVariantScalar<UA_LocalizedText, QString>(const QString &value, UA_LocalizedText *ptr)
+	void uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStructureDataType>(const QUaChangeStructureDataType &value, UA_ModelChangeStructureDataType *ptr)
 	{
-		ptr->text = UA_STRING_ALLOC(value.toUtf8().constData());
+		uaVariantFromQVariantScalar<UA_NodeId, QString>(value.m_strNodeIdAffected    , &ptr->affected    );
+		uaVariantFromQVariantScalar<UA_NodeId, QString>(value.m_strNodeIdAffectedType, &ptr->affectedType);
+		uaVariantFromQVariantScalar<UA_Byte  , uchar  >(value.m_uiVerb               , &ptr->verb        );
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-	UA_Variant uaVariantFromQVariantArray(const QVariant & var)
+	UA_Variant uaVariantFromQVariantArray(const QVariant & var, QMetaType::Type qtType/* = QMetaType::UnknownType*/)
 	{
 		// assume that the type of the first elem of the array is the type of all the array
-		auto iter   = var.value<QSequentialIterable>();
-        auto qtType = static_cast<QMetaType::Type>(iter.at(0).type());
+		auto iter = var.value<QSequentialIterable>();
+		// fix for forcing arrays of custom types
+		if (qtType == QMetaType::UnknownType)
+		{
+			qtType = static_cast<QMetaType::Type>(iter.at(0).type());
+		}
 		auto uaType = uaTypeFromQType(qtType);
 		switch (qtType)
 		{
@@ -533,6 +554,10 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantArray<UA_Guid      , QUuid     >(var, uaType);
 		case QMetaType::QByteArray:    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 			return uaVariantFromQVariantArray<UA_ByteString, QByteArray>(var, uaType);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		case METATYPE_CHANGESTRUCTUREDATATYPE: // 267 : UA_ModelChangeStructureDataType { UA_NodeId affected; UA_NodeId affectedType; UA_Byte verb; }
+			return uaVariantFromQVariantArray<UA_ModelChangeStructureDataType, QUaChangeStructureDataType>(var, uaType);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case QMetaType::QVariantList:  // UA_Array
 			Q_ASSERT_X(false, "uaVariantFromQVariantArray", "Unsupported multidimentional arrays");
 			return UA_Variant();
@@ -690,6 +715,12 @@ namespace QUaTypesConverter {
 		{
 			return METATYPE_LOCALIZEDTEXT;
 		}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE)))
+		{
+			return METATYPE_CHANGESTRUCTUREDATATYPE;
+		}
+#endif
 		else
 		{
 			Q_ASSERT_X(false, "uaTypeNodeIdToQType", "Unsupported datatype");
@@ -737,12 +768,14 @@ namespace QUaTypesConverter {
 			return QMetaType::QByteArray;
 		case UA_TYPES_NODEID:
 			return METATYPE_NODEID;
+		case UA_TYPES_LOCALIZEDTEXT:
+			return METATYPE_LOCALIZEDTEXT;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_TIMEZONEDATATYPE:
 			return METATYPE_TIMEZONEDATATYPE;
+		case UA_TYPES_MODELCHANGESTRUCTUREDATATYPE:
+			return METATYPE_CHANGESTRUCTUREDATATYPE;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-		case UA_TYPES_LOCALIZEDTEXT:
-			return METATYPE_LOCALIZEDTEXT;
 		default:
 			Q_ASSERT_X(false, "uaTypeToQType", "Unsupported datatype");
 			return QMetaType::UnknownType;
@@ -800,12 +833,14 @@ namespace QUaTypesConverter {
 			return uaVariantToQVariantScalar<QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
 		case UA_TYPES_NODEID:
 			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, METATYPE_NODEID);
+		case UA_TYPES_LOCALIZEDTEXT:
+			return uaVariantToQVariantScalar<QString    , UA_LocalizedText   >(uaVariant, METATYPE_LOCALIZEDTEXT);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case UA_TYPES_TIMEZONEDATATYPE:
 			return uaVariantToQVariantScalar<QTimeZone  , UA_TimeZoneDataType>(uaVariant, METATYPE_TIMEZONEDATATYPE);
+		case UA_TYPES_MODELCHANGESTRUCTUREDATATYPE:
+			return uaVariantToQVariantScalar<QUaChangeStructureDataType, UA_ModelChangeStructureDataType>(uaVariant, METATYPE_CHANGESTRUCTUREDATATYPE);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-		case UA_TYPES_LOCALIZEDTEXT:
-			return uaVariantToQVariantScalar<QString    , UA_LocalizedText   >(uaVariant, METATYPE_LOCALIZEDTEXT);
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariant", "Unsupported datatype");
 		}
@@ -866,6 +901,10 @@ namespace QUaTypesConverter {
             return uaVariantToQVariantArray<QList<QUuid>      , UA_Guid      >(uaVariant, QMetaType::QUuid);
 		case UA_TYPES_BYTESTRING:
             return uaVariantToQVariantArray<QList<QByteArray> , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		case UA_TYPES_MODELCHANGESTRUCTUREDATATYPE:
+			return uaVariantToQVariantArray<QList<QUaChangeStructureDataType>, UA_ModelChangeStructureDataType>(uaVariant, METATYPE_CHANGESTRUCTUREDATATYPE);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariantArray", "Unsupported datatype");
 		}
@@ -912,6 +951,10 @@ namespace QUaTypesConverter {
             return uaVariantToQVariantArray<QVector<QUuid>      , UA_Guid      >(uaVariant, QMetaType::QUuid);
 		case UA_TYPES_BYTESTRING:
             return uaVariantToQVariantArray<QVector<QByteArray> , UA_ByteString>(uaVariant, QMetaType::QByteArray);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		case UA_TYPES_MODELCHANGESTRUCTUREDATATYPE:
+			return uaVariantToQVariantArray<QVector<QUaChangeStructureDataType>, UA_ModelChangeStructureDataType>(uaVariant, METATYPE_CHANGESTRUCTUREDATATYPE);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		default:
 			Q_ASSERT_X(false, "uaVariantToQVariantVector", "Unsupported datatype");
 		}
@@ -936,7 +979,9 @@ namespace QUaTypesConverter {
 			TARGETTYPE tempTarg = uaVariantToQVariantScalar<TARGETTYPE, UATYPE>(&tempSrc[i]);
 			QVariant   tempVar  = QVariant::fromValue(tempTarg);
 			// convert if necessary
-			if (type != QMetaType::UnknownType && type != static_cast<QMetaType::Type>(tempVar.type()))
+			if (type != QMetaType::UnknownType && 
+				type != static_cast<QMetaType::Type>(tempVar.type()) &&
+				type < QMetaType::User)
 			{
 				tempVar.convert(type);
 				tempTarg = tempVar.value<TARGETTYPE>();
@@ -1010,6 +1055,12 @@ namespace QUaTypesConverter {
 	{
 		return nodeIdToQString(*data);
 	}
+	// specialization (LocalizedText)
+	template<>
+	QString uaVariantToQVariantScalar<QString, UA_LocalizedText>(const UA_LocalizedText *data)
+	{
+		return uaStringToQString(data->text);
+	}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// specialization (QTimeZone)
 	template<>
@@ -1020,15 +1071,18 @@ namespace QUaTypesConverter {
 		//        (true if offset includes correction, false if not)
 		return QTimeZone(60 * data->offset);
 	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// specialization (LocalizedText)
+	// specialization (QUaChangeStructureDataType)
 	template<>
-	QString uaVariantToQVariantScalar<QString, UA_LocalizedText>(const UA_LocalizedText *data)
+	QUaChangeStructureDataType uaVariantToQVariantScalar<QUaChangeStructureDataType, UA_ModelChangeStructureDataType>(const UA_ModelChangeStructureDataType * data)
 	{
-		return uaStringToQString(data->text);
+		QUaChangeStructureDataType ret;
+		ret.m_strNodeIdAffected     = uaVariantToQVariantScalar<QString, UA_NodeId>(&data->affected    );
+		ret.m_strNodeIdAffectedType = uaVariantToQVariantScalar<QString, UA_NodeId>(&data->affectedType);
+		ret.m_uiVerb                = uaVariantToQVariantScalar<uchar  , UA_Byte  >(&data->verb        );
+		return ret;
 	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	
-
 }
 
 QT_END_NAMESPACE

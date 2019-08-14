@@ -13,7 +13,24 @@ QUaGeneralModelChangeEvent::QUaGeneralModelChangeEvent(QUaServer *server)
 	
 }
 
-QUaProperty * QUaGeneralModelChangeEvent::getChanges()
+QUaChangesList QUaGeneralModelChangeEvent::changes() const
+{
+	QUaChangesList retList;
+	QVariant varList = this->getChanges()->value();
+	auto iter = varList.value<QSequentialIterable>();
+	for (const QVariant &v : iter)
+	{
+		retList << v.value<QUaChangeStructureDataType>();
+	}
+	return retList;
+}
+
+void QUaGeneralModelChangeEvent::setChanges(const QUaChangesList & listVerbs)
+{
+	this->getChanges()->setValue(QVariant::fromValue(listVerbs), METATYPE_CHANGESTRUCTUREDATATYPE);
+}
+
+QUaProperty * QUaGeneralModelChangeEvent::getChanges() const
 {
 	return this->findChild<QUaProperty*>("Changes");
 }

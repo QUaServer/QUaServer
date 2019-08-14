@@ -1,26 +1,7 @@
 #ifndef QUATYPESCONVERTER_H
 #define QUATYPESCONVERTER_H
 
-#include <QObject>
-#include <QVariant>
-#include <QUuid>
-#include <QRegularExpression>
-#include <QDate>
-#include <QTimeZone>
-#include <QDebug>
-
-#include "open62541.h"
-
-Q_DECLARE_METATYPE(QTimeZone);
-
-#define METATYPE_OFFSET_LOCALIZEDTEXT 1
-#define METATYPE_LOCALIZEDTEXT (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_LOCALIZEDTEXT)
-
-#define METATYPE_OFFSET_TIMEZONEDATATYPE 2
-#define METATYPE_TIMEZONEDATATYPE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_TIMEZONEDATATYPE)
-
-#define METATYPE_OFFSET_NODEID 3
-#define METATYPE_NODEID (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_NODEID)
+#include <QUaCustomDataTypes>
 
 QT_BEGIN_NAMESPACE
 
@@ -58,7 +39,7 @@ namespace QUaTypesConverter {
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	void       uaVariantFromQVariantScalar(const QTTYPE &var, TARGETTYPE *ptr);
 	// ua from qt : array
-	UA_Variant uaVariantFromQVariantArray(const QVariant & var);
+	UA_Variant uaVariantFromQVariantArray(const QVariant & var, QMetaType::Type qtType = QMetaType::UnknownType);
 	template<typename TARGETTYPE, typename QTTYPE>
 	UA_Variant uaVariantFromQVariantArray(const QVariant &var, const UA_DataType *type);
 	template<> // TODO : implement better
@@ -161,6 +142,12 @@ namespace QUaTypesConverter {
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);
 		}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		else if (std::is_same<T, QUaChangeStructureDataType>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE);
+		}
+#endif
 		Q_ASSERT_X(false, "uaTypeNodeIdFromCpp", "Unsupported type");
 		return UA_NodeId();
 	}
@@ -240,6 +227,12 @@ namespace QUaTypesConverter {
 		{
 			return QMetaType::QVariantList;
 		}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		else if (std::is_same<T, QUaChangeStructureDataType>::value)
+		{
+			return (QMetaType)METATYPE_CHANGESTRUCTUREDATATYPE;
+		}
+#endif
 		Q_ASSERT_X(false, "qtTypeFromCpp", "Unsupported type");
 		return QMetaType::UnknownType;
 	}

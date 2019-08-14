@@ -13,7 +13,8 @@ SOURCES += \
     $$PWD/quaproperty.cpp \
     $$PWD/quabasedatavariable.cpp \
     $$PWD/quabaseobject.cpp \
-    $$PWD/quafolderobject.cpp
+    $$PWD/quafolderobject.cpp \
+    $$PWD/quacustomdatatypes.cpp
 
 ua_events {
     SOURCES += \
@@ -31,7 +32,8 @@ HEADERS += \
     $$PWD/quaproperty.h \
     $$PWD/quabasedatavariable.h \
     $$PWD/quabaseobject.h \
-    $$PWD/quafolderobject.h
+    $$PWD/quafolderobject.h \
+    $$PWD/quacustomdatatypes.h
 
 ua_events {
     HEADERS += \
@@ -49,7 +51,9 @@ DISTFILES += \
     $$PWD/QUaProperty \
     $$PWD/QUaBaseDataVariable \
     $$PWD/QUaBaseObject \
-    $$PWD/QUaFolderObject
+    $$PWD/QUaFolderObject \
+    $$PWD/QUaCustomDataTypes
+
 
 ua_events {
     DISTFILES += \

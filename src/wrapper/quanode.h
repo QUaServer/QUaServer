@@ -308,7 +308,7 @@ public:
 	template<typename M>
 	void setUserExecutableCallback(const M &callback);
 
-	//
+	// default empty list for known (per-standard) type
 	static const QStringList DefaultProperties;
 
 signals:

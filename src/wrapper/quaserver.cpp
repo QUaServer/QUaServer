@@ -114,7 +114,6 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 {
 	// get parent node id
 	UA_NodeId parentNodeId       = QUaNode::getParentNodeId(*nodeId, server->m_server);
-	UA_NodeId directParentNodeId = parentNodeId;
 	// handle events
 #ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId));
