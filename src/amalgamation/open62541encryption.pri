@@ -1,7 +1,7 @@
 # Only if encryption enabled
 ua_encryption {
 	# Only once
-	if(!build_pass) {
+	CONFIG(debug, debug|release) {
 		# Paths
 		MBEDTLS_PATH = $$PWD/../../depends/mbedtls.git
 		MBEDTLS_BUILD_PATH = $$MBEDTLS_PATH/build

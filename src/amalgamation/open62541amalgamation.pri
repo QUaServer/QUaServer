@@ -19,7 +19,7 @@ OPEN62541_C_PATH     = $$OPEN62541_BUILD_PATH/open62541.c
 OPEN62541_H_LOCAL    = $$PWD/open62541.h
 OPEN62541_C_LOCAL    = $$PWD/open62541.c
 # Generate amalgamation (only once)
-if(!build_pass) {
+CONFIG(debug, debug|release) {
 	# Windows
 	win32 {
 		message("Compiling Open62541 for Windows")
