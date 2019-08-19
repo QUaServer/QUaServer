@@ -240,6 +240,8 @@ public:
 	// Browse API
 	// (* actually browses using QObject tree)
 
+	QString typeDefinitionNodeId() const;
+
 	// if strBrowseName empty, get all children
 	template<typename T>
 	QList<T*> browseChildren(const QString &strBrowseName = QString()) const;

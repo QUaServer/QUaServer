@@ -387,6 +387,14 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	return retArr;
 }
 
+void QUaBaseVariable::setArrayDimensions(const quint32 &size /*const QVector<quint32> &arrayDimenstions*/)
+{
+	UA_Variant uaArrayDimensions;
+	UA_UInt32 arrayDims[1] = { size };
+	UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);
+	UA_Server_writeArrayDimensions(m_qUaServer->m_server, m_nodeId, uaArrayDimensions);
+}
+
 quint8 QUaBaseVariable::accessLevel() const
 {
 	Q_CHECK_PTR(m_qUaServer);

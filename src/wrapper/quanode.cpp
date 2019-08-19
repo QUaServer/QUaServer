@@ -340,6 +340,36 @@ QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
 	return m_qUaServer->createInstance<QUaFolderObject>(this, strNodeId);
 }
 
+QString QUaNode::typeDefinitionNodeId() const
+{
+	UA_NodeId retTypeId = UA_NODEID_NULL;
+	// make ua browse
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&m_nodeId, &bDesc->nodeId); // from child
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;
+	bDesc->includeSubtypes = true;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(m_qUaServer->m_server, 0, bDesc);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT(bRes.referencesSize == 1);
+	if (bRes.referencesSize < 1)
+	{
+		return "";
+	}
+	UA_ReferenceDescription rDesc = bRes.references[0];
+	UA_NodeId_copy(&rDesc.nodeId.nodeId, &retTypeId);
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return in string form
+	QString retNodeId = QUaTypesConverter::nodeIdToQString(retTypeId);
+	UA_NodeId_clear(&retTypeId);
+	return retNodeId;
+}
+
 QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/) const
 {
 	return this->findChildren<QUaNode*>(strBrowseName, Qt::FindDirectChildrenOnly);

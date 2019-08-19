@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 	// Enable object for events
 	objsFolder->setEventNotifierSubscribeToEvents();
 	auto evtChange = objsFolder->createEvent<QUaGeneralModelChangeEvent>();
+	//auto evtChange = server.createEvent<QUaGeneralModelChangeEvent>();
 
 	// use methods to dynamically create object instances
 	objsFolder->addMethod("addObject", 
@@ -88,12 +89,12 @@ int main(int argc, char *argv[])
 		evtChange->setSourceName("FoldersObject");
 		evtChange->setMessage("Node has been added");
 		evtChange->setTime(QDateTime::currentDateTimeUtc());
-		evtChange->setSeverity(100);
+		evtChange->setSeverity(500);
 		evtChange->setChanges({
 			{
-				obj->nodeId(),
-				"ns=0;i=58",
-				QUaChangeVerb::ReferenceAdded
+				objsFolder->nodeId(),
+				objsFolder->typeDefinitionNodeId(),
+				QUaChangeVerb::NodeAdded // QUaChangeVerb::ReferenceAdded
 			}
 		});
 		auto changes = evtChange->changes();
