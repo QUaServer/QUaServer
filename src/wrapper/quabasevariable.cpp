@@ -195,6 +195,31 @@ QMetaType::Type QUaBaseVariable::dataType() const
 	return type;
 }
 
+QString QUaBaseVariable::dataTypeNodeId() const
+{
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return  QUaTypesConverter::nodeIdToQString(UA_NODEID_NULL);
+	}
+	// read type
+	UA_NodeId outDataType;
+	auto st = UA_Server_readDataType(m_qUaServer->m_server, m_nodeId, &outDataType);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// check if type is enum, if so, return type int 32
+	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
+	{
+		UA_NodeId_clear(&outDataType);
+		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_INT32));
+	}
+	// else return converted type
+	QString retNodeId = QUaTypesConverter::nodeIdToQString(outDataType);
+	UA_NodeId_clear(&outDataType);
+	return retNodeId;
+}
+
 void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 {
 	Q_CHECK_PTR(m_qUaServer);
@@ -387,13 +412,15 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	return retArr;
 }
 
-void QUaBaseVariable::setArrayDimensions(const quint32 &size /*const QVector<quint32> &arrayDimenstions*/)
+/*
+void QUaBaseVariable::setArrayDimensions(const quint32 &size) // const QVector<quint32> &arrayDimenstions
 {
 	UA_Variant uaArrayDimensions;
 	UA_UInt32 arrayDims[1] = { size };
 	UA_Variant_setArray(&uaArrayDimensions, arrayDims, 1, &UA_TYPES[UA_TYPES_UINT32]);
 	UA_Server_writeArrayDimensions(m_qUaServer->m_server, m_nodeId, uaArrayDimensions);
 }
+*/
 
 quint8 QUaBaseVariable::accessLevel() const
 {

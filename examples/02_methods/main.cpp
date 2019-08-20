@@ -68,9 +68,7 @@ int main(int argc, char *argv[])
 
 	// [TEST]
 	// Enable object for events
-	objsFolder->setEventNotifierSubscribeToEvents();
-	auto evtChange = objsFolder->createEvent<QUaGeneralModelChangeEvent>();
-	//auto evtChange = server.createEvent<QUaGeneralModelChangeEvent>();
+	auto evtChange = server.createEvent<QUaGeneralModelChangeEvent>();
 
 	// use methods to dynamically create object instances
 	objsFolder->addMethod("addObject", 
@@ -94,7 +92,7 @@ int main(int argc, char *argv[])
 			{
 				objsFolder->nodeId(),
 				objsFolder->typeDefinitionNodeId(),
-				QUaChangeVerb::NodeAdded // QUaChangeVerb::ReferenceAdded
+				QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
 			}
 		});
 		auto changes = evtChange->changes();
@@ -103,15 +101,21 @@ int main(int argc, char *argv[])
 
 		// create delete method for each newly created object
 		obj->addMethod("delete", 
-		[obj, evtChange]() {
-
-			// [TEST]
+		[obj, objsFolder, evtChange]() {
+			// [TEST] : NOTE need to process method before deleting instance because method belongs to it
+			evtChange->setMessage("Node has been removed");
+			evtChange->setTime(QDateTime::currentDateTimeUtc());
+			evtChange->setSeverity(500);
+			evtChange->setChanges({
+				{
+					objsFolder->nodeId(),
+					objsFolder->typeDefinitionNodeId(),
+					QUaChangeVerb::ReferenceDeleted
+				}
+			});
 			evtChange->trigger();
-			/*
-			Please take care that the 'Changes' property is filled correctly with reasonable values. 
-			*/
-
-			delete obj; 
+			// delete instance
+			delete obj;
 		});
 		return QObject::tr("Success.");
 	});

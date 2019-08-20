@@ -588,9 +588,18 @@ namespace QUaTypesConverter {
 		// set the array to the ua variant
         UA_Variant_setArray(&retVar, arr, static_cast<size_t>(iter.size()), type);
 		// TODO : support multidimentional array
-		retVar.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
-        retVar.arrayDimensions[0]  = static_cast<UA_UInt32>(iter.size());
-        retVar.arrayDimensionsSize = static_cast<size_t>(1);
+		// NOTE : need to disable this if using rank and arrayDim to set size and shape of data
+		//        (for UA to detect array or matrix)
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		if (!std::is_same<QTTYPE, QUaChangeStructureDataType>::value)
+		{
+#endif
+			retVar.arrayDimensions     = static_cast<UA_UInt32 *>(UA_Array_new(1, &UA_TYPES[UA_TYPES_UINT32]));
+			retVar.arrayDimensions[0]  = static_cast<UA_UInt32>(iter.size());
+			retVar.arrayDimensionsSize = static_cast<size_t>(1);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		}
+#endif
 		// return ua variant
 		return retVar;
 	}

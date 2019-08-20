@@ -26,24 +26,32 @@ QUaChangesList QUaGeneralModelChangeEvent::changes() const
 	{
 		retList << v.value<QUaChangeStructureDataType>();
 	}
-
-	auto arrDim = this->getChanges()->arrayDimensions();
-
 	return retList;
 }
 
 void QUaGeneralModelChangeEvent::setChanges(const QUaChangesList & listVerbs)
 {
 	this->getChanges()->setValue(QVariant::fromValue(listVerbs), METATYPE_CHANGESTRUCTUREDATATYPE);
-	// set array dimensions ?
+	/*
 	this->getChanges()->setArrayDimensions(listVerbs.count());
+	*/
+	/*
+	// TEST
+	auto dims = this->getChanges()->arrayDimensions();
+	Q_ASSERT(dims[0] == listVerbs.count());
+	auto rank = this->getChanges()->valueRank();
+	Q_ASSERT(rank == UA_VALUERANK_ONE_DIMENSION);
+	auto dataType = this->getChanges()->dataType();
+	Q_ASSERT(dataType == METATYPE_CHANGESTRUCTUREDATATYPE);
+	qDebug() << "Changes NodeId" << this->getChanges()->nodeId();
+	qDebug() << "Changes DataType NodeId" << this->getChanges()->dataTypeNodeId();
+	qDebug() << "Changes TypeDef NodeId"  << this->getChanges()->typeDefinitionNodeId();
+	*/
 }
 
 QUaProperty * QUaGeneralModelChangeEvent::getChanges() const
 {
 	return this->findChild<QUaProperty*>("Changes");
 }
-
-
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

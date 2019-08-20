@@ -91,7 +91,9 @@ public:
 	// NOTE : includes arrayDimensionsSize
 	qint32            valueRank() const;
 	QVector<quint32>  arrayDimensions() const; 
-	void              setArrayDimensions(const quint32 &size /*const QVector<quint32> &arrayDimenstions*/);
+	/*
+	void              setArrayDimensions(const quint32 &size); // const QVector<quint32> &arrayDimenstions
+	*/
 	// Indicates how the Value of a Variable can be accessed (read/write) and if it contains current and/or historic data.
 	quint8            accessLevel() const;
 	void              setAccessLevel(const quint8 &accessLevel);
@@ -111,6 +113,8 @@ public:
 	// Default : write access false
 	bool              writeAccess() const;
 	void              setWriteAccess(const bool &writeAccess);
+
+	QString           dataTypeNodeId() const;
 
 	// Static Helpers
 
