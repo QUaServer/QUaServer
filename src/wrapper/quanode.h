@@ -8,7 +8,7 @@
 #include <QVariant>
 #include <QMetaProperty>
 
-#include "open62541.h"
+#include <pch_open62541.h>
 
 class QUaServer;
 class QUaProperty;

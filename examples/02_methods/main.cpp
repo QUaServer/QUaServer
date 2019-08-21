@@ -66,54 +66,21 @@ int main(int argc, char *argv[])
 		return QVector<QString>() << "arturo" << "juan" << "miguel";
 	});
 
-	// [TEST]
-	// Enable object for events
-	auto evtChange = server.createEvent<QUaGeneralModelChangeEvent>();
-
 	// use methods to dynamically create object instances
 	objsFolder->addMethod("addObject", 
-	[objsFolder, evtChange](QString strName) {
+	[objsFolder](QString strName) {
 		auto obj = objsFolder->browseChild<QUaBaseObject>(strName);
 		if (obj)
 		{
 			return QObject::tr("Error : Object with name %1 already exists.").arg(strName);
 		}
 		obj = objsFolder->addBaseObject(QString("ns=1;s=%1").arg(strName));
-		// NOTE : setBrowseName to strName below, helps browseChild above find the object
+		// NOTE : setBrowseName to strName below, helps browseChild above find the object if already exists
 		obj->setBrowseName(strName);
 		obj->setDisplayName(strName);
-
-		// [TEST]
-		evtChange->setSourceName("FoldersObject");
-		evtChange->setMessage("Node has been added");
-		evtChange->setTime(QDateTime::currentDateTimeUtc());
-		evtChange->setSeverity(500);
-		evtChange->setChanges({
-			{
-				objsFolder->nodeId(),
-				objsFolder->typeDefinitionNodeId(),
-				QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-			}
-		});
-		auto changes = evtChange->changes();
-		// NOTE : changes array of struct seems to be saved correctly but thing is sent through wireshark
-		evtChange->trigger();
-
 		// create delete method for each newly created object
 		obj->addMethod("delete", 
-		[obj, objsFolder, evtChange]() {
-			// [TEST] : NOTE need to process method before deleting instance because method belongs to it
-			evtChange->setMessage("Node has been removed");
-			evtChange->setTime(QDateTime::currentDateTimeUtc());
-			evtChange->setSeverity(500);
-			evtChange->setChanges({
-				{
-					objsFolder->nodeId(),
-					objsFolder->typeDefinitionNodeId(),
-					QUaChangeVerb::ReferenceDeleted
-				}
-			});
-			evtChange->trigger();
+		[obj]() {
 			// delete instance
 			delete obj;
 		});

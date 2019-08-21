@@ -6,6 +6,9 @@ CONFIG -= flat
 
 INCLUDEPATH += $$PWD/
 
+CONFIG += precompile_header_c
+PRECOMPILED_HEADER = $$PWD/pch_open62541.h
+
 SOURCES += \
     $$PWD/quaserver.cpp \
     $$PWD/quanode.cpp \
