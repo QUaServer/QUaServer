@@ -93,7 +93,7 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 		if (iter.size() > 0)
 		{
 			QVariantList listOldType;
-			if (newType == QMetaType::UnknownType)
+			if (newType == QMetaType::UnknownType || newType == QMetaType::User)
 			{
 				newType = (QMetaType::Type)iter.at(0).type();
 			}
