@@ -124,12 +124,13 @@ public:
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QString &strNodeId = "");
-	void registerEnum(const QString &strEnumName, const QUaEnumMap &mapEnum, const QString &strNodeId = "");
+	void registerEnum(const QString &strEnumName, const QUaEnumMap &enumMap, const QString &strNodeId = "");
 	// enum helpers
-	bool isEnumRegistered(const QString &strEnumName);
-	QUaEnumMap enumMap(const QString &strEnumName);
-	void updateEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
-	void removeEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue);
+	bool        isEnumRegistered(const QString &strEnumName) const;
+	QUaEnumMap  enumMap         (const QString &strEnumName) const;
+	void        setEnumMap      (const QString &strEnumName, const QUaEnumMap &enumMap);
+	void        updateEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
+	void        removeEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue);
 	// register reference to get a respective refTypeId
 	void registerReference(const QUaReference &ref);
 
@@ -233,8 +234,8 @@ private:
 	);
 	// enums
 	void       registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
-	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId);
-	UA_Variant enumValues(const UA_NodeId &enumNodeId);
+	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId) const;
+	UA_Variant enumValues(const UA_NodeId &enumNodeId) const;
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
 	// lifecycle
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);

@@ -1766,7 +1766,7 @@ void QUaServer::bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId & no
 	nodeInstance->m_nodeId = nodeId;
 }
 
-void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapEnum, const QString & strNodeId)
+void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& enumMap, const QString & strNodeId)
 {
 	// check if already exists
 	if (m_hashEnums.contains(strEnumName))
@@ -1820,7 +1820,7 @@ void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapE
 	pattr.arrayDimensions        = arrayDimensions;
 	// create vector of enum values
 	QVector<QOpcUaEnumValue> vectEnumValues;
-	QMapIterator<QUaEnumKey, QUaEnumEntry> i(mapEnum);
+	QMapIterator<QUaEnumKey, QUaEnumEntry> i(enumMap);
 	while (i.hasNext()) 
 	{
 		i.next();
@@ -1836,12 +1836,13 @@ void QUaServer::registerEnum(const QString & strEnumName, const QUaEnumMap& mapE
 	m_hashEnums.insert(strEnumName, reqNodeId);
 }
 
-bool QUaServer::isEnumRegistered(const QString & strEnumName)
+bool QUaServer::isEnumRegistered(const QString & strEnumName) const
 {
 	return m_hashEnums.contains(strEnumName);
 }
 
-QUaEnumMap QUaServer::enumMap(const QString & strEnumName)
+// NOTE : expensive, creates a copy
+QUaEnumMap QUaServer::enumMap(const QString & strEnumName) const
 {
 	auto retMap = QUaEnumMap();
 	// if it does not exist, return empty
@@ -1862,9 +1863,27 @@ QUaEnumMap QUaServer::enumMap(const QString & strEnumName)
 		QString strDescription = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->description);
 		retMap.insert(enumVal->value, { strDisplayName.toUtf8(), strDescription.toUtf8() });
 	}
+	// clean up
+	UA_Variant_clear(&enumValues);
+	// return
 	return retMap;
 }
 
+void QUaServer::setEnumMap(const QString & strEnumName, const QUaEnumMap & enumMap)
+{
+	// if it does not exist, create it with one entry
+	if (!m_hashEnums.contains(strEnumName))
+	{
+		this->registerEnum(strEnumName, enumMap);
+		return;
+	}
+	// else update enum
+	auto enumNodeId = m_hashEnums[strEnumName];
+	this->updateEnum(enumNodeId, enumMap);
+}
+
+// NOTE : expensive because it needs to copy old array into new, update new and delete old array,
+//        to insert multiple elements at once use QUaServer::updateEnum
 void QUaServer::updateEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry)
 {
 	// if it does not exist, create it with one entry
@@ -1882,6 +1901,8 @@ void QUaServer::updateEnumEntry(const QString &strEnumName, const QUaEnumKey &en
 	this->updateEnum(enumNodeId, mapValues);
 }
 
+// NOTE : expensive because it needs to copy old array into new, update new and delete old array,
+//        to insert multiple elements at once use QUaServer::updateEnum with empty argument
 void QUaServer::removeEnumEntry(const QString &strEnumName, const QUaEnumKey &enumValue)
 {
 	// if it does not exist, do nothing
@@ -1899,7 +1920,7 @@ void QUaServer::removeEnumEntry(const QString &strEnumName, const QUaEnumKey &en
 }
 
 // NOTE : need to cleanup result after calling this method
-UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId)
+UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId) const
 {
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
@@ -1922,7 +1943,7 @@ UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId & enumNodeId)
 	return valuesNodeId;
 }
 
-UA_Variant QUaServer::enumValues(const UA_NodeId &enumNodeId)
+UA_Variant QUaServer::enumValues(const UA_NodeId &enumNodeId) const
 {
 	UA_NodeId valuesNodeId = this->enumValuesNodeId(enumNodeId);
 	// read value
@@ -1943,8 +1964,7 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 	auto enumValuesNodeId = this->enumValuesNodeId(enumNodeId);
 	auto enumValues       = this->enumValues(enumNodeId);
 	// delete old ua enum
-	UA_EnumValueType *enumArr = static_cast<UA_EnumValueType *>(enumValues.data);
-	UA_free(enumArr);
+	UA_Variant_clear(&enumValues);
 	// re-create array of enum values
 	UA_EnumValueType * valueEnum = nullptr;
 	if (mapEnum.count() > 0)
@@ -1964,6 +1984,7 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 			(mapEnum[listKeys.at(i)].strDescription, &valueEnum[i].description);
 	}
 	// create variant with array of enum values
+	UA_Variant_init(&enumValues);
 	UA_Variant_setArray(&enumValues, valueEnum, (UA_Int32)mapEnum.count(), &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
 	// set new ua enum value
 	auto st = UA_Server_writeValue(m_server, enumValuesNodeId, enumValues);
@@ -1971,6 +1992,11 @@ void QUaServer::updateEnum(const UA_NodeId & enumNodeId, const QUaEnumMap & mapE
 	Q_UNUSED(st);
 	// cleanup
 	UA_NodeId_clear(&enumValuesNodeId);
+	for (int i = 0; i < mapEnum.count(); i++)
+	{
+		UA_EnumValueType_clear(&valueEnum[i]);
+	}
+	UA_free(valueEnum);
 }
 
 void QUaServer::registerReference(const QUaReference & ref)
