@@ -278,7 +278,7 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	attr.arrayDimensions         = &arrayDimensions[0];
 	attr.dataType                = UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMVALUETYPE);
 	// create array of enum values
-	UA_EnumValueType * valueEnum = (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * numEnumValues);
+	UA_EnumValueType * valueEnum = numEnumValues > 0 ? (UA_EnumValueType *)UA_malloc(sizeof(UA_EnumValueType) * numEnumValues) : nullptr;
 	for (size_t i = 0; i < numEnumValues; i++)
 	{
 		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
