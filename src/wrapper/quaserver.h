@@ -455,6 +455,7 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode, strNodeId);
 	if (UA_NodeId_isNull(&newInstanceNodeId))
 	{
+		UA_NodeId_clear(&newInstanceNodeId);
 		return nullptr;
 	}
 	// get new c++ instance created in UA constructor
@@ -462,6 +463,7 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	T * newInstance = dynamic_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
 	// return c++ instance
+	UA_NodeId_clear(&newInstanceNodeId);
 	return newInstance;
 }
 

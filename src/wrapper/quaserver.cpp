@@ -1718,6 +1718,8 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	// clean up
 	UA_NodeId_clear(&reqNodeId);
 	UA_NodeId_clear(&outNodeId);
+	UA_NodeId_clear(&typeNodeId);
+	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
 	// return new instance node id
 	return nodeIdNewInstance;
@@ -2043,7 +2045,9 @@ QUaFolderObject * QUaServer::objectsFolder() const
 QUaNode * QUaServer::nodeById(const QString & strNodeId)
 {
 	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
-	return QUaNode::getNodeContext(nodeId, m_server);
+	QUaNode * node = QUaNode::getNodeContext(nodeId, m_server);
+	UA_NodeId_clear(&nodeId);
+	return node;
 }
 
 QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath) const

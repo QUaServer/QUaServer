@@ -138,9 +138,13 @@ QUaNode::~QUaNode()
 	auto st = UA_Server_readNodeId(m_qUaServer->m_server, m_nodeId, &outNodeId);
 	if (st == UA_STATUSCODE_BADNODEIDUNKNOWN)
 	{
+		// cleanup
+		UA_NodeId_clear(&outNodeId);
 		return;
 	}
 	Q_ASSERT(UA_NodeId_equal(&m_nodeId, &outNodeId));
+	// cleanup
+	UA_NodeId_clear(&outNodeId);
 	// remove context, so we avoid double deleting in ua destructor when called
 	st = UA_Server_setNodeContext(m_qUaServer->m_server, m_nodeId, nullptr);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
