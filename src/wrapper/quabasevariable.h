@@ -55,7 +55,7 @@ class QUaBaseVariable : public QUaNode
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
 	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
-	Q_PROPERTY(qint32            valueRank           READ valueRank          /*NOTE : Read-only      NOTIFY valueRankChanged      */)
+	Q_PROPERTY(qint32            valueRank           READ valueRank           WRITE setValueRank     NOTIFY valueRankChanged       )
 	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only      NOTIFY arrayDimensionsChanged*/)
 	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel /* NOTIFY accessLevelChanged */  )
 
@@ -90,6 +90,7 @@ public:
 	// Read-only, values set automatically when calling setValue
 	// NOTE : includes arrayDimensionsSize
 	qint32            valueRank() const;
+	void              setValueRank(const qint32& valueRank);
 	QVector<quint32>  arrayDimensions() const; 
 	/*
 	void              setArrayDimensions(const quint32 &size); // const QVector<quint32> &arrayDimenstions
@@ -123,6 +124,7 @@ public:
 	
 signals:
 	void valueChanged(const QVariant &value);
+	void valueRankChanged(const quint32 &valueRank);
 
 private:
 	static void onWrite(UA_Server             *server, 
