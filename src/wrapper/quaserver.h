@@ -791,7 +791,7 @@ struct QOpcUaMethodTraits< void(*)(Args...) > : QUaMethodTraitsBase<void, void, 
 };
 
 template<typename M>
-inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & methodCallback)
+inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & methodCallback, const QString & strNodeId)
 {
     // create input arguments
     UA_Argument * p_inputArguments = nullptr;
@@ -813,6 +813,7 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
     QByteArray byteMethodName = strMethodName.toUtf8();
     UA_NodeId methNodeId = this->addMethodNodeInternal(
         byteMethodName,
+        strNodeId,
         QOpcUaMethodTraits<M>::getNumArgs(),
         p_inputArguments,
         p_outputArgument
