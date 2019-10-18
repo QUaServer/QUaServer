@@ -272,6 +272,8 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 		case METATYPE_LOCALIZEDTEXT:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+		case METATYPE_IMAGE:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_CHANGESTRUCTUREDATATYPE:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE); // 267 : UA_ModelChangeStructureDataType { UA_NodeId affected; UA_NodeId affectedType; UA_Byte verb; }
@@ -325,6 +327,10 @@ namespace QUaTypesConverter {
 			return &UA_TYPES[UA_TYPES_NODEID];        // 16 : UA_NodeId : { ... }
 		case METATYPE_LOCALIZEDTEXT:
 			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
+#ifdef UA_TYPES_IMAGEPNG
+		case METATYPE_IMAGE:
+			return &UA_TYPES[UA_TYPES_IMAGEPNG];
+#endif
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE:
 			return &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]; // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
@@ -400,6 +406,8 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantScalar<UA_NodeId    , QString>(var, uaType);
 		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
 			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
+		case METATYPE_IMAGE:
+			return uaVariantFromQVariantScalar<UA_ByteString  , QByteArray>(var, uaType);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		case METATYPE_TIMEZONEDATATYPE: // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 			return uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(var, uaType);
@@ -723,6 +731,10 @@ namespace QUaTypesConverter {
 		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)))
 		{
 			return METATYPE_LOCALIZEDTEXT;
+		}
+		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)))
+		{
+			return METATYPE_IMAGE;
 		}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE)))
