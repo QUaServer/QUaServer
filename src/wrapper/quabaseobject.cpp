@@ -71,7 +71,7 @@ void QUaBaseObject::setEventNotifierNone()
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
+UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const QString &strNodeId, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
 {
     // add method node
     UA_MethodAttributes methAttr = UA_MethodAttributes_default;
@@ -81,10 +81,11 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const
                                                byteMethodName.data());
     methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"",
                                                byteMethodName.data());
+    UA_NodeId   user_nodeId = strNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strNodeId);
     // create callback
     UA_NodeId methNodeId;
     auto st = UA_Server_addMethodNode(m_qUaServer->m_server,
-                                      UA_NODEID_NULL,
+                                      user_nodeId,
                                       m_nodeId,
                                       UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
                                       UA_QUALIFIEDNAME (1, byteMethodName.data()),

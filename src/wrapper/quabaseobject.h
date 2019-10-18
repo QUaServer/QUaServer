@@ -70,7 +70,7 @@ public:
 	// Method Creation API
 
 	template<typename M>
-	void addMethod(const QString &strMethodName, const M &methodCallback);
+	void addMethod(const QString &strMethodName, const M &methodCallback, const QString & strNodeId = "");
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -86,7 +86,8 @@ signals:
 
 private:
 
-    UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName, 
+    UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName,
+		                            const QString  &strNodeId,
 		                            const size_t &nArgs, 
 		                            UA_Argument  *inputArguments, 
 		                            UA_Argument  *outputArgument);
