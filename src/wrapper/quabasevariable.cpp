@@ -35,6 +35,39 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	emit var->valueChanged(var->value());
 }
 
+// [STATIC]
+void QUaBaseVariable::onRead(UA_Server             *server, 
+		                      const UA_NodeId       *sessionId,
+		                      void                  *sessionContext, 
+		                      const UA_NodeId       *nodeId,
+		                      void                  *nodeContext, 
+		                      const UA_NumericRange *range,
+		                      const UA_DataValue    *data)
+{
+	Q_UNUSED(server);
+	Q_UNUSED(sessionId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(nodeId);
+	Q_UNUSED(range);
+	Q_UNUSED(data);
+	// get variable from context
+	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
+	Q_CHECK_PTR(var);
+	if (!var)
+	{
+		return;
+	}
+	if (!var->m_readCallback || var->m_readCallbackRunning) return;
+	// setValue (somehow) triggers read callback again; this avoids recursion
+	QVariant newValue = var->m_readCallback();
+	if (!newValue.isNull())
+	{
+		var->m_readCallbackRunning = true;
+		var->setValue(newValue);
+		var->m_readCallbackRunning = false;
+	}
+}
+
 QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	: QUaNode(server)
 {
@@ -44,12 +77,28 @@ QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	//          is used in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
-	const UA_NodeId &nodeId = *server->m_newNodeNodeId;
-	// setup callbacks
+	// this should not be needed since stored in m_nodeId already??:
+	//    const UA_NodeId &nodeId = *server->m_newNodeNodeId;
+	// sets also write callback to emit onWrite signal
+	setReadCallback();
+}
+
+void QUaBaseVariable::setReadCallback(const std::function<QVariant()>& readCallback){
 	UA_ValueCallback callback;
-	callback.onRead  = nullptr; // TODO : implement?
+	if (readCallback)
+	{
+		callback.onRead = &QUaBaseVariable::onRead;
+		m_readCallback = readCallback;
+		m_readCallbackRunning = false;
+	}
+	else
+	{
+		callback.onRead = nullptr;
+		m_readCallback = readCallback;
+	}
 	callback.onWrite = &QUaBaseVariable::onWrite;
-	UA_Server_setVariableNode_valueCallback(server->m_server, nodeId, callback);
+	// this replaces the previous callback, if any
+	UA_Server_setVariableNode_valueCallback(m_qUaServer->m_server, m_nodeId, callback);
 }
 
 QVariant QUaBaseVariable::value() const

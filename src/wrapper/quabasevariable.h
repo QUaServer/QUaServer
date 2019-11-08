@@ -105,6 +105,9 @@ public:
 	// Whether the Server is actively collecting data for the history of the Variable
 	// Currently unsupported by library (false)
 	bool              historizing() const;
+	// set callback which is called before a read is performed
+	// call with the default argument for no pre-read callback
+	void              setReadCallback(const std::function<QVariant()>& readCallback=std::function<QVariant()>());
 
 	// Helpers
 
@@ -135,7 +138,18 @@ private:
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
 
+	static void onRead (UA_Server             *server, 
+		                const UA_NodeId       *sessionId,
+		                void                  *sessionContext, 
+		                const UA_NodeId       *nodeId,
+		                void                  *nodeContext, 
+		                const UA_NumericRange *range,
+		                const UA_DataValue    *data);
+
+
 	bool m_bInternalWrite;
+	std::function<QVariant()> m_readCallback;
+	bool m_readCallbackRunning = false;
 
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
 };
