@@ -1,0 +1,4 @@
+#define Q_OBJECT
+#define slots
+#define Q_DECLARE_METATYPE()
+#define UA_EXPORT

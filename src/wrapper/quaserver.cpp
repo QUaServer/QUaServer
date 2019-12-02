@@ -3,6 +3,8 @@
 #include <QMetaProperty>
 #include <QTimer>
 
+#define QUA_DEBOUNCE_PERIOD_MS 50
+
 // Copied from open62541.c
 typedef struct {
 	UA_Boolean                allowAnonymous;
@@ -638,6 +640,15 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 }
 #endif
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+void QUaServer::addChange(const QUaChangeStructureDataType& change)
+{
+	Q_CHECK_PTR(m_changeEvent);
+	m_listChanges.append(change);
+	m_triggerChanges();
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
 	                                        UA_ByteString    &outUaCert,
 	                                        QByteArray       &outByteCertt)
@@ -776,6 +787,25 @@ void QUaServer::setupServer()
 		(char*)config->buildInfo.buildNumber.data,
 		(int)config->buildInfo.buildNumber.length
 	);
+
+	// instantiate change event
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_changeEvent = this->createEvent<QUaGeneralModelChangeEvent>();
+	Q_CHECK_PTR(m_changeEvent);
+	m_changeEvent->setSourceName(this->applicationName());
+	m_changeEvent->setMessage("Node added or removed.");
+	m_changeEvent->setSeverity(1);
+	// create debounced trigerring function
+	m_triggerChanges = QFunctionUtils::Debounce(
+	[this]() {
+		// trigger
+		m_changeEvent->setChanges(m_listChanges);
+		m_changeEvent->setTime(QDateTime::currentDateTimeUtc());
+		m_changeEvent->trigger();
+		// clean list of changes buffer
+		m_listChanges.clear();
+	}, QUA_DEBOUNCE_PERIOD_MS);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 QUaServer::~QUaServer()
@@ -820,6 +850,11 @@ void QUaServer::setApplicationName(const QString & strApplicationName)
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT((char*)"", m_byteApplicationName.data());
 	// update endpoints
 	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+	// update application name on change event
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	Q_CHECK_PTR(m_changeEvent);
+	m_changeEvent->setSourceName(strApplicationName);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 QString QUaServer::applicationUri() const
@@ -1721,6 +1756,18 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	UA_NodeId_clear(&typeNodeId);
 	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
+
+	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	Q_CHECK_PTR(m_changeEvent);
+	// add reference added change to buffer
+	this->addChange({
+		parentNode->nodeId(),
+		parentNode->typeDefinitionNodeId(),
+		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+	});	
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 	// return new instance node id
 	return nodeIdNewInstance;
 }

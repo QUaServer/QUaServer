@@ -1,5 +1,9 @@
 include($$PWD/../amalgamation/open62541.pri)
 
+ua_events {
+    include($$PWD/../../depends/QFunctionUtils.git/src/qfunctionutils.pri)
+}
+
 QT     += core
 CONFIG += c++11
 CONFIG -= flat

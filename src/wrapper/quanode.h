@@ -430,7 +430,7 @@ inline void QUaNode::setUserExecutableCallback(const M & callback)
 	};
 }
 
-// to check if has default props static method
+// to check if has default props static member
 template <typename T, typename = void>
 struct HasStaticDefaultProperties
 	: std::false_type

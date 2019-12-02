@@ -98,7 +98,7 @@ QUaNode::QUaNode(QUaServer *server)
 	} // for props
 	// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// handle variables of knwon types defined in the standard (not custom types)
+	// handle variables of known types defined in the standard (not custom types)
 	auto listDefaultProps = server->m_newEventDefaultProperties;
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
@@ -152,6 +152,21 @@ QUaNode::~QUaNode()
 	st = UA_Server_deleteNode(m_qUaServer->m_server, m_nodeId, true);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// trigger reference deleted, model change event, so client (UaExpert) auto refreshes tree
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
+	QUaNode* parent = dynamic_cast<QUaNode*>(this->parent());
+	if (!parent)
+	{
+		return;
+	}
+	// add reference deleted change to buffer
+	m_qUaServer->addChange({
+		parent->nodeId(),
+		parent->typeDefinitionNodeId(),
+		QUaChangeVerb::ReferenceDeleted // UaExpert does not recognize QUaChangeVerb::NodeAdded
+	});	
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 bool QUaNode::operator==(const QUaNode & other) const

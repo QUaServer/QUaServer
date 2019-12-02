@@ -13,6 +13,7 @@
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #include <QUaBaseEvent>
 #include <QUaGeneralModelChangeEvent>
+#include <QFunctionUtils>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 // Enum Stuff
@@ -217,6 +218,14 @@ private:
 	QHash<QUaReference, UA_NodeId> m_hashRefs;
 	QHash<UA_NodeId, QUaSignaler*> m_hashSignalers;
 	QUaValidationCallback          m_validationCallback;
+
+	// change event instance to notify client when nodes added or removed
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	QUaGeneralModelChangeEvent * m_changeEvent;
+	QUaChangesList m_listChanges; // buffer
+	std::function<void(void)> m_triggerChanges;
+	void addChange(const QUaChangeStructureDataType& change);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// only call once on constructor
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 

@@ -30,7 +30,7 @@ public:
 	QUaChangesList changes() const;
 	void           setChanges(const QUaChangesList &listVerbs);
 
-	// This is used in QUaNode constructor to add event properties defined in standard as children QObjects
+	// This is used in QUaServer::createEvent and QUaNode constructor to add event properties defined in standard as children QObjects
 	static const QStringList DefaultProperties;
 
 private:
