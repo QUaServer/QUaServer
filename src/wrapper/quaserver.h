@@ -527,6 +527,27 @@ inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
     return m_qUaServer->createInstance<T>(this, strNodeId);
 }
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+template<typename T>
+inline T * QUaBaseObject::createEvent()
+{
+    const QStringList * defaultProperties = getDefaultPropertiesRef<T>();
+    Q_ASSERT(defaultProperties);
+    // instantiate first in OPC UA
+    UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId, defaultProperties);
+    if (UA_NodeId_isNull(&newEventNodeId))
+    {
+        return nullptr;
+    }
+    // get new c++ instance created in UA constructor
+    auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer);
+    T * newEvent = dynamic_cast<T*>(tmp);
+    Q_CHECK_PTR(newEvent);
+    // return c++ event instance
+    return newEvent;
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 template<typename T>
 inline T * QUaBaseDataVariable::addChild(const QString &strNodeId/* = ""*/)
 {
