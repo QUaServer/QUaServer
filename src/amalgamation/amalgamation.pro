@@ -1,4 +1,5 @@
 TEMPLATE = lib
+CONFIG  += debug_and_release build_all
 CONFIG  += staticlib
 CONFIG  -= app_bundle
 CONFIG  -= qt
