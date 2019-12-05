@@ -120,7 +120,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 #ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId));
 #else
-	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId) || metaObject.inherits(&QUaBaseEvent::staticMetaObject));
+	Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId) || metaObject.inherits(&QUaBaseEvent::staticMetaObject));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// find top level node which is bound (bound := NodeId context == QUaNode instance)
 	UA_NodeClass outNodeClass;
@@ -153,7 +153,10 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		auto tmpParentNodeId = QUaNode::getParentNodeId(topBoundParentNodeId, server->m_server);
 		UA_NodeId_clear(&topBoundParentNodeId); // clear old
 		topBoundParentNodeId = tmpParentNodeId; // shallow copy
-		Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId));
+		if (UA_NodeId_isNull(&topBoundParentNodeId))
+		{
+			break;
+		}
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
