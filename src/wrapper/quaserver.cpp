@@ -115,17 +115,15 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	                                   const QMetaObject & metaObject)
 {
 	// get parent node id
-	UA_NodeId parentNodeId       = QUaNode::getParentNodeId(*nodeId, server->m_server);
+	UA_NodeId topBoundParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	// handle events
 #ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId));
+	Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId));
 #else
 	Q_ASSERT(!UA_NodeId_isNull(&parentNodeId) || metaObject.inherits(&QUaBaseEvent::staticMetaObject));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// check if constructor from explicit instance creation or type registration
-	// this is done by checking that parent is different from object ot variable instance
+	// find top level node which is bound (bound := NodeId context == QUaNode instance)
 	UA_NodeClass outNodeClass;
-	UA_NodeId lastParentNodeId;
 	QUaNode * parentContext = nullptr;
 	while (true)
 	{
@@ -138,28 +136,24 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// ignore if new instance is due to new type registration
-		UA_Server_readNodeClass(server->m_server, parentNodeId, &outNodeClass);
+		UA_Server_readNodeClass(server->m_server, topBoundParentNodeId, &outNodeClass);
 		Q_ASSERT_X(outNodeClass != UA_NODECLASS_UNSPECIFIED, "QUaServer::uaConstructor", "Something went wrong while getting parent info.");
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
-			UA_NodeId_clear(&parentNodeId);
+			UA_NodeId_clear(&topBoundParentNodeId);
 			return UA_STATUSCODE_GOOD;
 		}
-		lastParentNodeId = parentNodeId;
-		parentContext = QUaNode::getNodeContext(lastParentNodeId, server);
+		parentContext = QUaNode::getNodeContext(topBoundParentNodeId, server);
 		// check if parent node is bound
 		if (parentContext)
 		{
 			break;
 		}
-		auto tmpParentNodeId = QUaNode::getParentNodeId(parentNodeId, server->m_server);
-		UA_NodeId_clear(&parentNodeId); // clear old
-		parentNodeId = tmpParentNodeId;
-		// exit if null
-		if (UA_NodeId_isNull(&parentNodeId))
-		{
-			break;
-		}
+		// try next parent in hierarchy
+		auto tmpParentNodeId = QUaNode::getParentNodeId(topBoundParentNodeId, server->m_server);
+		UA_NodeId_clear(&topBoundParentNodeId); // clear old
+		topBoundParentNodeId = tmpParentNodeId; // shallow copy
+		Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId));
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
 	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
@@ -175,7 +169,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	Q_CHECK_PTR(newInstance);
 	if (!newInstance)
 	{
-		UA_NodeId_clear(&parentNodeId);
+		UA_NodeId_clear(&topBoundParentNodeId);
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
 	// need to bind again using the official (void ** nodeContext) of the UA constructor
@@ -184,9 +178,8 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	*nodeContext = (void*)newInstance;
 	newInstance->m_nodeId = *nodeId;
 	// need to set parent if direct parent is already bound bacause its constructor has already been called
-	UA_NodeId_clear(&parentNodeId);
-	parentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
-	if (UA_NodeId_equal(&parentNodeId, &lastParentNodeId) && parentContext)
+	UA_NodeId directParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
+	if (UA_NodeId_equal(&topBoundParentNodeId, &directParentNodeId) && parentContext)
 	{
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
@@ -194,7 +187,8 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		emit parentContext->childAdded(newInstance);
 	}
 	// success
-	UA_NodeId_clear(&parentNodeId);
+	UA_NodeId_clear(&topBoundParentNodeId);
+	UA_NodeId_clear(&directParentNodeId);
 	return UA_STATUSCODE_GOOD;
 }
 
@@ -1701,13 +1695,14 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// check if requested node id exists
-	UA_NodeId outNodeId;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
+	// TODO : create a nodeExists() method?
+	UA_NodeId testNodeId = UA_NODEID_NULL;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &testNodeId);
 	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::createInstance", "Requested NodeId already exists");
 	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
 	{
 		UA_NodeId_clear(&reqNodeId);
-		UA_NodeId_clear(&outNodeId);
+		UA_NodeId_clear(&testNodeId);
 		UA_QualifiedName_clear(&browseName);
 		return UA_NODEID_NULL;
 	}
@@ -1752,7 +1747,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	}
 	// clean up
 	UA_NodeId_clear(&reqNodeId);
-	UA_NodeId_clear(&outNodeId);
+	UA_NodeId_clear(&testNodeId);
 	UA_NodeId_clear(&typeNodeId);
 	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
