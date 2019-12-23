@@ -808,7 +808,7 @@ openssl x509 -in ca/ca.crt -inform pem -out ca/ca.crt.der -outform der
 # NOTE : might need to create in relative path
 #        - File './demoCA/index.txt' (Empty)
 #        - File './demoCA/crlnumber' with contents '1000'
-openssl ca -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl
+openssl ca -crldays 3600 -keyfile ca/ca.key -cert ca/ca.crt -gencrl -out ca/ca.crl
 # Convert CRL to der format
 openssl crl -in ca/ca.crl -inform pem -out ca/ca.der.crl -outform der
 ```

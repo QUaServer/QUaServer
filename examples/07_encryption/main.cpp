@@ -30,6 +30,15 @@ int main(int argc, char *argv[])
 	certServer.close();
 	privServer.close();
 
+	/*
+	Now that communications are encrypted, it is safe to use simple
+	username and password aithentication
+	// Disable Anon login and create Users
+	server.setAnonymousLoginAllowed(false);
+	server.addUser("juan", "pass123");
+	server.addUser("john", "qwerty");
+	*/
+
 	server.start();
 
 	return a.exec(); 

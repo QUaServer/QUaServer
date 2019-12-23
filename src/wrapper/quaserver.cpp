@@ -379,9 +379,11 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		if (!UA_String_equal(&userToken->policyId, &username_policy))
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
-		/* TODO: Support encrypted username/password over unencrypted SecureChannels */
+		/* TODO: Support encrypted username/password over unencrypted SecureChannels 
+		// NOTE: Why was this here? Plaintext username and pass should be supported when comms are encrypted. 
 		if (userToken->encryptionAlgorithm.length > 0)
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+		*/
 
 		/* Empty username and password */
 		if (userToken->userName.length == 0 && userToken->password.length == 0)

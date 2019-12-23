@@ -1,5 +1,5 @@
 [v3_ca]
-subjectAltName=DNS:localhost,IP:127.0.0.1,URI:urn:unconfigured:application
+subjectAltName=DNS:localhost,DNS:ppic09,IP:127.0.0.1,IP:192.168.1.18,URI:urn:unconfigured:application
 basicConstraints=CA:TRUE
 subjectKeyIdentifier=hash
 authorityKeyIdentifier=keyid,issuer
