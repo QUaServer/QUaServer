@@ -56,6 +56,24 @@ class QUaServer : public QObject
 
 	Q_OBJECT
 
+	// Qt properties
+
+	Q_PROPERTY(quint16    port              READ port              WRITE setPort              NOTIFY portChanged             )
+	Q_PROPERTY(QByteArray certificate       READ certificate       WRITE setCertificate       NOTIFY certificateChanged      )
+#ifdef UA_ENABLE_ENCRYPTION
+	Q_PROPERTY(QByteArray privateKey        READ privateKey        WRITE setPrivateKey        NOTIFY privateKeyChanged       )
+#endif
+	Q_PROPERTY(quint16    maxSecureChannels READ maxSecureChannels WRITE setMaxSecureChannels NOTIFY maxSecureChannelsChanged)
+	Q_PROPERTY(quint16    maxSessions       READ maxSessions       WRITE setMaxSessions       NOTIFY maxSessionsChanged      )
+	Q_PROPERTY(bool       isRunning         READ isRunning         WRITE setIsRunning         NOTIFY isRunningChanged        )
+	Q_PROPERTY(QString    applicationName   READ applicationName   WRITE setApplicationName   NOTIFY applicationNameChanged  )
+	Q_PROPERTY(QString    applicationUri    READ applicationUri    WRITE setApplicationUri    NOTIFY applicationUriChanged   )
+	Q_PROPERTY(QString    productName       READ productName       WRITE setProductName       NOTIFY productNameChanged      )
+	Q_PROPERTY(QString    productUri        READ productUri        WRITE setProductUri        NOTIFY productUriChanged       )
+	Q_PROPERTY(QString    manufacturerName  READ manufacturerName  WRITE setManufacturerName  NOTIFY manufacturerNameChanged )
+	Q_PROPERTY(QString    softwareVersion   READ softwareVersion   WRITE setSoftwareVersion   NOTIFY softwareVersionChanged  )
+	Q_PROPERTY(QString    buildNumber       READ buildNumber       WRITE setBuildNumber       NOTIFY buildNumberChanged      )
+
 public:
 
 #ifndef UA_ENABLE_ENCRYPTION
@@ -71,7 +89,18 @@ public:
 	
 	~QUaServer();
 
+	// Server Config API
+
 	quint16 port() const;
+	void    setPort(const quint16 &intPort); // NOTE : only updates after server restart
+
+	QByteArray certificate() const;
+	void       setCertificate(const QByteArray& byteCertificate);
+
+#ifdef UA_ENABLE_ENCRYPTION
+	QByteArray privateKey() const;
+	void       setPrivateKey(const QByteArray& bytePrivateKey);
+#endif
 
 	// Server Description API
 
@@ -95,6 +124,7 @@ public:
 	void start();
 	void stop();
 	bool isRunning() const;
+	void setIsRunning(const bool &running); // same as start/stop, just to complete Qt property
 
 	// Server Limits API
 
@@ -185,6 +215,23 @@ public:
 	void        setUserValidationCallback(const M &callback);
 
 signals:
+	void isRunningChanged        (const bool       &running         );
+	void portChanged             (const quint16    &port            );
+	void certificateChanged      (const QByteArray &byteCertificate );
+#ifdef UA_ENABLE_ENCRYPTION
+	void privateKeyChanged       (const QByteArray &bytePrivateKey  );
+#endif
+	void maxSecureChannelsChanged(const quint16 &maxSecureChannels  );
+	void maxSessionsChanged      (const quint16 &maxSession         );
+	void applicationNameChanged  (const QString &strApplicationName );
+	void applicationUriChanged   (const QString &strApplicationUri  );
+	void productNameChanged      (const QString &strProductName     );
+	void productUriChanged       (const QString &strProductUri      );
+	void manufacturerNameChanged (const QString &strManufacturerName);
+	void softwareVersionChanged  (const QString &strSoftwareVersion );
+	void buildNumberChanged      (const QString &strBuildNumber     );
+									    
+
 	void iterateServer();
 
 public slots:
@@ -193,13 +240,17 @@ public slots:
 private:
 	UA_Server             * m_server;
 	quint16                 m_port;
+	quint16                 m_maxSecureChannels;
+	quint16                 m_maxSessions;
 	UA_Boolean              m_running;
 	QTimer                  m_iterWaitTimer;
-	QByteArray              m_byteCertificate; // NOTE : needs to exists as long as server instance
+	QByteArray              m_byteCertificate;
+	QByteArray              m_byteCertificateInternal; // NOTE : needs to exists as long as server instance
 	QUaFolderObject       * m_pobjectsFolder;
 
 #ifdef UA_ENABLE_ENCRYPTION
-	QByteArray              m_bytePrivateKey; // NOTE : needs to exists as long as server instance
+	QByteArray              m_bytePrivateKey;
+	QByteArray              m_bytePrivateKeyInternal; // NOTE : needs to exists as long as server instance
 #endif
 
 	QByteArray m_byteApplicationName;
@@ -227,7 +278,10 @@ private:
 	void addChange(const QUaChangeStructureDataType& change);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-	// only call once on constructor
+	// reset open62541 config
+	void resetConfig();
+
+	// parse and validate certificate
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
 		                                    UA_ByteString    &outUaCert, 
 		                                    QByteArray       &outByteCert);

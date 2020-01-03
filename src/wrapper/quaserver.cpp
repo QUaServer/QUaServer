@@ -1,20 +1,9 @@
-#include "quaserver.h"
+#include "quaserver_anex.h"
 
 #include <QMetaProperty>
 #include <QTimer>
 
 #define QUA_DEBOUNCE_PERIOD_MS 50
-
-// Copied from open62541.c
-typedef struct {
-	UA_Boolean                allowAnonymous;
-	size_t                    usernamePasswordLoginSize;
-	UA_UsernamePasswordLogin *usernamePasswordLogin;
-} AccessControlContext;
-#define ANONYMOUS_POLICY "open62541-anonymous-policy"
-#define USERNAME_POLICY  "open62541-username-policy"
-const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
-const UA_String username_policy  = UA_STRING_STATIC(USERNAME_POLICY);
 
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
@@ -587,13 +576,11 @@ QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/,
 	                 QObject          *parent         /* = 0*/) 
 	: QObject(parent)
 {
-	m_port = intPort;
-	// convert cert if valid
-	UA_ByteString cert;
-	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
-	// create config with port and certificate
+	// copy args
+	this->setPort(intPort);
+	this->setCertificate(byteCertificate);
+	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
-	UA_ServerConfig_setMinimal(UA_Server_getConfig(this->m_server), intPort, ptrCert);
 	// setup server
 	this->setupServer();
 }
@@ -604,36 +591,12 @@ QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
 	                 QObject          * parent         /* = 0*/)
 	: QObject(parent)
 {
-	m_port = intPort;
+	// copy args
+	this->setPort(intPort);
+	this->setCertificate(byteCertificate);
+	this->setPrivateKey(bytePrivateKey);
+	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
-	// convert cert if valid (should contain public key)
-	UA_ByteString cert;
-	UA_ByteString * ptrCert = QUaServer::parseCertificate(byteCertificate, cert, m_byteCertificate);
-	// convert private key if valid
-	UA_ByteString priv;
-	UA_ByteString * ptrPriv = QUaServer::parseCertificate(bytePrivateKey, priv, m_bytePrivateKey);
-	// check if valid private key
-	if (ptrPriv)
-	{
-		// create config with port, certificate and private key for encryption
-		UA_ServerConfig_setDefaultWithSecurityPolicies(
-			UA_Server_getConfig(this->m_server), 
-			intPort, 
-			ptrCert, 
-			ptrPriv, 
-			nullptr, 
-			0, 
-			nullptr, 
-			0,
-			nullptr,
-			0
-		);
-	}
-	else
-	{
-		// create config with port and certificate only (no encryption)
-		UA_ServerConfig_setMinimal(UA_Server_getConfig(this->m_server), intPort, ptrCert);
-	}	
 	// setup server
 	this->setupServer();
 }
@@ -647,6 +610,86 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 	m_triggerChanges();
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+void QUaServer::resetConfig()
+{
+	// clean old config and create new
+	UA_ServerConfig * config = UA_Server_getConfig(m_server);
+	// NOTE : UA_ServerConfig_clean(config); called internally by UA_ServerConfig_setXXX
+#ifndef UA_ENABLE_ENCRYPTION
+	// convert cert if valid
+	UA_ByteString cert;
+	UA_ByteString* ptrCert = QUaServer::parseCertificate(m_byteCertificate, cert, m_byteCertificateInternal);
+	UA_ServerConfig_setMinimal(config, m_port, ptrCert);
+#else
+	// convert cert if valid (should contain public key)
+	UA_ByteString cert;
+	UA_ByteString* ptrCert = QUaServer::parseCertificate(m_byteCertificate, cert, m_byteCertificateInternal);
+	// convert private key if valid
+	UA_ByteString priv;
+	UA_ByteString* ptrPriv = QUaServer::parseCertificate(m_bytePrivateKey, priv, m_bytePrivateKeyInternal);
+	// check if valid private key
+	if (ptrPriv)
+	{
+		// create config with port, certificate and private key for encryption
+		UA_ServerConfig_setDefaultWithSecurityPolicies(
+			config,
+			m_port,
+			ptrCert,
+			ptrPriv,
+			nullptr,
+			0,
+			nullptr,
+			0,
+			nullptr,
+			0
+		);
+	}
+	else
+	{
+		// create config with port and certificate only (no encryption)
+		UA_ServerConfig_setMinimal(config, intPort, ptrCert);
+	}
+#endif
+
+	// setup access control
+
+	// static methods to reimplement custom behaviour
+	config->accessControl.activateSession           = &QUaServer::activateSession;
+	config->accessControl.closeSession              = &QUaServer::closeSession;
+	config->accessControl.getUserRightsMask         = &QUaServer::getUserRightsMask;
+	config->accessControl.getUserAccessLevel        = &QUaServer::getUserAccessLevel;
+	config->accessControl.getUserExecutable         = &QUaServer::getUserExecutable;
+	config->accessControl.getUserExecutableOnObject = &QUaServer::getUserExecutableOnObject;
+
+	// TODO : implement rest of callbacks
+	//        allowAddNode_default
+	//        allowAddReference_default
+	//        allowDeleteNode_default
+	//        allowDeleteReference_default
+
+	// setup server description
+
+	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC((char*)"", m_byteApplicationName.data());
+	config->applicationDescription.applicationUri  = UA_String_fromChars(m_byteApplicationUri.data());
+	config->buildInfo.productName                  = UA_String_fromChars(m_byteProductName.data());
+	config->buildInfo.productUri                   = UA_String_fromChars(m_byteProductUri.data());
+	config->buildInfo.manufacturerName             = UA_String_fromChars(m_byteManufacturerName.data());
+	config->buildInfo.softwareVersion              = UA_String_fromChars(m_byteSoftwareVersion.data());
+	config->buildInfo.buildNumber                  = UA_String_fromChars(m_byteBuildNumber.data());
+	// NOTE : update application description productUri as well
+	config->applicationDescription.productUri      = UA_String_fromChars(m_byteProductUri.data());
+	// update endpoints necessary
+	// NOTE : use about updating config->applicationDescription.
+	//        In UA_ServerConfig_new_customBuffer we have
+	//        conf->endpointsSize = 1;
+	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+
+	// setup server limits
+
+	config->maxSecureChannels = m_maxSecureChannels;
+	config->maxSessions       = m_maxSessions;
+}
 
 UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
 	                                        UA_ByteString    &outUaCert,
@@ -734,58 +777,49 @@ void QUaServer::setupServer()
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), QUaGeneralModelChangeEvent::staticMetaObject);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// setup access control
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	// static methods to reimplement custom behaviour
-	config->accessControl.activateSession           = &QUaServer::activateSession;
-	config->accessControl.closeSession              = &QUaServer::closeSession;
-	config->accessControl.getUserRightsMask         = &QUaServer::getUserRightsMask;
-	config->accessControl.getUserAccessLevel        = &QUaServer::getUserAccessLevel;
-	config->accessControl.getUserExecutable         = &QUaServer::getUserExecutable;
-	config->accessControl.getUserExecutableOnObject = &QUaServer::getUserExecutableOnObject;
 
-	// TODO : implement rest of callbacks
-	//        allowAddNode_default
-	//        allowAddReference_default
-	//        allowDeleteNode_default
-	//        allowDeleteReference_default
-
+	// read initial values for server description
+	UA_ServerConfig* config = UA_Server_getConfig(m_server);
+	UA_ServerConfig_setMinimal(config, m_port, nullptr);
 	// get server app name
-	m_byteApplicationName = QByteArray::fromRawData(
+	m_byteApplicationName = QByteArray(
 		(char*)config->applicationDescription.applicationName.text.data,
 		(int)config->applicationDescription.applicationName.text.length
 	);
 	// get server app uri
-	m_byteApplicationUri = QByteArray::fromRawData(
+	m_byteApplicationUri = QByteArray(
 		(char*)config->applicationDescription.applicationUri.data,
 		(int)config->applicationDescription.applicationUri.length
 	);
-
 	// get server product name
-	m_byteProductName = QByteArray::fromRawData(
+	m_byteProductName = QByteArray(
 		(char*)config->buildInfo.productName.data,
 		(int)config->buildInfo.productName.length
 	);
 	// get server product uri
-	m_byteProductUri = QByteArray::fromRawData(
+	m_byteProductUri = QByteArray(
 		(char*)config->buildInfo.productUri.data,
 		(int)config->buildInfo.productUri.length
 	);
 	// get server manufacturer name
-	m_byteManufacturerName = QByteArray::fromRawData(
+	m_byteManufacturerName = QByteArray(
 		(char*)config->buildInfo.manufacturerName.data,
 		(int)config->buildInfo.manufacturerName.length
 	);
 	// get server software version
-	m_byteSoftwareVersion = QByteArray::fromRawData(
+	m_byteSoftwareVersion = QByteArray(
 		(char*)config->buildInfo.softwareVersion.data,
 		(int)config->buildInfo.softwareVersion.length
 	);
 	// get server software version
-	m_byteBuildNumber = QByteArray::fromRawData(
+	m_byteBuildNumber = QByteArray(
 		(char*)config->buildInfo.buildNumber.data,
 		(int)config->buildInfo.buildNumber.length
 	);
+
+	// copy other initial values
+	m_maxSecureChannels = config->maxSecureChannels;
+	m_maxSessions       = config->maxSessions;
 
 	// instantiate change event
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -809,6 +843,8 @@ void QUaServer::setupServer()
 
 QUaServer::~QUaServer()
 {
+	// stop if running
+	this->stop();
 	// [FIX] : QObject children destructors were called after this one
 	//         and the ~QUaNode destructor makes use of m_server
 	//         so we better destroy the children manually before deleting m_server
@@ -816,7 +852,8 @@ QUaServer::~QUaServer()
 	{
 		delete this->children().at(0);
 	}
-	// Cleanup library objects
+
+	// cleanup open62541
 	UA_Server_delete(this->m_server);
 }
 
@@ -825,35 +862,52 @@ quint16 QUaServer::port() const
 	return m_port;
 }
 
+void QUaServer::setPort(const quint16 &intPort)
+{
+	m_port = intPort;
+	emit this->portChanged(m_port);
+}
+
+QByteArray QUaServer::certificate() const
+{
+	return m_byteCertificate;
+}
+
+void QUaServer::setCertificate(const QByteArray &byteCertificate)
+{
+	m_byteCertificate = byteCertificate;
+	emit this->certificateChanged(m_byteCertificate);
+}
+
+#ifdef UA_ENABLE_ENCRYPTION
+QByteArray QUaServer::privateKey() const
+{
+	return m_bytePrivateKey;
+}
+
+void QUaServer::setPrivateKey(const QByteArray &bytePrivateKey)
+{
+	m_bytePrivateKey = bytePrivateKey;
+	emit this->privateKeyChanged(m_bytePrivateKey);
+}
+#endif
+
 QString QUaServer::applicationName() const
 {
 	return QString(m_byteApplicationName);
 }
 
-/*
-// NOTE : not use about updating config->applicationDescription. 
-//        In UA_ServerConfig_new_customBuffer we have
-
-conf->endpointsSize = 1;
-
-// which seems to point that there will only be one endpoint
-// so maybe we can do the same as in createEndpoint and just copy 
-// the applicationDescription from config to endpoint
-*/
-
 void QUaServer::setApplicationName(const QString & strApplicationName)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteApplicationName = strApplicationName.toUtf8();
-	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT((char*)"", m_byteApplicationName.data());
-	// update endpoints
-	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
 	// update application name on change event
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_CHECK_PTR(m_changeEvent);
 	m_changeEvent->setSourceName(strApplicationName);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// emit event
+	emit this->applicationNameChanged(strApplicationName);
 }
 
 QString QUaServer::applicationUri() const
@@ -864,11 +918,9 @@ QString QUaServer::applicationUri() const
 void QUaServer::setApplicationUri(const QString & strApplicationUri)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteApplicationUri = strApplicationUri.toUtf8();
-	config->applicationDescription.applicationUri = UA_STRING(m_byteApplicationUri.data());
-	// update endpoints
-	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+	// emit event
+	emit this->applicationUriChanged(strApplicationUri);
 }
 
 QString QUaServer::productName() const
@@ -879,9 +931,9 @@ QString QUaServer::productName() const
 void QUaServer::setProductName(const QString & strProductName)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductName = strProductName.toUtf8();
-	config->buildInfo.productName = UA_STRING(m_byteProductName.data());
+	// emit event
+	emit this->productNameChanged(strProductName);
 }
 
 QString QUaServer::productUri() const
@@ -892,13 +944,9 @@ QString QUaServer::productUri() const
 void QUaServer::setProductUri(const QString & strProductUri)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteProductUri = strProductUri.toUtf8();
-	config->buildInfo.productUri = UA_STRING(m_byteProductUri.data());
-	// NOTE : update application description productUri as well
-	config->applicationDescription.productUri = UA_STRING(m_byteProductUri.data());
-	// update endpoints
-	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+	// emit event
+	emit this->productUriChanged(strProductUri);
 }
 
 QString QUaServer::manufacturerName() const
@@ -909,9 +957,9 @@ QString QUaServer::manufacturerName() const
 void QUaServer::setManufacturerName(const QString & strManufacturerName)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteManufacturerName = strManufacturerName.toUtf8();
-	config->buildInfo.manufacturerName = UA_STRING(m_byteManufacturerName.data());
+	// emit event
+	emit this->manufacturerNameChanged(strManufacturerName);
 }
 
 QString QUaServer::softwareVersion() const
@@ -922,9 +970,9 @@ QString QUaServer::softwareVersion() const
 void QUaServer::setSoftwareVersion(const QString & strSoftwareVersion)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteSoftwareVersion = strSoftwareVersion.toUtf8();
-	config->buildInfo.softwareVersion = UA_STRING(m_byteSoftwareVersion.data());
+	// emit event
+	emit this->manufacturerNameChanged(strSoftwareVersion);
 }
 
 QString QUaServer::buildNumber() const
@@ -935,9 +983,9 @@ QString QUaServer::buildNumber() const
 void QUaServer::setBuildNumber(const QString & strBuildNumber)
 {
 	// update config
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
 	m_byteBuildNumber = strBuildNumber.toUtf8();
-	config->buildInfo.buildNumber = UA_STRING(m_byteBuildNumber.data());
+	// emit event
+	emit this->buildNumberChanged(strBuildNumber);
 }
 
 void QUaServer::start()
@@ -948,6 +996,9 @@ void QUaServer::start()
 	{
 		return;
 	}
+	// reset config before starting
+	this->resetConfig();
+	// start open62541 server
 	auto st = UA_Server_run_startup(m_server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
@@ -966,57 +1017,27 @@ void QUaServer::start()
 	//        seem affected by it at least in Qt 5.12, don't know if using QTimer for this
 	//        will come back bite me in the ass some time later.
 	m_iterWaitTimer.start(1);
-}
-
-// NOTE : copied from open62541 to help resolve QUaServer::stop/start issue
-static UA_StatusCode addDefaultNetworkLayers(
-	UA_ServerConfig *conf, 
-	UA_UInt16 portNumber,
-	UA_UInt32 sendBufferSize, 
-	UA_UInt32 recvBufferSize) 
-{
-	/* Add a network layer */
-	conf->networkLayers = (UA_ServerNetworkLayer *)
-		UA_malloc(sizeof(UA_ServerNetworkLayer));
-	if (!conf->networkLayers)
-		return UA_STATUSCODE_BADOUTOFMEMORY;
-
-	UA_ConnectionConfig config = UA_ConnectionConfig_default;
-	if (sendBufferSize > 0)
-		config.sendBufferSize = sendBufferSize;
-	if (recvBufferSize > 0)
-		config.recvBufferSize = recvBufferSize;
-
-	conf->networkLayers[0] =
-		UA_ServerNetworkLayerTCP(config, portNumber, &conf->logger);
-	if (!conf->networkLayers[0].handle)
-		return UA_STATUSCODE_BADOUTOFMEMORY;
-	conf->networkLayersSize = 1;
-
-	return UA_STATUSCODE_GOOD;
+	// emit event
+	emit this->isRunningChanged(m_running);
 }
 
 void QUaServer::stop()
 {
+	if (!m_running)
+	{
+		return;
+	}
 	m_running = false;
 	m_iterWaitTimer.stop();
 	m_iterWaitTimer.disconnect();
 	UA_Server_run_shutdown(m_server);
-	// NOTE : there is a bug in open62541, if server is shutdown while a client still connected
-	//        then after starting server again, clients cannot connect to it anymore.
-	//        the issue seems to be in *ServerNetworkLayerTCP_listen*, where the server gets
-	//        stucked in the "Socket select failed with %s" error.
-	//        the code below helps, but sometimes crashes when calling UA_Server_delete (i.e. ~QUaServer)
-	// cleanup network layers
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	for (size_t i = 0; i < config->networkLayersSize; ++i) {
-		UA_ServerNetworkLayer *nl = &config->networkLayers[i];
-		nl->deleteMembers(nl);
-	}
-	UA_free(config->networkLayers);
-	// recreate network layers (as in UA_ServerConfig_setMinimalCustomBuffer)
-	auto retval = addDefaultNetworkLayers(config, m_port, 0, 0);
-	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+
+	// [FIX] remove channels and sessions
+	UA_SecureChannelManager_deleteMembers(&m_server->secureChannelManager);
+	UA_SessionManager_deleteMembers(&m_server->sessionManager);
+
+	// emit event
+	emit this->isRunningChanged(m_running);
 }
 
 bool QUaServer::isRunning() const
@@ -1024,28 +1045,38 @@ bool QUaServer::isRunning() const
 	return m_running;
 }
 
+void QUaServer::setIsRunning(const bool& running)
+{
+	if (running)
+	{
+		this->start();
+	}
+	else
+	{
+		this->stop();
+	}
+}
+
 quint16 QUaServer::maxSecureChannels() const
 {
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	return config->maxSecureChannels;
+	return m_maxSecureChannels;;
 }
 
 void QUaServer::setMaxSecureChannels(const quint16 & maxSecureChannels)
 {
-	UA_ServerConfig * config  = UA_Server_getConfig(m_server);
-	config->maxSecureChannels = maxSecureChannels;
+	m_maxSecureChannels = maxSecureChannels;
+	emit this->maxSecureChannelsChanged(m_maxSecureChannels);
 }
 
 quint16 QUaServer::maxSessions() const
 {
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	return config->maxSessions;
+	return m_maxSessions;
 }
 
 void QUaServer::setMaxSessions(const quint16 & maxSessions)
 {
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	config->maxSessions = maxSessions;
+	m_maxSessions = maxSessions;
+	emit this->maxSessionsChanged(m_maxSessions);
 }
 
 void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNodeId/* = ""*/)
