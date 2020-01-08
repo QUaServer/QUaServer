@@ -569,8 +569,6 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 }
 
 #ifndef UA_ENABLE_ENCRYPTION
-// NOTE : cannot load cert later with UA_Server_updateCertificate because
-//        it requires oldCertificate != NULL
 QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/, 
 	                 const QByteArray &byteCertificate/* = QByteArray()*/, 
 	                 QObject          *parent         /* = 0*/) 
@@ -972,7 +970,7 @@ void QUaServer::setSoftwareVersion(const QString & strSoftwareVersion)
 	// update config
 	m_byteSoftwareVersion = strSoftwareVersion.toUtf8();
 	// emit event
-	emit this->manufacturerNameChanged(strSoftwareVersion);
+	emit this->softwareVersionChanged(strSoftwareVersion);
 }
 
 QString QUaServer::buildNumber() const

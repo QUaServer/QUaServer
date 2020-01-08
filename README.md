@@ -99,10 +99,10 @@ int main(int argc, char *argv[])
 
 Note it is necessary to create a `QCoreApplication` and execute it, because `QUaServer` makes use of [Qt's event loop](https://wiki.qt.io/Threads_Events_QObjects).
 
-By default the *QUaServer* listens on port **4840** which is the [IANA assigned port](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=4840) for OPC UA applications. To change the listening port, simply pass it as the first argument of the *QUaServer* constructor:
+By default the *QUaServer* listens on port **4840** which is the [IANA assigned port](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=4840) for OPC UA applications. To change the listening port, simply pass call the `setPort` method **before** starting the server:
 
 ```c++
-QUaServer server(8080);
+server.setPort(8080);
 ```
 
 To start creating OPC *Objects* and *Variables* it is necessary to get the *Objects Folder* of the server and start adding instances to it:
@@ -893,7 +893,7 @@ Now the *server certificate* must be copied next to the *QUaServer* application:
 cp server/server.crt.der $SERVER_PATH/server.crt.der
 ```
 
-And in the C++ code the server's certificate contents need to be passed to the `QUaServer` constructor:
+And in the C++ code the server's certificate contents need to be passed to the `setCertificate` method **before** starting the server:
 
 ```c++
 #include <QCoreApplication>
@@ -906,14 +906,15 @@ int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
 
+	QUaServer server;
+
 	// Load server certificate
 	QFile certServer;
 	certServer.setFileName("server.crt.der");
 	Q_ASSERT(certServer.exists());
 	certServer.open(QIODevice::ReadOnly);
-
-	// Instantiate server by passing certificate contents
-	QUaServer server(4840, certServer.readAll());
+	server.setCertificate(certServer.readAll());
+	certServer.close();
 
 	server.start();
 
@@ -939,6 +940,8 @@ server.setManufacturerName("My Company Inc.");
 server.setSoftwareVersion ("6.6.6-master");
 server.setBuildNumber     ("gvfsed43fs");
 ```
+
+This methods should be called **before** starting the server, else the changes won't be visible until the server is restarted.
 
 This information is then made available to the clients through the *Server Object* that can be found by browsing to `/Root/Objects/Server/ServerStatus/BuildInfo`
 

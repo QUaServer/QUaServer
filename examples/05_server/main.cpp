@@ -8,14 +8,17 @@ int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
 
+	QUaServer server;
+
+	// Set custom port
+	server.setPort(8080);
+
 	// Load server certificate
 	QFile certServer;
 	certServer.setFileName("server.crt.der");
 	Q_ASSERT(certServer.exists());
 	certServer.open(QIODevice::ReadOnly);
-	
-	// Instantiate server by passing certificate contents
-	QUaServer server(4840, certServer.readAll());
+	server.setCertificate(certServer.readAll());
 	certServer.close();
 
 	// Add server description

@@ -222,7 +222,7 @@ signals:
 	void privateKeyChanged       (const QByteArray &bytePrivateKey  );
 #endif
 	void maxSecureChannelsChanged(const quint16 &maxSecureChannels  );
-	void maxSessionsChanged      (const quint16 &maxSession         );
+	void maxSessionsChanged      (const quint16 &maxSessions        );
 	void applicationNameChanged  (const QString &strApplicationName );
 	void applicationUriChanged   (const QString &strApplicationUri  );
 	void productNameChanged      (const QString &strProductName     );
@@ -231,8 +231,8 @@ signals:
 	void softwareVersionChanged  (const QString &strSoftwareVersion );
 	void buildNumberChanged      (const QString &strBuildNumber     );
 									    
-
-	void iterateServer();
+	// NOTE : private signal
+	void iterateServer(QPrivateSignal);
 
 public slots:
 	
