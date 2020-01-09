@@ -1274,7 +1274,9 @@ int main(int argc, char *argv[])
 	privServer.open(QIODevice::ReadOnly);
 
 	// Instantiate server by passing certificate and key
-	QUaServer server(4840, certServer.readAll(), privServer.readAll());
+	QUaServer server;
+	server.setCertificate(certServer.readAll());
+	server.setPrivateKey (privServer.readAll());
 
 	certServer.close();
 	privServer.close();

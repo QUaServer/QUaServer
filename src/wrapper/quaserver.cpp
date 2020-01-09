@@ -568,37 +568,23 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	return true;
 }
 
-#ifndef UA_ENABLE_ENCRYPTION
-QUaServer::QUaServer(const quint16    &intPort        /* = 4840*/, 
-	                 const QByteArray &byteCertificate/* = QByteArray()*/, 
-	                 QObject          *parent         /* = 0*/) 
+QUaServer::QUaServer(QObject* parent/* = 0*/)
 	: QObject(parent)
 {
-	// copy args
-	this->setPort(intPort);
-	this->setCertificate(byteCertificate);
-	// create long-living open62541 server instance
-	this->m_server = UA_Server_new();
-	// setup server
-	this->setupServer();
-}
-#else
-QUaServer::QUaServer(const quint16    & intPort        /* = 4840*/,
-	                 const QByteArray & byteCertificate/* = QByteArray()*/,
-	                 const QByteArray & bytePrivateKey /* = QByteArray()*/,
-	                 QObject          * parent         /* = 0*/)
-	: QObject(parent)
-{
-	// copy args
-	this->setPort(intPort);
-	this->setCertificate(byteCertificate);
-	this->setPrivateKey(bytePrivateKey);
-	// create long-living open62541 server instance
-	this->m_server = UA_Server_new();
-	// setup server
-	this->setupServer();
-}
+	// defaults
+	m_port = 4840;
+	m_anonymousLoginAllowed = true;
+	m_byteCertificate = QByteArray();
+	m_byteCertificateInternal = QByteArray();
+#ifdef UA_ENABLE_ENCRYPTION
+	m_bytePrivateKey = QByteArray();
+	m_bytePrivateKeyInternal = QByteArray();
 #endif
+	// create long-living open62541 server instance
+	this->m_server = UA_Server_new();
+	// setup server (other defaults)
+	this->setupServer();
+}
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 void QUaServer::addChange(const QUaChangeStructureDataType& change)
@@ -646,11 +632,13 @@ void QUaServer::resetConfig()
 	else
 	{
 		// create config with port and certificate only (no encryption)
-		UA_ServerConfig_setMinimal(config, intPort, ptrCert);
+		UA_ServerConfig_setMinimal(config, m_port, ptrCert);
 	}
 #endif
 
 	// setup access control
+	AccessControlContext* context = static_cast<AccessControlContext*>(config->accessControl.context);
+	context->allowAnonymous = m_anonymousLoginAllowed;
 
 	// static methods to reimplement custom behaviour
 	config->accessControl.activateSession           = &QUaServer::activateSession;
@@ -2154,16 +2142,13 @@ QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath) const
 
 bool QUaServer::anonymousLoginAllowed() const
 {
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	AccessControlContext *context = static_cast<AccessControlContext*>(config->accessControl.context);
-	return context->allowAnonymous;
+	return m_anonymousLoginAllowed;
 }
 
-void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed) const
+void QUaServer::setAnonymousLoginAllowed(const bool & anonymousLoginAllowed)
 {
-	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	AccessControlContext *context = static_cast<AccessControlContext*>(config->accessControl.context);
-	context->allowAnonymous = anonymousLoginAllowed;
+	m_anonymousLoginAllowed = anonymousLoginAllowed;
+	emit this->anonymousLoginAllowedChanged(m_anonymousLoginAllowed);
 }
 
 void QUaServer::addUser(const QString & strUserName, const QString & strKey)

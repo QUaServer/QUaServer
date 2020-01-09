@@ -74,18 +74,11 @@ class QUaServer : public QObject
 	Q_PROPERTY(QString    softwareVersion   READ softwareVersion   WRITE setSoftwareVersion   NOTIFY softwareVersionChanged  )
 	Q_PROPERTY(QString    buildNumber       READ buildNumber       WRITE setBuildNumber       NOTIFY buildNumberChanged      )
 
+	Q_PROPERTY(bool anonymousLoginAllowed READ anonymousLoginAllowed WRITE setAnonymousLoginAllowed NOTIFY buildNumberChanged)
+
 public:
 
-#ifndef UA_ENABLE_ENCRYPTION
-	explicit QUaServer(const quint16    &intPort         = 4840, 
-		               const QByteArray &byteCertificate = QByteArray(), 
-		               QObject          *parent          = 0);
-#else
-	explicit QUaServer(const quint16    &intPort         = 4840, 
-		               const QByteArray &byteCertificate = QByteArray(), 
-		               const QByteArray &bytePrivateKey  = QByteArray(), 
-		               QObject          *parent          = 0);
-#endif
+	explicit QUaServer(QObject* parent = 0);
 	
 	~QUaServer();
 
@@ -197,7 +190,7 @@ public:
 
 	// anonymous login is enabled by default
 	bool        anonymousLoginAllowed() const;
-	void        setAnonymousLoginAllowed(const bool &anonymousLoginAllowed) const;
+	void        setAnonymousLoginAllowed(const bool &anonymousLoginAllowed);
 	// if user already exists, it updates password
 	void        addUser(const QString &strUserName, const QString & strKey);
 	// if user does not exist, it does nothing
@@ -215,21 +208,22 @@ public:
 	void        setUserValidationCallback(const M &callback);
 
 signals:
-	void isRunningChanged        (const bool       &running         );
-	void portChanged             (const quint16    &port            );
-	void certificateChanged      (const QByteArray &byteCertificate );
-#ifdef UA_ENABLE_ENCRYPTION
-	void privateKeyChanged       (const QByteArray &bytePrivateKey  );
-#endif
-	void maxSecureChannelsChanged(const quint16 &maxSecureChannels  );
-	void maxSessionsChanged      (const quint16 &maxSessions        );
-	void applicationNameChanged  (const QString &strApplicationName );
-	void applicationUriChanged   (const QString &strApplicationUri  );
-	void productNameChanged      (const QString &strProductName     );
-	void productUriChanged       (const QString &strProductUri      );
-	void manufacturerNameChanged (const QString &strManufacturerName);
-	void softwareVersionChanged  (const QString &strSoftwareVersion );
-	void buildNumberChanged      (const QString &strBuildNumber     );
+	void isRunningChanged            (const bool       &running           );
+	void portChanged                 (const quint16    &port              );
+	void certificateChanged          (const QByteArray &byteCertificate   );
+#ifdef UA_ENABLE_ENCRYPTION		     									  
+	void privateKeyChanged           (const QByteArray &bytePrivateKey    );
+#endif							     									  
+	void maxSecureChannelsChanged    (const quint16 &maxSecureChannels    );
+	void maxSessionsChanged          (const quint16 &maxSessions          );
+	void applicationNameChanged      (const QString &strApplicationName   );
+	void applicationUriChanged       (const QString &strApplicationUri    );
+	void productNameChanged          (const QString &strProductName       );
+	void productUriChanged           (const QString &strProductUri        );
+	void manufacturerNameChanged     (const QString &strManufacturerName  );
+	void softwareVersionChanged      (const QString &strSoftwareVersion   );
+	void buildNumberChanged          (const QString &strBuildNumber       );
+	void anonymousLoginAllowedChanged(const bool    &anonymousLoginAllowed);
 									    
 	// NOTE : private signal
 	void iterateServer(QPrivateSignal);
@@ -246,6 +240,7 @@ private:
 	QTimer                  m_iterWaitTimer;
 	QByteArray              m_byteCertificate;
 	QByteArray              m_byteCertificateInternal; // NOTE : needs to exists as long as server instance
+	bool                    m_anonymousLoginAllowed;
 	QUaFolderObject       * m_pobjectsFolder;
 
 #ifdef UA_ENABLE_ENCRYPTION
