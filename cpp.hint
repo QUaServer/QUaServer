@@ -3,3 +3,6 @@
 #define Q_DECLARE_METATYPE()
 #define UA_EXPORT
 #define ZIP_PROTTYPE(name, type, keytype) void name##_ZIP_INSERT(struct name *head, struct type *elm, unsigned char rank); void name##_ZIP_REMOVE(struct name *head, struct type *elm); struct type *name##_ZIP_FIND(struct name *head, const keytype *key); struct type *name##_ZIP_MIN(struct name *head); struct type *name##_ZIP_MAX(struct name *head); typedef void (*name##_cb)(struct type *elm, void *data); void name##_ZIP_ITER(struct name *head, name##_cb cb, void *data);
+#define Q_PROPERTY(__VA_ARGS__) QT_ANNOTATE_CLASS(qt_property, __VA_ARGS__)
+#define Q_PROPERTY(text) QT_ANNOTATE_CLASS(qt_property, text)
+#define Q_PROPERTY(text) Q_PROPERTY(text)

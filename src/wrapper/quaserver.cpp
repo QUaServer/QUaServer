@@ -1156,6 +1156,7 @@ void QUaServer::registerType(const QMetaObject &metaObject, const QString &strNo
 	}
 	// clean up
 	UA_QualifiedName_clear(&browseName);
+	UA_NodeId_clear(&reqNodeId);
 	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	// register constructor/destructor
@@ -1770,7 +1771,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject & metaObject, QUaNode * pa
 	// clean up
 	UA_NodeId_clear(&reqNodeId);
 	UA_NodeId_clear(&testNodeId);
-	UA_NodeId_clear(&typeNodeId);
+	// NOTE : do not UA_NodeId_clear(&typeNodeId); or value in m_mapTypes gets corrupted
 	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
 
