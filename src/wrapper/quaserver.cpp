@@ -994,14 +994,13 @@ void QUaServer::start()
 		// do not iterate if asked to stop
 		if (!m_running) { return; }
 		// iterate and restart
-		UA_Server_run_iterate(m_server, false);
+		m_iterWaitTimer.stop();
+		auto msToWait = UA_Server_run_iterate(m_server, false);
+		msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.7 * msToWait));
+		msToWait = (std::max)(msToWait, static_cast<UA_UInt16>(1));
+		m_iterWaitTimer.start(msToWait);
 	});
 	// start iterations
-	// NOTE : using a 1ms delay seems to have the best trade-off (so far) between
-	//        not blocking Qt's event loop, OPC server's resposiveness, and not overloading the CPU.
-	//        I made some tests changing the system's local time on winows and QTimer does not
-	//        seem affected by it at least in Qt 5.12, don't know if using QTimer for this
-	//        will come back bite me in the ass some time later.
 	m_iterWaitTimer.start(1);
 	// emit event
 	emit this->isRunningChanged(m_running);
