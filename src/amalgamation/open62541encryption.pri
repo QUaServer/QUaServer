@@ -86,12 +86,20 @@
 			}
 			# Build Visual Studio project
 			PROJECT_BUILT = FALSE
-			system("msbuild \"$${MBEDTLS_BUILD_PATH_WIN}\mbed TLS.sln\""): PROJECT_BUILT = TRUE
+			system("msbuild \"$${MBEDTLS_BUILD_PATH_WIN}\mbed TLS.sln\" /m /p:Configuration=Debug"): PROJECT_BUILT = TRUE
 			equals(BUILD_CREATED, TRUE) {
-				message("MbedTLS build successful.")
+				message("MbedTLS Debug build successful.")
 			}
 			else {
-				error("MbedTLS build failed.")
+				error("MbedTLS Debug build failed.")
+			}
+			PROJECT_BUILT = FALSE
+			system("msbuild \"$${MBEDTLS_BUILD_PATH_WIN}\mbed TLS.sln\" /m /p:Configuration=Release"): PROJECT_BUILT = TRUE
+			equals(BUILD_CREATED, TRUE) {
+				message("MbedTLS Release build successful.")
+			}
+			else {
+				error("MbedTLS Release build failed.")
 			}
 		}
 		# Linux

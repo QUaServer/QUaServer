@@ -241,6 +241,8 @@ public:
 	// (* actually browses using QObject tree)
 
 	QString typeDefinitionNodeId() const;
+	QString typeDefinitionDisplayName() const;
+	QString typeDefinitionBrowseName() const;
 
 	// if strBrowseName empty, get all children
 	template<typename T>

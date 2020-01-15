@@ -187,13 +187,16 @@ QString QUaNode::displayName() const
 	{
 		return QString();
 	}
-	// read description
+	// read display name
 	UA_LocalizedText outDisplayName;
 	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, m_nodeId, &outDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	QString strDisplayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	// cleanup
+	UA_LocalizedText_clear(&outDisplayName);
 	// return
-	return QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	return strDisplayName;
 }
 
 void QUaNode::setDisplayName(const QString & displayName)
@@ -316,6 +319,7 @@ QString QUaNode::browseName() const
 	// populate return value
 	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
 	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
 	return strBrowseName;
 }
@@ -361,6 +365,12 @@ QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
 
 QString QUaNode::typeDefinitionNodeId() const
 {
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return QString();
+	}
 	UA_NodeId retTypeId = UA_NODEID_NULL;
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
@@ -387,6 +397,60 @@ QString QUaNode::typeDefinitionNodeId() const
 	QString retNodeId = QUaTypesConverter::nodeIdToQString(retTypeId);
 	UA_NodeId_clear(&retTypeId);
 	return retNodeId;
+}
+
+QString QUaNode::typeDefinitionDisplayName() const
+{
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return QString();
+	}
+	UA_NodeId typeId = QUaTypesConverter::nodeIdFromQString(this->typeDefinitionNodeId());
+	Q_ASSERT(!UA_NodeId_isNull(&typeId));
+	if (UA_NodeId_isNull(&typeId))
+	{
+		return QString();
+	}
+	// read display name
+	UA_LocalizedText outDisplayName;
+	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, typeId, &outDisplayName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	QString strDisplayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	// cleanup
+	UA_NodeId_clear(&typeId);
+	UA_LocalizedText_clear(&outDisplayName);
+	// return
+	return strDisplayName;
+}
+
+QString QUaNode::typeDefinitionBrowseName() const
+{
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return QString();
+	}
+	UA_NodeId typeId = QUaTypesConverter::nodeIdFromQString(this->typeDefinitionNodeId());
+	Q_ASSERT(!UA_NodeId_isNull(&typeId));
+	if (UA_NodeId_isNull(&typeId))
+	{
+		return QString();
+	}
+	// read browse name
+	UA_QualifiedName outBrowseName;
+	auto st = UA_Server_readBrowseName(m_qUaServer->m_server, typeId, &outBrowseName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// populate return value
+	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
+	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	// cleanup
+	UA_QualifiedName_clear(&outBrowseName);
+	return strBrowseName;
 }
 
 QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/) const
