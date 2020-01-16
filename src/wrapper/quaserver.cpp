@@ -589,7 +589,10 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 void QUaServer::addChange(const QUaChangeStructureDataType& change)
 {
-	Q_CHECK_PTR(m_changeEvent);
+	if (m_listChanges.contains(change))
+	{
+		return;
+	}
 	m_listChanges.append(change);
 	m_triggerChanges();
 }

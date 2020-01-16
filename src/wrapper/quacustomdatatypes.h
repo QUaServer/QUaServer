@@ -40,11 +40,19 @@ struct QUaChangeStructureDataType
 	};
 	QUaChangeStructureDataType();
 	QUaChangeStructureDataType(const QString &strNodeIdAffected, const QString &strNodeIdAffectedType, const Verb &uiVerb);
+
 	QString m_strNodeIdAffected;
 	QString m_strNodeIdAffectedType;
 	uchar   m_uiVerb;
 };
 typedef QUaChangeStructureDataType::Verb QUaChangeVerb;
+
+inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStructureDataType& rhs) 
+{
+	return lhs.m_strNodeIdAffected    .compare(rhs.m_strNodeIdAffected    , Qt::CaseInsensitive) == 0 &&
+		   lhs.m_strNodeIdAffectedType.compare(rhs.m_strNodeIdAffectedType, Qt::CaseInsensitive) == 0 &&
+		   lhs.m_uiVerb == rhs.m_uiVerb;
+}
 
 Q_DECLARE_METATYPE(QUaChangeStructureDataType);
 
