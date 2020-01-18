@@ -868,6 +868,12 @@ UA_Logger QUaServer::getLogger()
 #else
 			auto srv = static_cast<QUaServer*>(logContext);
 #endif // QT_DEBUG 
+			// do not process log message if nobody listening
+			static const QMetaMethod logSignal = QMetaMethod::fromSignal(&QUaServer::logMessage);
+			if (!srv->isSignalConnected(logSignal))
+			{
+				return;
+			}
 			vsprintf(srv->m_logBuffer.data(), msg, args);
 			QString strMessage = QString::fromUtf8(srv->m_logBuffer);
 			emit srv->logMessage({

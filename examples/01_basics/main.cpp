@@ -9,6 +9,13 @@ int main(int argc, char *argv[])
 
 	QUaServer server;
 
+	// logging
+
+	QObject::connect(&server, &QUaServer::logMessage,
+    [](const QUaLog &log) {
+        qDebug() << "[" << log.level << "] :" << log.message;
+    });
+
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// basics
