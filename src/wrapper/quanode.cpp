@@ -495,8 +495,12 @@ QStringList QUaNode::nodeBrowsePath() const
 	{
 		return QStringList() << this->browseName();
 	}
-	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+#ifdef QT_DEBUG 
+	QUaNode* parent = dynamic_cast<QUaNode*>(this->parent());
 	Q_CHECK_PTR(parent);
+#else
+	QUaNode* parent = static_cast<QUaNode*>(this->parent());
+#endif // QT_DEBUG 
 	return parent->nodeBrowsePath() << this->browseName();
 }
 
@@ -854,7 +858,7 @@ QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, QUaServer * server)
 QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
 {
 	void * context = QUaNode::getVoidContext(nodeId, server);
-	// try to cast to C++ node
+	// try to cast to C++ node, dynamic_cast check is necessary
 	return dynamic_cast<QUaNode*>(static_cast<QObject*>(context));
 }
 

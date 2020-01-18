@@ -4,6 +4,7 @@
 #include <QTimer>
 
 #define QUA_DEBOUNCE_PERIOD_MS 50
+#define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
@@ -17,8 +18,12 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	// get server from context object
+#ifdef QT_DEBUG 
 	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
 	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(typeNodeContext);
+#endif // QT_DEBUG 
 	if (!srv)
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -30,8 +35,12 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	if (srv->m_hashSignalers.contains(*typeNodeId))
 	{
 		auto signaler = srv->m_hashSignalers.value(*typeNodeId);
+#ifdef QT_DEBUG 
 		auto newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(*nodeContext));
 		Q_CHECK_PTR(newInstance);
+#else
+		auto newInstance = static_cast<QUaNode*>(*nodeContext);
+#endif // QT_DEBUG 
 		emit signaler->signalNewInstance(newInstance);
 	}
 	return st;
@@ -156,9 +165,13 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	server->m_newNodeMetaObject = &metaObject;
 	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QUaServer*, server));
+#ifdef QT_DEBUG 
 	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
-	auto * newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(pQObject));
+	auto* newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(pQObject));
 	Q_CHECK_PTR(newInstance);
+#else
+	auto* newInstance = static_cast<QUaNode*>(pQObject);
+#endif // QT_DEBUG 
 	if (!newInstance)
 	{
 		UA_NodeId_clear(&topBoundParentNodeId);
@@ -204,8 +217,12 @@ UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
+#ifdef QT_DEBUG 
 	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(methodContext);
+#endif // QT_DEBUG 
 	if (!srv)
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -246,9 +263,13 @@ QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
 {
 	auto context = QUaNode::getVoidContext(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), server);
 	// try to cast to C++ server
-	auto qServer = dynamic_cast<QUaServer*>(static_cast<QObject*>(context));
-	Q_CHECK_PTR(qServer);
-	return qServer;
+#ifdef QT_DEBUG 
+	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(context));
+	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(context);
+#endif // QT_DEBUG 
+	return srv;
 }
 
 UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues)
@@ -580,6 +601,7 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_bytePrivateKey = QByteArray();
 	m_bytePrivateKeyInternal = QByteArray();
 #endif
+	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// setup server (other defaults)
@@ -638,6 +660,9 @@ void QUaServer::resetConfig()
 		UA_ServerConfig_setMinimal(config, m_port, ptrCert);
 	}
 #endif
+
+	// setup logger
+	config->logger = this->getLogger();
 
 	// setup access control
 	AccessControlContext* context = static_cast<AccessControlContext*>(config->accessControl.context);
@@ -770,6 +795,8 @@ void QUaServer::setupServer()
 	// read initial values for server description
 	UA_ServerConfig* config = UA_Server_getConfig(m_server);
 	UA_ServerConfig_setMinimal(config, m_port, nullptr);
+	// setup logger
+	config->logger = this->getLogger();
 	// get server app name
 	m_byteApplicationName = QByteArray(
 		(char*)config->applicationDescription.applicationName.text.data,
@@ -828,6 +855,30 @@ void QUaServer::setupServer()
 		m_listChanges.clear();
 	}, QUA_DEBOUNCE_PERIOD_MS);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+}
+
+UA_Logger QUaServer::getLogger()
+{
+	return {
+		[](void* logContext, UA_LogLevel level, UA_LogCategory category, const char* msg, va_list args)
+		{
+#ifdef QT_DEBUG 
+			auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(logContext));
+			Q_CHECK_PTR(srv);
+#else
+			auto srv = static_cast<QUaServer*>(logContext);
+#endif // QT_DEBUG 
+			vsprintf(srv->m_logBuffer.data(), msg, args);
+			QString strMessage = QString::fromUtf8(srv->m_logBuffer);
+			emit srv->logMessage({
+				strMessage,
+				static_cast<LogLevel>(level),
+				static_cast<LogCategory>(category)
+			});
+		},
+		this,
+		nullptr
+	};
 }
 
 QUaServer::~QUaServer()

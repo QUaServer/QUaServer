@@ -23,8 +23,12 @@ UA_StatusCode QUaBaseObject::methodCallback(UA_Server        * server,
 	Q_UNUSED(inputSize     );
 	Q_UNUSED(outputSize    );
 	// get node from context object
+#ifdef QT_DEBUG 
 	auto obj = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(obj);
+#else
+	auto obj = static_cast<QUaBaseObject*>(methodContext);
+#endif // QT_DEBUG 
 	if (!obj)
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;

@@ -19,8 +19,12 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	Q_UNUSED(range);
 	Q_UNUSED(data);
 	// get variable from context
+#ifdef QT_DEBUG 
 	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
 	Q_CHECK_PTR(var);
+#else
+	auto var = static_cast<QUaBaseVariable*>(nodeContext);
+#endif // QT_DEBUG 
 	if (!var)
 	{
 		return;
@@ -51,8 +55,12 @@ void QUaBaseVariable::onRead(UA_Server             *server,
 	Q_UNUSED(range);
 	Q_UNUSED(data);
 	// get variable from context
+#ifdef QT_DEBUG 
 	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
 	Q_CHECK_PTR(var);
+#else
+	auto var = static_cast<QUaBaseVariable*>(nodeContext);
+#endif // QT_DEBUG 
 	if (!var)
 	{
 		return;

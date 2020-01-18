@@ -207,6 +207,38 @@ public:
 	template<typename M>
 	void        setUserValidationCallback(const M &callback);
 
+	// Log API
+
+	enum LogLevel { 
+		Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
+		Debug   = UA_LogLevel::UA_LOGLEVEL_DEBUG,
+		Info    = UA_LogLevel::UA_LOGLEVEL_INFO,
+		Warning = UA_LogLevel::UA_LOGLEVEL_WARNING,
+		Error   = UA_LogLevel::UA_LOGLEVEL_ERROR,
+		Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
+	};
+	Q_ENUM(LogLevel)
+	typedef QUaServer::LogLevel QUaLogLevel;
+
+	enum LogCategory {
+		Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
+		SecurecChannel = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
+		Session        = UA_LogCategory::UA_LOGCATEGORY_SESSION,
+		Server         = UA_LogCategory::UA_LOGCATEGORY_SERVER,
+		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
+		UserLand       = UA_LogCategory::UA_LOGCATEGORY_USERLAND,
+		SecurityPolicy = UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY
+	};
+	Q_ENUM(LogCategory)
+	typedef QUaServer::LogCategory QUaLogCategory;
+
+	struct QUaLog
+	{
+		QString        message;
+		QUaLogLevel    level;
+		QUaLogCategory category;
+	};
+
 signals:
 	void isRunningChanged            (const bool       &running           );
 	void portChanged                 (const quint16    &port              );
@@ -224,7 +256,10 @@ signals:
 	void softwareVersionChanged      (const QString &strSoftwareVersion   );
 	void buildNumberChanged          (const QString &strBuildNumber       );
 	void anonymousLoginAllowedChanged(const bool    &anonymousLoginAllowed);
-									    
+	
+	// Log API
+	void logMessage(const QUaLog &log);
+
 	// NOTE : private signal
 	void iterateServer(QPrivateSignal);
 
@@ -242,6 +277,7 @@ private:
 	QByteArray              m_byteCertificateInternal; // NOTE : needs to exists as long as server instance
 	bool                    m_anonymousLoginAllowed;
 	QUaFolderObject       * m_pobjectsFolder;
+	QByteArray              m_logBuffer;
 
 #ifdef UA_ENABLE_ENCRYPTION
 	QByteArray              m_bytePrivateKey;
@@ -281,6 +317,7 @@ private:
 		                                    UA_ByteString    &outUaCert, 
 		                                    QByteArray       &outByteCert);
 	void setupServer();
+	UA_Logger getLogger();
 	// types
 	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
@@ -416,6 +453,11 @@ private:
 	const UA_NodeId   * m_newEventOriginatorNodeId;
 	const QStringList * m_newEventDefaultProperties;
 };
+
+typedef QUaServer::QUaLog      QUaLog;
+typedef QUaServer::LogLevel    QUaLogLevel;
+typedef QUaServer::LogCategory QUaLogCategory;
+Q_DECLARE_METATYPE(QUaLog);
 
 template<typename T>
 inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)
