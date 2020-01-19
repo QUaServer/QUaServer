@@ -26,6 +26,24 @@ struct {								\
 }
 
  /*
+  * List access methods
+  */
+#define	LIST_FIRST(head)		((head)->lh_first)
+#define	LIST_END(head)			NULL
+#define	LIST_EMPTY(head)		(LIST_FIRST(head) == LIST_END(head))
+#define	LIST_NEXT(elm, field)		((elm)->field.le_next)
+
+#define LIST_FOREACH(var, head, field)					\
+    for((var) = LIST_FIRST(head);					\
+        (var)!= LIST_END(head);					\
+        (var) = LIST_NEXT(var, field))
+
+#define	LIST_FOREACH_SAFE(var, head, field, tvar)			\
+    for ((var) = LIST_FIRST(head);				\
+        (var) && ((tvar) = LIST_NEXT(var, field), 1);		\
+        (var) = (tvar))
+
+ /*
   * Simple queue definitions.
   */
 #define SIMPLEQ_HEAD(name, type)					\
@@ -64,6 +82,43 @@ struct {								\
 struct name {                                   \
     struct type *zip_root;                      \
 }
+
+   /*
+    * tail queue access methods
+    */
+#define	TAILQ_FIRST(head)		((head)->tqh_first)
+#define	TAILQ_END(head)			NULL
+#define	TAILQ_NEXT(elm, field)		((elm)->field.tqe_next)
+#define TAILQ_LAST(head, headname)					\
+    (*(((struct headname *)((head)->tqh_last))->tqh_last))
+    /* XXX */
+#define TAILQ_PREV(elm, headname, field)				\
+    (*(((struct headname *)((elm)->field.tqe_prev))->tqh_last))
+#define	TAILQ_EMPTY(head)						\
+    (TAILQ_FIRST(head) == TAILQ_END(head))
+
+#define TAILQ_FOREACH(var, head, field)					\
+    for((var) = TAILQ_FIRST(head);					\
+        (var) != TAILQ_END(head);					\
+        (var) = TAILQ_NEXT(var, field))
+
+#define	TAILQ_FOREACH_SAFE(var, head, field, tvar)			\
+    for ((var) = TAILQ_FIRST(head);					\
+        (var) != TAILQ_END(head) &&					\
+        ((tvar) = TAILQ_NEXT(var, field), 1);			\
+        (var) = (tvar))
+
+
+#define TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
+    for((var) = TAILQ_LAST(head, headname);				\
+        (var) != TAILQ_END(head);					\
+        (var) = TAILQ_PREV(var, headname, field))
+
+#define	TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar)	\
+    for ((var) = TAILQ_LAST(head, headname);			\
+        (var) != TAILQ_END(head) &&					\
+        ((tvar) = TAILQ_PREV(var, headname, field), 1);		\
+        (var) = (tvar))
 
 typedef enum {
     UA_SERVERLIFECYCLE_FRESH,
@@ -108,6 +163,21 @@ typedef struct {
     size_t           totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
 #endif
 } UA_Session;
+
+typedef void (*UA_ApplicationCallback)(void* application, void* data);
+
+typedef struct UA_DelayedCallback {
+    SIMPLEQ_ENTRY(UA_DelayedCallback) next;
+    UA_ApplicationCallback callback;
+    void* application;
+    void* data;
+} UA_DelayedCallback;
+
+typedef struct session_list_entry {
+    UA_DelayedCallback cleanupCallback;
+    LIST_ENTRY(session_list_entry) pointers;
+    UA_Session session;
+} session_list_entry;
 
 struct UA_TimerEntry;
 typedef struct UA_TimerEntry UA_TimerEntry;
@@ -187,6 +257,54 @@ typedef struct {
     UA_UInt32 lastTokenId;
     UA_Server* server;
 } UA_SecureChannelManager;
+
+typedef enum {
+    UA_SECURECHANNELSTATE_FRESH,
+    UA_SECURECHANNELSTATE_OPEN,
+    UA_SECURECHANNELSTATE_CLOSED
+} UA_SecureChannelState;
+
+typedef TAILQ_HEAD(UA_MessageQueue, UA_Message) UA_MessageQueue;
+
+struct UA_SecureChannel {
+    UA_SecureChannelState   state;
+    UA_MessageSecurityMode  securityMode;
+    /* We use three tokens because when switching tokens the client is allowed to accept
+     * messages with the old token for up to 25% of the lifetime after the token would have timed out.
+     * For messages that are sent, the new token is already used, which is contained in the securityToken
+     * variable. The nextSecurityToken variable holds a newly issued token, that will be automatically
+     * revolved into the securityToken variable. This could be done with two variables, but would require
+     * greater changes to the current code. This could be done in the future after the client and networking
+     * structure has been reworked, which would make this easier to implement. */
+    UA_ChannelSecurityToken securityToken; /* the channelId is contained in the securityToken */
+    UA_ChannelSecurityToken nextSecurityToken;
+    UA_ChannelSecurityToken previousSecurityToken;
+
+    /* The endpoint and context of the channel */
+    const UA_SecurityPolicy* securityPolicy;
+    void* channelContext; /* For interaction with the security policy */
+    UA_Connection* connection;
+
+    /* Asymmetric encryption info */
+    UA_ByteString remoteCertificate;
+    UA_Byte remoteCertificateThumbprint[20]; /* The thumbprint of the remote certificate */
+
+    /* Symmetric encryption info */
+    UA_ByteString remoteNonce;
+    UA_ByteString localNonce;
+
+    UA_UInt32 receiveSequenceNumber;
+    UA_UInt32 sendSequenceNumber;
+
+    LIST_HEAD(, UA_SessionHeader) sessions;
+    UA_MessageQueue messages;
+};
+
+typedef struct channel_entry {
+    UA_DelayedCallback cleanupCallback;
+    TAILQ_ENTRY(channel_entry) pointers;
+    UA_SecureChannel channel;
+} channel_entry;
 
 struct UA_Server {
     /* Config */

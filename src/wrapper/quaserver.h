@@ -44,6 +44,43 @@ signals:
 	void signalNewInstance(QUaNode *node);
 };
 
+class QUaSession : public QObject
+{
+	friend class QUaServer;
+	Q_OBJECT
+
+	Q_PROPERTY(QString sessionId       READ sessionId      )
+	Q_PROPERTY(QString userName        READ userName       )
+	Q_PROPERTY(QString applicationName READ applicationName)
+	Q_PROPERTY(QString applicationUri  READ applicationUri )
+	Q_PROPERTY(QString productUri      READ productUri     )
+	Q_PROPERTY(QString address         READ address        )
+	Q_PROPERTY(quint16 port            READ port           )
+
+public:
+
+	explicit QUaSession(QObject* parent = 0);
+	QUaSession(const QUaSession& other);
+
+	QString sessionId      () const;
+	QString userName       () const;
+	QString applicationName() const;
+	QString applicationUri () const;
+	QString productUri     () const;
+	QString address        () const;
+	quint16 port           () const;
+
+private:
+	QString m_strSessionId;
+	QString m_strUserName;
+	QString m_strApplicationName;
+	QString m_strApplicationUri;
+	QString m_strProductUri;
+	QString m_strAddress;
+	quint16 m_intPort;
+};
+Q_DECLARE_METATYPE(QUaSession);
+
 class QUaServer : public QObject
 {
 	friend class QUaNode;
@@ -260,6 +297,10 @@ signals:
 	// Log API
 	void logMessage(const QUaLog &log);
 
+	// Sessions API
+	void clientConnected   (const QUaSession& sessionData);
+	void clientDisconnected(const QUaSession& sessionData);
+
 	// NOTE : private signal
 	void iterateServer(QPrivateSignal);
 
@@ -291,14 +332,14 @@ private:
 	QByteArray m_byteProductUri;
 	QByteArray m_byteManufacturerName;
 	QByteArray m_byteSoftwareVersion;
-	QByteArray m_byteBuildNumber;
+	QByteArray m_byteBuildNumber; 
 
-	QHash<QString     , QString  > m_hashUsers;
-	QHash<UA_NodeId   , QString  > m_hashSessions;
-	QMap <QString     , UA_NodeId> m_mapTypes;
-	QHash<QString     , UA_NodeId> m_hashEnums;
-	QHash<QUaReference, UA_NodeId> m_hashRefs;
-	QHash<UA_NodeId, QUaSignaler*> m_hashSignalers;
+	QHash<QString     , QString   > m_hashUsers;
+	QHash<UA_NodeId   , QUaSession> m_hashSessions;
+	QMap <QString     , UA_NodeId > m_mapTypes;
+	QHash<QString     , UA_NodeId > m_hashEnums;
+	QHash<QUaReference, UA_NodeId > m_hashRefs;
+	QHash<UA_NodeId, QUaSignaler* > m_hashSignalers;
 	QUaValidationCallback          m_validationCallback;
 
 	// change event instance to notify client when nodes added or removed
@@ -409,6 +450,9 @@ private:
 		                                 const UA_NodeId              *sessionId,
 		                                 const UA_ExtensionObject     *userIdentityToken,
 		                                 void                        **sessionContext);
+
+	static void newSession(QUaServer* server, 
+		                        const UA_NodeId* sessionId);
 
 	static void closeSession(UA_Server        *server, 
 		                     UA_AccessControl *ac, 

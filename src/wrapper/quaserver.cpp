@@ -338,15 +338,18 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 	AccessControlContext *context = (AccessControlContext*)ac->context;
 
 	// NOTE : custom code : get server instance
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
 	/* The empty token is interpreted as anonymous */
 	if (userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
 		if (!context->allowAnonymous)
 			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
 		// NOTE : custom code : add session to hash
-		Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
-		qServer->m_hashSessions[*sessionId] = "";
+		Q_ASSERT(!srv->m_hashSessions.contains(*sessionId));
+		srv->m_hashSessions[*sessionId].m_strUserName = "";
+
+		// notify client connected
+		QUaServer::newSession(srv, sessionId);
 
 		/* No userdata atm */
 		*sessionContext = NULL;
@@ -373,8 +376,11 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 
 		// NOTE : custom code : add session to hash
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
-		//Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
-		qServer->m_hashSessions[*sessionId] = "";
+		//Q_ASSERT(!srv->m_hashSessions.contains(*sessionId));
+		srv->m_hashSessions[*sessionId].m_strUserName = "";
+
+		// notify client connected
+		QUaServer::newSession(srv, sessionId);
 
 		/* No userdata atm */
 		*sessionContext = NULL;
@@ -406,24 +412,27 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		const QString userName = QString::fromUtf8((char*)userToken->userName.data, (int)userToken->userName.length);
 		const QString password = QString::fromUtf8((char*)userToken->password.data, (int)userToken->password.length);	
 		// Call validation callback
-		UA_Boolean match = qServer->m_validationCallback(userName, password);
+		UA_Boolean match = srv->m_validationCallback(userName, password);
 		if (!match)
 		{
 			return UA_STATUSCODE_BADUSERACCESSDENIED;			
 		}
-		else if (match && !qServer->m_hashUsers.contains(userName))
+		else if (match && !srv->m_hashUsers.contains(userName))
 		{
 			// Server must be aware of user name otherwise it will kick user out of session
 			// in user access callbacks
 			// NOTE : do not keep password in memory for security
-			qServer->m_hashUsers.insert(userName, "");
+			srv->m_hashUsers.insert(userName, "");
 		}
 
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
-		//Q_ASSERT(!qServer->m_hashSessions.contains(*sessionId));
+		//Q_ASSERT(!srv->m_hashSessions.contains(*sessionId));
 
 		// NOTE : custom code : add session to hash
-		qServer->m_hashSessions[*sessionId] = userName;
+		srv->m_hashSessions[*sessionId].m_strUserName = userName;
+
+		// notify client connected
+		QUaServer::newSession(srv, sessionId);
 
 		/* No userdata atm */
 		*sessionContext = NULL;
@@ -435,6 +444,81 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 	return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 }
 
+void QUaServer::newSession(QUaServer* server,
+	                            const UA_NodeId* sessionId)
+{
+	// get session data
+	QString strApplicationName;
+	QString strApplicationUri;
+	QString strProductUri;
+	auto sm = &server->m_server->sessionManager;
+	session_list_entry* current, * temp_s;
+	LIST_FOREACH_SAFE(current, &sm->sessions, pointers, temp_s) 
+	{
+		UA_Session* session = &current->session;
+		if (!UA_NodeId_equal(&session->sessionId, sessionId))
+		{
+			continue;
+		}
+		UA_ApplicationDescription clientDescription = session->clientDescription;
+		Q_ASSERT(clientDescription.applicationType == UA_APPLICATIONTYPE_CLIENT);
+		strApplicationUri  = QUaTypesConverter::uaStringToQString(clientDescription.applicationUri);
+		strProductUri      = QUaTypesConverter::uaStringToQString(clientDescription.productUri);
+		strApplicationName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&clientDescription.applicationName);
+		break;
+	}
+	// get connection data
+	QString strAddress;
+	quint16 intPort;
+	auto cm = &server->m_server->secureChannelManager;
+	channel_entry* entry, * temp_c;
+	TAILQ_FOREACH_SAFE(entry, &cm->channels, pointers, temp_c) 
+	{
+		UA_Connection* connection = entry->channel.connection;
+
+		auto sockFd = connection->sockfd;
+		sockaddr address;
+		socklen_t address_len = sizeof(address);
+		auto res = getpeername(sockFd, &address, &address_len);
+
+		char remote_name[100];
+		res = UA_getnameinfo(&address,
+			sizeof(struct sockaddr_storage),
+			remote_name, sizeof(remote_name),
+			NULL, 0, NI_NUMERICHOST);
+
+		strAddress = QString(remote_name);
+
+		switch (address.sa_family) {
+		case AF_INET: {
+			sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(&address);
+			intPort = static_cast<quint16>(sin->sin_port);
+			break;
+		}
+		case AF_INET6: {
+			sockaddr_in6* sin = reinterpret_cast<sockaddr_in6*>(&address);
+			intPort = static_cast<quint16>(sin->sin6_port);
+			break;
+		}
+		default:
+			Q_ASSERT(false);
+		}
+
+		
+	}
+
+	Q_ASSERT(server->m_hashSessions.contains(*sessionId));
+
+	server->m_hashSessions[*sessionId].m_strSessionId       = QUaTypesConverter::nodeIdToQString(*sessionId);
+	server->m_hashSessions[*sessionId].m_strApplicationName	= strApplicationName;
+	server->m_hashSessions[*sessionId].m_strApplicationUri	= strApplicationUri	;
+	server->m_hashSessions[*sessionId].m_strProductUri		= strProductUri		;
+	server->m_hashSessions[*sessionId].m_strAddress			= strAddress		;
+	server->m_hashSessions[*sessionId].m_intPort			= intPort			;
+
+	emit server->clientConnected(server->m_hashSessions[*sessionId]);
+}
+
 void QUaServer::closeSession(UA_Server        * server, 
 	                         UA_AccessControl * ac, 
 	                         const UA_NodeId  * sessionId, 
@@ -443,9 +527,9 @@ void QUaServer::closeSession(UA_Server        * server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
 	// remove session form hash
-	qServer->m_hashSessions.remove(*sessionId);
+	emit srv->clientDisconnected(srv->m_hashSessions.take(*sessionId));
 }
 
 UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
@@ -459,12 +543,12 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
-	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	// get user
-	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	QString strUserName = srv->m_hashSessions[*sessionId].m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -493,12 +577,12 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
-	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	// get user
-	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	QString strUserName = srv->m_hashSessions[*sessionId].m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -532,12 +616,12 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 	// overall execution permissions for method regardless of conntext object
 	// boils down to whether user exists
 	// get server
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
-	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	// get user
-	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	QString strUserName = srv->m_hashSessions[*sessionId].m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -564,12 +648,12 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(ac);
 	// get server
-	QUaServer *qServer = QUaServer::getServerNodeContext(server);
-	Q_ASSERT(qServer->m_hashSessions.contains(*sessionId));
+	QUaServer *srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	// get user
-	QString strUserName = qServer->m_hashSessions.value(*sessionId);
+	QString strUserName = srv->m_hashSessions[*sessionId].m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !qServer->userExists(strUserName))
+	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -742,6 +826,10 @@ void QUaServer::setupServer()
 	if (QMetaType::type("QUaEnumEntry") == QMetaType::UnknownType)
 	{
 		qRegisterMetaType<QUaEnumEntry>("QUaEnumEntry");
+	}
+	if (QMetaType::type("QUaSession") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaEnumEntry>("QUaSession");
 	}
 	// Server stuff
 	UA_StatusCode st;
@@ -1104,7 +1192,7 @@ void QUaServer::setIsRunning(const bool& running)
 
 quint16 QUaServer::maxSecureChannels() const
 {
-	return m_maxSecureChannels;;
+	return m_maxSecureChannels;
 }
 
 void QUaServer::setMaxSecureChannels(const quint16 & maxSecureChannels)
@@ -2284,4 +2372,54 @@ UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, co
 	return referenceTypeId;
 }
 
+QUaSession::QUaSession(QObject* parent/* = 0*/)
+	: QObject(parent)
+{
 
+}
+
+QUaSession::QUaSession(const QUaSession& other)
+{
+	m_strSessionId       = other.m_strSessionId;
+	m_strUserName        = other.m_strUserName;
+	m_strApplicationName = other.m_strApplicationName;
+	m_strApplicationUri  = other.m_strApplicationUri;
+	m_strProductUri      = other.m_strProductUri;
+	m_strAddress         = other.m_strAddress;
+	m_intPort            = other.m_intPort;
+}
+
+QString QUaSession::sessionId() const
+{
+	return m_strSessionId;
+}
+
+QString QUaSession::userName() const
+{
+	return m_strUserName;
+}
+
+QString QUaSession::applicationName() const
+{
+	return m_strApplicationName;
+}
+
+QString QUaSession::applicationUri() const
+{
+	return m_strApplicationUri;
+}
+
+QString QUaSession::productUri() const
+{
+	return m_strProductUri;
+}
+
+QString QUaSession::address() const
+{
+	return m_strAddress;
+}
+
+quint16 QUaSession::port() const
+{
+	return m_intPort;
+}
