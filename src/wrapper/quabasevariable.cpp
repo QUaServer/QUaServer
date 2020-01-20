@@ -85,6 +85,7 @@ QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	//          is used in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
+	m_type = QMetaType::UnknownType;
 	// this should not be needed since stored in m_nodeId already??:
 	//    const UA_NodeId &nodeId = *server->m_newNodeNodeId;
 	// sets also write callback to emit onWrite signal
@@ -202,7 +203,6 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-
 	// convert to UA_Variant and set new value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
 	m_bInternalWrite = true;
@@ -225,31 +225,14 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	}
 	// [NOTE] do not set rank or arrayDimensions because they are permanent
 	//        is better to just set array dimensions on Variant value and leave rank as ANY
+	// update cache
+	m_type = newType;
+	//Q_ASSERT(this->dataTypeInternal() == m_type);
 }
 
 QMetaType::Type QUaBaseVariable::dataType() const
 {
-	Q_CHECK_PTR(m_qUaServer);
-	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QMetaType::UnknownType;
-	}
-	// read type
-	UA_NodeId outDataType;
-	auto st = UA_Server_readDataType(m_qUaServer->m_server, m_nodeId, &outDataType);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-	// check if type is enum, if so, return type int 32
-	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
-	{
-		UA_NodeId_clear(&outDataType);
-		return QMetaType::Int;
-	}
-	// else return converted type
-	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
-	UA_NodeId_clear(&outDataType);
-	return type;
+	return m_type;
 }
 
 QString QUaBaseVariable::dataTypeNodeId() const
@@ -341,6 +324,9 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		QUaTypesConverter::uaTypeNodeIdFromQType(dataType));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// update cache
+	m_type = dataType;
+	Q_ASSERT(this->dataTypeInternal() == m_type);
 }
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
@@ -427,6 +413,34 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 		enumTypeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// update cache
+	m_type = QMetaType::Int;
+	Q_ASSERT(this->dataTypeInternal() == m_type);
+}
+
+QMetaType::Type QUaBaseVariable::dataTypeInternal() const
+{
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return QMetaType::UnknownType;
+	}
+	// read type
+	UA_NodeId outDataType;
+	auto st = UA_Server_readDataType(m_qUaServer->m_server, m_nodeId, &outDataType);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// check if type is enum, if so, return type int 32
+	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
+	{
+		UA_NodeId_clear(&outDataType);
+		return QMetaType::Int;
+	}
+	// else return converted type
+	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
+	UA_NodeId_clear(&outDataType);
+	return type;
 }
 
 qint32 QUaBaseVariable::valueRank() const

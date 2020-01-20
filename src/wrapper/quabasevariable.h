@@ -146,12 +146,14 @@ private:
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
 
-
+	// cache type for performance
+	QMetaType::Type m_type; 
 	bool m_bInternalWrite;
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;
 
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
+	QMetaType::Type dataTypeInternal() const;
 };
 
 #endif // QUABASEVARIABLE_H

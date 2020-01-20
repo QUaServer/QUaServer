@@ -11,13 +11,20 @@ int main(int argc, char *argv[])
 
 	QUaServer server;
 
-	QUaFolderObject * objsFolder = server.objectsFolder();
+	// logging
+
+	QObject::connect(&server, &QUaServer::logMessage,
+	[](const QUaLog& log) {
+		qDebug() << "[" << log.level << "] :" << log.message;
+	});
 
 	// register new type
 
 	server.registerType<TemperatureSensor>();
 
 	// create new type instances
+
+	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	auto sensor1 = objsFolder->addChild<TemperatureSensor>();
 	sensor1->setDisplayName("Sensor1");
