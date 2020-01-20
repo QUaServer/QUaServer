@@ -276,6 +276,10 @@ public:
 		QUaLogCategory category;
 	};
 
+	// Sessions API
+
+	QList<QUaSession> sessions() const;
+
 signals:
 	void isRunningChanged            (const bool       &running           );
 	void portChanged                 (const quint16    &port              );

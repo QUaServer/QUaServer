@@ -445,7 +445,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 }
 
 void QUaServer::newSession(QUaServer* server,
-	                            const UA_NodeId* sessionId)
+	                       const UA_NodeId* sessionId)
 {
 	// get session data
 	QString strApplicationName;
@@ -472,50 +472,48 @@ void QUaServer::newSession(QUaServer* server,
 	quint16 intPort;
 	auto cm = &server->m_server->secureChannelManager;
 	channel_entry* entry, * temp_c;
-	TAILQ_FOREACH_SAFE(entry, &cm->channels, pointers, temp_c) 
+	// assume new connection is always the last one on the list
+	// sonce we do not have a mechanism to associate it with the sessionId
+	channel_entry* last = TAILQ_LAST(&cm->channels, channel_list);
+	UA_Connection* connection = last->channel.connection;
+	// get peer name (address) from socket fd
+	auto sockFd = connection->sockfd;
+	sockaddr address;
+	socklen_t address_len = sizeof(address);
+	auto res = getpeername(sockFd, &address, &address_len);
+	char remote_name[100];
+	res = UA_getnameinfo(&address,
+		sizeof(struct sockaddr_storage),
+		remote_name, sizeof(remote_name),
+		NULL, 0, NI_NUMERICHOST);
+	strAddress = QString(remote_name);
+	// get peer port
+	switch (address.sa_family) 
 	{
-		UA_Connection* connection = entry->channel.connection;
-
-		auto sockFd = connection->sockfd;
-		sockaddr address;
-		socklen_t address_len = sizeof(address);
-		auto res = getpeername(sockFd, &address, &address_len);
-
-		char remote_name[100];
-		res = UA_getnameinfo(&address,
-			sizeof(struct sockaddr_storage),
-			remote_name, sizeof(remote_name),
-			NULL, 0, NI_NUMERICHOST);
-
-		strAddress = QString(remote_name);
-
-		switch (address.sa_family) {
-		case AF_INET: {
+	case AF_INET: 
+		{
 			sockaddr_in* sin = reinterpret_cast<sockaddr_in*>(&address);
 			intPort = static_cast<quint16>(sin->sin_port);
 			break;
 		}
-		case AF_INET6: {
+	case AF_INET6: 
+		{
 			sockaddr_in6* sin = reinterpret_cast<sockaddr_in6*>(&address);
 			intPort = static_cast<quint16>(sin->sin6_port);
 			break;
 		}
-		default:
-			Q_ASSERT(false);
-		}
-
-		
+	default:
+		Q_ASSERT(false);
 	}
-
+	// store session data
 	Q_ASSERT(server->m_hashSessions.contains(*sessionId));
-
 	server->m_hashSessions[*sessionId].m_strSessionId       = QUaTypesConverter::nodeIdToQString(*sessionId);
 	server->m_hashSessions[*sessionId].m_strApplicationName	= strApplicationName;
 	server->m_hashSessions[*sessionId].m_strApplicationUri	= strApplicationUri	;
 	server->m_hashSessions[*sessionId].m_strProductUri		= strProductUri		;
 	server->m_hashSessions[*sessionId].m_strAddress			= strAddress		;
 	server->m_hashSessions[*sessionId].m_intPort			= intPort			;
-
+	// emit new client connected event
 	emit server->clientConnected(server->m_hashSessions[*sessionId]);
 }
 
@@ -2339,6 +2337,11 @@ bool QUaServer::userExists(const QString & strUserName) const
 		return false;
 	}
 	return m_hashUsers.contains(strUserName);
+}
+
+QList<QUaSession> QUaServer::sessions() const
+{
+	return m_hashSessions.values();
 }
 
 UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, const QMetaObject & childMetaObject)

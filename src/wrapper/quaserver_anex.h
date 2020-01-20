@@ -258,6 +258,10 @@ typedef struct {
     UA_Server* server;
 } UA_SecureChannelManager;
 
+// NOTE : just gave it a name in order to be able to use
+//        TAILQ_LAST in QUaServer::newSession
+TAILQ_HEAD(channel_list, channel_entry);
+
 typedef enum {
     UA_SECURECHANNELSTATE_FRESH,
     UA_SECURECHANNELSTATE_OPEN,
