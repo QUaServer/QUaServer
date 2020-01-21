@@ -535,7 +535,9 @@ void QUaServer::closeSession(UA_Server        * server,
 	// get server
 	QUaServer *srv = QUaServer::getServerNodeContext(server);
 	// remove session form hash
-	emit srv->clientDisconnected(srv->m_hashSessions.take(*sessionId));
+	auto session = srv->m_hashSessions.take(*sessionId);
+	emit srv->clientDisconnected(session);
+	session->deleteLater();
 }
 
 UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
