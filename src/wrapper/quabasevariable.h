@@ -194,7 +194,7 @@ private:
 		                const UA_DataValue    *data);
 
 	// cache type for performance
-	QMetaType::Type m_type; 
+	QMetaType::Type m_dataType; 
 	bool m_bInternalWrite;
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;

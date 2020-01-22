@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	// Instantiate server by passing certificate and key
 	QUaServer server;
 	server.setCertificate(certServer.readAll());
-	server.setPrivateKey (privServer.readAll());hack
+	server.setPrivateKey (privServer.readAll());
 
 	privServer.close();
 #else

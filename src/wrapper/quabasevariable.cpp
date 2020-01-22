@@ -124,7 +124,7 @@ QUaBaseVariable::QUaBaseVariable(QUaServer *server)
 	//          is used in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
-	m_type = QMetaType::UnknownType;
+	m_dataType = QMetaType::UnknownType;
 	// this should not be needed since stored in m_nodeId already??:
 	//    const UA_NodeId &nodeId = *server->m_newNodeNodeId;
 	// sets also write callback to emit onWrite signal
@@ -265,13 +265,13 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	// [NOTE] do not set rank or arrayDimensions because they are permanent
 	//        is better to just set array dimensions on Variant value and leave rank as ANY
 	// update cache
-	m_type = newType;
+	m_dataType = newType;
 	//Q_ASSERT(this->dataTypeInternal() == m_type);
 }
 
 QMetaType::Type QUaBaseVariable::dataType() const
 {
-	return m_type;
+	return m_dataType;
 }
 
 QString QUaBaseVariable::dataTypeNodeId() const
@@ -303,6 +303,11 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	// early exit if already same
+	if (dataType == m_dataType)
+	{
+
+	}
 	// need to "reset" dataType before setting a new value
 	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
@@ -364,8 +369,8 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// update cache
-	m_type = dataType;
-	Q_ASSERT(this->dataTypeInternal() == m_type);
+	m_dataType = dataType;
+	Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
@@ -453,8 +458,8 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// update cache
-	m_type = QMetaType::Int;
-	Q_ASSERT(this->dataTypeInternal() == m_type);
+	m_dataType = QMetaType::Int;
+	Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
 QMetaType::Type QUaBaseVariable::dataTypeInternal() const

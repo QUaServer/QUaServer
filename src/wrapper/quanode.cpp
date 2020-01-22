@@ -155,7 +155,7 @@ QUaNode::~QUaNode()
 	// trigger reference deleted, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
-	QUaNode* parent = dynamic_cast<QUaNode*>(this->parent());
+	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
 	if (!parent)
 	{
 		return;
@@ -496,7 +496,7 @@ QStringList QUaNode::nodeBrowsePath() const
 		return QStringList() << this->browseName();
 	}
 #ifdef QT_DEBUG 
-	QUaNode* parent = dynamic_cast<QUaNode*>(this->parent());
+	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
 	Q_CHECK_PTR(parent);
 #else
 	QUaNode* parent = static_cast<QUaNode*>(this->parent());
@@ -634,7 +634,6 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool&
 	{
 		UA_NodeId nodeId = i.next();
 		QUaNode* node = QUaNode::getNodeContext(nodeId, m_qUaServer);
-		Q_CHECK_PTR(node || UA_NodeId_equal(&nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
 		if (node)
 		{
 			retRefList.append(node);
@@ -779,7 +778,7 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
 {
 	// if has a node parent, use parent's callback
-	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	QUaNode * parent = qobject_cast<QUaNode*>(this->parent());
 	if (parent)
 	{
 		return parent->userWriteMask(strUserName);
@@ -791,7 +790,7 @@ QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
 QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
 {
 	// if has a node parent, use parent's callback
-	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	QUaNode * parent = qobject_cast<QUaNode*>(this->parent());
 	if (parent)
 	{
 		return parent->userAccessLevelInternal(strUserName);
@@ -803,7 +802,7 @@ QUaAccessLevel QUaNode::userAccessLevel(const QString & strUserName)
 bool QUaNode::userExecutable(const QString & strUserName)
 {
 	// if has a node parent, use parent's callback
-	QUaNode * parent = dynamic_cast<QUaNode*>(this->parent());
+	QUaNode * parent = qobject_cast<QUaNode*>(this->parent());
 	if (parent)
 	{
 		return parent->userExecutable(strUserName);
@@ -917,7 +916,7 @@ QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
 {
 	void * context = QUaNode::getVoidContext(nodeId, server);
 	// try to cast to C++ node, dynamic_cast check is necessary
-	return dynamic_cast<QUaNode*>(static_cast<QObject*>(context));
+	return qobject_cast<QUaNode*>(static_cast<QObject*>(context));
 }
 
 void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)

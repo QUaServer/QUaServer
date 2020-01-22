@@ -19,7 +19,7 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	Q_UNUSED(sessionContext); 
 	// get server from context object
 #ifdef QT_DEBUG 
-	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(typeNodeContext));
 	Q_CHECK_PTR(srv);
 #else
 	auto srv = static_cast<QUaServer*>(typeNodeContext);
@@ -36,7 +36,7 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	{
 		auto signaler = srv->m_hashSignalers.value(*typeNodeId);
 #ifdef QT_DEBUG 
-		auto newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(*nodeContext));
+		auto newInstance = qobject_cast<QUaNode*>(static_cast<QObject*>(*nodeContext));
 		Q_CHECK_PTR(newInstance);
 #else
 		auto newInstance = static_cast<QUaNode*>(*nodeContext);
@@ -63,7 +63,7 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	auto st = UA_Server_getNodeContext(server, *nodeId, &context);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// try to convert to node
-	auto node = dynamic_cast<QUaNode*>(static_cast<QObject*>(context));
+	auto node = qobject_cast<QUaNode*>(static_cast<QObject*>(context));
 	// early exit if not convertible (this call was triggered by ~QUaNode)
 	if (!node)
 	{
@@ -72,7 +72,7 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	// handle events if enabled
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check if event (not in tree)
-	auto evt = dynamic_cast<QUaBaseEvent*>(node);
+	auto evt = qobject_cast<QUaBaseEvent*>(node);
 	if (evt)
 	{
 		evt->deleteLater();
@@ -92,7 +92,7 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	void * parentContext;
 	st = UA_Server_getNodeContext(server, parentNodeId, &parentContext);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	auto parentNode = dynamic_cast<QUaNode*>(static_cast<QObject*>(parentContext));
+	auto parentNode = qobject_cast<QUaNode*>(static_cast<QObject*>(parentContext));
 	if (!parentNode)
 	{
 		st = UA_Server_setNodeContext(server, *nodeId, nullptr);
@@ -167,7 +167,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	auto * pQObject    = metaObject.newInstance(Q_ARG(QUaServer*, server));
 #ifdef QT_DEBUG 
 	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
-	auto* newInstance = dynamic_cast<QUaNode*>(static_cast<QObject*>(pQObject));
+	auto* newInstance = qobject_cast<QUaNode*>(static_cast<QObject*>(pQObject));
 	Q_CHECK_PTR(newInstance);
 #else
 	auto* newInstance = static_cast<QUaNode*>(pQObject);
@@ -218,7 +218,7 @@ UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 	Q_UNUSED(outputSize    );
 	// get node from context object
 #ifdef QT_DEBUG 
-	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(methodContext));
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(methodContext));
 	Q_CHECK_PTR(srv);
 #else
 	auto srv = static_cast<QUaServer*>(methodContext);
@@ -264,7 +264,7 @@ QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
 	auto context = QUaNode::getVoidContext(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), server);
 	// try to cast to C++ server
 #ifdef QT_DEBUG 
-	auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(context));
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(context));
 	Q_CHECK_PTR(srv);
 #else
 	auto srv = static_cast<QUaServer*>(context);
@@ -599,7 +599,7 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	}
 	// if node from user tree then call user implementation
 	QUaNode * node = QUaNode::getNodeContext(*nodeId, server);
-	QUaBaseVariable * variable = dynamic_cast<QUaBaseVariable *>(node);
+	QUaBaseVariable * variable = qobject_cast<QUaBaseVariable *>(node);
 	if (variable)
 	{
 		return variable->userAccessLevelInternal(strUserName).intValue;
@@ -670,7 +670,7 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	}
 	// if node from user tree then call user implementation
 	QUaNode * node = QUaNode::getNodeContext(*objectId, server);
-	QUaBaseObject * object = dynamic_cast<QUaBaseObject *>(node);
+	QUaBaseObject * object = qobject_cast<QUaBaseObject *>(node);
 	if (object)
 	{
 		// NOTE : could not diff by method name because name multiples are possible
@@ -968,7 +968,7 @@ UA_Logger QUaServer::getLogger()
 		[](void* logContext, UA_LogLevel level, UA_LogCategory category, const char* msg, va_list args)
 		{
 #ifdef QT_DEBUG 
-			auto srv = dynamic_cast<QUaServer*>(static_cast<QObject*>(logContext));
+			auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(logContext));
 			Q_CHECK_PTR(srv);
 #else
 			auto srv = static_cast<QUaServer*>(logContext);
@@ -1743,7 +1743,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			"Method already exists, callback will be overwritten.");
 		m_hashMethods[methNodeId] = [i, this](void* objectContext, const UA_Variant* input, UA_Variant* output) {
 			// get object instance that owns method
-			QUaBaseObject* object = dynamic_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
+			QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
 			Q_ASSERT_X(object,
 				"QUaServer::addMetaMethods",
 				"Cannot call method on invalid C++ object.");

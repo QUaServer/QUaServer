@@ -1,47 +1,12 @@
 #include <QCoreApplication>
 #include <QDebug>
+#include <QFile>
 
 #include <QUaServer>
 
 #include "temperaturesensor.h"
+#include "quaxmlserializer.h"
 
-struct XmlSerializer
-{
-	bool writeInstance(
-		const QString& nodeId, 
-		const QString& typeName, 
-		const QMap<QString, QVariant>& attrs, 
-		const QList<QUaForwardReference>& forwardRefs
-	)
-	{
-		qDebug() << "NodeId :" << nodeId;
-		qDebug() << "TypeName :" << typeName;
-		qDebug() << "Attributes :" << [](const QMap<QString, QVariant>& attrs) {
-			QString strAttrs;
-			QMap<QString, QVariant>::const_iterator i = attrs.constBegin();
-			while (i != attrs.constEnd()) {
-				strAttrs += QString("{%1, %2}").arg(i.key()).arg(i.value().toString());
-				i++;
-			}
-			return strAttrs;
-		}(attrs);
-		qDebug() << "References :" << std::accumulate(forwardRefs.begin(), forwardRefs.end(), QString(), [](const QString &str, QUaForwardReference ref) {
-			return str + QString("{%1->%2}").arg(ref.refType.strForwardName).arg(ref.nodeIdTarget);
-		});
-		qDebug() << "--------------------------------------------------------";
-		return true;
-	}
-
-	bool readInstance(
-		const QString& nodeId, 
-		QString& typeName, 
-		QMap<QString, QVariant>& attrs, 
-		QList<QUaForwardReference>& forwardRefs
-	)
-	{
-		return true;
-	}
-};
 
 int main(int argc, char *argv[])
 {
@@ -95,10 +60,38 @@ int main(int argc, char *argv[])
 	objSubSubBase->setBrowseName("my_subsub_object");
 	objSubSubBase->setDisplayName("my_subsub_object");
 
-	XmlSerializer serializer;
+	// register new type
+
+	server.registerType<TemperatureSensor>();
+
+	auto sensor1 = objSubSubBase->addChild<TemperatureSensor>();
+	sensor1->setDisplayName("Sensor1");
+	sensor1->setBrowseName("Sensor1");
+	auto sensor2 = objSubSubBase->addChild<TemperatureSensor>();
+	sensor2->setDisplayName("Sensor2");
+	sensor2->setBrowseName("Sensor2");
+	auto sensor3 = objSubSubBase->addChild<TemperatureSensor>();
+	sensor3->setDisplayName("Sensor3");
+	sensor3->setBrowseName("Sensor3");
+
+	// serialize
+
+	QUaXmlSerializer serializer;
 	objsFolder->serialize(serializer);
 
-	/*
+	// save to file
+	QFile fileConfig("config.xml");
+	if (fileConfig.open(QIODevice::WriteOnly | QIODevice::Text | QFile::Truncate))
+	{
+		// create stream
+		QTextStream streamConfig(&fileConfig);
+		// save config in file
+		auto b = serializer.toByteArray();
+		streamConfig << b;
+	}
+	// close files
+	fileConfig.close();
+
 	// logging
 
 	QObject::connect(&server, &QUaServer::logMessage,
@@ -106,24 +99,7 @@ int main(int argc, char *argv[])
 		qDebug() << "[" << log.level << "] :" << log.message;
 	});
 
-	// register new type
-
-	server.registerType<TemperatureSensor>();
-
-	// create new type instances
-
-	QUaFolderObject * objsFolder = server.objectsFolder();
-
-	auto sensor1 = objsFolder->addChild<TemperatureSensor>();
-	sensor1->setDisplayName("Sensor1");
-	auto sensor2 = objsFolder->addChild<TemperatureSensor>();
-	sensor2->setDisplayName("Sensor2");
-	auto sensor3 = objsFolder->addChild<TemperatureSensor>();
-	sensor3->setDisplayName("Sensor3");
-
-	*/
-
-	server.start();
+	//server.start();
 
 	return a.exec(); 
 }

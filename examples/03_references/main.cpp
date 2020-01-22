@@ -24,10 +24,10 @@ int main(int argc, char *argv[])
 
 	// create references
 
-	server.registerReference({ "Supplies", "IsSuppliedBy" });
+	server.registerReferenceType({ "Supplies", "IsSuppliedBy" });
 	objSupl1->addReference({ "Supplies", "IsSuppliedBy" }, objSensor1);
 
-	server.registerReference({ "Supplies", "IsSuppliedBy" });
+	server.registerReferenceType({ "Supplies", "IsSuppliedBy" });
 	objSensor2->addReference({ "Supplies", "IsSuppliedBy" }, objSupl1, false);
 
 	// browse references

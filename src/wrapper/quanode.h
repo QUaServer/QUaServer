@@ -50,8 +50,6 @@ Q_DECLARE_METATYPE(QUaReferenceType);
 
 QDebug operator<<(QDebug debug, const QUaReferenceType& refType);
 
-QDebug operator<<(QDebug debug, const QMetaType::Type& metaType);
-
 // to have QUaReferenceType as a hash key
 inline bool operator==(const QUaReferenceType& e1, const QUaReferenceType& e2)
 {
