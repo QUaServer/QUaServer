@@ -3,6 +3,45 @@
 #include <QUaServer>
 #include <QUaBaseDataVariable>
 
+QMetaEnum QUaDataType::m_metaEnum = QMetaEnum::fromType<QUa::Type>();
+
+QUaDataType::QUaDataType()
+{
+	m_type = QUa::Type::UnknownType;
+}
+
+QUaDataType::QUaDataType(const QMetaType::Type& metaType)
+{
+	m_type = static_cast<QUa::Type>(metaType);
+}
+
+QUaDataType::QUaDataType(const QString& strType)
+{
+	*this = QUaDataType(strType.toUtf8());
+}
+
+QUaDataType::QUaDataType(const QByteArray& byteType)
+{
+	bool ok = false;
+	int val = m_metaEnum.keyToValue(byteType.constData(), &ok);
+	m_type = static_cast<QUa::Type>(val);
+}
+
+QUaDataType::operator QMetaType::Type()
+{
+	return static_cast<QMetaType::Type>(m_type);
+}
+
+QUaDataType::operator QString()
+{
+	return QString(m_metaEnum.valueToKey(static_cast<int>(m_type)));
+}
+
+bool QUaDataType::operator==(const QMetaType::Type& metaType)
+{
+	return static_cast<QMetaType::Type>(m_type) == metaType;
+}
+
 // [STATIC]
 void QUaBaseVariable::onWrite(UA_Server             *server, 
 		                      const UA_NodeId       *sessionId,

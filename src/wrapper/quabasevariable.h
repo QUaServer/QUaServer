@@ -47,14 +47,61 @@ The BaseVariableType is the abstract base type for all other VariableTypes.
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
 
+namespace QUa
+{
+	Q_NAMESPACE
+
+	enum class Type
+	{
+		Bool        = QMetaType::Bool,
+		Char        = QMetaType::Char,
+		SChar       = QMetaType::SChar,
+		UChar       = QMetaType::UChar,
+		Short       = QMetaType::Short,
+		UShort      = QMetaType::UShort,
+		Int         = QMetaType::Int,
+		UInt        = QMetaType::UInt,
+		Long        = QMetaType::Long,
+		LongLong    = QMetaType::LongLong,
+		ULong       = QMetaType::ULong,
+		ULongLong   = QMetaType::ULongLong,
+		Float       = QMetaType::Float,
+		Double      = QMetaType::Double,
+		QString     = QMetaType::QString,
+		QDateTime   = QMetaType::QDateTime,
+		QUuid       = QMetaType::QUuid,
+		QByteArray  = QMetaType::QByteArray,
+		UnknownType = QMetaType::UnknownType,
+	};
+	Q_ENUM_NS(Type)
+}
+
+class QUaDataType
+{
+
+public:
+	QUaDataType();
+	QUaDataType(const QMetaType::Type& metaType);
+	QUaDataType(const QString& strType);
+	QUaDataType(const QByteArray& byteType);
+	operator QMetaType::Type();
+	operator QString();
+	bool operator==(const QMetaType::Type& metaType);
+
+private:
+	QUa::Type m_type;
+	static QMetaEnum m_metaEnum;
+};
+
+Q_DECLARE_METATYPE(QUaDataType);
+
 class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
-
 	// Variable Attributes
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
-	Q_PROPERTY(QMetaType::Type   dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
+	Q_PROPERTY(QUaDataType       dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
 	Q_PROPERTY(qint32            valueRank           READ valueRank           WRITE setValueRank     NOTIFY valueRankChanged       )
 	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only      NOTIFY arrayDimensionsChanged*/)
 	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel /* NOTIFY accessLevelChanged */  )
@@ -70,7 +117,7 @@ class QUaBaseVariable : public QUaNode
 
 public:
 	explicit QUaBaseVariable(QUaServer *server);
-	
+
 	// Attributes API
 
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved

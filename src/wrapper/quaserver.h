@@ -190,8 +190,11 @@ public:
 	void        setEnumMap      (const QString &strEnumName, const QUaEnumMap &enumMap);
 	void        updateEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
 	void        removeEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue);
-	// register reference to get a respective refTypeId
-	void registerReference(const QUaReference &ref);
+	
+	// register custom non-hierarchical reference type
+	bool registerReferenceType(const QUaReferenceType &refType, const QString& strNodeId = "");
+	// get list of registered reference types
+	const QList<QUaReferenceType> referenceTypes() const;
 
 	// create instance of a given (variable or object) type
 	template<typename T>
@@ -336,13 +339,14 @@ private:
 	QByteArray m_byteSoftwareVersion;
 	QByteArray m_byteBuildNumber; 
 
-    QHash<QString     , QString    > m_hashUsers;
-    QHash<UA_NodeId   , QUaSession*> m_hashSessions;
-    QMap <QString     , UA_NodeId  > m_mapTypes;
-    QHash<QString     , UA_NodeId  > m_hashEnums;
-    QHash<QUaReference, UA_NodeId  > m_hashRefs;
-    QHash<UA_NodeId, QUaSignaler*  > m_hashSignalers;
-	QUaValidationCallback          m_validationCallback;
+	QHash<QString         , QString      > m_hashUsers;
+	QHash<UA_NodeId       , QUaSession*  > m_hashSessions;
+	QMap <QString         , UA_NodeId    > m_mapTypes;
+	QHash<QString         , UA_NodeId    > m_hashEnums;
+	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
+	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
+	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
+	QUaValidationCallback m_validationCallback;
 
 	// change event instance to notify client when nodes added or removed
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS

@@ -504,21 +504,27 @@ QStringList QUaNode::nodeBrowsePath() const
 	return parent->nodeBrowsePath() << this->browseName();
 }
 
-void QUaNode::addReference(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward/* = true*/)
+void QUaNode::addReference(const QUaReferenceType& ref, QUaNode* nodeTarget, const bool& isForward/* = true*/)
 {
 	// first check if reference type is registered
-	if (!m_qUaServer->m_hashRefs.contains(ref))
+	if (!m_qUaServer->m_hashRefTypes.contains(ref))
 	{
-		m_qUaServer->registerReference(ref);
+		m_qUaServer->registerReferenceType(ref);
 	}
-	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
+	Q_ASSERT(m_qUaServer->m_hashRefTypes.contains(ref));
+	// reject hierarchical references
+	Q_ASSERT_X(!m_qUaServer->m_hashHierRefTypes.contains(ref), "QUaNode::addReference", "Cannot add hierarchical references using this method.");
+	if (m_qUaServer->m_hashHierRefTypes.contains(ref))
+	{
+		return;
+	}
 	// check valid node target
 	Q_ASSERT_X(nodeTarget, "QUaNode::addReference", "Invalid target node.");
 	if (!nodeTarget)
 	{
 		return;
 	}
-	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefTypes[ref];
 	// check if reference already exists
 	auto set = getRefsInternal(ref, isForward);
 	if (set.contains(nodeTarget->m_nodeId))
@@ -552,23 +558,23 @@ void QUaNode::addReference(const QUaReference & ref, QUaNode * nodeTarget, const
 	emit this->referenceAdded(ref, nodeTarget, isForward);
 	emit nodeTarget->referenceAdded(ref, this, !isForward);
 	// subscribe node destructions
-	QObject::connect(nodeTarget, &QObject::destroyed, this, 
-	[this, ref, nodeTarget, isForward]() {
-		// emit event
-		emit this->referenceRemoved(ref, nodeTarget, isForward);
-	});
+	QObject::connect(nodeTarget, &QObject::destroyed, this,
+		[this, ref, nodeTarget, isForward]() {
+			// emit event
+			emit this->referenceRemoved(ref, nodeTarget, isForward);
+		});
 	QObject::connect(this, &QObject::destroyed, nodeTarget,
-	[this, ref, nodeTarget, isForward]() {
-		// emit event
-		emit nodeTarget->referenceRemoved(ref, this, !isForward);
-	});
+		[this, ref, nodeTarget, isForward]() {
+			// emit event
+			emit nodeTarget->referenceRemoved(ref, this, !isForward);
+		});
 }
 
-void QUaNode::removeReference(const QUaReference & ref, QUaNode * nodeTarget, const bool & isForward/* = true*/)
+void QUaNode::removeReference(const QUaReferenceType& ref, QUaNode* nodeTarget, const bool& isForward/* = true*/)
 {
 	// first check if reference type is removeReference
-	Q_ASSERT_X(m_qUaServer->m_hashRefs.contains(ref), "QUaNode::addReference", "Reference not registered.");
-	if (!m_qUaServer->m_hashRefs.contains(ref))
+	Q_ASSERT_X(m_qUaServer->m_hashRefTypes.contains(ref), "QUaNode::addReference", "Reference not registered.");
+	if (!m_qUaServer->m_hashRefTypes.contains(ref))
 	{
 		return;
 	}
@@ -578,7 +584,7 @@ void QUaNode::removeReference(const QUaReference & ref, QUaNode * nodeTarget, co
 	{
 		return;
 	}
-	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefTypes[ref];
 	// check reference exists
 	auto set = getRefsInternal(ref, isForward);
 	if (!set.contains(nodeTarget->m_nodeId))
@@ -617,7 +623,7 @@ void QUaNode::removeReference(const QUaReference & ref, QUaNode * nodeTarget, co
 	QObject::disconnect(this, &QObject::destroyed, nodeTarget, 0);
 }
 
-QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & isForward) const
+QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool& isForward) const
 {
 	QList<QUaNode*> retRefList;
 	// call internal method
@@ -627,32 +633,32 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReference & ref, const bool & i
 	while (i.hasNext())
 	{
 		UA_NodeId nodeId = i.next();
-		QUaNode * node = QUaNode::getNodeContext(nodeId, m_qUaServer);
-		Q_CHECK_PTR(node);
+		QUaNode* node = QUaNode::getNodeContext(nodeId, m_qUaServer);
+		Q_CHECK_PTR(node || UA_NodeId_equal(&nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
 		if (node)
 		{
 			retRefList.append(node);
 		}
 		// cleanup set
 		UA_NodeId_clear(&nodeId);
-	}	
+	}
 	// return
 	return retRefList;
 }
 
 // NOTE : need to cleanup result after calling this method
-QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReference & ref, const bool & isForward) const
+QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool & isForward) const
 {
 	QSet<UA_NodeId> retRefSet;
 	// first check if reference type is registered
-	if (!m_qUaServer->m_hashRefs.contains(ref))
+	if (!m_qUaServer->m_hashRefTypes.contains(ref))
 	{
-		m_qUaServer->registerReference(ref);
+		m_qUaServer->registerReferenceType(ref);
 		// there cannot be any since it didnt even exist before
 		return retRefSet;
 	}
-	Q_ASSERT(m_qUaServer->m_hashRefs.contains(ref));
-	UA_NodeId refTypeId = m_qUaServer->m_hashRefs[ref];
+	Q_ASSERT(m_qUaServer->m_hashRefTypes.contains(ref));
+	UA_NodeId refTypeId = m_qUaServer->m_hashRefTypes[ref];
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&m_nodeId, &bDesc->nodeId); // from child
@@ -716,6 +722,58 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 	}
 	// else use possible reimplementation
 	return this->userExecutable(strUserName);
+}
+
+const QMap<QString, QVariant> QUaNode::serializeAttrs() const
+{
+	QMap<QString, QVariant> retMap;
+	auto metaObject = this->metaObject();
+	// list meta props
+	int propCount  = metaObject->propertyCount();
+	int propOffset = QUaNode::staticMetaObject.propertyOffset();
+	for (int i = propOffset; i < propCount; i++)
+	{
+		QMetaProperty metaProperty = metaObject->property(i);
+		QString strPropName = QString(metaProperty.name());
+		Q_ASSERT(!retMap.contains(strPropName));
+		Q_ASSERT(metaProperty.isReadable());
+		// non-writabe props cannot be restored
+		if (!metaProperty.isWritable())
+		{
+			continue;
+		}
+		// ignore QUaNode * properties
+		int type = metaProperty.userType();
+		auto propMetaObject = QMetaType::metaObjectForType(type);
+		if (propMetaObject && propMetaObject->inherits(&QUaNode::staticMetaObject))
+		{
+			continue;
+		}
+		QVariant value = metaProperty.read(this);
+		// check if
+		auto metaType = static_cast<QMetaType::Type>(type);
+		if (metaType == QMetaType::UnknownType)
+		{
+			continue;
+		}
+		// get the Qt meta property name
+		retMap[strPropName] = value;
+	}
+	return retMap;
+}
+
+const QList<QUaForwardReference> QUaNode::serializeRefs() const
+{
+	QList<QUaForwardReference> retList;
+	for (auto& refType : m_qUaServer->referenceTypes())
+	{
+		for (auto ref : this->findReferences(refType))
+		{
+			QUaForwardReference fRef = { ref->nodeId(), refType };
+			retList << fRef;
+		}
+	}
+	return retList;
 }
 
 QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
@@ -908,4 +966,11 @@ int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)
 		propOffset = QUaBaseObject::staticMetaObject.propertyOffset();
 	}
 	return propOffset;
+}
+
+QDebug operator<<(QDebug debug, const QUaReferenceType& refType)
+{
+	QDebugStateSaver saver(debug);
+	debug.nospace() << '{' << refType.strForwardName << ", " << refType.strInverseName << '}';
+	return debug;
 }
