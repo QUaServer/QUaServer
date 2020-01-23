@@ -768,11 +768,20 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 	{
 		for (auto ref : this->findReferences(refType))
 		{
-			QUaForwardReference fRef = { ref->nodeId(), refType };
+			QUaForwardReference fRef = { 
+				ref->nodeId(), 
+				ref->metaObject()->className(),
+				refType 
+			};
 			retList << fRef;
 		}
 	}
 	return retList;
+}
+
+void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut)
+{
+	// TODO : implement
 }
 
 QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)

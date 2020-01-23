@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QVariant>
 #include <QMetaProperty>
+#include <QQueue>
 
 #include <pch_open62541.h>
 
@@ -70,6 +71,7 @@ inline uint qHash(const QUaReferenceType& key, uint seed)
 struct QUaForwardReference
 {
 	QString nodeIdTarget;
+	QString targetType;
 	QUaReferenceType refType;
 };
 
@@ -78,6 +80,67 @@ inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference&
 	return e1.nodeIdTarget.compare(e2.nodeIdTarget, Qt::CaseSensitive) == 0
 		&& e1.refType == e2.refType;
 }
+
+namespace QUa
+{
+	Q_NAMESPACE
+
+	enum class Type
+	{
+		Bool        = QMetaType::Bool,
+		Char        = QMetaType::Char,
+		SChar       = QMetaType::SChar,
+		UChar       = QMetaType::UChar,
+		Short       = QMetaType::Short,
+		UShort      = QMetaType::UShort,
+		Int         = QMetaType::Int,
+		UInt        = QMetaType::UInt,
+		Long        = QMetaType::Long,
+		LongLong    = QMetaType::LongLong,
+		ULong       = QMetaType::ULong,
+		ULongLong   = QMetaType::ULongLong,
+		Float       = QMetaType::Float,
+		Double      = QMetaType::Double,
+		QString     = QMetaType::QString,
+		QDateTime   = QMetaType::QDateTime,
+		QUuid       = QMetaType::QUuid,
+		QByteArray  = QMetaType::QByteArray,
+		UnknownType = QMetaType::UnknownType,
+	};
+	Q_ENUM_NS(Type)
+
+	enum class LogLevel {
+		Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
+		Debug   = UA_LogLevel::UA_LOGLEVEL_DEBUG,
+		Info    = UA_LogLevel::UA_LOGLEVEL_INFO,
+		Warning = UA_LogLevel::UA_LOGLEVEL_WARNING,
+		Error   = UA_LogLevel::UA_LOGLEVEL_ERROR,
+		Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
+	};
+	Q_ENUM_NS(LogLevel)
+
+	enum class LogCategory {
+		Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
+		SecurecChannel = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
+		Session        = UA_LogCategory::UA_LOGCATEGORY_SESSION,
+		Server         = UA_LogCategory::UA_LOGCATEGORY_SERVER,
+		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
+		UserLand       = UA_LogCategory::UA_LOGCATEGORY_USERLAND,
+		SecurityPolicy = UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY,
+		Serialization
+	};
+	Q_ENUM_NS(LogCategory)
+}
+typedef QUa::LogLevel    QUaLogLevel;
+typedef QUa::LogCategory QUaLogCategory;
+
+struct QUaLog
+{
+	QString        message;
+	QUaLogLevel    level;
+	QUaLogCategory category;
+};
+Q_DECLARE_METATYPE(QUaLog);
 
 /*
 typedef struct {
@@ -246,17 +309,17 @@ public:
 
 	// Instance Creation API
 
-	virtual QUaProperty* addProperty(const QString& strNodeId = "");
-	virtual QUaBaseDataVariable* addBaseDataVariable(const QString& strNodeId = "");
-	virtual QUaBaseObject* addBaseObject(const QString& strNodeId = "");
-	virtual QUaFolderObject* addFolderObject(const QString& strNodeId = "");
+	virtual QUaProperty *         addProperty        (const QString& strNodeId = "");
+	virtual QUaBaseDataVariable * addBaseDataVariable(const QString& strNodeId = "");
+	virtual QUaBaseObject *       addBaseObject      (const QString& strNodeId = "");
+	virtual QUaFolderObject *     addFolderObject    (const QString& strNodeId = "");
 
 	// Browse API
 	// (* actually browses using QObject tree)
 
-	QString typeDefinitionNodeId() const;
+	QString typeDefinitionNodeId     () const;
 	QString typeDefinitionDisplayName() const;
-	QString typeDefinitionBrowseName() const;
+	QString typeDefinitionBrowseName () const;
 
 	// if strBrowseName empty, get all children
 	template<typename T>
@@ -331,11 +394,11 @@ public:
 	// T must implement:
 	// bool writeInstance(const QString &nodeId, const QString &typeName, const QMap<QString, QVariant> &attrs, const QList<QUaForwardReference> &forwardRefs);
 	template<typename T>
-	bool serialize(T& serializer);
+	bool serialize(T& serializer, QQueue<QUaLog> &logOut);
 	// T must implement:
 	// bool readInstance( const QString &nodeId, QString &typeName, QMap<QString, QVariant> &attrs, QList<QUaForwardReference> &forwardRefs);
 	template<typename T>
-	bool deserialize(T& deserializer);
+	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
 	// list for known (62541 standard) types, empty by default, overwrite for subtypes
 	static const QStringList DefaultProperties;
@@ -385,6 +448,8 @@ private:
 	// Serialization API
 	const QMap<QString, QVariant>    serializeAttrs() const;
 	const QList<QUaForwardReference> serializeRefs() const;
+
+	void deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut);
 
 	std::function<QUaWriteMask(const QString&)> m_userWriteMaskCallback;
 	std::function<QUaAccessLevel(const QString&)> m_userAccessLevelCallback;
@@ -462,13 +527,14 @@ inline void QUaNode::setUserExecutableCallback(const M & callback)
 }
 
 template<typename T>
-inline bool QUaNode::serialize(T& serializer)
+inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
 {
 	if(!serializer.writeInstance(
 		this->nodeId(),
 		this->metaObject()->className(),
 		this->serializeAttrs(),
-		this->serializeRefs()
+		this->serializeRefs(),
+		logOut
 	))
 	{
 		return false;
@@ -478,7 +544,7 @@ inline bool QUaNode::serialize(T& serializer)
 	{
 		for (auto ref : this->findReferences(refType))
 		{
-			if (!ref->serialize(serializer))
+			if (!ref->serialize(serializer, logOut))
 			{
 				return false;
 			}
@@ -488,10 +554,40 @@ inline bool QUaNode::serialize(T& serializer)
 }
 
 template<typename T>
-inline bool QUaNode::deserialize(T& deserializer)
+inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 {
-	// TODO : implement
-	return false;
+	QString typeName;
+	QMap<QString, QVariant> attrs;
+	QList<QUaForwardReference> forwardRefs;
+	if (!deserializer.readInstance(
+		this->nodeId(),
+		typeName,
+		attrs,
+		forwardRefs,
+		logOut
+	))
+	{
+		return false;
+	}
+	// check typeName
+	if (typeName.compare(this->metaObject()->className()) != 0)
+	{
+		logOut.enqueue({
+			tr("Returned type %1 does not match instance type %2. Ignoring node %3 and its children.")
+				.arg(typeName)
+				.arg(this->metaObject()->className())
+				.arg(this->nodeId()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+	}
+	else
+	{
+		// deserialize attrs (this can only generate warnings)
+		this->deserializeAttrs(attrs, logOut);
+		// TODO : recurse children
+	}
+	return true;
 }
 
 // to check if has default props static member

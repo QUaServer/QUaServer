@@ -206,6 +206,10 @@ public:
 	T* nodeById(const QString &strNodeId);
 	// get node reference by node id (nullptr if node id does not exist)
 	QUaNode * nodeById(const QString &strNodeId);
+	// check if a type with type name (C++ class name) is registered
+	bool isTypeNameRegistered(const QString &strTypeName) const;
+	// test if node id format is valid (does not check if instance exist though)
+	static bool isIdValid(const QString &strNodeId);
 
 	// Browse API
 	// (* actually browses using QObject tree)
@@ -244,38 +248,6 @@ public:
 	// add a validation callback for user key, defaults checks key == password
 	template<typename M>
 	void        setUserValidationCallback(const M &callback);
-
-	// Log API
-
-	enum LogLevel { 
-		Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
-		Debug   = UA_LogLevel::UA_LOGLEVEL_DEBUG,
-		Info    = UA_LogLevel::UA_LOGLEVEL_INFO,
-		Warning = UA_LogLevel::UA_LOGLEVEL_WARNING,
-		Error   = UA_LogLevel::UA_LOGLEVEL_ERROR,
-		Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
-	};
-	Q_ENUM(LogLevel)
-	typedef QUaServer::LogLevel QUaLogLevel;
-
-	enum LogCategory {
-		Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
-		SecurecChannel = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
-		Session        = UA_LogCategory::UA_LOGCATEGORY_SESSION,
-		Server         = UA_LogCategory::UA_LOGCATEGORY_SERVER,
-		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
-		UserLand       = UA_LogCategory::UA_LOGCATEGORY_USERLAND,
-		SecurityPolicy = UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY
-	};
-	Q_ENUM(LogCategory)
-	typedef QUaServer::LogCategory QUaLogCategory;
-
-	struct QUaLog
-	{
-		QString        message;
-		QUaLogLevel    level;
-		QUaLogCategory category;
-	};
 
 	// Sessions API
 
@@ -503,11 +475,6 @@ private:
 	const UA_NodeId   * m_newEventOriginatorNodeId;
 	const QStringList * m_newEventDefaultProperties;
 };
-
-typedef QUaServer::QUaLog      QUaLog;
-typedef QUaServer::LogLevel    QUaLogLevel;
-typedef QUaServer::LogCategory QUaLogCategory;
-Q_DECLARE_METATYPE(QUaLog);
 
 template<typename T>
 inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)

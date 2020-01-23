@@ -7,12 +7,14 @@ QUaXmlSerializer::QUaXmlSerializer()
 
 void QUaXmlSerializer::reset()
 {
+	// reset serialization state
 	m_doc.clear();
-	// setup
 	QDomProcessingInstruction header = m_doc.createProcessingInstruction("xml", "version='1.0' encoding='UTF-8'");
 	m_doc.appendChild(header);
 	QDomElement root = m_doc.createElement("nodes");
 	m_doc.appendChild(root);
+	// reset deserialization state
+	m_mapNodeData.clear();
 }
 
 QByteArray QUaXmlSerializer::toByteArray() const
@@ -20,12 +22,11 @@ QByteArray QUaXmlSerializer::toByteArray() const
 	return m_doc.toByteArray();
 }
 
-bool QUaXmlSerializer::fromByteArray(const QByteArray& xmlData, QString& strError)
+bool QUaXmlSerializer::fromByteArray(const QUaServer* server, const QByteArray& xmlData, QString& strError)
 {
 	// load from xml
-	QDomDocument doc;
 	int line, col;
-	doc.setContent(xmlData, &strError, &line, &col);
+	m_doc.setContent(xmlData, &strError, &line, &col);
 	if (!strError.isEmpty())
 	{
 		strError = QObject::tr("Error : Invalid XML in Line %1 Column %2 Error %3").arg(line).arg(col).arg(strError);
@@ -50,15 +51,48 @@ bool QUaXmlSerializer::fromByteArray(const QByteArray& xmlData, QString& strErro
 			iter = iter.nextSibling();
 			continue;
 		}
-		
+		// parse typeName
+		QString typeName = this->readTypeNameAttribute(server, node, strError);
+		if (typeName.isEmpty())
+		{
+			iter = iter.nextSibling();
+			continue;
+		}
+		// read rest of attributes
+		QMap<QString, QVariant> mapAttrs;
+		auto attrs = node.attributes();
+		for (int i = 0; i < attrs.count(); i++)
+		{
+			QDomAttr attr = attrs.item(i).toAttr();
+			if (attr.isNull() || 
+				attr.name().compare("nodeId") == 0 ||
+				attr.name().compare("typeName") == 0)
+			{
+				continue;
+			}
+			// deserialize
+			QString name = attr.name();
+			QVariant value = this->readAttribute(attr.value(), strError);
+			if (!value.isValid())
+			{
+				continue;
+			}
+			Q_ASSERT(!mapAttrs.contains(name));
+			mapAttrs.insert(name, value);
+		}
 
-		// TODO : parse attribute
+		// TODO : parse references
+		QList<QUaForwardReference> refs;
 
+		// insert to internal data
+		m_mapNodeData.insert(nodeId, {
+			typeName,
+			mapAttrs,
+			refs
+		});
 		// continue with next element
 		iter = iter.nextSibling();
 	}
-	// reset internal xml doc
-	this->reset();
 	return true;
 }
 
@@ -66,8 +100,10 @@ bool QUaXmlSerializer::writeInstance(
 	const QString& nodeId, 
 	const QString& typeName, 
 	const QMap<QString, QVariant>& attrs, 
-	const QList<QUaForwardReference>& forwardRefs)
+	const QList<QUaForwardReference>& forwardRefs,
+	QQueue<QUaLog>& logOut)
 {
+	Q_UNUSED(logOut);
 	QDomElement root = m_doc.documentElement();
 	// create node in xml
 	QDomElement node = m_doc.createElement("n");
@@ -87,6 +123,7 @@ bool QUaXmlSerializer::writeInstance(
 		QDomElement refElem = m_doc.createElement("r");
 		node.appendChild(refElem);
 		this->writeAttribute(refElem, "nodeIdTarget", ref.nodeIdTarget);
+		this->writeAttribute(refElem, "targetType"  , ref.targetType);
 		this->writeAttribute(refElem, "forwardName" , ref.refType.strForwardName);
 		this->writeAttribute(refElem, "inverseName" , ref.refType.strInverseName);
 	}
@@ -97,10 +134,24 @@ bool QUaXmlSerializer::readInstance(
 	const QString& nodeId, 
 	QString& typeName, 
 	QMap<QString, QVariant>& attrs, 
-	QList<QUaForwardReference>& forwardRefs)
+	QList<QUaForwardReference>& forwardRefs,
+	QQueue<QUaLog>& logOut)
 {
-	// TODO
-	return false;
+	if (!m_mapNodeData.contains(nodeId))
+	{
+		logOut.append({
+			QObject::tr("Could not find nodeId %1").arg(nodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// set return values
+	auto& data  = m_mapNodeData[nodeId];
+	typeName    = data.typeName;
+	attrs       = data.attrs;
+	forwardRefs = data.forwardRefs;
+	return true;
 }
 
 void QUaXmlSerializer::writeAttribute(
@@ -131,7 +182,52 @@ QString QUaXmlSerializer::readNodeIdAttribute(QDomElement& node, QString& strErr
 		strError += QObject::tr("Error : Found node element with empty nodeId attribute. Ignoring.");
 		return "";
 	}
+	if (!QUaServer::isIdValid(nodeId))
+	{
+		strError += QObject::tr("Error : Found node element with invalid nodeId attribute %1. Ignoring.").arg(nodeId);
+		return "";
+	}
+	// success
+	return nodeId;
+}
 
-	// TODO : validate
+QString QUaXmlSerializer::readTypeNameAttribute(const QUaServer* server, QDomElement& node, QString& strError)
+{
+	if (!node.hasAttribute("typeName"))
+	{
+		strError += QObject::tr("Error : Found node element without typeName attribute. Ignoring.");
+		return "";
+	}
+	QString typeName = node.attribute("typeName", "");
+	if (typeName.isEmpty())
+	{
+		strError += QObject::tr("Error : Found node element with empty typeName attribute. Ignoring.");
+		return "";
+	}
+	if (!server->isTypeNameRegistered(typeName))
+	{
+		strError += QObject::tr("Error : Found node element with unregistered typeName attribute %1. Ignoring.").arg(typeName);
+		return "";
+	}
+	// success
+	return typeName;
+}
 
+QVariant QUaXmlSerializer::readAttribute(const QString& strValue, QString& strError)
+{
+	// first try int
+	bool ok;
+	int intVal = strValue.toInt(&ok);
+	if (ok)
+	{
+		return intVal;
+	}
+	// then try double
+	double dblVal = strValue.toDouble(&ok);
+	if (ok)
+	{
+		return dblVal;
+	}
+	// if all fails, then string
+	return strValue;
 }

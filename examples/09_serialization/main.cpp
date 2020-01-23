@@ -85,14 +85,15 @@ int main(int argc, char *argv[])
 		{
 			// load all data
 			QString strError;
-			if (!serializer.fromByteArray(fileConf.readAll(), strError))
+			if (!serializer.fromByteArray(&server, fileConf.readAll(), strError))
 			{
 				qCritical() << strError;
 				return 1;
 			}
 		}
 		// deserialize
-		bool ok = objsFolder->deserialize(serializer);
+		QQueue<QUaLog> logOut;
+		bool ok = objsFolder->deserialize(serializer, logOut);
 		Q_ASSERT(ok);
 	}
 	else
@@ -100,7 +101,8 @@ int main(int argc, char *argv[])
 		// create some objects and variables to test
 		setupDefaultAddressSpace(server);
 		// serialize
-		bool ok = objsFolder->serialize(serializer);
+		QQueue<QUaLog> logOut;
+		bool ok = objsFolder->serialize(serializer, logOut);
 		Q_ASSERT(ok);
 		// save to file
 		QFile fileConf(strFileName);

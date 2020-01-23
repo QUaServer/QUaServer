@@ -47,35 +47,6 @@ The BaseVariableType is the abstract base type for all other VariableTypes.
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
 
-namespace QUa
-{
-	Q_NAMESPACE
-
-	enum class Type
-	{
-		Bool        = QMetaType::Bool,
-		Char        = QMetaType::Char,
-		SChar       = QMetaType::SChar,
-		UChar       = QMetaType::UChar,
-		Short       = QMetaType::Short,
-		UShort      = QMetaType::UShort,
-		Int         = QMetaType::Int,
-		UInt        = QMetaType::UInt,
-		Long        = QMetaType::Long,
-		LongLong    = QMetaType::LongLong,
-		ULong       = QMetaType::ULong,
-		ULongLong   = QMetaType::ULongLong,
-		Float       = QMetaType::Float,
-		Double      = QMetaType::Double,
-		QString     = QMetaType::QString,
-		QDateTime   = QMetaType::QDateTime,
-		QUuid       = QMetaType::QUuid,
-		QByteArray  = QMetaType::QByteArray,
-		UnknownType = QMetaType::UnknownType,
-	};
-	Q_ENUM_NS(Type)
-}
-
 class QUaDataType
 {
 

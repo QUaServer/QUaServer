@@ -13,20 +13,26 @@ public:
 	void reset();
 
 	QByteArray toByteArray() const;
-	bool fromByteArray(const QByteArray &xmlData, QString &strError);
+	bool fromByteArray(
+		const QUaServer* server,
+		const QByteArray &xmlData, 
+		QString &strError
+	);
 
 	bool writeInstance(
-		const QString& nodeId,
-		const QString& typeName,
-		const QMap<QString, QVariant>& attrs,
-		const QList<QUaForwardReference>& forwardRefs
+		const QString &nodeId,
+		const QString &typeName,
+		const QMap<QString, QVariant> &attrs,
+		const QList<QUaForwardReference> &forwardRefs,
+		QQueue<QUaLog> &logOut
 	);
 
 	bool readInstance(
-		const QString& nodeId,
-		QString& typeName,
-		QMap<QString, QVariant>& attrs,
-		QList<QUaForwardReference>& forwardRefs
+		const QString &nodeId,
+		QString &typeName,
+		QMap<QString, QVariant> &attrs,
+		QList<QUaForwardReference> &forwardRefs,
+		QQueue<QUaLog> &logOut
 	);
 
 private:
@@ -49,6 +55,17 @@ private:
 	// helper to decode nodeId
 	QString readNodeIdAttribute(
 		QDomElement& node,
+		QString& strError
+	);
+	// helper to decode typeName
+	QString readTypeNameAttribute(
+		const QUaServer * server,
+		QDomElement& node,
+		QString& strError
+	);
+	// helper to decode serialized data
+	QVariant readAttribute(
+		const QString& strValue,
 		QString& strError
 	);
 };

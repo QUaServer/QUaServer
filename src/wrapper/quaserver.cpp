@@ -861,13 +861,13 @@ void QUaServer::setupServer()
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types (for all types)
-	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
+	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
 	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QUaProperty::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
-	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
-	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
+	m_mapTypes.insert(QString(QUaProperty::staticMetaObject        .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
+	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject      .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
+	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
+	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject              .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
 	m_mapTypes.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// set context for server
@@ -983,8 +983,8 @@ UA_Logger QUaServer::getLogger()
 			QString strMessage = QString::fromUtf8(srv->m_logBuffer);
 			emit srv->logMessage({
 				strMessage,
-				static_cast<LogLevel>(level),
-				static_cast<LogCategory>(category)
+				static_cast<QUaLogLevel>(level),
+				static_cast<QUaLogCategory>(category)
 			});
 		},
 		this,
@@ -2301,6 +2301,19 @@ QUaNode * QUaServer::nodeById(const QString & strNodeId)
 	QUaNode * node = QUaNode::getNodeContext(nodeId, m_server);
 	UA_NodeId_clear(&nodeId);
 	return node;
+}
+
+bool QUaServer::isTypeNameRegistered(const QString& strTypeName) const
+{
+	return m_mapTypes.contains(strTypeName);
+}
+
+bool QUaServer::isIdValid(const QString& strNodeId)
+{
+	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
+	bool res = !UA_NodeId_isNull(&nodeId);
+	UA_NodeId_clear(&nodeId);
+	return res;
 }
 
 QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath) const
