@@ -20,6 +20,48 @@ QByteArray QUaXmlSerializer::toByteArray() const
 	return m_doc.toByteArray();
 }
 
+bool QUaXmlSerializer::fromByteArray(const QByteArray& xmlData, QString& strError)
+{
+	// load from xml
+	QDomDocument doc;
+	int line, col;
+	doc.setContent(xmlData, &strError, &line, &col);
+	if (!strError.isEmpty())
+	{
+		strError = QObject::tr("Error : Invalid XML in Line %1 Column %2 Error %3").arg(line).arg(col).arg(strError);
+		return false;
+	}
+	// fill up nodes data
+	QDomElement root = m_doc.documentElement();
+	QDomNode iter = root.firstChild();
+	while (!iter.isNull()) 
+	{
+		// try to convert the node to an element, continue if not possible
+		QDomElement node = iter.toElement(); 
+		if (node.isNull()) 
+		{
+			iter = iter.nextSibling();
+			continue;
+		}
+		// parse nodeId
+		QString nodeId = this->readNodeIdAttribute(node, strError);
+		if (nodeId.isEmpty())
+		{
+			iter = iter.nextSibling();
+			continue;
+		}
+		
+
+		// TODO : parse attribute
+
+		// continue with next element
+		iter = iter.nextSibling();
+	}
+	// reset internal xml doc
+	this->reset();
+	return true;
+}
+
 bool QUaXmlSerializer::writeInstance(
 	const QString& nodeId, 
 	const QString& typeName, 
@@ -51,6 +93,16 @@ bool QUaXmlSerializer::writeInstance(
 	return true;
 }
 
+bool QUaXmlSerializer::readInstance(
+	const QString& nodeId, 
+	QString& typeName, 
+	QMap<QString, QVariant>& attrs, 
+	QList<QUaForwardReference>& forwardRefs)
+{
+	// TODO
+	return false;
+}
+
 void QUaXmlSerializer::writeAttribute(
 	QDomElement& node, 
 	const QString& strName,
@@ -64,4 +116,22 @@ void QUaXmlSerializer::writeAttribute(
 		return;
 	}
 	node.setAttribute(strName, varValue.toString());
+}
+
+QString QUaXmlSerializer::readNodeIdAttribute(QDomElement& node, QString& strError)
+{
+	if (!node.hasAttribute("nodeId"))
+	{
+		strError += QObject::tr("Error : Found node element without nodeId attribute. Ignoring.");
+		return "";
+	}
+	QString nodeId = node.attribute("nodeId", "");
+	if (nodeId.isEmpty())
+	{
+		strError += QObject::tr("Error : Found node element with empty nodeId attribute. Ignoring.");
+		return "";
+	}
+
+	// TODO : validate
+
 }

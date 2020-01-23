@@ -487,6 +487,13 @@ inline bool QUaNode::serialize(T& serializer)
 	return true;
 }
 
+template<typename T>
+inline bool QUaNode::deserialize(T& deserializer)
+{
+	// TODO : implement
+	return false;
+}
+
 // to check if has default props static member
 template <typename T, typename = void>
 struct HasStaticDefaultProperties

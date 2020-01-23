@@ -13,6 +13,7 @@ public:
 	void reset();
 
 	QByteArray toByteArray() const;
+	bool fromByteArray(const QByteArray &xmlData, QString &strError);
 
 	bool writeInstance(
 		const QString& nodeId,
@@ -29,11 +30,26 @@ public:
 	);
 
 private:
+	// used to hold serialization data
 	QDomDocument m_doc;
+	// used to hold deserialization data
+	struct NodeData 
+	{
+		QString typeName;
+		QMap<QString, QVariant> attrs;
+		QList<QUaForwardReference> forwardRefs;
+	};
+	QMap<QString, NodeData> m_mapNodeData;
+	// helper to encode data for serialization
 	void writeAttribute(
 		QDomElement& node, 
 		const QString& strName, 
 		const QVariant& varValue
+	);
+	// helper to decode nodeId
+	QString readNodeIdAttribute(
+		QDomElement& node,
+		QString& strError
 	);
 };
 

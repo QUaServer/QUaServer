@@ -1,28 +1,18 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 
 #include <QUaServer>
 
 #include "temperaturesensor.h"
 #include "quaxmlserializer.h"
 
-
-int main(int argc, char *argv[])
+void setupDefaultAddressSpace(QUaServer &server)
 {
-	QCoreApplication a(argc, argv);
-
-	QUaDataType type = QString("Double");
-	Q_ASSERT(type == QMetaType::Double);
-
-	QUaDataType type2 = QString("QString");
-	Q_ASSERT(type2 == QMetaType::QString);
-
-	QUaServer server;
-
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
-	// basics
+	// create default
 
 	QUaBaseDataVariable* varBaseData = objsFolder->addBaseDataVariable();
 	varBaseData->setWriteAccess(true);
@@ -73,24 +63,58 @@ int main(int argc, char *argv[])
 	auto sensor3 = objSubSubBase->addChild<TemperatureSensor>();
 	sensor3->setDisplayName("Sensor3");
 	sensor3->setBrowseName("Sensor3");
+}
 
-	// serialize
+int main(int argc, char *argv[])
+{
+	QCoreApplication a(argc, argv);
 
+	const QString strFileName = "config.xml";
+
+	QUaServer server;
 	QUaXmlSerializer serializer;
-	objsFolder->serialize(serializer);
 
-	// save to file
-	QFile fileConfig("config.xml");
-	if (fileConfig.open(QIODevice::WriteOnly | QIODevice::Text | QFile::Truncate))
+	QUaFolderObject* objsFolder = server.objectsFolder();
+
+	QFileInfo fileInfoConf(strFileName);
+	if (fileInfoConf.exists())
 	{
-		// create stream
-		QTextStream streamConfig(&fileConfig);
-		// save config in file
-		auto b = serializer.toByteArray();
-		streamConfig << b;
+		// load from file
+		QFile fileConf(strFileName);
+		if (fileConf.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			// load all data
+			QString strError;
+			if (!serializer.fromByteArray(fileConf.readAll(), strError))
+			{
+				qCritical() << strError;
+				return 1;
+			}
+		}
+		// deserialize
+		bool ok = objsFolder->deserialize(serializer);
+		Q_ASSERT(ok);
 	}
-	// close files
-	fileConfig.close();
+	else
+	{
+		// create some objects and variables to test
+		setupDefaultAddressSpace(server);
+		// serialize
+		bool ok = objsFolder->serialize(serializer);
+		Q_ASSERT(ok);
+		// save to file
+		QFile fileConf(strFileName);
+		if (fileConf.open(QIODevice::WriteOnly | QIODevice::Text | QFile::Truncate))
+		{
+			// create stream
+			QTextStream streamConfig(&fileConf);
+			// save config in file
+			auto b = serializer.toByteArray();
+			streamConfig << b;
+		}
+		// close file
+		fileConf.close();
+	}
 
 	// logging
 
@@ -99,7 +123,7 @@ int main(int argc, char *argv[])
 		qDebug() << "[" << log.level << "] :" << log.message;
 	});
 
-	//server.start();
+	server.start();
 
 	return a.exec(); 
 }
