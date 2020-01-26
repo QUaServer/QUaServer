@@ -25,7 +25,7 @@ void setupDefaultAddressSpace(QUaServer &server)
 	varProp->setDisplayName("my_property");
 	varProp->setValue("hola");
 
-	QUaBaseObject* objBase = objsFolder->addBaseObject();
+	QUaBaseObject* objBase = objsFolder->addBaseObject("ns=1;s=my_obj");
 	objBase->setBrowseName("my_object");
 	objBase->setDisplayName("my_object");
 
@@ -92,17 +92,22 @@ int main(int argc, char *argv[])
 			}
 		}
 		// deserialize
+		QUaBaseObject* objBase = objsFolder->addBaseObject("ns=1;s=my_obj");
+		objBase->setBrowseName("my_object");
+		objBase->setDisplayName("my_object");
+
 		QQueue<QUaLog> logOut;
-		bool ok = objsFolder->deserialize(serializer, logOut);
+		bool ok = objBase->deserialize(serializer, logOut);
 		Q_ASSERT(ok);
 	}
 	else
 	{
 		// create some objects and variables to test
 		setupDefaultAddressSpace(server);
+		QUaBaseObject* objBase = objsFolder->browseChild<QUaBaseObject>("my_object");
 		// serialize
 		QQueue<QUaLog> logOut;
-		bool ok = objsFolder->serialize(serializer, logOut);
+		bool ok = objBase->serialize(serializer, logOut);
 		Q_ASSERT(ok);
 		// save to file
 		QFile fileConf(strFileName);

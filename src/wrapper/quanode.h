@@ -567,6 +567,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 		logOut
 	))
 	{
+		// stop deserializing
 		return false;
 	}
 	// check typeName
@@ -580,13 +581,21 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
+		// continue deserializing anyway
+		return true;
 	}
-	else
+	// deserialize attrs for all nodes except objectsFolder
+	if(this != m_qUaServer->objectsFolder())
 	{
 		// deserialize attrs (this can only generate warnings)
 		this->deserializeAttrs(attrs, logOut);
-		// TODO : recurse children
 	}
+
+	// TODO : recurse children
+	// find out existing browseChildren and match with forwardRefs
+	// deserialize children if existing and matching, else instantiate
+	// leave non-hierarchical refs for the end somehow, maybe a map of pointers vs missing refs
+
 	return true;
 }
 

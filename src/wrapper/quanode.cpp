@@ -741,7 +741,7 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 		{
 			continue;
 		}
-		// ignore QUaNode * properties
+		// ignore QUaNode * properties (type children)
 		int type = metaProperty.userType();
 		auto propMetaObject = QMetaType::metaObjectForType(type);
 		if (propMetaObject && propMetaObject->inherits(&QUaNode::staticMetaObject))
@@ -749,7 +749,7 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 			continue;
 		}
 		QVariant value = metaProperty.read(this);
-		// check if
+		// check known type
 		auto metaType = static_cast<QMetaType::Type>(type);
 		if (metaType == QMetaType::UnknownType)
 		{
@@ -781,7 +781,71 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 
 void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut)
 {
-	// TODO : implement
+	QStringList listAttrsNotInProps = attrs.keys();
+	QStringList listPropsNotInAttrs;
+	auto metaObject = this->metaObject();
+	// list meta props
+	int propCount = metaObject->propertyCount();
+	int propOffset = QUaNode::staticMetaObject.propertyOffset();
+	for (int i = propOffset; i < propCount; i++)
+	{
+		QMetaProperty metaProperty = metaObject->property(i);
+		QString strPropName = QString(metaProperty.name());
+		Q_ASSERT(metaProperty.isReadable());
+		// non-writabe props cannot be restored
+		if (!metaProperty.isWritable())
+		{
+			continue;
+		}
+		// ignore QUaNode * properties (type children)
+		int type = metaProperty.userType();
+		auto propMetaObject = QMetaType::metaObjectForType(type);
+		if (propMetaObject && propMetaObject->inherits(&QUaNode::staticMetaObject))
+		{
+			continue;
+		}
+		// check known type
+		auto metaType = static_cast<QMetaType::Type>(type);
+		if (metaType == QMetaType::UnknownType)
+		{
+			continue;
+		}
+		// check if metaprop in attrs
+		if (attrs.contains(strPropName))
+		{
+			// remove from shame list
+			bool ok = listAttrsNotInProps.removeOne(strPropName);
+			Q_ASSERT(ok);
+			// write property
+			ok = metaProperty.write(this, attrs[strPropName]);
+			Q_ASSERT(ok);
+			continue;
+		}
+		// else add to shame list
+		listPropsNotInAttrs << strPropName;
+	}
+	// check props not in attrs
+	if (!listPropsNotInAttrs.isEmpty())
+	{
+		logOut.enqueue({
+			tr("Node %1 has attributes that were not found in data; %2. Ignoring.")
+				.arg(this->nodeId())
+				.arg(listPropsNotInAttrs.join(", ")),
+			QUaLogLevel::Warning,
+			QUaLogCategory::Serialization
+		});
+	}
+	// check attrs not in props
+	if (!listAttrsNotInProps.isEmpty())
+	{
+		logOut.enqueue({
+			tr("Node %1 does not have attributes that were found in data; %2. Ignoring.")
+				.arg(this->nodeId())
+				.arg(listAttrsNotInProps.join(", ")),
+			QUaLogLevel::Warning,
+			QUaLogCategory::Serialization
+		});
+	}
 }
 
 QUaWriteMask QUaNode::userWriteMask(const QString & strUserName)
