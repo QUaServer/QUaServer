@@ -13,6 +13,7 @@ public:
 	void reset();
 
 	QByteArray toByteArray() const;
+
 	bool fromByteArray(
 		const QUaServer* server,
 		const QByteArray &xmlData, 
@@ -66,6 +67,23 @@ private:
 	// helper to decode serialized data
 	QVariant readAttribute(
 		const QString& strValue,
+		QString& strError
+	);
+	// helper to decode nodeIdTarget
+	QString readNodeIdTargetAttribute(
+		QDomElement& ref,
+		QString& strError
+	);
+	// helper to decode targetType
+	QString readTargetTypeAttribute(
+		const QUaServer* server,
+		QDomElement& ref,
+		QString& strError
+	);
+	// helper to decode forwardName and inverseName
+	QUaReferenceType readRefNameAttribute(
+		const QUaServer* server,
+		QDomElement& ref,
 		QString& strError
 	);
 };

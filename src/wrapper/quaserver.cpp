@@ -2290,6 +2290,11 @@ const QList<QUaReferenceType> QUaServer::referenceTypes() const
 	return m_hashRefTypes.keys();
 }
 
+bool QUaServer::referenceTypeRegistered(const QUaReferenceType& refType) const
+{
+	return m_hashRefTypes.contains(refType);
+}
+
 QUaFolderObject * QUaServer::objectsFolder() const
 {
 	return m_pobjectsFolder;

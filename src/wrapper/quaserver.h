@@ -195,6 +195,8 @@ public:
 	bool registerReferenceType(const QUaReferenceType &refType, const QString& strNodeId = "");
 	// get list of registered reference types
 	const QList<QUaReferenceType> referenceTypes() const;
+	// check if a reference type is already registered
+	bool referenceTypeRegistered(const QUaReferenceType& refType) const;
 
 	// create instance of a given (variable or object) type
 	template<typename T>

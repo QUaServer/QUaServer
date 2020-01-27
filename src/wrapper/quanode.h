@@ -449,6 +449,14 @@ private:
 	const QMap<QString, QVariant>    serializeAttrs() const;
 	const QList<QUaForwardReference> serializeRefs() const;
 
+	template<typename T>
+	bool deserializeInternal(T& deserializer, 
+		                     const QString& typeName, 
+		                     const QMap<QString, QVariant>& attrs, 
+		                     const QList<QUaForwardReference>& forwardRefs, 
+		                     QMap<QUaNode*, QList<QUaForwardReference>>& nonHierRefs, 
+		                     QQueue<QUaLog>& logOut, 
+		                     const bool &isObjsFolder = false);
 	void deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut);
 
 	std::function<QUaWriteMask(const QString&)> m_userWriteMaskCallback;
@@ -570,6 +578,37 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 		// stop deserializing
 		return false;
 	}
+	// deserialize recursive
+	QMap<QUaNode*, QList<QUaForwardReference>> nonHierRefs;
+	bool ok = this->deserializeInternal<T>(
+		deserializer,
+		typeName,
+		attrs,
+		forwardRefs,
+		nonHierRefs,
+		logOut,
+		this != m_qUaServer->objectsFolder()
+	);
+	if (!ok)
+	{
+		return ok;
+	}
+
+	// TODO : non-hierarchical at the end
+
+	return ok;
+}
+
+template<typename T>
+inline bool QUaNode::deserializeInternal(
+	T& deserializer, 
+	const QString &typeName,
+	const QMap<QString, QVariant> &attrs,
+	const QList<QUaForwardReference> &forwardRefs,
+	QMap<QUaNode*, QList<QUaForwardReference>>& nonHierRefs,
+	QQueue<QUaLog>& logOut,
+	const bool& isObjsFolder/* = false*/)
+{
 	// check typeName
 	if (typeName.compare(this->metaObject()->className()) != 0)
 	{
@@ -585,17 +624,31 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 		return true;
 	}
 	// deserialize attrs for all nodes except objectsFolder
-	if(this != m_qUaServer->objectsFolder())
+	if (!isObjsFolder)
 	{
 		// deserialize attrs (this can only generate warnings)
 		this->deserializeAttrs(attrs, logOut);
 	}
-
 	// TODO : recurse children
+	auto existingChildren = this->browseChildren();
 	// find out existing browseChildren and match with forwardRefs
 	// deserialize children if existing and matching, else instantiate
-	// leave non-hierarchical refs for the end somehow, maybe a map of pointers vs missing refs
+	// find a way to handle non-matching existing children nodeIds (maybe a map)
+	for (auto &forwRef : forwardRefs)
+	{
+		// leave non-hierarchical refs for the end (nonHierRefs)
+		if (!m_qUaServer->m_hashHierRefTypes.contains(forwRef.refType))
+		{
+			nonHierRefs[this] << forwRef;
+			continue;
+		}
+		// deserialize hierarchical ref
+		QString typeName;
+		QMap<QString, QVariant> attrs;
+		QList<QUaForwardReference> forwardRefs;
 
+	}
+	// success
 	return true;
 }
 
