@@ -10,7 +10,8 @@ CONFIG -= flat
 
 INCLUDEPATH += $$PWD/
 
-CONFIG += precompile_header_c
+LANGUAGE = C++
+CONFIG += precompile_header
 PRECOMPILED_HEADER = $$PWD/pch_open62541.h
 
 SOURCES += \

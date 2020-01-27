@@ -9,7 +9,7 @@
 #include <QTimeZone>
 #include <QDebug>
 
-#include <pch_open62541.h>
+#include <open62541.h>
 
 Q_DECLARE_METATYPE(QTimeZone);
 

@@ -9,7 +9,7 @@
 #include <QMetaProperty>
 #include <QQueue>
 
-#include <pch_open62541.h>
+#include <open62541.h>
 
 class QUaServer;
 class QUaProperty;
