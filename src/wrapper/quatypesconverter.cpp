@@ -687,11 +687,11 @@ namespace QUaTypesConverter {
 		}
         else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)))
 		{
-			return QMetaType::Long;
+			return QMetaType::LongLong;
 		}
         else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)))
 		{
-			return QMetaType::ULong;
+			return QMetaType::ULongLong;
 		}
         else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)))
 		{
