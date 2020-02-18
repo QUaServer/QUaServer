@@ -300,8 +300,8 @@ private:
 	QByteArray              m_logBuffer;
 
 #ifdef UA_ENABLE_ENCRYPTION
-	QByteArray              m_bytePrivateKey;
-	QByteArray              m_bytePrivateKeyInternal; // NOTE : needs to exists as long as server instance
+	QByteArray m_bytePrivateKey;
+	QByteArray m_bytePrivateKeyInternal; // NOTE : needs to exists as long as server instance
 #endif
 
 	QByteArray m_byteApplicationName;
@@ -316,6 +316,7 @@ private:
 	QHash<QString         , QString      > m_hashUsers;
 	QHash<UA_NodeId       , QUaSession*  > m_hashSessions;
 	QMap <QString         , UA_NodeId    > m_mapTypes;
+	QHash<QString         , QMetaObject  > m_hashMetaObjects;
 	QHash<QString         , UA_NodeId    > m_hashEnums;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
@@ -371,6 +372,9 @@ private:
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	void bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId &nodeId);
+
+	bool isMetaObjectRegistered(const QString& strClassName) const;
+	QMetaObject getRegisteredMetaObject(const QString& strClassName) const;
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
 	QHash< UA_NodeId, std::function<UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>      > m_hashMethods;
@@ -579,7 +583,7 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	}
 	// get new c++ instance created in UA constructor
 	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this);
-	T * newInstance = dynamic_cast<T*>(tmp);
+	T * newInstance = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
 	// return c++ instance
 	UA_NodeId_clear(&newInstanceNodeId);

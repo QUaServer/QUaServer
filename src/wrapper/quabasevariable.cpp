@@ -42,6 +42,11 @@ bool QUaDataType::operator==(const QMetaType::Type& metaType)
 	return static_cast<QMetaType::Type>(m_type) == metaType;
 }
 
+void QUaDataType::operator=(const QString& strType)
+{
+	*this = QUaDataType(strType.toUtf8());
+}
+
 // [STATIC]
 void QUaBaseVariable::onWrite(UA_Server             *server, 
 		                      const UA_NodeId       *sessionId,

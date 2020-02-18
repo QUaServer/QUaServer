@@ -156,56 +156,56 @@ typedef struct {
 union QUaWriteMask
 {
 	struct bit_map {
-		bool bAccessLevel : 1; // UA_WRITEMASK_ACCESSLEVEL            
-		bool bArrrayDimensions : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS       
-		bool bBrowseName : 1; // UA_WRITEMASK_BROWSENAME             
-		bool bContainsNoLoops : 1; // UA_WRITEMASK_CONTAINSNOLOOPS        
-		bool bDataType : 1; // UA_WRITEMASK_DATATYPE               
-		bool bDescription : 1; // UA_WRITEMASK_DESCRIPTION            
-		bool bDisplayName : 1; // UA_WRITEMASK_DISPLAYNAME            
-		bool bEventNotifier : 1; // UA_WRITEMASK_EVENTNOTIFIER          
-		bool bExecutable : 1; // UA_WRITEMASK_EXECUTABLE             
-		bool bHistorizing : 1; // UA_WRITEMASK_HISTORIZING            
-		bool bInverseName : 1; // UA_WRITEMASK_INVERSENAME            
-		bool bIsAbstract : 1; // UA_WRITEMASK_ISABSTRACT             
+		bool bAccessLevel             : 1; // UA_WRITEMASK_ACCESSLEVEL
+		bool bArrrayDimensions        : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS
+		bool bBrowseName              : 1; // UA_WRITEMASK_BROWSENAME
+		bool bContainsNoLoops         : 1; // UA_WRITEMASK_CONTAINSNOLOOPS
+		bool bDataType                : 1; // UA_WRITEMASK_DATATYPE
+		bool bDescription             : 1; // UA_WRITEMASK_DESCRIPTION
+		bool bDisplayName             : 1; // UA_WRITEMASK_DISPLAYNAME
+		bool bEventNotifier           : 1; // UA_WRITEMASK_EVENTNOTIFIER
+		bool bExecutable              : 1; // UA_WRITEMASK_EXECUTABLE
+		bool bHistorizing             : 1; // UA_WRITEMASK_HISTORIZING
+		bool bInverseName             : 1; // UA_WRITEMASK_INVERSENAME
+		bool bIsAbstract              : 1; // UA_WRITEMASK_ISABSTRACT
 		bool bMinimumSamplingInterval : 1; // UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL
-		bool bNodeClass : 1; // UA_WRITEMASK_NODECLASS              
-		bool bNodeId : 1; // UA_WRITEMASK_NODEID                 
-		bool bSymmetric : 1; // UA_WRITEMASK_SYMMETRIC              
-		bool bUserAccessLevel : 1; // UA_WRITEMASK_USERACCESSLEVEL        
-		bool bUserExecutable : 1; // UA_WRITEMASK_USEREXECUTABLE         
-		bool bUserWriteMask : 1; // UA_WRITEMASK_USERWRITEMASK          
-		bool bValueRank : 1; // UA_WRITEMASK_VALUERANK              
-		bool bWriteMask : 1; // UA_WRITEMASK_WRITEMASK              
-		bool bValueForVariableType : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE  
+		bool bNodeClass               : 1; // UA_WRITEMASK_NODECLASS
+		bool bNodeId                  : 1; // UA_WRITEMASK_NODEID
+		bool bSymmetric               : 1; // UA_WRITEMASK_SYMMETRIC
+		bool bUserAccessLevel         : 1; // UA_WRITEMASK_USERACCESSLEVEL
+		bool bUserExecutable          : 1; // UA_WRITEMASK_USEREXECUTABLE
+		bool bUserWriteMask           : 1; // UA_WRITEMASK_USERWRITEMASK
+		bool bValueRank               : 1; // UA_WRITEMASK_VALUERANK
+		bool bWriteMask               : 1; // UA_WRITEMASK_WRITEMASK
+		bool bValueForVariableType    : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE
 	} bits;
 	quint32 intValue;
 	// constructors
 	QUaWriteMask()
 	{
 		// all attributes writable by default (getUserRightsMask_default returns 0xFFFFFFFF)
-		bits.bAccessLevel = true;
-		bits.bArrrayDimensions = true;
-		bits.bBrowseName = true;
-		bits.bContainsNoLoops = true;
-		bits.bDataType = true;
-		bits.bDescription = true;
-		bits.bDisplayName = true;
-		bits.bEventNotifier = true;
-		bits.bExecutable = true;
-		bits.bHistorizing = true;
-		bits.bInverseName = true;
-		bits.bIsAbstract = true;
+		bits.bAccessLevel             = true;
+		bits.bArrrayDimensions        = true;
+		bits.bBrowseName              = true;
+		bits.bContainsNoLoops         = true;
+		bits.bDataType                = true;
+		bits.bDescription             = true;
+		bits.bDisplayName             = true;
+		bits.bEventNotifier           = true;
+		bits.bExecutable              = true;
+		bits.bHistorizing             = true;
+		bits.bInverseName             = true;
+		bits.bIsAbstract              = true;
 		bits.bMinimumSamplingInterval = true;
-		bits.bNodeClass = true;
-		bits.bNodeId = true;
-		bits.bSymmetric = true;
-		bits.bUserAccessLevel = true;
-		bits.bUserExecutable = true;
-		bits.bUserWriteMask = true;
-		bits.bValueRank = true;
-		bits.bWriteMask = true;
-		bits.bValueForVariableType = true;
+		bits.bNodeClass               = true;
+		bits.bNodeId                  = true;
+		bits.bSymmetric               = true;
+		bits.bUserAccessLevel         = true;
+		bits.bUserExecutable          = true;
+		bits.bUserWriteMask           = true;
+		bits.bValueRank               = true;
+		bits.bWriteMask               = true;
+		bits.bValueForVariableType    = true;
 	};
 	QUaWriteMask(const quint32& value)
 	{
@@ -216,12 +216,12 @@ union QUaWriteMask
 union QUaAccessLevel
 {
 	struct bit_map {
-		bool bRead : 1; // UA_ACCESSLEVELMASK_READ
-		bool bWrite : 1; // UA_ACCESSLEVELMASK_WRITE
-		bool bHistoryRead : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
-		bool bHistoryWrite : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
+		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
+		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
+		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
+		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
 		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
-		bool bStatusWrite : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
+		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
 		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
 	} bits;
 	quint8 intValue;
@@ -229,12 +229,12 @@ union QUaAccessLevel
 	QUaAccessLevel()
 	{
 		// read only by default
-		bits.bRead = true;
-		bits.bWrite = false;
-		bits.bHistoryRead = false;
-		bits.bHistoryWrite = false;
+		bits.bRead           = true;
+		bits.bWrite          = false;
+		bits.bHistoryRead    = false;
+		bits.bHistoryWrite   = false;
 		bits.bSemanticChange = false;
-		bits.bStatusWrite = false;
+		bits.bStatusWrite    = false;
 		bits.bTimestampWrite = false;
 	};
 	QUaAccessLevel(const quint8& value)
@@ -587,15 +587,38 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 		forwardRefs,
 		nonHierRefs,
 		logOut,
-		this != m_qUaServer->objectsFolder()
+		this == m_qUaServer->objectsFolder()
 	);
 	if (!ok)
 	{
 		return ok;
 	}
-
-	// TODO : non-hierarchical at the end
-
+	// non-hierarchical at the end
+	auto srcNodes = nonHierRefs.keys();
+	for (auto srcNode : srcNodes)
+	{
+		for (auto nonHierRef : nonHierRefs[srcNode])
+		{
+			auto targetNode = this->server()->nodeById(nonHierRef.nodeIdTarget);
+			if (targetNode)
+			{
+				srcNode->addReference(nonHierRef.refType, targetNode, true);
+			}
+			else
+			{
+				logOut.enqueue({
+					tr("Failed to add non-hierarchical reference (%1:%2) "
+					   "from source node %3 to target node %4. Target node does not exist.")
+						.arg(nonHierRef.refType.strForwardName)
+						.arg(nonHierRef.refType.strInverseName)
+						.arg(srcNode->nodeId())
+						.arg(nonHierRef.nodeIdTarget),
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+				});
+			}
+		}
+	}
 	return ok;
 }
 
@@ -629,11 +652,14 @@ inline bool QUaNode::deserializeInternal(
 		// deserialize attrs (this can only generate warnings)
 		this->deserializeAttrs(attrs, logOut);
 	}
-	// TODO : recurse children
+	// get extsing children list to match hierachical forward references
 	auto existingChildren = this->browseChildren();
-	// find out existing browseChildren and match with forwardRefs
-	// deserialize children if existing and matching, else instantiate
-	// find a way to handle non-matching existing children nodeIds (maybe a map)
+	QHash<QString, QUaNode*> mapExistingChildren;
+	for (auto child : existingChildren)
+	{
+		mapExistingChildren[child->nodeId()] = child;
+	}
+	// loop deserialized forward references
 	for (auto &forwRef : forwardRefs)
 	{
 		// leave non-hierarchical refs for the end (nonHierRefs)
@@ -646,7 +672,180 @@ inline bool QUaNode::deserializeInternal(
 		QString typeName;
 		QMap<QString, QVariant> attrs;
 		QList<QUaForwardReference> forwardRefs;
-
+		if (!deserializer.readInstance(
+			forwRef.nodeIdTarget,
+			typeName,
+			attrs,
+			forwardRefs,
+			logOut
+		))
+		{
+			// stop deserializing
+			return false;
+		}
+		// validate typeName
+		if (!this->server()->isMetaObjectRegistered(typeName))
+		{
+			logOut.enqueue({
+				tr("Type name %1 for deserialized node %2 is not registered. Ignoring.")
+					.arg(typeName)
+					.arg(forwRef.nodeIdTarget),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			});
+			continue;
+		}
+		// check if already exists by node id 
+		if (mapExistingChildren.contains(forwRef.nodeIdTarget))
+		{
+			QUaNode* instance = mapExistingChildren.take(forwRef.nodeIdTarget);
+			// remove from existingChildren to mark it as deserialized
+			existingChildren.removeOne(instance);
+			// deserialize (recursive)
+			bool ok = instance->deserializeInternal<T>(
+				deserializer,
+				typeName,
+				attrs,
+				forwardRefs,
+				nonHierRefs,
+				logOut,
+				instance == m_qUaServer->objectsFolder()
+				);
+			if (!ok)
+			{
+				return ok;
+			}
+			// continue
+			continue;
+		}
+		// check if already exists by browse name
+		if (!attrs.contains("browseName"))
+		{
+			logOut.enqueue({
+				tr("Deserialized node %1 does not contain browseName attribute. Creating new instance.")
+					.arg(forwRef.nodeIdTarget),
+				QUaLogLevel::Warning,
+				QUaLogCategory::Serialization
+			});
+		}
+		else
+		{
+			QString strBrowseName = attrs.value("browseName").toString();
+			auto existingBrowseName = this->browseChildren(strBrowseName);
+			// deserialize existing
+			if (existingBrowseName.count() > 0)
+			{
+				QUaNode* instance = nullptr;
+				if (existingBrowseName.count() > 1)
+				{
+					// if existingChildren does not contain an instance it meas it has already been deserialized
+					while (!existingChildren.contains(existingBrowseName.first()) && existingBrowseName.count() > 0)
+					{
+						existingBrowseName.takeFirst();
+					}
+					if (existingBrowseName.count() == 0)
+					{
+						logOut.enqueue({
+						tr("All children of %1 with browseName %2 have been deserialized. Ignoring deserialization of forward reference to %3.")
+								.arg(this->nodeId())
+								.arg(strBrowseName)
+								.arg(instance->nodeId()),
+							QUaLogLevel::Error,
+							QUaLogCategory::Serialization
+						});
+						continue;
+					}
+					instance = existingBrowseName.takeFirst();
+					logOut.enqueue({
+						tr("Node %1 contains more than one children with the same browseName attribute %2. Deserializing over instance with node id %3.")
+							.arg(this->nodeId())
+							.arg(strBrowseName)
+							.arg(instance->nodeId()),
+						QUaLogLevel::Warning,
+						QUaLogCategory::Serialization
+					});
+				}
+				else
+				{
+					instance = existingBrowseName.takeFirst();
+				}
+				// remove from existingChildren to mark it as deserialized
+				existingChildren.removeOne(instance);
+				// deserialize (recursive)
+				bool ok = instance->deserializeInternal<T>(
+					deserializer,
+					typeName,
+					attrs,
+					forwardRefs,
+					nonHierRefs,
+					logOut,
+					instance == m_qUaServer->objectsFolder()
+					);
+				if (!ok)
+				{
+					return ok;
+				}
+				// continue
+				continue;
+			}
+		}
+		// before creating new, check node id does not exist
+		if (this->server()->nodeById(forwRef.nodeIdTarget))
+		{
+			logOut.enqueue({
+				tr("Cannot instantiate forward reference of %1 because node id %2 already exists elsewhere in server. Ignoring.")
+						.arg(this->nodeId())
+						.arg(forwRef.nodeIdTarget),
+					QUaLogLevel::Error,
+					QUaLogCategory::Serialization
+			});
+			continue;
+		}
+		// to create new first get metaobject
+		QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
+		// instantiate first in OPC UA
+		UA_NodeId newInstanceNodeId = this->server()->createInstance(metaObject, this, forwRef.nodeIdTarget);
+		if (UA_NodeId_isNull(&newInstanceNodeId))
+		{
+			UA_NodeId_clear(&newInstanceNodeId);
+			logOut.enqueue({
+			tr("Failed to instantiate child instance of %1 with node id %2. Ignoring.")
+					.arg(this->nodeId())
+					.arg(forwRef.nodeIdTarget),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			});
+			continue;
+		}
+		// get new c++ instance created in UA constructor
+		auto instance = QUaNode::getNodeContext(newInstanceNodeId, this->server());
+		// return c++ instance
+		UA_NodeId_clear(&newInstanceNodeId);
+		// deserialize (recursive)
+		bool ok = instance->deserializeInternal<T>(
+			deserializer,
+			typeName,
+			attrs,
+			forwardRefs,
+			nonHierRefs,
+			logOut,
+			instance == m_qUaServer->objectsFolder()
+			);
+		if (!ok)
+		{
+			return ok;
+		}
+	}
+	// TODO : what to do with non-matching existing children
+	if (existingChildren.count() > 0)
+	{
+		logOut.enqueue({
+			tr("Node %1 contains %2 existing children which did not match any if its deserialized forward references.")
+				.arg(this->nodeId())
+				.arg(existingChildren.count()),
+			QUaLogLevel::Warning,
+			QUaLogCategory::Serialization
+		});
 	}
 	// success
 	return true;

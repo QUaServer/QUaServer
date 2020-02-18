@@ -58,6 +58,7 @@ public:
 	operator QMetaType::Type();
 	operator QString();
 	bool operator==(const QMetaType::Type& metaType);
+	void operator=(const QString& strType);
 
 private:
 	QUa::Type m_type;

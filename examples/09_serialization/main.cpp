@@ -50,10 +50,7 @@ void setupDefaultAddressSpace(QUaServer &server)
 	objSubSubBase->setBrowseName("my_subsub_object");
 	objSubSubBase->setDisplayName("my_subsub_object");
 
-	// register new type
-
-	server.registerType<TemperatureSensor>();
-
+	// instances of custom type
 	auto sensor1 = objSubSubBase->addChild<TemperatureSensor>();
 	sensor1->setDisplayName("Sensor1");
 	sensor1->setBrowseName("Sensor1");
@@ -72,6 +69,8 @@ int main(int argc, char *argv[])
 	const QString strFileName = "config.xml";
 
 	QUaServer server;
+	server.registerType<TemperatureSensor>();
+
 	QUaXmlSerializer serializer;
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
@@ -92,22 +91,24 @@ int main(int argc, char *argv[])
 			}
 		}
 		// deserialize
-		QUaBaseObject* objBase = objsFolder->addBaseObject("ns=1;s=my_obj");
-		objBase->setBrowseName("my_object");
-		objBase->setDisplayName("my_object");
-
+		QUaFolderObject* objsFolder = server.objectsFolder();
 		QQueue<QUaLog> logOut;
-		bool ok = objBase->deserialize(serializer, logOut);
+		bool ok = objsFolder->deserialize(serializer, logOut);
 		Q_ASSERT(ok);
+		// print log entries if any
+		for (auto log : logOut)
+		{
+			qWarning() << "[" << log.level << "] :" << log.message;
+		}
 	}
 	else
 	{
 		// create some objects and variables to test
 		setupDefaultAddressSpace(server);
-		QUaBaseObject* objBase = objsFolder->browseChild<QUaBaseObject>("my_object");
+		QUaFolderObject* objsFolder = server.objectsFolder();
 		// serialize
 		QQueue<QUaLog> logOut;
-		bool ok = objBase->serialize(serializer, logOut);
+		bool ok = objsFolder->serialize(serializer, logOut);
 		Q_ASSERT(ok);
 		// save to file
 		QFile fileConf(strFileName);
@@ -124,7 +125,6 @@ int main(int argc, char *argv[])
 	}
 
 	// logging
-
 	QObject::connect(&server, &QUaServer::logMessage,
 	[](const QUaLog& log) {
 		qDebug() << "[" << log.level << "] :" << log.message;

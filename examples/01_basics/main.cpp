@@ -16,6 +16,12 @@ int main(int argc, char *argv[])
         qDebug() << "[" << log.level << "] :" << log.message;
     });
 
+	QObject::connect(&server, &QUaServer::clientConnected,
+	[](const QUaSession& sessionData)
+	{
+			qDebug() << "Connected" << sessionData.address() << ":" << sessionData.port() << "|" << sessionData.applicationName();
+	});
+
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// basics

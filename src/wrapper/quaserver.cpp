@@ -157,21 +157,17 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		}
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
-	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
+	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server) found.");
 	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
 	//        we temporarily store in the QUaServer reference the UA_NodeId and QMetaObject values needed to
 	//        instantiate the new node.
 	server->m_newNodeNodeId     = nodeId;
 	server->m_newNodeMetaObject = &metaObject;
 	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
-	auto * pQObject    = metaObject.newInstance(Q_ARG(QUaServer*, server));
-#ifdef QT_DEBUG 
-	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server, const UA_NodeId &nodeId) found.");
-	auto* newInstance = qobject_cast<QUaNode*>(static_cast<QObject*>(pQObject));
+	auto * pQObject = metaObject.newInstance(Q_ARG(QUaServer*, server));
+	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server) found.");
+	auto* newInstance = qobject_cast<QUaNode*>(pQObject);
 	Q_CHECK_PTR(newInstance);
-#else
-	auto* newInstance = static_cast<QUaNode*>(pQObject);
-#endif // QT_DEBUG 
 	if (!newInstance)
 	{
 		UA_NodeId_clear(&topBoundParentNodeId);
@@ -180,7 +176,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	// need to bind again using the official (void ** nodeContext) of the UA constructor
 	// because we set context on C++ instantiation, but later the UA library overwrites it 
 	// after calling the UA constructor
-	*nodeContext = (void*)newInstance;
+	*nodeContext = static_cast<void*>(newInstance);
 	newInstance->m_nodeId = *nodeId;
 	// need to set parent if direct parent is already bound bacause its constructor has already been called
 	UA_NodeId directParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
@@ -838,8 +834,15 @@ void QUaServer::setupServer()
 	{
 		qRegisterMetaType<QUaSession>("QUaSession");
 	}
+	if (QMetaType::type("QUaDataType") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaDataType>("QUaDataType");
+	}
 	QMetaType::registerConverter<QUaDataType, QString>([](QUaDataType type) {
 		return type;
+	});
+	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
+		return QUaDataType(strType);
 	});
 	// Server stuff
 	UA_StatusCode st;
@@ -861,22 +864,29 @@ void QUaServer::setupServer()
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types (for all types)
-	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE));
+	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE    ));
 	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QUaProperty::staticMetaObject        .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE));
-	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject      .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE));
-	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE));
+	m_mapTypes.insert(QString(QUaProperty::staticMetaObject        .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ));
+	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject      .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ));
+	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ));
+	m_hashMetaObjects.insert(QString(QUaBaseVariable::staticMetaObject    .className()), QUaBaseVariable::staticMetaObject    );
+	m_hashMetaObjects.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), QUaBaseDataVariable::staticMetaObject);
+	m_hashMetaObjects.insert(QString(QUaProperty::staticMetaObject        .className()), QUaProperty::staticMetaObject        );
+	m_hashMetaObjects.insert(QString(QUaBaseObject::staticMetaObject      .className()), QUaBaseObject::staticMetaObject      );
+	m_hashMetaObjects.insert(QString(QUaFolderObject::staticMetaObject    .className()), QUaFolderObject::staticMetaObject    );
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject              .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE));
+	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject              .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE              ));
 	m_mapTypes.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
+	m_hashMetaObjects.insert(QString(QUaBaseEvent::staticMetaObject              .className()), QUaBaseEvent::staticMetaObject              );
+	m_hashMetaObjects.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), QUaGeneralModelChangeEvent::staticMetaObject);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// set context for base types (for instantiable types)
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1242,11 +1252,7 @@ void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNo
 	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (!UA_NodeId_isNull(&newTypeNodeId))
 	{
-		// add to map of not here yet
-		if (!m_mapTypes.contains(strClassName))
-		{
-			m_mapTypes[strClassName] = newTypeNodeId;
-		}
+		Q_ASSERT(m_mapTypes.contains(strClassName));
 		return;
 	}
 	// create new type browse name
@@ -1323,6 +1329,7 @@ void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNo
 	UA_NodeId_clear(&reqNodeId);
 	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
+	m_hashMetaObjects.insert(strClassName, metaObject);
 	// register constructor/destructor
 	this->registerTypeLifeCycle(&newTypeNodeId, metaObject);
 	// register meta-enums
@@ -1917,7 +1924,8 @@ UA_NodeId QUaServer::createInstance(const QMetaObject& metaObject, QUaNode* pare
 	}
 	else
 	{
-		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject));
+		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
+			metaObject.className() == QUaBaseObject::staticMetaObject.className());
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
@@ -1995,6 +2003,17 @@ void QUaServer::bindCppInstanceWithUaNode(QUaNode* nodeInstance, UA_NodeId& node
 	UA_Server_setNodeContext(m_server, nodeId, (void**)(&nodeInstance));
 	// set node id to c++ instance
 	nodeInstance->m_nodeId = nodeId;
+}
+
+bool QUaServer::isMetaObjectRegistered(const QString& strClassName) const
+{
+	return m_hashMetaObjects.contains(strClassName);
+}
+
+QMetaObject QUaServer::getRegisteredMetaObject(const QString& strClassName) const
+{
+	Q_ASSERT_X(m_hashMetaObjects.contains(strClassName), "QUaServer::getRegisteredMetaObject", "Class is not registered.");
+	return m_hashMetaObjects.value(strClassName);
 }
 
 void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumMap, const QString& strNodeId)
