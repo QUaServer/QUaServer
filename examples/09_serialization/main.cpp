@@ -80,19 +80,27 @@ int main(int argc, char *argv[])
 	{
 		// load from file
 		QFile fileConf(strFileName);
-		if (fileConf.open(QIODevice::ReadOnly | QIODevice::Text))
+		if (!fileConf.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
-			// load all data
-			QString strError;
-			if (!serializer.fromByteArray(&server, fileConf.readAll(), strError))
+			qCritical() << "Could not open config file for read" << strFileName;
+			return 1;
+		}
+		// load all data
+		QQueue<QUaLog> logOut;
+		if (!serializer.fromByteArray(&server, fileConf.readAll(), logOut))
+		{
+			// print log entries if any
+			for (auto log : logOut)
 			{
-				qCritical() << strError;
-				return 1;
+				qWarning() << "[" << log.level << "] :" << log.message;
 			}
+			// close file
+			fileConf.close();
+			// exit
+			return 1;
 		}
 		// deserialize
 		QUaFolderObject* objsFolder = server.objectsFolder();
-		QQueue<QUaLog> logOut;
 		bool ok = objsFolder->deserialize(serializer, logOut);
 		Q_ASSERT(ok);
 		// print log entries if any

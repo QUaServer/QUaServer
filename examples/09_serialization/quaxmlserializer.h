@@ -10,16 +10,20 @@ class QUaXmlSerializer
 public:
     QUaXmlSerializer();
 
+	// reset serializer state
 	void reset();
 
+	// write text from XML
 	QByteArray toByteArray() const;
 
+	// read XML from text
 	bool fromByteArray(
 		const QUaServer* server,
 		const QByteArray &xmlData, 
-		QString &strError
+		QQueue<QUaLog>& logOut
 	);
 
+	// required API for QUaNode::serialize
 	bool writeInstance(
 		const QString &nodeId,
 		const QString &typeName,
@@ -28,6 +32,7 @@ public:
 		QQueue<QUaLog> &logOut
 	);
 
+	// required API for QUaNode::deserialize
 	bool readInstance(
 		const QString &nodeId,
 		QString &typeName,
@@ -37,9 +42,9 @@ public:
 	);
 
 private:
-	// used to hold serialization data
+	// used to hold serialization state
 	QDomDocument m_doc;
-	// used to hold deserialization data
+	// used to hold deserialization state
 	struct NodeData 
 	{
 		QString typeName;
@@ -56,35 +61,35 @@ private:
 	// helper to decode nodeId
 	QString readNodeIdAttribute(
 		QDomElement& node,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 	// helper to decode typeName
 	QString readTypeNameAttribute(
 		const QUaServer * server,
 		QDomElement& node,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 	// helper to decode serialized data
 	QVariant readAttribute(
 		const QString& strValue,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 	// helper to decode nodeIdTarget
 	QString readNodeIdTargetAttribute(
 		QDomElement& ref,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 	// helper to decode targetType
 	QString readTargetTypeAttribute(
 		const QUaServer* server,
 		QDomElement& ref,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 	// helper to decode forwardName and inverseName
 	QUaReferenceType readRefNameAttribute(
 		const QUaServer* server,
 		QDomElement& ref,
-		QString& strError
+		QQueue<QUaLog>& logOut
 	);
 };
 

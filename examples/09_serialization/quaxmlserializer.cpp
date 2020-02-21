@@ -22,14 +22,25 @@ QByteArray QUaXmlSerializer::toByteArray() const
 	return m_doc.toByteArray();
 }
 
-bool QUaXmlSerializer::fromByteArray(const QUaServer* server, const QByteArray& xmlData, QString& strError)
+bool QUaXmlSerializer::fromByteArray(
+	const QUaServer* server, 
+	const QByteArray& xmlData, 
+	QQueue<QUaLog>& logOut)
 {
 	// load from xml
 	int line, col;
-	m_doc.setContent(xmlData, &strError, &line, &col);
-	if (!strError.isEmpty())
+	QString strXmlError;
+	m_doc.setContent(xmlData, &strXmlError, &line, &col);
+	if (!strXmlError.isEmpty())
 	{
-		strError = QObject::tr("Error : Invalid XML in Line %1 Column %2 Error %3").arg(line).arg(col).arg(strError);
+		logOut << QUaLog({
+			QObject::tr("Invalid XML in Line %1 Column %2 Error %3")
+				.arg(line)
+				.arg(col)
+				.arg(strXmlError),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return false;
 	}
 	// fill up nodes data
@@ -45,14 +56,14 @@ bool QUaXmlSerializer::fromByteArray(const QUaServer* server, const QByteArray& 
 			continue;
 		}
 		// parse nodeId
-		QString nodeId = this->readNodeIdAttribute(node, strError);
+		QString nodeId = this->readNodeIdAttribute(node, logOut);
 		if (nodeId.isEmpty())
 		{
 			nIter = nIter.nextSibling();
 			continue;
 		}
 		// parse typeName
-		QString typeName = this->readTypeNameAttribute(server, node, strError);
+		QString typeName = this->readTypeNameAttribute(server, node, logOut);
 		if (typeName.isEmpty())
 		{
 			nIter = nIter.nextSibling();
@@ -72,7 +83,7 @@ bool QUaXmlSerializer::fromByteArray(const QUaServer* server, const QByteArray& 
 			}
 			// deserialize
 			QString name = attr.name();
-			QVariant value = this->readAttribute(attr.value(), strError);
+			QVariant value = this->readAttribute(attr.value(), logOut);
 			if (!value.isValid())
 			{
 				continue;
@@ -93,20 +104,20 @@ bool QUaXmlSerializer::fromByteArray(const QUaServer* server, const QByteArray& 
 				continue;
 			}
 			// parse nodeIdTarget
-			QString nodeIdTarget = this->readNodeIdTargetAttribute(ref, strError);
+			QString nodeIdTarget = this->readNodeIdTargetAttribute(ref, logOut);
 			if (nodeIdTarget.isEmpty())
 			{
 				rIter = rIter.nextSibling();
 				continue;
 			}
 			// parse targetType
-			QString targetType = this->readTargetTypeAttribute(server, ref, strError);
+			QString targetType = this->readTargetTypeAttribute(server, ref, logOut);
 			if (targetType.isEmpty())
 			{
 				rIter = rIter.nextSibling();
 				continue;
 			}
-			QUaReferenceType refType = this->readRefNameAttribute(server, ref, strError);
+			QUaReferenceType refType = this->readRefNameAttribute(server, ref, logOut);
 			if (refType.strForwardName.isEmpty() || refType.strInverseName.isEmpty())
 			{
 				rIter = rIter.nextSibling();
@@ -206,53 +217,84 @@ void QUaXmlSerializer::writeAttribute(
 	node.setAttribute(strName, varValue.toString());
 }
 
-QString QUaXmlSerializer::readNodeIdAttribute(QDomElement& node, QString& strError)
+QString QUaXmlSerializer::readNodeIdAttribute(
+	QDomElement& node, 
+	QQueue<QUaLog>& logOut)
 {
 	if (!node.hasAttribute("nodeId"))
 	{
-		strError += QObject::tr("Error : Found node element without nodeId attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found node element without nodeId attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	QString nodeId = node.attribute("nodeId", "");
 	if (nodeId.isEmpty())
 	{
-		strError += QObject::tr("Error : Found node element with empty nodeId attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found node element with empty nodeId attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	if (!QUaServer::isIdValid(nodeId))
 	{
-		strError += QObject::tr("Error : Found node element with invalid nodeId attribute %1. Ignoring.").arg(nodeId);
+		logOut << QUaLog({
+			QObject::tr("Found node element with invalid nodeId attribute %1. Ignoring.").arg(nodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	// success
 	return nodeId;
 }
 
-QString QUaXmlSerializer::readTypeNameAttribute(const QUaServer* server, QDomElement& node, QString& strError)
+QString QUaXmlSerializer::readTypeNameAttribute(
+	const QUaServer* server, 
+	QDomElement& node, 
+	QQueue<QUaLog>& logOut)
 {
 	if (!node.hasAttribute("typeName"))
 	{
-		strError += QObject::tr("Error : Found node element without typeName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found node element without typeName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	QString typeName = node.attribute("typeName", "");
 	if (typeName.isEmpty())
 	{
-		strError += QObject::tr("Error : Found node element with empty typeName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found node element with empty typeName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	if (!server->isTypeNameRegistered(typeName))
 	{
-		strError += QObject::tr("Error : Found node element with unregistered typeName attribute %1. Ignoring.").arg(typeName);
+		logOut << QUaLog({
+			QObject::tr("Found node element with unregistered typeName attribute %1. Ignoring.").arg(typeName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	// success
 	return typeName;
 }
 
-QVariant QUaXmlSerializer::readAttribute(const QString& strValue, QString& strError)
+QVariant QUaXmlSerializer::readAttribute(
+	const QString& strValue, 
+	QQueue<QUaLog>& logOut)
 {
-	Q_UNUSED(strError);
+	Q_UNUSED(logOut);
 	// first try int
 	bool ok;
 	int intVal = strValue.toInt(&ok);
@@ -270,64 +312,108 @@ QVariant QUaXmlSerializer::readAttribute(const QString& strValue, QString& strEr
 	return strValue;
 }
 
-QString QUaXmlSerializer::readNodeIdTargetAttribute(QDomElement& ref, QString& strError)
+QString QUaXmlSerializer::readNodeIdTargetAttribute(
+	QDomElement& ref, 
+	QQueue<QUaLog>& logOut)
 {
 	if (!ref.hasAttribute("nodeIdTarget"))
 	{
-		strError += QObject::tr("Error : Found reference element without nodeIdTarget attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element without nodeIdTarget attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	QString nodeIdTarget = ref.attribute("nodeIdTarget", "");
 	if (nodeIdTarget.isEmpty())
 	{
-		strError += QObject::tr("Error : Found reference element with empty nodeIdTarget attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element with empty nodeIdTarget attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 	}
 	return nodeIdTarget;
 }
 
-QString QUaXmlSerializer::readTargetTypeAttribute(const QUaServer* server, QDomElement& ref, QString& strError)
+QString QUaXmlSerializer::readTargetTypeAttribute(
+	const QUaServer* server, 
+	QDomElement& ref, 
+	QQueue<QUaLog>& logOut)
 {
 	if (!ref.hasAttribute("targetType"))
 	{
-		strError += QObject::tr("Error : Found reference element without targetType attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element without targetType attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	QString targetType = ref.attribute("targetType", "");
 	if (targetType.isEmpty())
 	{
-		strError += QObject::tr("Error : Found reference element with empty targetType attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element with empty targetType attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	if (!server->isTypeNameRegistered(targetType))
 	{
-		strError += QObject::tr("Error : Found reference element with unregistered targetType attribute %1. Ignoring.").arg(targetType);
+		logOut << QUaLog({
+			QObject::tr("Found reference element with unregistered targetType attribute %1. Ignoring.").arg(targetType),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return "";
 	}
 	return targetType;
 }
 
-QUaReferenceType QUaXmlSerializer::readRefNameAttribute(const QUaServer* server, QDomElement& ref, QString& strError)
+QUaReferenceType QUaXmlSerializer::readRefNameAttribute(
+	const QUaServer* server, 
+	QDomElement& ref, 
+	QQueue<QUaLog>& logOut)
 {
 	if (!ref.hasAttribute("forwardName"))
 	{
-		strError += QObject::tr("Error : Found reference element without forwardName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element without forwardName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return {"", ""};
 	}
 	QString forwardName = ref.attribute("forwardName", "");
 	if (forwardName.isEmpty())
 	{
-		strError += QObject::tr("Error : Found reference element with empty forwardName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element with empty forwardName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return { "", "" };
 	}
 	if (!ref.hasAttribute("inverseName"))
 	{
-		strError += QObject::tr("Error : Found reference element without inverseName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element without inverseName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return { "", "" };
 	}
 	QString inverseName = ref.attribute("inverseName", "");
 	if (inverseName.isEmpty())
 	{
-		strError += QObject::tr("Error : Found reference element with empty inverseName attribute. Ignoring.");
+		logOut << QUaLog({
+			QObject::tr("Found reference element with empty inverseName attribute. Ignoring."),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return { "", "" };
 	}
 	QUaReferenceType refType = {
@@ -336,7 +422,11 @@ QUaReferenceType QUaXmlSerializer::readRefNameAttribute(const QUaServer* server,
 	};
 	if (!server->referenceTypeRegistered(refType))
 	{
-		strError += QObject::tr("Error : Found reference element with unregistered referenceType attribute {%1, %2}. Ignoring.").arg(forwardName).arg(inverseName);
+		logOut << QUaLog({
+			QObject::tr("Found reference element with unregistered referenceType attribute {%1, %2}. Ignoring.").arg(forwardName).arg(inverseName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
 		return { "", "" };
 	}
 	return refType;
