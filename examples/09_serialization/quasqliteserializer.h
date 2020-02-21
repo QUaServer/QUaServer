@@ -5,10 +5,10 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 
-class QUaSQLiteSerializer
+class QUaSqliteSerializer
 {
 public:
-    QUaSQLiteSerializer();
+    QUaSqliteSerializer();
 
 	// set sqlite database to read from or write to
 	QString sqliteDbName() const;
@@ -37,8 +37,58 @@ public:
 
 private:
 	QString m_strSqliteDbName;
-	// get database handle, adds it if not added
-	QSqlDatabase getDatabase(QQueue<QUaLog>& logOut);
+	// get database handle, creates it if not already
+	bool getOpenedDatabase(
+		QSqlDatabase &db, 
+		QQueue<QUaLog>& logOut
+	);
+	// check table exists
+	bool tableExists(
+		QSqlDatabase& db,
+		const QString& strTableName, 
+		bool& tableExists,
+		QQueue<QUaLog>& logOut
+	);
+	// create nodes table
+	bool createNodesTable(
+		QSqlDatabase& db, 
+		QQueue<QUaLog>& logOut
+	);
+	// create references table
+	bool createReferencesTable(
+		QSqlDatabase& db, 
+		QQueue<QUaLog>& logOut
+	);
+	// create type table
+	bool createTypeTable(
+		QSqlDatabase& db,
+		const QString& typeName, 
+		const QList<QString> &attrNames, 
+		QQueue<QUaLog>& logOut
+	);
+	// check if node already exists in type table
+	bool nodeIdInTypeTable(
+		QSqlDatabase& db,
+		const QString& typeName, 
+		const QString& nodeId, 
+		bool& nodeExists,
+		QQueue<QUaLog>& logOut);
+	// insert new node, return unique key
+	bool insertNewNode(
+		QSqlDatabase& db, 
+		qint32& nodeKey, 
+		QQueue<QUaLog>& logOut
+	);
+	// insert new instance, return unique key
+	bool insertNewInstance(
+		QSqlDatabase& db,
+		const QString& typeName, 
+		const QString& nodeId, 
+		const qint32& nodeKey,
+		const QMap<QString, QVariant>& attrs,
+		qint32& instanceKey,
+		QQueue<QUaLog>& logOut
+	);
 };
 
 #endif // QUASQLITESERIALIZER_H

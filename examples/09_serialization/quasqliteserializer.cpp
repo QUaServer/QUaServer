@@ -1,34 +1,34 @@
 #include "quasqliteserializer.h"
 
-QUaSQLiteSerializer::QUaSQLiteSerializer()
+#include <QSqlError>
+
+QUaSqliteSerializer::QUaSqliteSerializer()
 {
 
 }
 
-QString QUaSQLiteSerializer::sqliteDbName() const
+QString QUaSqliteSerializer::sqliteDbName() const
 {
 	return m_strSqliteDbName;
 }
 
-bool QUaSQLiteSerializer::setSqliteDbName(
+bool QUaSqliteSerializer::setSqliteDbName(
 	const QString& strSqliteDbName,
 	QQueue<QUaLog>& logOut)
 {
 	// set internally
 	m_strSqliteDbName = strSqliteDbName;
 	// create database handle
-	QSqlDatabase db = this->getDatabase(logOut);
-	// check if opened correctly
-	if (!db.isOpen())
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
 	{
-		// error
 		return false;
 	}
 	// success
 	return true;
 }
 
-bool QUaSQLiteSerializer::writeInstance(
+bool QUaSqliteSerializer::writeInstance(
 	const QString& nodeId,
 	const QString& typeName,
 	const QMap<QString, QVariant>& attrs,
@@ -36,21 +36,86 @@ bool QUaSQLiteSerializer::writeInstance(
 	QQueue<QUaLog>& logOut)
 {
 	// get database handle
-	QSqlDatabase db = this->getDatabase(logOut);
-	// check if opened correctly
-	if (!db.isOpen())
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
 	{
-		// error
 		return false;
 	}
+	// check nodes table exists
+	bool nodeTableExists;
+	if (this->tableExists(db, "QUaNode", nodeTableExists, logOut))
+	{
+		return false;
+	}
+	if (!nodeTableExists)
+	{
+		if (!this->createNodesTable(db, logOut))
+		{
+			return false;
+		}
+	}
+	// check references table exists
+	bool refsTableExists;
+	if (!this->tableExists(db, "QUaForwardReference", refsTableExists, logOut))
+	{
+		return false;
+	}
+	if (!refsTableExists)
+	{
+		if (!this->createReferencesTable(db, logOut))
+		{
+			return false;
+		}
+	}
+	// check type table exists
+	bool typeTableExists;
+	if (!this->tableExists(db, typeName, typeTableExists, logOut))
+	{
+		return false;
+	}
+	if (!typeTableExists)
+	{
+		if (!this->createTypeTable(db, typeName, attrs.keys(), logOut))
+		{
+			return false;
+		}
+	}
+	// update or insert
+	bool nodeExists;
+	if (!this->nodeIdInTypeTable(db, typeName, nodeId, nodeExists, logOut))
+	{
+		return false;
+	}
+	if (nodeExists)
+	{
+		// update
 
+		// TODO : implement
 
+	}
+	else
+	{
+		// insert new node
+		qint32 nodeKey;
+		if (!this->insertNewNode(db, nodeKey, logOut))
+		{
+			return false;
+		}
+		// insert new instance
+		qint32 instanceKey;
+		if (!this->insertNewInstance(db, typeName, nodeId, nodeKey, attrs, instanceKey, logOut))
+		{
+			return false;
+		}
 
+		// TODO : implement add references
+
+	}
 	// success
 	return true;
 }
 
-bool QUaSQLiteSerializer::readInstance(
+bool QUaSqliteSerializer::readInstance(
 	const QString& nodeId,
 	QString& typeName,
 	QMap<QString, QVariant>& attrs,
@@ -58,11 +123,9 @@ bool QUaSQLiteSerializer::readInstance(
 	QQueue<QUaLog>& logOut)
 {
 	// get database handle
-	QSqlDatabase db = this->getDatabase(logOut);
-	// check if opened correctly
-	if (!db.isOpen())
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
 	{
-		// error
 		return false;
 	}
 
@@ -72,9 +135,11 @@ bool QUaSQLiteSerializer::readInstance(
 	return true;
 }
 
-QSqlDatabase QUaSQLiteSerializer::getDatabase(QQueue<QUaLog>& logOut)
+bool QUaSqliteSerializer::getOpenedDatabase(
+	QSqlDatabase& db, 
+	QQueue<QUaLog>& logOut
+)
 {
-	QSqlDatabase db;
 	// add if not added
 	if (QSqlDatabase::contains(m_strSqliteDbName))
 	{
@@ -95,5 +160,7 @@ QSqlDatabase QUaSQLiteSerializer::getDatabase(QQueue<QUaLog>& logOut)
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
+		return false;
 	}
+	return true;
 }
