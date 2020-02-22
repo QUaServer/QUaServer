@@ -63,7 +63,7 @@ private:
 	bool createTypeTable(
 		QSqlDatabase& db,
 		const QString& typeName, 
-		const QList<QString> &attrNames, 
+		const QMap<QString, QVariant>& attrs,
 		QQueue<QUaLog>& logOut
 	);
 	// check if node already exists in type table
@@ -72,6 +72,7 @@ private:
 		const QString& typeName, 
 		const QString& nodeId, 
 		bool& nodeExists,
+		qint32& instanceKey,
 		QQueue<QUaLog>& logOut);
 	// insert new node, return unique key
 	bool insertNewNode(
@@ -89,6 +90,16 @@ private:
 		qint32& instanceKey,
 		QQueue<QUaLog>& logOut
 	);
+	// add references
+	bool addReferences(
+		QSqlDatabase& db,
+		const qint32& nodeKey,
+		const QList<QUaForwardReference>& forwardRefs,
+		QQueue<QUaLog>& logOut
+	);
+
+	// return SQL type in string form, for given Qt type (only QUaServer supported types)
+	static const QString QtTypeToSqlType(const QMetaType::Type& qtType);
 };
 
 #endif // QUASQLITESERIALIZER_H
