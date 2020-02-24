@@ -830,10 +830,6 @@ void QUaServer::setupServer()
 	{
 		qRegisterMetaType<QUaEnumEntry>("QUaEnumEntry");
 	}
-	if (QMetaType::type("QUaSession") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaSession>("QUaSession");
-	}
 	if (QMetaType::type("QUaDataType") == QMetaType::UnknownType)
 	{
 		qRegisterMetaType<QUaDataType>("QUaDataType");
