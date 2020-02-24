@@ -3,27 +3,28 @@
 #include <QSqlError>
 #include <QSqlRecord>
 
+// map supported types
 QHash<int, QString> QUaSqliteSerializer::m_hashTypes = {
-	{QMetaType::Bool       , "BOOLEAN"},
-	{QMetaType::Char       , "CHARACTER"},
-	{QMetaType::SChar      , "TINYINT"},
-	{QMetaType::UChar      , "TINYINT"},
-	{QMetaType::Short      , "SMALLINT"},
-	{QMetaType::UShort     , "SMALLINT"},
-	{QMetaType::Int        , "MEDIUMINT"},
-	{QMetaType::UInt       , "MEDIUMINT"},
-	{qMetaTypeId<QUaDataType>(), "MEDIUMINT"},
-	{QMetaType::Long       , "BIGINT"},
-	{QMetaType::LongLong   , "BIGINT"},
-	{QMetaType::ULong      , "UNSIGNED BIG INT"},
-	{QMetaType::ULongLong  , "UNSIGNED BIG INT"},
-	{QMetaType::Float      , "REAL"},
-	{QMetaType::Double     , "DOUBLE"},
-	{QMetaType::QString    , "TEXT"},
-	{QMetaType::QDateTime  , "DATETIME"},
-	{QMetaType::QUuid      , "NUMERIC"},
-	{QMetaType::QByteArray , "BLOB"},
-	{QMetaType::UnknownType, "BLOB"}
+	{QMetaType::Bool           , "INTEGER"},
+	{QMetaType::Char           , "INTEGER"},
+	{QMetaType::SChar          , "INTEGER"},
+	{QMetaType::UChar          , "INTEGER"},
+	{QMetaType::Short          , "INTEGER"},
+	{QMetaType::UShort         , "INTEGER"},
+	{QMetaType::Int            , "INTEGER"},
+	{QMetaType::UInt           , "INTEGER"},
+	{qMetaTypeId<QUaDataType>(), "INTEGER"},
+	{QMetaType::Long           , "INTEGER"},
+	{QMetaType::LongLong       , "INTEGER"},
+	{QMetaType::ULong          , "INTEGER"},
+	{QMetaType::ULongLong      , "INTEGER"},
+	{QMetaType::Float          , "REAL"   },
+	{QMetaType::Double         , "REAL"   },
+	{QMetaType::QString        , "TEXT"   },
+	{QMetaType::QDateTime      , "INTEGER"},
+	{QMetaType::QUuid          , "INTEGER"},
+	{QMetaType::QByteArray     , "BLOB"   },
+	{QMetaType::UnknownType    , "BLOB"   }
 };
 
 QUaSqliteSerializer::QUaSqliteSerializer()
@@ -106,8 +107,7 @@ bool QUaSqliteSerializer::writeInstance(
 	}
 	// update or insert
 	bool nodeExists;
-	qint32 instanceKey;
-	if (!this->nodeIdInTypeTable(db, typeName, nodeId, nodeExists, instanceKey, logOut))
+	if (!this->nodeIdInTypeTable(db, typeName, nodeId, nodeExists, logOut))
 	{
 		return false;
 	}
@@ -126,12 +126,12 @@ bool QUaSqliteSerializer::writeInstance(
 	{
 		// insert new node
 		qint32 nodeKey = -1;
-		if (!this->insertNewNode(db, nodeKey, logOut))
+		if (!this->insertNewNode(db, nodeId, typeName, nodeKey, logOut))
 		{
 			return false;
 		}
 		// insert new instance
-		if (!this->insertNewInstance(db, typeName, nodeId, nodeKey, attrs, instanceKey, logOut))
+		if (!this->insertNewInstance(db, typeName, nodeKey, attrs, logOut))
 		{
 			return false;
 		}
@@ -158,9 +158,22 @@ bool QUaSqliteSerializer::readInstance(
 	{
 		return false;
 	}
-
-
-
+	// get type name (table) and node key by node id
+	qint32 nodeKey;
+	if (!this->typeAndKeyInNodesTable(db, nodeId, typeName, nodeKey, logOut))
+	{
+		return false;
+	}
+	// get attributes
+	if (!this->nodeAttributes(db, typeName, nodeKey, attrs, logOut))
+	{
+		return false;
+	}
+	// get references
+	if (!this->nodeReferences(db, nodeKey, forwardRefs, logOut))
+	{
+		return false;
+	}
 	// success
 	return true;
 }
@@ -186,7 +199,7 @@ bool QUaSqliteSerializer::getOpenedDatabase(
 	if (!db.isOpen())
 	{
 		logOut << QUaLog({
-			QObject::tr("Error opening %1. %2")
+			QObject::tr("Error opening %1. Sql : %2")
 				.arg(m_strSqliteDbName)
 				.arg(db.lastError().text()),
 			QUaLogLevel::Error,
@@ -213,7 +226,7 @@ bool QUaSqliteSerializer::tableExists(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-		QObject::tr("Error checking %1 table exists in %2 database. Sql : %3.")
+			QObject::tr("Error checking %1 table exists in %2 database. Sql : %3.")
 				.arg(strTableName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -242,13 +255,15 @@ bool QUaSqliteSerializer::createNodesTable(
 	QString strStmt(
 		"CREATE TABLE \"QUaNode\""
 		"("
-			"[QUaNodeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"
+			"[QUaNodeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+			"[typeName] NVARCHAR(100) NOT NULL, "
+			"[nodeId] NVARCHAR(100) NOT NULL"
 		");"
 	);
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-		QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
 				.arg("QUaNode")
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -270,18 +285,18 @@ bool QUaSqliteSerializer::createReferencesTable(
 		"CREATE TABLE \"QUaForwardReference\""
 		"("
 			"[QUaForwardReference] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
-			"[QUaNodeIdSource] INTEGER NOT NULL,"
+			"[QUaNodeId] INTEGER NOT NULL,"
 			"[forwardName] NVARCHAR(100) NOT NULL,"
 			"[inverseName] NVARCHAR(100) NOT NULL,"
 			"[targetType] NVARCHAR(100) NOT NULL,"
-			"[nodeIdTarget] NVARCHAR(100) NOT NULL,"
-			"FOREIGN KEY ([QUaNodeIdSource]) REFERENCES \"QUaNode\" ([QUaNodeId]) ON DELETE NO ACTION ON UPDATE NO ACTION"
+			"[targetNodeId] NVARCHAR(100) NOT NULL,"
+			"FOREIGN KEY ([QUaNodeId]) REFERENCES \"QUaNode\" ([QUaNodeId]) ON DELETE NO ACTION ON UPDATE NO ACTION"
 		");"
 	);
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-		QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
 				.arg("QUaForwardReference")
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -307,18 +322,16 @@ bool QUaSqliteSerializer::createTypeTable(
 		"("
 			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
 			"[QUaNodeId] INTEGER NOT NULL,"
-			"[nodeId] NVARCHAR(100) NOT NULL,"
 	).arg(typeName);
 	for (auto attrName : attrNames)
 	{
-		strStmt += QString("[%1] %2,") //  NOT NULL
+		strStmt += QString("[%1] %2, ") // NOT NULL
 			.arg(attrName)
 			.arg(QUaSqliteSerializer::QtTypeToSqlType(
 				static_cast<QMetaType::Type>(
 					attrs[attrName].type() < 1024 ? 
 					attrs[attrName].type() :
-					attrs[attrName].userType()
-				)
+					attrs[attrName].userType())
 			));
 	}
 	strStmt += "FOREIGN KEY ([QUaNodeId]) REFERENCES \"QUaNode\" ([QUaNodeId]) "
@@ -327,7 +340,7 @@ bool QUaSqliteSerializer::createTypeTable(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-		QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -344,7 +357,6 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	const QString& typeName, 
 	const QString& nodeId, 
 	bool& nodeExists, 
-	qint32& instanceKey, 
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -352,15 +364,20 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	nodeExists = false;
 	QString strStmt = QString(
 		"SELECT "
-			"i.QUaNodeId "
+			"t.%1 AS %1 "
 		"FROM "
-			"%1 i "
-		"WHERE i.nodeId = '%2';"
+			"%1 t "
+		"INNER JOIN "
+			"QUaNode n "
+		"ON "
+			"t.QUaNodeId = n.QUaNodeId "
+		"WHERE "
+			"n.nodeId = '%2';"
 	).arg(typeName).arg(nodeId);
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-		QObject::tr("Error querying %1 table in %2 database. Sql : %3.")
+			QObject::tr("Error querying %1 table in %2 database. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -369,11 +386,9 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 		});
 		return false;
 	}
-	int keyFieldNo = query.record().indexOf(typeName);
 	if (query.next())
 	{
 		nodeExists  = true;
-		instanceKey = query.value(keyFieldNo).toInt();
 	}
 	else
 	{
@@ -384,18 +399,23 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 
 bool QUaSqliteSerializer::insertNewNode(
 	QSqlDatabase& db, 
+	const QString& nodeId,
+	const QString& typeName,
 	qint32& nodeKey, 
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
 	QSqlQuery query(db);
 	QString strStmt(
-		"INSERT INTO QUaNode DEFAULT VALUES;"
+		"INSERT INTO QUaNode (typeName, nodeId) VALUES (:typeName, :nodeId);"
 	);
-	if (!query.exec(strStmt))
+	query.prepare(strStmt);
+	query.bindValue(0, typeName);
+	query.bindValue(1, nodeId);
+	if (!query.exec())
 	{
 		logOut << QUaLog({
-		QObject::tr("Could not insert new row in QUaNode table in %1 database. Sql : %2.")
+			QObject::tr("Could not insert new row in QUaNode table in %1 database. Sql : %2.")
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
@@ -411,10 +431,8 @@ bool QUaSqliteSerializer::insertNewNode(
 bool QUaSqliteSerializer::insertNewInstance(
 	QSqlDatabase& db, 
 	const QString& typeName, 
-	const QString& nodeId, 
 	const qint32& nodeKey, 
 	const QMap<QString, QVariant>& attrs, 
-	qint32& instanceKey, 
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -423,7 +441,6 @@ bool QUaSqliteSerializer::insertNewInstance(
 		"INSERT INTO %1 ("
 	).arg(typeName);
 	QList<QString> attrNames = attrs.keys();
-	attrNames.prepend("nodeId");
 	attrNames.prepend("QUaNodeId");
 	for (auto it = attrNames.begin(); it != attrNames.end(); ++it)
 	{
@@ -438,15 +455,14 @@ bool QUaSqliteSerializer::insertNewInstance(
 	}
 	query.prepare(strStmt);
 	query.bindValue(0, nodeKey);
-	query.bindValue(1, nodeId);
-	for (int i = 2; i < attrNames.count(); i++)
+	for (int i = 1; i < attrNames.count(); i++)
 	{
 		query.bindValue(i, attrs.value(attrNames.at(i)));
 	}
 	if (!query.exec())
 	{
 		logOut << QUaLog({
-		QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -468,9 +484,9 @@ bool QUaSqliteSerializer::addReferences(
 	QSqlQuery query(db);
 	QString strStmt(
 		"INSERT INTO QUaForwardReference "
-		"(QUaNodeIdSource, forwardName, inverseName, targetType, nodeIdTarget) "
+		"(QUaNodeId, forwardName, inverseName, targetType, targetNodeId) "
 		"VALUES "
-		"(:QUaNodeIdSource, :forwardName, :inverseName, :targetType, :nodeIdTarget);"
+		"(:QUaNodeId, :forwardName, :inverseName, :targetType, :targetNodeId);"
 	);
 	query.prepare(strStmt);
 	for (auto forwRef : forwardRefs)
@@ -479,18 +495,154 @@ bool QUaSqliteSerializer::addReferences(
 		query.bindValue(1, forwRef.refType.strForwardName);
 		query.bindValue(2, forwRef.refType.strInverseName);
 		query.bindValue(3, forwRef.targetType);
-		query.bindValue(4, forwRef.nodeIdTarget);
+		query.bindValue(4, forwRef.targetNodeId);
 		if (!query.exec())
 		{
 			logOut << QUaLog({
 				QObject::tr("Could not insert new row in QUaForwardReference table in %1 database. Sql : %2.")
-						.arg(m_strSqliteDbName)
-						.arg(query.lastError().text()),
-					QUaLogLevel::Error,
-					QUaLogCategory::Serialization
+					.arg(m_strSqliteDbName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
 			});
 			return false;
 		}
+	}
+	return true;
+}
+
+bool QUaSqliteSerializer::typeAndKeyInNodesTable(
+	QSqlDatabase& db, 
+	const QString& nodeId, 
+	QString& typeName, 
+	qint32& nodeKey, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"SELECT n.QUaNodeId, n.typeName FROM QUaNode n WHERE n.nodeId = '%1';"
+	).arg(nodeId);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Failed to query %1 node id on QUaNode table in %2 database. Sql : %3.")
+				.arg(nodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	QSqlRecord rec  = query.record();
+	int nodeKeyCol  = rec.indexOf("QUaNodeId");
+	int typeNameCol = rec.indexOf("typeName");
+	Q_ASSERT(nodeKeyCol >= 0 && typeNameCol >= 0);
+	if (!query.next())
+	{
+		logOut << QUaLog({
+			QObject::tr("Node id %1 does not exist on QUaNode table in %2 database.")
+				.arg(nodeId)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+	}
+	nodeKey  = query.value(nodeKeyCol).toInt();
+	typeName = query.value(typeNameCol).toString();
+	return true;
+}
+
+bool QUaSqliteSerializer::nodeAttributes(
+	QSqlDatabase& db, 
+	const QString& typeName, 
+	const qint32& nodeKey, 
+	QMap<QString, QVariant>& attrs, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"SELECT * FROM %1 t WHERE t.QUaNodeId = %2;"
+	).arg(typeName).arg(nodeKey);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Failed to query %1 key on %2 table in %3 database. Sql : %4.")
+				.arg(nodeKey)
+				.arg(typeName)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	if (!query.next())
+	{
+		logOut << QUaLog({
+			QObject::tr("Node key %1 does not exist on %2 table in %3 database.")
+				.arg(nodeKey)
+				.arg(typeName)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+	}
+	// loop columns
+	QSqlRecord rec = query.record();
+	for (int i = 0; i < rec.count(); i++)
+	{
+		if (rec.fieldName(i).compare(typeName   , Qt::CaseSensitive) == 0 ||
+			rec.fieldName(i).compare("QUaNodeId", Qt::CaseSensitive) == 0)
+		{
+			continue;
+		}
+		attrs[rec.fieldName(i)] = rec.value(i);
+	}
+	return true;
+}
+
+bool QUaSqliteSerializer::nodeReferences(
+	QSqlDatabase& db, 
+	const qint32& nodeKey, 
+	QList<QUaForwardReference>& forwardRefs, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"SELECT * FROM QUaForwardReference r WHERE r.QUaNodeId = %2;"
+	).arg(nodeKey);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Failed to query %1 key on QUaForwardReference table in %2 database. Sql : %3.")
+				.arg(nodeKey)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	while (query.next())
+	{
+		QSqlRecord rec  = query.record();
+		int forwNameCol = rec.indexOf("forwardName");
+		int invNameCol  = rec.indexOf("inverseName");
+		int targTypeCol = rec.indexOf("targetType");
+		int targNodeCol = rec.indexOf("targetNodeId");
+		Q_ASSERT(forwNameCol >= 0 && invNameCol >= 0 && targTypeCol >= 0 && targNodeCol >= 0);
+		forwardRefs << QUaForwardReference({
+			query.value(targNodeCol).toString(),
+			query.value(targTypeCol).toString(),
+			{
+				query.value(forwNameCol).toString(),
+				query.value(invNameCol ).toString()
+			}
+		});
 	}
 	return true;
 }

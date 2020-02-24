@@ -64,9 +64,15 @@ void setupDefaultAddressSpace(QUaServer &server)
 	auto sensor2 = objSubSubBase->addChild<TemperatureSensor>();
 	sensor2->setDisplayName("Sensor2");
 	sensor2->setBrowseName("Sensor2");
+	sensor2->turnOn();
 	auto sensor3 = objSubSubBase->addChild<TemperatureSensor>();
 	sensor3->setDisplayName("Sensor3");
 	sensor3->setBrowseName("Sensor3");
+	sensor3->currentValue()->setValue(1.2345);
+
+	// some non-hierarchical references
+	objBase->addReference({ "FriendOf", "FriendOf" }, sensor1);
+	sensor2->addReference({ "FriendOf", "FriendOf" }, objFolder);
 }
 
 int main(int argc, char *argv[])
@@ -128,7 +134,6 @@ int main(int argc, char *argv[])
 		}
 #endif // !SQLITE_SERIALIZER
 		// deserialize
-		QUaFolderObject* objsFolder = server.objectsFolder();
 		if (!objsFolder->deserialize(serializer, logOut))
 		{
 			// print log entries if any
@@ -143,7 +148,6 @@ int main(int argc, char *argv[])
 	{
 		// create some objects and variables to test
 		setupDefaultAddressSpace(server);
-		QUaFolderObject* objsFolder = server.objectsFolder();
 		// serialize
 		if (!objsFolder->serialize(serializer, logOut))
 		{
@@ -174,6 +178,12 @@ int main(int argc, char *argv[])
 	[](const QUaLog& log) {
 		qDebug() << "[" << log.level << "] :" << log.message;
 	});
+
+	// print log entries if any
+	for (auto log : logOut)
+	{
+		qDebug() << "[" << log.level << "] :" << log.message;
+	}
 
 	server.start();
 

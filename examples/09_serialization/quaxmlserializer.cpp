@@ -103,9 +103,9 @@ bool QUaXmlSerializer::fromByteArray(
 				rIter = rIter.nextSibling();
 				continue;
 			}
-			// parse nodeIdTarget
-			QString nodeIdTarget = this->readNodeIdTargetAttribute(ref, logOut);
-			if (nodeIdTarget.isEmpty())
+			// parse targetNodeId
+			QString targetNodeId = this->readNodeIdTargetAttribute(ref, logOut);
+			if (targetNodeId.isEmpty())
 			{
 				rIter = rIter.nextSibling();
 				continue;
@@ -125,7 +125,7 @@ bool QUaXmlSerializer::fromByteArray(
 			}
 			// success parsing fRef
 			refs << QUaForwardReference({
-				nodeIdTarget,
+				targetNodeId,
 				targetType,
 				refType
 			});
@@ -170,7 +170,7 @@ bool QUaXmlSerializer::writeInstance(
 	{
 		QDomElement refElem = m_doc.createElement("r");
 		node.appendChild(refElem);
-		this->writeAttribute(refElem, "nodeIdTarget", ref.nodeIdTarget);
+		this->writeAttribute(refElem, "targetNodeId", ref.targetNodeId);
 		this->writeAttribute(refElem, "targetType"  , ref.targetType);
 		this->writeAttribute(refElem, "forwardName" , ref.refType.strForwardName);
 		this->writeAttribute(refElem, "inverseName" , ref.refType.strInverseName);
@@ -316,25 +316,25 @@ QString QUaXmlSerializer::readNodeIdTargetAttribute(
 	QDomElement& ref, 
 	QQueue<QUaLog>& logOut)
 {
-	if (!ref.hasAttribute("nodeIdTarget"))
+	if (!ref.hasAttribute("targetNodeId"))
 	{
 		logOut << QUaLog({
-			QObject::tr("Found reference element without nodeIdTarget attribute. Ignoring."),
+			QObject::tr("Found reference element without targetNodeId attribute. Ignoring."),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
 		return "";
 	}
-	QString nodeIdTarget = ref.attribute("nodeIdTarget", "");
-	if (nodeIdTarget.isEmpty())
+	QString targetNodeId = ref.attribute("targetNodeId", "");
+	if (targetNodeId.isEmpty())
 	{
 		logOut << QUaLog({
-			QObject::tr("Found reference element with empty nodeIdTarget attribute. Ignoring."),
+			QObject::tr("Found reference element with empty targetNodeId attribute. Ignoring."),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
 	}
-	return nodeIdTarget;
+	return targetNodeId;
 }
 
 QString QUaXmlSerializer::readTargetTypeAttribute(
@@ -423,11 +423,13 @@ QUaReferenceType QUaXmlSerializer::readRefNameAttribute(
 	if (!server->referenceTypeRegistered(refType))
 	{
 		logOut << QUaLog({
-			QObject::tr("Found reference element with unregistered referenceType attribute {%1, %2}. Ignoring.").arg(forwardName).arg(inverseName),
-			QUaLogLevel::Error,
+			QObject::tr(
+				"Found unregistered referenceType {%1, %2}. "
+				"Consider registering it before deserializing."
+			).arg(forwardName).arg(inverseName),
+			QUaLogLevel::Warning,
 			QUaLogCategory::Serialization
 		});
-		return { "", "" };
 	}
 	return refType;
 }

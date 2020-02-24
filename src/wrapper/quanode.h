@@ -70,14 +70,14 @@ inline uint qHash(const QUaReferenceType& key, uint seed)
 
 struct QUaForwardReference
 {
-	QString nodeIdTarget;
+	QString targetNodeId;
 	QString targetType;
 	QUaReferenceType refType;
 };
 
 inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference& e2)
 {
-	return e1.nodeIdTarget.compare(e2.nodeIdTarget, Qt::CaseSensitive) == 0
+	return e1.targetNodeId.compare(e2.targetNodeId, Qt::CaseSensitive) == 0
 		&& e1.refType == e2.refType;
 }
 
@@ -599,7 +599,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 	{
 		for (auto nonHierRef : nonHierRefs[srcNode])
 		{
-			auto targetNode = this->server()->nodeById(nonHierRef.nodeIdTarget);
+			auto targetNode = this->server()->nodeById(nonHierRef.targetNodeId);
 			if (targetNode)
 			{
 				srcNode->addReference(nonHierRef.refType, targetNode, true);
@@ -612,7 +612,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 						.arg(nonHierRef.refType.strForwardName)
 						.arg(nonHierRef.refType.strInverseName)
 						.arg(srcNode->nodeId())
-						.arg(nonHierRef.nodeIdTarget),
+						.arg(nonHierRef.targetNodeId),
 					QUaLogLevel::Error,
 					QUaLogCategory::Serialization
 				});
@@ -673,7 +673,7 @@ inline bool QUaNode::deserializeInternal(
 		QMap<QString, QVariant> attrs;
 		QList<QUaForwardReference> forwardRefs;
 		if (!deserializer.readInstance(
-			forwRef.nodeIdTarget,
+			forwRef.targetNodeId,
 			typeName,
 			attrs,
 			forwardRefs,
@@ -689,16 +689,16 @@ inline bool QUaNode::deserializeInternal(
 			logOut.enqueue({
 				tr("Type name %1 for deserialized node %2 is not registered. Ignoring.")
 					.arg(typeName)
-					.arg(forwRef.nodeIdTarget),
+					.arg(forwRef.targetNodeId),
 				QUaLogLevel::Error,
 				QUaLogCategory::Serialization
 			});
 			continue;
 		}
 		// check if already exists by node id 
-		if (mapExistingChildren.contains(forwRef.nodeIdTarget))
+		if (mapExistingChildren.contains(forwRef.targetNodeId))
 		{
-			QUaNode* instance = mapExistingChildren.take(forwRef.nodeIdTarget);
+			QUaNode* instance = mapExistingChildren.take(forwRef.targetNodeId);
 			// remove from existingChildren to mark it as deserialized
 			existingChildren.removeOne(instance);
 			// deserialize (recursive)
@@ -723,7 +723,7 @@ inline bool QUaNode::deserializeInternal(
 		{
 			logOut.enqueue({
 				tr("Deserialized node %1 does not contain browseName attribute. Creating new instance.")
-					.arg(forwRef.nodeIdTarget),
+					.arg(forwRef.targetNodeId),
 				QUaLogLevel::Warning,
 				QUaLogCategory::Serialization
 			});
@@ -790,12 +790,12 @@ inline bool QUaNode::deserializeInternal(
 			}
 		}
 		// before creating new, check node id does not exist
-		if (this->server()->nodeById(forwRef.nodeIdTarget))
+		if (this->server()->nodeById(forwRef.targetNodeId))
 		{
 			logOut.enqueue({
 				tr("Cannot instantiate forward reference of %1 because node id %2 already exists elsewhere in server. Ignoring.")
 						.arg(this->nodeId())
-						.arg(forwRef.nodeIdTarget),
+						.arg(forwRef.targetNodeId),
 					QUaLogLevel::Error,
 					QUaLogCategory::Serialization
 			});
@@ -804,14 +804,14 @@ inline bool QUaNode::deserializeInternal(
 		// to create new first get metaobject
 		QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
 		// instantiate first in OPC UA
-		UA_NodeId newInstanceNodeId = this->server()->createInstance(metaObject, this, forwRef.nodeIdTarget);
+		UA_NodeId newInstanceNodeId = this->server()->createInstance(metaObject, this, forwRef.targetNodeId);
 		if (UA_NodeId_isNull(&newInstanceNodeId))
 		{
 			UA_NodeId_clear(&newInstanceNodeId);
 			logOut.enqueue({
 			tr("Failed to instantiate child instance of %1 with node id %2. Ignoring.")
 					.arg(this->nodeId())
-					.arg(forwRef.nodeIdTarget),
+					.arg(forwRef.targetNodeId),
 				QUaLogLevel::Error,
 				QUaLogCategory::Serialization
 			});

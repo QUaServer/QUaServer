@@ -74,7 +74,7 @@ private:
 		const QString& strValue,
 		QQueue<QUaLog>& logOut
 	);
-	// helper to decode nodeIdTarget
+	// helper to decode targetNodeId
 	QString readNodeIdTargetAttribute(
 		QDomElement& ref,
 		QQueue<QUaLog>& logOut
