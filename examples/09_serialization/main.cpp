@@ -6,7 +6,14 @@
 #include <QUaServer>
 
 #include "temperaturesensor.h"
+
+#define SQLITE_SERIALIZER
+
+#ifdef SQLITE_SERIALIZER
+#include "quasqliteserializer.h"
+#else
 #include "quaxmlserializer.h"
+#endif // SQLITE_SERIALIZER
 
 void setupDefaultAddressSpace(QUaServer &server)
 {
@@ -66,18 +73,39 @@ int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
 
+#ifdef SQLITE_SERIALIZER
+	const QString strFileName = "config.sqlite";
+#else
 	const QString strFileName = "config.xml";
+#endif // SQLITE_SERIALIZER
 
 	QUaServer server;
 	server.registerType<TemperatureSensor>();
 
+#ifdef SQLITE_SERIALIZER
+	QUaSqliteSerializer serializer;
+#else
 	QUaXmlSerializer serializer;
+#endif // SQLITE_SERIALIZER
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
+	QQueue<QUaLog> logOut;
 	QFileInfo fileInfoConf(strFileName);
-	if (fileInfoConf.exists())
+	bool fileInfoExists = fileInfoConf.exists();
+#ifdef SQLITE_SERIALIZER
+	if (!serializer.setSqliteDbName(strFileName, logOut))
 	{
+		for (auto log : logOut)
+		{
+			qCritical() << "[" << log.level << "] :" << log.message;
+		}
+		return 1;
+	}
+#endif // SQLITE_SERIALIZER
+	if (fileInfoExists)
+	{
+#ifndef SQLITE_SERIALIZER
 		// load from file
 		QFile fileConf(strFileName);
 		if (!fileConf.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -86,7 +114,6 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		// load all data
-		QQueue<QUaLog> logOut;
 		if (!serializer.fromByteArray(&server, fileConf.readAll(), logOut))
 		{
 			// print log entries if any
@@ -99,14 +126,17 @@ int main(int argc, char *argv[])
 			// exit
 			return 1;
 		}
+#endif // !SQLITE_SERIALIZER
 		// deserialize
 		QUaFolderObject* objsFolder = server.objectsFolder();
-		bool ok = objsFolder->deserialize(serializer, logOut);
-		Q_ASSERT(ok);
-		// print log entries if any
-		for (auto log : logOut)
+		if (!objsFolder->deserialize(serializer, logOut))
 		{
-			qWarning() << "[" << log.level << "] :" << log.message;
+			// print log entries if any
+			for (auto log : logOut)
+			{
+				qCritical() << "[" << log.level << "] :" << log.message;
+			}
+			return 1;
 		}
 	}
 	else
@@ -115,9 +145,15 @@ int main(int argc, char *argv[])
 		setupDefaultAddressSpace(server);
 		QUaFolderObject* objsFolder = server.objectsFolder();
 		// serialize
-		QQueue<QUaLog> logOut;
-		bool ok = objsFolder->serialize(serializer, logOut);
-		Q_ASSERT(ok);
+		if (!objsFolder->serialize(serializer, logOut))
+		{
+			for (auto log : logOut)
+			{
+				qCritical() << "[" << log.level << "] :" << log.message;
+			}
+			return 1;
+		}
+#ifndef SQLITE_SERIALIZER
 		// save to file
 		QFile fileConf(strFileName);
 		if (fileConf.open(QIODevice::WriteOnly | QIODevice::Text | QFile::Truncate))
@@ -130,6 +166,7 @@ int main(int argc, char *argv[])
 		}
 		// close file
 		fileConf.close();
+#endif // !SQLITE_SERIALIZER
 	}
 
 	// logging

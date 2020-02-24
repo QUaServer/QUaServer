@@ -608,3 +608,5 @@ compile_commands.json
 /src/amalgamation/open62541.c
 /src/wrapper/pch_open62541.h.cpp
 /src/wrapper/pch_open62541.h.c
+*.sqlite
+*.xml

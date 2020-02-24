@@ -99,6 +99,7 @@ private:
 	);
 
 	// return SQL type in string form, for given Qt type (only QUaServer supported types)
+	static QHash<int, QString> m_hashTypes;
 	static const QString QtTypeToSqlType(const QMetaType::Type& qtType);
 };
 
