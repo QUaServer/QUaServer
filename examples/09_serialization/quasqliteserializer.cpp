@@ -43,13 +43,42 @@ bool QUaSqliteSerializer::setSqliteDbName(
 {
 	// set internally
 	m_strSqliteDbName = strSqliteDbName;
-	// create database handle
+	// create and test open database handle
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(db, logOut))
 	{
 		return false;
 	}
+	// close
+	db.close();
 	// success
+	return true;
+}
+
+bool QUaSqliteSerializer::serializeStart(QQueue<QUaLog>& logOut)
+{
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+
+	// TODO : create default tables, start transaction
+
+	return true;
+}
+
+bool QUaSqliteSerializer::serializeEnd(QQueue<QUaLog>& logOut)
+{
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+	// close database
+	db.close();
 	return true;
 }
 
@@ -166,6 +195,33 @@ bool QUaSqliteSerializer::writeInstance(
 		}
 	}
 	// success
+	return true;
+}
+
+bool QUaSqliteSerializer::deserializeStart(QQueue<QUaLog>& logOut)
+{
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+
+	// TODO : check default tables
+
+	return true;
+}
+
+bool QUaSqliteSerializer::deserializeEnd(QQueue<QUaLog>& logOut)
+{
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+	// close database
+	db.close();
 	return true;
 }
 

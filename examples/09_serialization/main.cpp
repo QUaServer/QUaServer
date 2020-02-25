@@ -7,8 +7,6 @@
 
 #include "temperaturesensor.h"
 
-#define SQLITE_SERIALIZER
-
 #ifdef SQLITE_SERIALIZER
 #include "quasqliteserializer.h"
 #else

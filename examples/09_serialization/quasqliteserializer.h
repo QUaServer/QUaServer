@@ -17,6 +17,12 @@ public:
 		QQueue<QUaLog>& logOut
 	);
 
+	// optional API for QUaNode::serialize
+	bool serializeStart(QQueue<QUaLog>& logOut);
+
+	// optional API for QUaNode::serialize
+	bool serializeEnd(QQueue<QUaLog>& logOut);
+
 	// required API for QUaNode::serialize
 	bool writeInstance(
 		const QString& nodeId,
@@ -25,6 +31,12 @@ public:
 		const QList<QUaForwardReference>& forwardRefs,
 		QQueue<QUaLog>& logOut
 	);
+
+	// optional API for QUaNode::deserialize
+	bool deserializeStart(QQueue<QUaLog>& logOut);
+
+	// optional API for QUaNode::deserialize
+	bool deserializeEnd(QQueue<QUaLog>& logOut);
 
 	// required API for QUaNode::deserialize
 	bool readInstance(

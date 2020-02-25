@@ -635,9 +635,58 @@ inline void QUaServer::setUserValidationCallback(const M & callback)
 
 // -------- OTHER TYPES --------------------------------------------------
 
+template<typename T>
+inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog>& logOut)
+{
+    if (!this->serializeStart<T>(serializer, logOut))
+    {
+        return false;
+    }
+    if (!this->serializeInternal<T>(serializer, logOut))
+    {
+        return false;
+    }
+    if (!this->serializeEnd<T>(serializer, logOut))
+    {
+        return false;
+    }
+    return true;
+}
 
 template<typename T>
-inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
+inline typename std::enable_if<QUaHasMethodSerializeStart<T>::value, bool>::type
+QUaNode::serializeStart(T& serializer, QQueue<QUaLog>& logOut)
+{
+    return serializer.T::serializeStart(logOut);
+}
+
+template<typename T>
+inline typename std::enable_if<!QUaHasMethodSerializeStart<T>::value, bool>::type
+QUaNode::serializeStart(T& serializer, QQueue<QUaLog>& logOut)
+{
+    Q_UNUSED(serializer);
+    Q_UNUSED(logOut);
+    return true;
+}
+
+template<typename T>
+inline typename std::enable_if<QUaHasMethodSerializeEnd<T>::value, bool>::type 
+QUaNode::serializeEnd(T& serializer, QQueue<QUaLog>& logOut)
+{
+    return serializer.T::serializeEnd(logOut);
+}
+
+template<typename T>
+inline typename std::enable_if<!QUaHasMethodSerializeEnd<T>::value, bool>::type
+QUaNode::serializeEnd(T& serializer, QQueue<QUaLog>& logOut)
+{
+    Q_UNUSED(serializer);
+    Q_UNUSED(logOut);
+    return true;
+}
+
+template<typename T>
+inline bool QUaNode::serializeInternal(T& serializer, QQueue<QUaLog> &logOut)
 {
     if(!serializer.writeInstance(
         this->nodeId(),
@@ -654,7 +703,7 @@ inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
     {
         for (auto ref : this->findReferences(refType))
         {
-            if (!ref->serialize(serializer, logOut))
+            if (!ref->serializeInternal(serializer, logOut))
             {
                 return false;
             }
@@ -666,6 +715,10 @@ inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
 template<typename T>
 inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 {
+    if (!this->deserializeStart<T>(deserializer, logOut))
+    {
+        return false;
+    }
     QString typeName;
     QMap<QString, QVariant> attrs;
     QList<QUaForwardReference> forwardRefs;
@@ -682,7 +735,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     }
     // deserialize recursive
     QMap<QUaNode*, QList<QUaForwardReference>> nonHierRefs;
-    bool ok = this->deserializeInternal<T>(
+    if (!this->deserializeInternal<T>(
         deserializer,
         typeName,
         attrs,
@@ -690,10 +743,9 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
         nonHierRefs,
         logOut,
         this == m_qUaServer->objectsFolder()
-    );
-    if (!ok)
+    ))
     {
-        return ok;
+        return false;
     }
     // non-hierarchical at the end
     auto srcNodes = nonHierRefs.keys();
@@ -721,7 +773,43 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
             }
         }
     }
-    return ok;
+    if (!this->deserializeEnd<T>(deserializer, logOut))
+    {
+        return false;
+    }
+    return true;
+}
+
+template<typename T>
+inline typename std::enable_if<QUaHasMethodDeserializeStart<T>::value, bool>::type
+QUaNode::deserializeStart(T& deserializer, QQueue<QUaLog>& logOut)
+{
+    return deserializer.T::deserializeStart(logOut);
+}
+
+template<typename T>
+inline typename std::enable_if<!QUaHasMethodDeserializeStart<T>::value, bool>::type
+QUaNode::deserializeStart(T& deserializer, QQueue<QUaLog>& logOut)
+{
+    Q_UNUSED(deserializer);
+    Q_UNUSED(logOut);
+    return true;
+}
+
+template<typename T>
+inline typename std::enable_if<QUaHasMethodDeserializeEnd<T>::value, bool>::type
+QUaNode::deserializeEnd(T& deserializer, QQueue<QUaLog>& logOut)
+{
+    return deserializer.T::deserializeEnd(logOut);
+}
+
+template<typename T>
+inline typename std::enable_if<!QUaHasMethodDeserializeEnd<T>::value, bool>::type
+QUaNode::deserializeEnd(T& deserializer, QQueue<QUaLog>& logOut)
+{
+    Q_UNUSED(deserializer);
+    Q_UNUSED(logOut);
+    return true;
 }
 
 template<typename T>

@@ -142,6 +142,54 @@ struct QUaLog
 };
 Q_DECLARE_METATYPE(QUaLog);
 
+// trait used to check if type has bool T::serializeStart(QQueue<QUaLog>&)
+template <typename T, typename = void>
+struct QUaHasMethodSerializeStart
+	: std::false_type
+{};
+
+template <typename T>
+struct QUaHasMethodSerializeStart<T,
+	typename std::enable_if<std::is_same<decltype(&T::serializeStart), bool(T::*)(QQueue<QUaLog>&)>::value>::type>
+	: std::true_type
+{};
+
+// trait used to check if type has bool T::serializeEnd(QQueue<QUaLog>&)
+template <typename T, typename = void>
+struct QUaHasMethodSerializeEnd
+	: std::false_type
+{};
+
+template <typename T>
+struct QUaHasMethodSerializeEnd<T,
+	typename std::enable_if<std::is_same<decltype(&T::serializeEnd), bool(T::*)(QQueue<QUaLog>&)>::value>::type>
+	: std::true_type
+{};
+
+// trait used to check if type has bool T::deserializeStart(QQueue<QUaLog>&)
+template <typename T, typename = void>
+struct QUaHasMethodDeserializeStart
+	: std::false_type
+{};
+
+template <typename T>
+struct QUaHasMethodDeserializeStart<T,
+	typename std::enable_if<std::is_same<decltype(&T::deserializeStart), bool(T::*)(QQueue<QUaLog>&)>::value>::type>
+	: std::true_type
+{};
+
+// trait used to check if type has bool T::deserializeEnd(QQueue<QUaLog>&)
+template <typename T, typename = void>
+struct QUaHasMethodDeserializeEnd
+	: std::false_type
+{};
+
+template <typename T>
+struct QUaHasMethodDeserializeEnd<T,
+	typename std::enable_if<std::is_same<decltype(&T::deserializeEnd), bool(T::*)(QQueue<QUaLog>&)>::value>::type>
+	: std::true_type
+{};
+
 /*
 typedef struct {
 	// Node Attributes
@@ -392,11 +440,29 @@ public:
 	// Serialization API
 
 	// T must implement:
-	// bool writeInstance(const QString &nodeId, const QString &typeName, const QMap<QString, QVariant> &attrs, const QList<QUaForwardReference> &forwardRefs);
+	// bool T::writeInstance(
+	// 	const QString& nodeId,
+	// 	const QString& typeName,
+	// 	const QMap<QString, QVariant>& attrs,
+	// 	const QList<QUaForwardReference>& forwardRefs,
+	// 	QQueue<QUaLog>& logOut
+	// );
+	// T can optionally implement:
+	// bool T::serializeStart(QQueue<QUaLog>& logOut);
+	// bool T::serializeEnd(QQueue<QUaLog>& logOut);
 	template<typename T>
 	bool serialize(T& serializer, QQueue<QUaLog> &logOut);
 	// T must implement:
-	// bool readInstance( const QString &nodeId, QString &typeName, QMap<QString, QVariant> &attrs, QList<QUaForwardReference> &forwardRefs);
+	// bool T::readInstance(
+	// 	const QString& nodeId,
+	// 	QString& typeName,
+	// 	QMap<QString, QVariant>& attrs,
+	// 	QList<QUaForwardReference>& forwardRefs,
+	// 	QQueue<QUaLog>& logOut
+	// );
+	// T can optionally implement:
+	// bool T::deserializeStart(QQueue<QUaLog>& logOut);
+	// bool T::deserializeEnd(QQueue<QUaLog>& logOut);
 	template<typename T>
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
@@ -450,6 +516,25 @@ private:
 	const QList<QUaForwardReference> serializeRefs() const;
 
 	template<typename T>
+	bool serializeInternal(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<QUaHasMethodSerializeStart<T>::value, bool>::type
+	serializeStart(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<!QUaHasMethodSerializeStart<T>::value, bool>::type
+	serializeStart(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<QUaHasMethodSerializeEnd<T>::value, bool>::type
+	serializeEnd(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<!QUaHasMethodSerializeEnd<T>::value, bool>::type
+	serializeEnd(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
 	bool deserializeInternal(T& deserializer, 
 		                     const QString& typeName, 
 		                     const QMap<QString, QVariant>& attrs, 
@@ -458,6 +543,22 @@ private:
 		                     QQueue<QUaLog>& logOut, 
 		                     const bool &isObjsFolder = false);
 	void deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<QUaHasMethodDeserializeStart<T>::value, bool>::type
+	deserializeStart(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<!QUaHasMethodDeserializeStart<T>::value, bool>::type
+	deserializeStart(T& serializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<QUaHasMethodDeserializeEnd<T>::value, bool>::type
+	deserializeEnd(T& deserializer, QQueue<QUaLog>& logOut);
+
+	template<typename T>
+	typename std::enable_if<!QUaHasMethodDeserializeEnd<T>::value, bool>::type
+	deserializeEnd(T& deserializer, QQueue<QUaLog>& logOut);
 
 	std::function<QUaWriteMask(const QString&)> m_userWriteMaskCallback;
 	std::function<QUaAccessLevel(const QString&)> m_userAccessLevelCallback;
