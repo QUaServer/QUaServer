@@ -547,8 +547,8 @@ inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
 	{
 		return false;
 	}
-	// recurse children
-	for (auto& refType : m_qUaServer->referenceTypes())
+	// recurse children (only hierarchical references)
+	for (auto& refType : m_qUaServer->m_hashHierRefTypes.keys())
 	{
 		for (auto ref : this->findReferences(refType))
 		{

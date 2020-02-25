@@ -106,26 +106,50 @@ bool QUaSqliteSerializer::writeInstance(
 		}
 	}
 	// update or insert
-	bool nodeExists;
-	if (!this->nodeIdInTypeTable(db, typeName, nodeId, nodeExists, logOut))
+	bool nodeExists = false;
+	qint32 nodeKey = -1;
+	if (!this->nodeIdInTypeTable(db, typeName, nodeId, nodeExists, nodeKey, logOut))
 	{
 		return false;
 	}
 	if (nodeExists)
 	{
 		// update existing instance in type table
-
+		if (!this->updateInstance(db, typeName, nodeKey, attrs, logOut))
+		{
+			return false;
+		}
 		// get existing references
-
-		// merge references (to remove, to update, to add)
-
-		// TODO : implement
-
+		QList<QUaForwardReference> existingRefs;
+		if (!this->nodeReferences(db, nodeKey, existingRefs, logOut))
+		{
+			return false;
+		}
+		// merge references (compute references to remove and to add)
+		QList<QUaForwardReference> copyRefs(forwardRefs);
+		// remove common references (do not need to be updated)
+		existingRefs.erase(
+		std::remove_if(existingRefs.begin(), existingRefs.end(),
+		[&copyRefs](const QUaForwardReference &ref) {
+			bool isCommon = copyRefs.contains(ref);
+			copyRefs.removeAll(ref);
+			return isCommon;
+		}),
+		existingRefs.end());
+		// now existingRefs contains references to be removed
+		if (!this->removeReferences(db, nodeKey, existingRefs, logOut))
+		{
+			return false;
+		}
+		// and copyRefs contains references to be added
+		if (!this->addReferences(db, nodeKey, copyRefs, logOut))
+		{
+			return false;
+		}
 	}
 	else
 	{
 		// insert new node
-		qint32 nodeKey = -1;
 		if (!this->insertNewNode(db, nodeId, typeName, nodeKey, logOut))
 		{
 			return false;
@@ -357,6 +381,7 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	const QString& typeName, 
 	const QString& nodeId, 
 	bool& nodeExists, 
+	qint32& nodeKey,
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -364,7 +389,7 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	nodeExists = false;
 	QString strStmt = QString(
 		"SELECT "
-			"t.%1 AS %1 "
+			"t.QUaNodeId AS QUaNodeId "
 		"FROM "
 			"%1 t "
 		"INNER JOIN "
@@ -389,6 +414,11 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	if (query.next())
 	{
 		nodeExists  = true;
+		// get node key
+		QSqlRecord rec = query.record();
+		int nodeKeyCol = rec.indexOf("QUaNodeId");
+		Q_ASSERT(nodeKeyCol >= 0);
+		nodeKey = query.value(nodeKeyCol).toInt();
 	}
 	else
 	{
@@ -507,6 +537,83 @@ bool QUaSqliteSerializer::addReferences(
 			});
 			return false;
 		}
+	}
+	return true;
+}
+
+bool QUaSqliteSerializer::removeReferences(
+	QSqlDatabase& db, 
+	const qint32& nodeKey, 
+	const QList<QUaForwardReference>& forwardRefs, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt(
+		"DELETE FROM QUaForwardReference WHERE "
+		"UaNodeId = :UaNodeId "
+		"AND forwardName = :forwardName AND inverseName = :inverseName "
+		"AND targetType = :targetType AND targetNodeId = :targetNodeId;"
+	);
+	query.prepare(strStmt);
+	for (auto forwRef : forwardRefs)
+	{
+		query.bindValue(0, nodeKey);
+		query.bindValue(1, forwRef.refType.strForwardName);
+		query.bindValue(2, forwRef.refType.strInverseName);
+		query.bindValue(3, forwRef.targetType);
+		query.bindValue(4, forwRef.targetNodeId);
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Could not remove row in QUaForwardReference table in %1 database. Sql : %2.")
+					.arg(m_strSqliteDbName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+				});
+			return false;
+		}
+	}
+	return true;
+}
+
+bool QUaSqliteSerializer::updateInstance(
+	QSqlDatabase& db, 
+	const QString& typeName, 
+	const qint32& nodeKey, 
+	const QMap<QString, QVariant>& attrs, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"UPDATE %1 SET "
+	).arg(typeName);
+	QList<QString> attrNames = attrs.keys();
+	for (auto it = attrNames.begin(); it != attrNames.end(); ++it)
+	{
+		strStmt += std::next(it) != attrNames.end() ?
+			QString("%1 = :%1, ").arg(*it) : QString("%1 = :%1 ").arg(*it);
+	}
+	strStmt += QString("WHERE QUaNodeId = %1;").arg(nodeKey);
+	query.prepare(strStmt);
+	for (int i = 0; i < attrNames.count(); i++)
+	{
+		query.bindValue(i, attrs.value(attrNames.at(i)));
+	}
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not update row with QUaNodeId = %1 in %2 table in %3 database. Sql : %4.")
+				.arg(nodeKey)
+				.arg(typeName)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
 	}
 	return true;
 }
@@ -649,6 +756,9 @@ bool QUaSqliteSerializer::nodeReferences(
 
 const QString QUaSqliteSerializer::QtTypeToSqlType(const QMetaType::Type& qtType)
 {
-	Q_ASSERT_X(QUaSqliteSerializer::m_hashTypes.contains(qtType), "QtTypeToSqlType", "Unknown type.");
+	Q_ASSERT_X(
+		QUaSqliteSerializer::m_hashTypes.contains(qtType), 
+		"QtTypeToSqlType", "Unknown type."
+	);
 	return QUaSqliteSerializer::m_hashTypes.value(qtType, "BLOB");
 }

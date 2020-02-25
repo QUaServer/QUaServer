@@ -72,6 +72,7 @@ private:
 		const QString& typeName, 
 		const QString& nodeId, 
 		bool& nodeExists,
+		qint32& nodeKey,
 		QQueue<QUaLog>& logOut
 	);
 	// insert new node, return unique key
@@ -90,11 +91,26 @@ private:
 		const QMap<QString, QVariant>& attrs,
 		QQueue<QUaLog>& logOut
 	);
-	// add references
+	// add references to db
 	bool addReferences(
 		QSqlDatabase& db,
 		const qint32& nodeKey,
 		const QList<QUaForwardReference>& forwardRefs,
+		QQueue<QUaLog>& logOut
+	);
+	// remove references from db
+	bool removeReferences(
+		QSqlDatabase& db,
+		const qint32& nodeKey,
+		const QList<QUaForwardReference>& forwardRefs,
+		QQueue<QUaLog>& logOut
+	);
+	// update attributes of existing instance
+	bool updateInstance(
+		QSqlDatabase& db,
+		const QString& typeName,
+		const qint32& nodeKey,
+		const QMap<QString, QVariant>& attrs,
 		QQueue<QUaLog>& logOut
 	);
 	// get type name and node key by node id

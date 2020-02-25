@@ -623,7 +623,7 @@ void QUaNode::removeReference(const QUaReferenceType& ref, QUaNode* nodeTarget, 
 	QObject::disconnect(this, &QObject::destroyed, nodeTarget, 0);
 }
 
-QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool& isForward) const
+QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool& isForward /*= true*/) const
 {
 	QList<QUaNode*> retRefList;
 	// call internal method
@@ -636,6 +636,7 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool&
 		QUaNode* node = QUaNode::getNodeContext(nodeId, m_qUaServer);
 		if (node)
 		{
+			Q_ASSERT(UA_NodeId_equal(&nodeId, &node->m_nodeId));
 			retRefList.append(node);
 		}
 		// cleanup set
@@ -646,7 +647,7 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool&
 }
 
 // NOTE : need to cleanup result after calling this method
-QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool & isForward) const
+QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool & isForward /*= true*/) const
 {
 	QSet<UA_NodeId> retRefSet;
 	// first check if reference type is registered
@@ -663,6 +664,7 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool
 	UA_NodeId_copy(&m_nodeId, &bDesc->nodeId); // from child
 	bDesc->browseDirection = isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
 	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(m_qUaServer->m_server, 0, bDesc);
@@ -764,6 +766,7 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 const QList<QUaForwardReference> QUaNode::serializeRefs() const
 {
 	QList<QUaForwardReference> retList;
+	// serialize all reference types
 	for (auto& refType : m_qUaServer->referenceTypes())
 	{
 		for (auto ref : this->findReferences(refType))
