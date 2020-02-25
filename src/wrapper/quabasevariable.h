@@ -51,10 +51,10 @@ class QUaDataType
 {
 
 public:
-	QUaDataType();
+    QUaDataType();
 	QUaDataType(const QMetaType::Type& metaType);
-	QUaDataType(const QString& strType);
-	QUaDataType(const QByteArray& byteType);
+    QUaDataType(const QString& strType);
+    QUaDataType(const QByteArray& byteType);
 	operator QMetaType::Type();
 	operator QString();
 	bool operator==(const QMetaType::Type& metaType);
@@ -117,7 +117,7 @@ public:
 	// Indicates how the Value of a Variable can be accessed (read/write) and if it contains current and/or historic data.
 	quint8            accessLevel() const;
 	void              setAccessLevel(const quint8 &accessLevel);
-	// The MinimumSamplingInterval Attribute indicates how ìcurrentî the Value of the Variable will be kept. 
+	// The MinimumSamplingInterval Attribute indicates how ‚Äúcurrent‚Äù the Value of the Variable will be kept. 
 	// It specifies (in milliseconds) how fast the Server can reasonably sample the value for changes
 	double            minimumSamplingInterval() const;
 	void              setMinimumSamplingInterval(const double &minimumSamplingInterval);

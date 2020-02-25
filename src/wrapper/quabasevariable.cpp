@@ -17,14 +17,14 @@ QUaDataType::QUaDataType(const QMetaType::Type& metaType)
 
 QUaDataType::QUaDataType(const QString& strType)
 {
-	*this = QUaDataType(strType.toUtf8());
+    *this = QUaDataType(strType.toUtf8());
 }
 
 QUaDataType::QUaDataType(const QByteArray& byteType)
 {
 	bool ok = false;
 	int val = m_metaEnum.keyToValue(byteType.constData(), &ok);
-	m_type = static_cast<QUa::Type>(val);
+    m_type  = static_cast<QUa::Type>(val);
 }
 
 QUaDataType::operator QMetaType::Type()

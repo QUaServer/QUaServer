@@ -143,6 +143,8 @@ int main(int argc, char *argv[])
 			}
 			return 1;
 		}
+        // display success
+        qInfo() << "[INFO] Deserialized from" << strFileName;
 	}
 	else
 	{
@@ -171,6 +173,8 @@ int main(int argc, char *argv[])
 		// close file
 		fileConf.close();
 #endif // !SQLITE_SERIALIZER
+        // display success
+        qInfo() << "[INFO] Serialized to" << strFileName;
 	}
 
 	// logging

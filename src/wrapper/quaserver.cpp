@@ -835,7 +835,7 @@ void QUaServer::setupServer()
 		qRegisterMetaType<QUaDataType>("QUaDataType");
 	}
 	QMetaType::registerConverter<QUaDataType, QString>([](QUaDataType type) {
-		return type;
+        return type.operator QString();
 	});
 	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
 		return QUaDataType(strType);

@@ -635,6 +635,324 @@ inline void QUaServer::setUserValidationCallback(const M & callback)
 
 // -------- OTHER TYPES --------------------------------------------------
 
+
+template<typename T>
+inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog> &logOut)
+{
+    if(!serializer.writeInstance(
+        this->nodeId(),
+        this->metaObject()->className(),
+        this->serializeAttrs(),
+        this->serializeRefs(),
+        logOut
+    ))
+    {
+        return false;
+    }
+    // recurse children (only hierarchical references)
+    for (auto& refType : m_qUaServer->m_hashHierRefTypes.keys())
+    {
+        for (auto ref : this->findReferences(refType))
+        {
+            if (!ref->serialize(serializer, logOut))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<typename T>
+inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
+{
+    QString typeName;
+    QMap<QString, QVariant> attrs;
+    QList<QUaForwardReference> forwardRefs;
+    if (!deserializer.readInstance(
+        this->nodeId(),
+        typeName,
+        attrs,
+        forwardRefs,
+        logOut
+    ))
+    {
+        // stop deserializing
+        return false;
+    }
+    // deserialize recursive
+    QMap<QUaNode*, QList<QUaForwardReference>> nonHierRefs;
+    bool ok = this->deserializeInternal<T>(
+        deserializer,
+        typeName,
+        attrs,
+        forwardRefs,
+        nonHierRefs,
+        logOut,
+        this == m_qUaServer->objectsFolder()
+    );
+    if (!ok)
+    {
+        return ok;
+    }
+    // non-hierarchical at the end
+    auto srcNodes = nonHierRefs.keys();
+    for (auto srcNode : srcNodes)
+    {
+        for (auto nonHierRef : nonHierRefs[srcNode])
+        {
+            auto targetNode = this->server()->nodeById(nonHierRef.targetNodeId);
+            if (targetNode)
+            {
+                srcNode->addReference(nonHierRef.refType, targetNode, true);
+            }
+            else
+            {
+                logOut.enqueue({
+                    tr("Failed to add non-hierarchical reference (%1:%2) "
+                       "from source node %3 to target node %4. Target node does not exist.")
+                        .arg(nonHierRef.refType.strForwardName)
+                        .arg(nonHierRef.refType.strInverseName)
+                        .arg(srcNode->nodeId())
+                        .arg(nonHierRef.targetNodeId),
+                    QUaLogLevel::Error,
+                    QUaLogCategory::Serialization
+                });
+            }
+        }
+    }
+    return ok;
+}
+
+template<typename T>
+inline bool QUaNode::deserializeInternal(
+    T& deserializer,
+    const QString &typeName,
+    const QMap<QString, QVariant> &attrs,
+    const QList<QUaForwardReference> &forwardRefs,
+    QMap<QUaNode*, QList<QUaForwardReference>>& nonHierRefs,
+    QQueue<QUaLog>& logOut,
+    const bool& isObjsFolder/* = false*/)
+{
+    // check typeName
+    if (typeName.compare(this->metaObject()->className()) != 0)
+    {
+        logOut.enqueue({
+            tr("Returned type %1 does not match instance type %2. Ignoring node %3 and its children.")
+                .arg(typeName)
+                .arg(this->metaObject()->className())
+                .arg(this->nodeId()),
+            QUaLogLevel::Error,
+            QUaLogCategory::Serialization
+        });
+        // continue deserializing anyway
+        return true;
+    }
+    // deserialize attrs for all nodes except objectsFolder
+    if (!isObjsFolder)
+    {
+        // deserialize attrs (this can only generate warnings)
+        this->deserializeAttrs(attrs, logOut);
+    }
+    // get extsing children list to match hierachical forward references
+    auto existingChildren = this->browseChildren();
+    QHash<QString, QUaNode*> mapExistingChildren;
+    for (auto child : existingChildren)
+    {
+        mapExistingChildren[child->nodeId()] = child;
+    }
+    // loop deserialized forward references
+    for (auto &forwRef : forwardRefs)
+    {
+        // leave non-hierarchical refs for the end (nonHierRefs)
+        if (!m_qUaServer->m_hashHierRefTypes.contains(forwRef.refType))
+        {
+            nonHierRefs[this] << forwRef;
+            continue;
+        }
+        // deserialize hierarchical ref
+        QString typeName;
+        QMap<QString, QVariant> attrs;
+        QList<QUaForwardReference> forwardRefs;
+        if (!deserializer.readInstance(
+            forwRef.targetNodeId,
+            typeName,
+            attrs,
+            forwardRefs,
+            logOut
+        ))
+        {
+            // stop deserializing
+            return false;
+        }
+        // validate typeName
+        if (!this->server()->isMetaObjectRegistered(typeName))
+        {
+            logOut.enqueue({
+                tr("Type name %1 for deserialized node %2 is not registered. Ignoring.")
+                    .arg(typeName)
+                    .arg(forwRef.targetNodeId),
+                QUaLogLevel::Error,
+                QUaLogCategory::Serialization
+            });
+            continue;
+        }
+        // check if already exists by node id
+        if (mapExistingChildren.contains(forwRef.targetNodeId))
+        {
+            QUaNode* instance = mapExistingChildren.take(forwRef.targetNodeId);
+            // remove from existingChildren to mark it as deserialized
+            existingChildren.removeOne(instance);
+            // deserialize (recursive)
+            bool ok = instance->deserializeInternal<T>(
+                deserializer,
+                typeName,
+                attrs,
+                forwardRefs,
+                nonHierRefs,
+                logOut,
+                instance == m_qUaServer->objectsFolder()
+                );
+            if (!ok)
+            {
+                return ok;
+            }
+            // continue
+            continue;
+        }
+        // check if already exists by browse name
+        if (!attrs.contains("browseName"))
+        {
+            logOut.enqueue({
+                tr("Deserialized node %1 does not contain browseName attribute. Creating new instance.")
+                    .arg(forwRef.targetNodeId),
+                QUaLogLevel::Warning,
+                QUaLogCategory::Serialization
+            });
+        }
+        else
+        {
+            QString strBrowseName = attrs.value("browseName").toString();
+            auto existingBrowseName = this->browseChildren(strBrowseName);
+            // deserialize existing
+            if (existingBrowseName.count() > 0)
+            {
+                QUaNode* instance = nullptr;
+                if (existingBrowseName.count() > 1)
+                {
+                    // if existingChildren does not contain an instance it meas it has already been deserialized
+                    while (!existingChildren.contains(existingBrowseName.first()) && existingBrowseName.count() > 0)
+                    {
+                        existingBrowseName.takeFirst();
+                    }
+                    if (existingBrowseName.count() == 0)
+                    {
+                        logOut.enqueue({
+                        tr("All children of %1 with browseName %2 have been deserialized. Ignoring deserialization of forward reference to %3.")
+                                .arg(this->nodeId())
+                                .arg(strBrowseName)
+                                .arg(instance->nodeId()),
+                            QUaLogLevel::Error,
+                            QUaLogCategory::Serialization
+                        });
+                        continue;
+                    }
+                    instance = existingBrowseName.takeFirst();
+                    logOut.enqueue({
+                        tr("Node %1 contains more than one children with the same browseName attribute %2. Deserializing over instance with node id %3.")
+                            .arg(this->nodeId())
+                            .arg(strBrowseName)
+                            .arg(instance->nodeId()),
+                        QUaLogLevel::Warning,
+                        QUaLogCategory::Serialization
+                    });
+                }
+                else
+                {
+                    instance = existingBrowseName.takeFirst();
+                }
+                // remove from existingChildren to mark it as deserialized
+                existingChildren.removeOne(instance);
+                // deserialize (recursive)
+                bool ok = instance->deserializeInternal<T>(
+                    deserializer,
+                    typeName,
+                    attrs,
+                    forwardRefs,
+                    nonHierRefs,
+                    logOut,
+                    instance == m_qUaServer->objectsFolder()
+                    );
+                if (!ok)
+                {
+                    return ok;
+                }
+                // continue
+                continue;
+            }
+        }
+        // before creating new, check node id does not exist
+        if (this->server()->nodeById(forwRef.targetNodeId))
+        {
+            logOut.enqueue({
+                tr("Cannot instantiate forward reference of %1 because node id %2 already exists elsewhere in server. Ignoring.")
+                        .arg(this->nodeId())
+                        .arg(forwRef.targetNodeId),
+                    QUaLogLevel::Error,
+                    QUaLogCategory::Serialization
+            });
+            continue;
+        }
+        // to create new first get metaobject
+        QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
+        // instantiate first in OPC UA
+        UA_NodeId newInstanceNodeId = this->server()->createInstance(metaObject, this, forwRef.targetNodeId);
+        if (UA_NodeId_isNull(&newInstanceNodeId))
+        {
+            UA_NodeId_clear(&newInstanceNodeId);
+            logOut.enqueue({
+            tr("Failed to instantiate child instance of %1 with node id %2. Ignoring.")
+                    .arg(this->nodeId())
+                    .arg(forwRef.targetNodeId),
+                QUaLogLevel::Error,
+                QUaLogCategory::Serialization
+            });
+            continue;
+        }
+        // get new c++ instance created in UA constructor
+        auto instance = QUaNode::getNodeContext(newInstanceNodeId, this->server());
+        // return c++ instance
+        UA_NodeId_clear(&newInstanceNodeId);
+        // deserialize (recursive)
+        bool ok = instance->deserializeInternal<T>(
+            deserializer,
+            typeName,
+            attrs,
+            forwardRefs,
+            nonHierRefs,
+            logOut,
+            instance == m_qUaServer->objectsFolder()
+            );
+        if (!ok)
+        {
+            return ok;
+        }
+    }
+    // TODO : what to do with non-matching existing children
+    if (existingChildren.count() > 0)
+    {
+        logOut.enqueue({
+            tr("Node %1 contains %2 existing children which did not match any if its deserialized forward references.")
+                .arg(this->nodeId())
+                .arg(existingChildren.count()),
+            QUaLogLevel::Warning,
+            QUaLogCategory::Serialization
+        });
+    }
+    // success
+    return true;
+}
+
 template<typename T>
 inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
 {

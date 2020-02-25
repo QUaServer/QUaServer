@@ -610,3 +610,14 @@ compile_commands.json
 /src/wrapper/pch_open62541.h.c
 *.sqlite
 *.xml
+
+*.gch
+/examples/01_basics/01_basics
+/examples/02_methods/02_methods
+/examples/03_references/03_references
+/examples/04_types/04_types
+/examples/05_server/05_server
+/examples/06_users/06_users
+/examples/07_encryption/07_encryption
+/examples/08_events/08_events
+/examples/09_serialization/09_serialization
