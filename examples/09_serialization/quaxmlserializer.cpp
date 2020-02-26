@@ -15,6 +15,8 @@ void QUaXmlSerializer::reset()
 	m_doc.appendChild(root);
 	// reset deserialization state
 	m_mapNodeData.clear();
+	// close file
+	m_xmlFileConf.close();
 }
 
 QByteArray QUaXmlSerializer::toByteArray() const
@@ -23,7 +25,6 @@ QByteArray QUaXmlSerializer::toByteArray() const
 }
 
 bool QUaXmlSerializer::fromByteArray(
-	const QUaServer* server, 
 	const QByteArray& xmlData, 
 	QQueue<QUaLog>& logOut)
 {
@@ -63,7 +64,7 @@ bool QUaXmlSerializer::fromByteArray(
 			continue;
 		}
 		// parse typeName
-		QString typeName = this->readTypeNameAttribute(server, node, logOut);
+		QString typeName = this->readTypeNameAttribute(node, logOut);
 		if (typeName.isEmpty())
 		{
 			nIter = nIter.nextSibling();
@@ -111,13 +112,13 @@ bool QUaXmlSerializer::fromByteArray(
 				continue;
 			}
 			// parse targetType
-			QString targetType = this->readTargetTypeAttribute(server, ref, logOut);
+			QString targetType = this->readTargetTypeAttribute(ref, logOut);
 			if (targetType.isEmpty())
 			{
 				rIter = rIter.nextSibling();
 				continue;
 			}
-			QUaReferenceType refType = this->readRefNameAttribute(server, ref, logOut);
+			QUaReferenceType refType = this->readRefNameAttribute(ref, logOut);
 			if (refType.strForwardName.isEmpty() || refType.strInverseName.isEmpty())
 			{
 				rIter = rIter.nextSibling();
@@ -141,6 +142,65 @@ bool QUaXmlSerializer::fromByteArray(
 		// continue with next element
 		nIter = nIter.nextSibling();
 	}
+	return true;
+}
+
+QString QUaXmlSerializer::xmlFileName() const
+{
+	return m_strXmlFileName;
+}
+
+bool QUaXmlSerializer::setXmlFileName(
+	const QString& strXmlFileName, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_UNUSED(logOut);
+	// copy internally
+	m_strXmlFileName = strXmlFileName;
+	// reset internal state (close file, etc.)
+	this->reset();
+	// set filename
+	m_xmlFileConf.setFileName(m_strXmlFileName);
+	// always success
+	return true;
+}
+
+bool QUaXmlSerializer::serializeStart(QQueue<QUaLog>& logOut)
+{
+	// reset internal state
+	this->reset();
+	// if we cannot open file, then no point in continuing with serialization
+	if (!m_xmlFileConf.open(QIODevice::WriteOnly | QIODevice::Text | QFile::Truncate))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not open file %1.").arg(m_strXmlFileName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// keep file open
+	return true;
+}
+
+bool QUaXmlSerializer::serializeEnd(QQueue<QUaLog>& logOut)
+{
+	if (!m_xmlFileConf.isOpen())
+	{
+		logOut << QUaLog({
+			QObject::tr("File %1 is not open.").arg(m_strXmlFileName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// create stream
+	QTextStream streamConfig(&m_xmlFileConf);
+	// save config in file
+	auto b = this->toByteArray();
+	streamConfig << b;
+	// close file
+	m_xmlFileConf.close();
 	return true;
 }
 
@@ -175,6 +235,39 @@ bool QUaXmlSerializer::writeInstance(
 		this->writeAttribute(refElem, "forwardName" , ref.refType.strForwardName);
 		this->writeAttribute(refElem, "inverseName" , ref.refType.strInverseName);
 	}
+	return true;
+}
+
+bool QUaXmlSerializer::deserializeStart(QQueue<QUaLog>& logOut)
+{
+	// reset internal state
+	this->reset();
+	// if we cannot open file, then no point in continuing with deserialization
+	if (!m_xmlFileConf.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not open file %1.").arg(m_strXmlFileName),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+			});
+		return false;
+	}
+	// load all data
+	if (!this->fromByteArray(m_xmlFileConf.readAll(), logOut))
+	{
+		// print log entries if any
+		for (auto log : logOut)
+		{
+			qWarning() << "[" << log.level << "] :" << log.message;
+		}
+		// close file
+		m_xmlFileConf.close();
+		// exit
+		return false;
+	}
+	// close file
+	m_xmlFileConf.close();
+	// exit
 	return true;
 }
 
@@ -254,7 +347,6 @@ QString QUaXmlSerializer::readNodeIdAttribute(
 }
 
 QString QUaXmlSerializer::readTypeNameAttribute(
-	const QUaServer* server, 
 	QDomElement& node, 
 	QQueue<QUaLog>& logOut)
 {
@@ -272,15 +364,6 @@ QString QUaXmlSerializer::readTypeNameAttribute(
 	{
 		logOut << QUaLog({
 			QObject::tr("Found node element with empty typeName attribute. Ignoring."),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return "";
-	}
-	if (!server->isTypeNameRegistered(typeName))
-	{
-		logOut << QUaLog({
-			QObject::tr("Found node element with unregistered typeName attribute %1. Ignoring.").arg(typeName),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
@@ -338,7 +421,6 @@ QString QUaXmlSerializer::readNodeIdTargetAttribute(
 }
 
 QString QUaXmlSerializer::readTargetTypeAttribute(
-	const QUaServer* server, 
 	QDomElement& ref, 
 	QQueue<QUaLog>& logOut)
 {
@@ -361,20 +443,10 @@ QString QUaXmlSerializer::readTargetTypeAttribute(
 		});
 		return "";
 	}
-	if (!server->isTypeNameRegistered(targetType))
-	{
-		logOut << QUaLog({
-			QObject::tr("Found reference element with unregistered targetType attribute %1. Ignoring.").arg(targetType),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return "";
-	}
 	return targetType;
 }
 
 QUaReferenceType QUaXmlSerializer::readRefNameAttribute(
-	const QUaServer* server, 
 	QDomElement& ref, 
 	QQueue<QUaLog>& logOut)
 {
@@ -420,16 +492,5 @@ QUaReferenceType QUaXmlSerializer::readRefNameAttribute(
 		forwardName,
 		inverseName
 	};
-	if (!server->referenceTypeRegistered(refType))
-	{
-		logOut << QUaLog({
-			QObject::tr(
-				"Found unregistered referenceType {%1, %2}. "
-				"Consider registering it before deserializing."
-			).arg(forwardName).arg(inverseName),
-			QUaLogLevel::Warning,
-			QUaLogCategory::Serialization
-		});
-	}
 	return refType;
 }

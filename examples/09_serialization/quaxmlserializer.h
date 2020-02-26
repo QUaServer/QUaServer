@@ -4,24 +4,25 @@
 #include <QUaServer>
 #include <QDomDocument>
 #include <QDomElement>
+#include <QFile>
 
 class QUaXmlSerializer
 {
 public:
     QUaXmlSerializer();
 
-	// reset serializer state
-	void reset();
-
-	// write text from XML
-	QByteArray toByteArray() const;
-
-	// read XML from text
-	bool fromByteArray(
-		const QUaServer* server,
-		const QByteArray &xmlData, 
+	// set XML file to read from or write to
+	QString xmlFileName() const;
+	bool setXmlFileName(
+		const QString& strXmlFileName,
 		QQueue<QUaLog>& logOut
 	);
+
+	// optional API for QUaNode::serialize
+	bool serializeStart(QQueue<QUaLog>& logOut);
+
+	// optional API for QUaNode::serialize
+	bool serializeEnd(QQueue<QUaLog>& logOut);
 
 	// required API for QUaNode::serialize
 	bool writeInstance(
@@ -31,6 +32,11 @@ public:
 		const QList<QUaForwardReference> &forwardRefs,
 		QQueue<QUaLog> &logOut
 	);
+
+	// optional API for QUaNode::deserialize
+	bool deserializeStart(QQueue<QUaLog>& logOut);
+
+	// NOTE : deserializeEnd not necessary
 
 	// required API for QUaNode::deserialize
 	bool readInstance(
@@ -42,6 +48,8 @@ public:
 	);
 
 private:
+	QString m_strXmlFileName;
+	QFile   m_xmlFileConf;
 	// used to hold serialization state
 	QDomDocument m_doc;
 	// used to hold deserialization state
@@ -52,6 +60,15 @@ private:
 		QList<QUaForwardReference> forwardRefs;
 	};
 	QMap<QString, NodeData> m_mapNodeData;
+	// reset serializer state
+	void reset();
+	// write text from XML
+	QByteArray toByteArray() const;
+	// read XML from text
+	bool fromByteArray(
+		const QByteArray& xmlData,
+		QQueue<QUaLog>& logOut
+	);
 	// helper to encode data for serialization
 	void writeAttribute(
 		QDomElement& node, 
@@ -65,7 +82,6 @@ private:
 	);
 	// helper to decode typeName
 	QString readTypeNameAttribute(
-		const QUaServer * server,
 		QDomElement& node,
 		QQueue<QUaLog>& logOut
 	);
@@ -81,13 +97,11 @@ private:
 	);
 	// helper to decode targetType
 	QString readTargetTypeAttribute(
-		const QUaServer* server,
 		QDomElement& ref,
 		QQueue<QUaLog>& logOut
 	);
 	// helper to decode forwardName and inverseName
 	QUaReferenceType readRefNameAttribute(
-		const QUaServer* server,
 		QDomElement& ref,
 		QQueue<QUaLog>& logOut
 	);
