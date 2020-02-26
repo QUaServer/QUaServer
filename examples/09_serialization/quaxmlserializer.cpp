@@ -63,13 +63,6 @@ bool QUaXmlSerializer::fromByteArray(
 			nIter = nIter.nextSibling();
 			continue;
 		}
-		// parse typeName
-		QString typeName = this->readTypeNameAttribute(node, logOut);
-		if (typeName.isEmpty())
-		{
-			nIter = nIter.nextSibling();
-			continue;
-		}
 		// read rest of attributes
 		QMap<QString, QVariant> mapAttrs;
 		auto attrs = node.attributes();
@@ -77,8 +70,7 @@ bool QUaXmlSerializer::fromByteArray(
 		{
 			QDomAttr attr = attrs.item(i).toAttr();
 			if (attr.isNull() || 
-				attr.name().compare("nodeId") == 0 ||
-				attr.name().compare("typeName") == 0)
+				attr.name().compare("nodeId") == 0)
 			{
 				continue;
 			}
@@ -135,7 +127,6 @@ bool QUaXmlSerializer::fromByteArray(
 		}
 		// insert to internal data
 		m_mapNodeData.insert(nodeId, {
-			typeName,
 			mapAttrs,
 			refs
 		});
@@ -218,7 +209,6 @@ bool QUaXmlSerializer::writeInstance(
 	root.appendChild(node);
 	// copy attributes
 	this->writeAttribute(node, "nodeId"  , nodeId);
-	this->writeAttribute(node, "typeName", typeName);
 	auto i = attrs.constBegin();
 	while (i != attrs.constEnd())
 	{
@@ -273,11 +263,12 @@ bool QUaXmlSerializer::deserializeStart(QQueue<QUaLog>& logOut)
 
 bool QUaXmlSerializer::readInstance(
 	const QString& nodeId, 
-	QString& typeName, 
+	const QString& typeName, 
 	QMap<QString, QVariant>& attrs, 
 	QList<QUaForwardReference>& forwardRefs,
 	QQueue<QUaLog>& logOut)
 {
+	Q_UNUSED(typeName);
 	if (!m_mapNodeData.contains(nodeId))
 	{
 		logOut.append({
@@ -289,7 +280,6 @@ bool QUaXmlSerializer::readInstance(
 	}
 	// set return values
 	auto& data  = m_mapNodeData[nodeId];
-	typeName    = data.typeName;
 	attrs       = data.attrs;
 	forwardRefs = data.forwardRefs;
 	return true;
@@ -344,33 +334,6 @@ QString QUaXmlSerializer::readNodeIdAttribute(
 	}
 	// success
 	return nodeId;
-}
-
-QString QUaXmlSerializer::readTypeNameAttribute(
-	QDomElement& node, 
-	QQueue<QUaLog>& logOut)
-{
-	if (!node.hasAttribute("typeName"))
-	{
-		logOut << QUaLog({
-			QObject::tr("Found node element without typeName attribute. Ignoring."),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return "";
-	}
-	QString typeName = node.attribute("typeName", "");
-	if (typeName.isEmpty())
-	{
-		logOut << QUaLog({
-			QObject::tr("Found node element with empty typeName attribute. Ignoring."),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return "";
-	}
-	// success
-	return typeName;
 }
 
 QVariant QUaXmlSerializer::readAttribute(

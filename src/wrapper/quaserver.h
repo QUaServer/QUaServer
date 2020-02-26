@@ -719,7 +719,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     {
         return false;
     }
-    QString typeName;
+    QString typeName = this->metaObject()->className();
     QMap<QString, QVariant> attrs;
     QList<QUaForwardReference> forwardRefs;
     if (!deserializer.readInstance(
@@ -737,7 +737,6 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     QMap<QUaNode*, QList<QUaForwardReference>> nonHierRefs;
     if (!this->deserializeInternal<T>(
         deserializer,
-        typeName,
         attrs,
         forwardRefs,
         nonHierRefs,
@@ -815,27 +814,12 @@ QUaNode::deserializeEnd(T& deserializer, QQueue<QUaLog>& logOut)
 template<typename T>
 inline bool QUaNode::deserializeInternal(
     T& deserializer,
-    const QString &typeName,
     const QMap<QString, QVariant> &attrs,
     const QList<QUaForwardReference> &forwardRefs,
     QMap<QUaNode*, QList<QUaForwardReference>>& nonHierRefs,
     QQueue<QUaLog>& logOut,
     const bool& isObjsFolder/* = false*/)
 {
-    // check typeName
-    if (typeName.compare(this->metaObject()->className()) != 0)
-    {
-        logOut.enqueue({
-            tr("Returned type %1 does not match instance type %2. Ignoring node %3 and its children.")
-                .arg(typeName)
-                .arg(this->metaObject()->className())
-                .arg(this->nodeId()),
-            QUaLogLevel::Error,
-            QUaLogCategory::Serialization
-        });
-        // continue deserializing anyway
-        return true;
-    }
     // deserialize attrs for all nodes except objectsFolder
     if (!isObjsFolder)
     {
@@ -858,8 +842,20 @@ inline bool QUaNode::deserializeInternal(
             nonHierRefs[this] << forwRef;
             continue;
         }
+        // validate ref typeName
+        QString typeName = forwRef.targetType;
+        if (!this->server()->isMetaObjectRegistered(typeName))
+        {
+            logOut.enqueue({
+                tr("Type name %1 for deserialized node %2 is not registered. Ignoring.")
+                    .arg(typeName)
+                    .arg(forwRef.targetNodeId),
+                QUaLogLevel::Error,
+                QUaLogCategory::Serialization
+            });
+            continue;
+        }
         // deserialize hierarchical ref
-        QString typeName;
         QMap<QString, QVariant> attrs;
         QList<QUaForwardReference> forwardRefs;
         if (!deserializer.readInstance(
@@ -873,18 +869,6 @@ inline bool QUaNode::deserializeInternal(
             // stop deserializing
             return false;
         }
-        // validate typeName
-        if (!this->server()->isMetaObjectRegistered(typeName))
-        {
-            logOut.enqueue({
-                tr("Type name %1 for deserialized node %2 is not registered. Ignoring.")
-                    .arg(typeName)
-                    .arg(forwRef.targetNodeId),
-                QUaLogLevel::Error,
-                QUaLogCategory::Serialization
-            });
-            continue;
-        }
         // check if already exists by node id
         if (mapExistingChildren.contains(forwRef.targetNodeId))
         {
@@ -894,7 +878,6 @@ inline bool QUaNode::deserializeInternal(
             // deserialize (recursive)
             bool ok = instance->deserializeInternal<T>(
                 deserializer,
-                typeName,
                 attrs,
                 forwardRefs,
                 nonHierRefs,
@@ -964,7 +947,6 @@ inline bool QUaNode::deserializeInternal(
                 // deserialize (recursive)
                 bool ok = instance->deserializeInternal<T>(
                     deserializer,
-                    typeName,
                     attrs,
                     forwardRefs,
                     nonHierRefs,
@@ -1014,7 +996,6 @@ inline bool QUaNode::deserializeInternal(
         // deserialize (recursive)
         bool ok = instance->deserializeInternal<T>(
             deserializer,
-            typeName,
             attrs,
             forwardRefs,
             nonHierRefs,

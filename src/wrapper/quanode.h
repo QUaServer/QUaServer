@@ -540,7 +540,6 @@ private:
 
 	template<typename T>
 	bool deserializeInternal(T& deserializer, 
-		                     const QString& typeName, 
 		                     const QMap<QString, QVariant>& attrs, 
 		                     const QList<QUaForwardReference>& forwardRefs, 
 		                     QMap<QUaNode*, QList<QUaForwardReference>>& nonHierRefs, 

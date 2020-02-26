@@ -41,7 +41,7 @@ public:
 	// required API for QUaNode::deserialize
 	bool readInstance(
 		const QString &nodeId,
-		QString &typeName,
+		const QString &typeName,
 		QMap<QString, QVariant> &attrs,
 		QList<QUaForwardReference> &forwardRefs,
 		QQueue<QUaLog> &logOut
@@ -55,7 +55,6 @@ private:
 	// used to hold deserialization state
 	struct NodeData 
 	{
-		QString typeName;
 		QMap<QString, QVariant> attrs;
 		QList<QUaForwardReference> forwardRefs;
 	};
@@ -77,11 +76,6 @@ private:
 	);
 	// helper to decode nodeId
 	QString readNodeIdAttribute(
-		QDomElement& node,
-		QQueue<QUaLog>& logOut
-	);
-	// helper to decode typeName
-	QString readTypeNameAttribute(
 		QDomElement& node,
 		QQueue<QUaLog>& logOut
 	);

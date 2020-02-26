@@ -1608,7 +1608,7 @@ Where `T` is any C++ *type* implementing the following interface:
 // required API for QUaNode::deserialize
 bool readInstance(
 	const QString &nodeId,
-	QString &typeName,
+	const QString &typeName,
 	QMap<QString, QVariant> &attrs,
 	QList<QUaForwardReference> &forwardRefs,
 	QQueue<QUaLog> &logOut
@@ -1623,7 +1623,7 @@ bool deserializeEnd(QQueue<QUaLog>& logOut);
 
 Which works in a similar fashion as `writeInstance`, `serializeStart` and `serializeEnd`.
 
-When deserializing, it is responsability of the `readInstance` implementation to return the node's information (`typeName`, `attrs` and `forwardRefs`) for a given `nodeId`.
+When deserializing, it is responsability of the `readInstance` implementation to return the node's information (`typeName`, `attrs` and `forwardRefs`) for a given `nodeId` and `typeName`.
 
 The `deserialize` call then takes care of restoring the *Address Space* instatiating any missing nodes or overwriting the attributes of any existing nodes.
 

@@ -41,7 +41,7 @@ public:
 	// required API for QUaNode::deserialize
 	bool readInstance(
 		const QString& nodeId,
-		QString& typeName,
+		const QString& typeName,
 		QMap<QString, QVariant>& attrs,
 		QList<QUaForwardReference>& forwardRefs,
 		QQueue<QUaLog>& logOut
@@ -92,7 +92,6 @@ private:
 	bool insertNewNode(
 		QSqlDatabase& db, 
 		const QString& nodeId,
-		const QString& typeName,
 		qint32& nodeKey, 
 		QQueue<QUaLog>& logOut
 	);
@@ -126,26 +125,18 @@ private:
 		const QMap<QString, QVariant>& attrs,
 		QQueue<QUaLog>& logOut
 	);
-	// get type name and node key by node id
-	bool typeAndKeyInNodesTable(
-		QSqlDatabase& db,
-		const QString& nodeId,
-		QString& typeName,
-		qint32& nodeKey,
-		QQueue<QUaLog>& logOut
-	);
 	// get attributes by type name and node key
 	bool nodeAttributes(
 		QSqlDatabase& db,
 		const QString& typeName,
-		const qint32& nodeKey,
+		const QString& nodeId,
 		QMap<QString, QVariant>& attrs,
 		QQueue<QUaLog>& logOut
 	);
 	// get references by node key
 	bool nodeReferences(
 		QSqlDatabase& db,
-		const qint32& nodeKey,
+		const QString& nodeId,
 		QList<QUaForwardReference>& forwardRefs,
 		QQueue<QUaLog>& logOut
 	);
