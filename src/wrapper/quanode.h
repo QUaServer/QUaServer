@@ -136,7 +136,11 @@ typedef QUa::LogCategory QUaLogCategory;
 
 struct QUaLog
 {
-	QString        message;
+	// default constructor required by Qt
+	QUaLog();
+	// consutructor accepting QString instead of QByteArray (to support generating messages with QObject::tr)
+	QUaLog(const QString& strMessage, const QUaLogLevel& logLevel, const QUaLogCategory& logCategory);
+	QByteArray     message;
 	QUaLogLevel    level;
 	QUaLogCategory category;
 };

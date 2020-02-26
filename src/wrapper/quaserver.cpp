@@ -986,9 +986,10 @@ UA_Logger QUaServer::getLogger()
 				return;
 			}
 			vsprintf(srv->m_logBuffer.data(), msg, args);
-			QString strMessage = QString::fromUtf8(srv->m_logBuffer);
+			// [FIX] do not convert QBytearray to QString to avoid overhead
+			//QString strMessage = QString::fromUtf8(srv->m_logBuffer);
 			emit srv->logMessage({
-				strMessage,
+				srv->m_logBuffer,
 				static_cast<QUaLogLevel>(level),
 				static_cast<QUaLogCategory>(category)
 			});

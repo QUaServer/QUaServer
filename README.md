@@ -206,7 +206,7 @@ if(!varProp)
 }
 ```
 
-To notify changed, the *QUaNode* API provides the following *Qt signals*:
+To notify changes, the *QUaNode* API provides the following *Qt signals*:
 
 ```c++
 void displayNameChanged(const QString &displayName);
@@ -1489,7 +1489,7 @@ Build and test the events example in [./examples/08_events](./examples/08_events
 
 ### Amalgamation
 
-The amalgamation source code found in `./src/amalgamartion` is licensed by **open62541** under the [Mozilla Public License 2.0](https://github.com/open62541/open62541/blob/master/LICENSE).
+The amalgamation source code found in `./src/amalgamation` is licensed by **open62541** under the [Mozilla Public License 2.0](https://github.com/open62541/open62541/blob/master/LICENSE).
 
 ### QUaTypesConverter
 
@@ -1497,6 +1497,6 @@ The source code in the files `./src/wrapper/quatypesconverter.h` and `quatypesco
 
 ### QUaServer
 
-For the rest of the code, the license is [MIT]().
+For the rest of the code, the license is [MIT](./LICENSE).
 
 Copyright (c) 2019 Juan Gonzalez Burgos
