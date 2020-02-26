@@ -49,6 +49,7 @@ public:
 
 private:
 	QString m_strSqliteDbName;
+	QHash<QString, QSqlQuery> m_prepStmts;
 	// get database handle, creates it if not already
 	bool getOpenedDatabase(
 		QSqlDatabase &db, 

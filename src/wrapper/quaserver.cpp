@@ -506,7 +506,13 @@ void QUaServer::newSession(QUaServer* server,
 			break;
 		}
 	default:
-		Q_ASSERT(false);
+		{
+			// TODO : [BUG] sometimes when client keeps old session, sockFd is not valid?
+			//Q_ASSERT(false);
+			strAddress = "Unknown";
+			intPort = 0;
+		}
+
 	}
 	// store session data
 	Q_ASSERT(server->m_hashSessions.contains(*sessionId));
