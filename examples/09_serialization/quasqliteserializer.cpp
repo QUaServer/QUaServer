@@ -225,15 +225,15 @@ bool QUaSqliteSerializer::writeInstance(
 
 bool QUaSqliteSerializer::deserializeStart(QQueue<QUaLog>& logOut)
 {
+	// cleanup
+	m_prepStmts.clear();
 	// get database handle
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(db, logOut))
 	{
 		return false;
 	}
-
-	// TODO : check default tables
-
+	// TODO : check default tables exist
 	return true;
 }
 
@@ -247,6 +247,8 @@ bool QUaSqliteSerializer::deserializeEnd(QQueue<QUaLog>& logOut)
 	}
 	// close database
 	db.close();
+	// cleanup
+	m_prepStmts.clear();
 	return true;
 }
 
@@ -751,27 +753,47 @@ bool QUaSqliteSerializer::nodeAttributes(
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"* "
-		"FROM "
-			"%1 t "
-		"INNER JOIN "
-			"QUaNode n "
-		"ON "
-			"t.QUaNodeId = n.QUaNodeId "
-		"WHERE "
-			"n.nodeId = '%2';"
-	).arg(typeName).arg(nodeId);
-	if (!query.exec(strStmt))
+	if (!m_prepStmts.contains(typeName))
+	{
+		QSqlQuery query(db);
+		QString strStmt = QString(
+			"SELECT "
+				"* "
+			"FROM "
+				"%1 t "
+			"INNER JOIN "
+				"QUaNode n "
+			"ON "
+				"t.QUaNodeId = n.QUaNodeId "
+			"WHERE "
+				"n.nodeId = :nodeId;"
+		).arg(typeName);
+		if (!query.prepare(strStmt))
+		{
+			logOut << QUaLog({
+			QObject::tr("Failed to prepare statement %1 in %2 database. Sql : %3.")
+					.arg(strStmt)
+					.arg(m_strSqliteDbName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			});
+			return false;
+		}
+		// cache
+		m_prepStmts[typeName] = query;
+	}
+	// bind node id
+	QSqlQuery& query = m_prepStmts[typeName];
+	query.bindValue(0, nodeId);
+	// exec
+	if (!query.exec())
 	{
 		logOut << QUaLog({
-			QObject::tr("Failed to query %1 node id on %2 table in %3 database. Sql : %4 : %5.")
+			QObject::tr("Failed to query %1 node id on %2 table in %3 database. Sql : %4.")
 				.arg(nodeId)
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
-				.arg(strStmt)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
@@ -811,20 +833,41 @@ bool QUaSqliteSerializer::nodeReferences(
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"* "
-		"FROM "
-			"QUaForwardReference r "
-		"INNER JOIN "
-			"QUaNode n "
-		"ON "
-			"r.QUaNodeId = n.QUaNodeId "
-		"WHERE "
-			"n.nodeId = '%1';"
-	).arg(nodeId);
-	if (!query.exec(strStmt))
+	if (!m_prepStmts.contains("QUaForwardReference"))
+	{
+		QSqlQuery query(db);
+		QString strStmt(
+			"SELECT "
+				"* "
+			"FROM "
+				"QUaForwardReference r "
+			"INNER JOIN "
+				"QUaNode n "
+			"ON "
+				"r.QUaNodeId = n.QUaNodeId "
+			"WHERE "
+				"n.nodeId = :nodeId;"
+		);
+		if (!query.prepare(strStmt))
+		{
+			logOut << QUaLog({
+			QObject::tr("Failed to prepare statement %1 in %2 database. Sql : %3.")
+					.arg(strStmt)
+					.arg(m_strSqliteDbName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::Serialization
+			});
+			return false;
+		}
+		// cache
+		m_prepStmts["QUaForwardReference"] = query;
+	}
+	// bind node id
+	QSqlQuery& query = m_prepStmts["QUaForwardReference"];
+	query.bindValue(0, nodeId);
+	// exec
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Failed to query %1 node id on QUaForwardReference table in %2 database. Sql : %3.")
