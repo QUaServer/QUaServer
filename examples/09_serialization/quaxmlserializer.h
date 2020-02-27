@@ -36,7 +36,8 @@ public:
 	// optional API for QUaNode::deserialize
 	bool deserializeStart(QQueue<QUaLog>& logOut);
 
-	// NOTE : deserializeEnd not necessary
+	// optional API for QUaNode::deserialize
+	bool deserializeEnd(QQueue<QUaLog>& logOut);
 
 	// required API for QUaNode::deserialize
 	bool readInstance(

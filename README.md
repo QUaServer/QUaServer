@@ -1542,18 +1542,18 @@ bool writeInstance(
 
 When the `serialize` method is called over a node instance, it will call the `serializer`'s `writeInstance` method recursivelly, starting with the node instance that called it and all its descendants. If the `writeInstance` method returns `false`, the recursion stops, and the call to `serialize` also returns `false`. Any useful log messages should be added to the `logOut` queue.
 
-It is then responsability of the `writeInstance` implementation to save to disk the node's information (`nodeId`, `typeName`, `attrs` and `forwardRefs`) in a sensible manner. For example, in the [./examples/09_serialization](./examples/09_serialization) example, the `QUaXmlSerializer` class implements serialization to XML in the following format:
+It is then responsability of the `writeInstance` implementation to save to disk the node's information (`nodeId`, `attrs` and `forwardRefs`) in a sensible manner. For example, in the [./examples/09_serialization](./examples/09_serialization) example, the `QUaXmlSerializer` class implements serialization to XML in the following format:
 
 ```xml
 <?xml version='1.0' encoding='UTF-8'?>
 <nodes>
- <n nodeId="ns=0;i=85" browseName="Objects" description="" eventNotifier="0" displayName="Objects" writeMask="0" typeName="QUaFolderObject">
+ <n nodeId="ns=0;i=85" browseName="Objects" description="" eventNotifier="0" displayName="Objects" writeMask="0">
   <r forwardName="Organizes" targetType="QUaBaseObject" targetNodeId="ns=1;s=my_obj" inverseName="OrganizedBy"/>
   <r forwardName="Organizes" targetType="QUaFolderObject" targetNodeId="ns=0;i=1592406929" inverseName="OrganizedBy"/>
   <r forwardName="Organizes" targetType="QUaBaseDataVariable" targetNodeId="ns=0;i=2501818547" inverseName="OrganizedBy"/>
   <r forwardName="Organizes" targetType="QUaProperty" targetNodeId="ns=1;s=my_prop" inverseName="OrganizedBy"/>
  </n>
- <n nodeId="ns=1;s=my_obj" browseName="my_object" description="" eventNotifier="0" displayName="my_object" writeMask="0" typeName="QUaBaseObject">
+ <n nodeId="ns=1;s=my_obj" browseName="my_object" description="" eventNotifier="0" displayName="my_object" writeMask="0">
   <r forwardName="FriendOf" targetType="TemperatureSensor" targetNodeId="ns=0;i=2070436686" inverseName="FriendOf"/>
   <r forwardName="HasProperty" targetType="QUaProperty" targetNodeId="ns=0;i=2687773104" inverseName="PropertyOf"/>
   <r forwardName="HasOrderedComponent" targetType="QUaBaseObject" targetNodeId="ns=0;i=4261035154" inverseName="OrderedComponentOf"/>
@@ -1564,6 +1564,8 @@ It is then responsability of the `writeInstance` implementation to save to disk 
 ```
 
 It simply writes down a list of nodes, each node with the `<n>` *XML tag* and all the node's attributes as *XML attributes*. Each `<n>` contains a list of `<r>` *XML tags* as children listing the *forward references* for that node. This is all the information required to *serialize* the state of the *Address Space*.
+
+Note that the `typeName` is not serialized as an *XML attribute*. The `typeName` is passed to the `writeInstance` method to allow the user to organize the data by type if desired. In the *XML* serialization this is not necessary, but if serializing to *SQL*, knowing the `typeName` might be useful to store all instance of a type in their own table.
 
 The type `T` can *optionally* implement the following interface:
 
@@ -1621,7 +1623,7 @@ bool deserializeStart(QQueue<QUaLog>& logOut);
 bool deserializeEnd(QQueue<QUaLog>& logOut);
 ```
 
-Which works in a similar fashion as `writeInstance`, `serializeStart` and `serializeEnd`.
+Which work in a similar fashion as the serializing interface (`writeInstance`, `serializeStart` and `serializeEnd` respectively).
 
 When deserializing, it is responsability of the `readInstance` implementation to return the node's information (`typeName`, `attrs` and `forwardRefs`) for a given `nodeId` and `typeName`.
 

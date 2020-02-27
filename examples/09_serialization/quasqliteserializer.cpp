@@ -65,6 +65,19 @@ bool QUaSqliteSerializer::serializeStart(QQueue<QUaLog>& logOut)
 	{
 		return false;
 	}
+	
+	// start transaction
+	if (!db.transaction())
+	{
+		logOut << QUaLog({
+			QObject::tr("Failed to begin transaction in %1 database. Sql : %2.")
+				.arg(m_strSqliteDbName)
+				.arg(db.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
 	// check nodes table exists
 	bool nodeTableExists;
 	if (!this->tableExists(db, "QUaNode", nodeTableExists, logOut))
@@ -90,18 +103,6 @@ bool QUaSqliteSerializer::serializeStart(QQueue<QUaLog>& logOut)
 		{
 			return false;
 		}
-	}
-	// start transaction
-	if (!db.transaction())
-	{
-		logOut << QUaLog({
-			QObject::tr("Failed to begin transaction in %1 database. Sql : %2.")
-				.arg(m_strSqliteDbName)
-				.arg(db.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return false;
 	}
 	return true;
 }
@@ -370,8 +371,19 @@ bool QUaSqliteSerializer::createNodesTable(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
-				.arg("QUaNode")
+			QObject::tr("Could not create QUaNode table in %1 database. Sql : %2.")
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// create unique index on nodeId for faster queries and to enforce unique nodeId
+	if (!query.exec("CREATE UNIQUE INDEX nodeId ON QUaNode(nodeId);"))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create nodeId index on QUaNode table in %1 database. Sql : %2.")
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
@@ -423,6 +435,18 @@ bool QUaSqliteSerializer::createReferencesTable(
 		logOut << QUaLog({
 			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
 				.arg("QUaForwardReference")
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// create unique index on QUaNodeId foreign key for faster queries
+	if (!query.exec("CREATE INDEX QUaForwardReference_QUaNodeId ON QUaForwardReference(QUaNodeId);"))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create QUaForwardReference_QUaNodeId index on QUaForwardReference table in %1 database. Sql : %2.")
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
@@ -487,6 +511,20 @@ bool QUaSqliteSerializer::createTypeTable(
 	{
 		logOut << QUaLog({
 			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+				.arg(typeName)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// create unique index on QUaNodeId foreign key for faster queries
+	strStmt = QString("CREATE UNIQUE INDEX %1_QUaNodeId ON %1(QUaNodeId);").arg(typeName);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1_QUaNodeId index on %1 table in %2 database. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),

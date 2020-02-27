@@ -203,6 +203,7 @@ bool QUaXmlSerializer::writeInstance(
 	QQueue<QUaLog>& logOut)
 {
 	Q_UNUSED(logOut);
+	Q_UNUSED(typeName);
 	QDomElement root = m_doc.documentElement();
 	// create node in xml
 	QDomElement node = m_doc.createElement("n");
@@ -258,6 +259,14 @@ bool QUaXmlSerializer::deserializeStart(QQueue<QUaLog>& logOut)
 	// close file
 	m_xmlFileConf.close();
 	// exit
+	return true;
+}
+
+bool QUaXmlSerializer::deserializeEnd(QQueue<QUaLog>& logOut)
+{
+	Q_UNUSED(logOut);
+	// cleanup
+	this->reset();
 	return true;
 }
 
