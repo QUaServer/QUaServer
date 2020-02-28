@@ -496,7 +496,7 @@ inline QList<T*> QUaServer::typeInstances()
 	auto nodeList = this->typeInstances(T::staticMetaObject);
 	for (int i = 0; i < nodeList.count(); i++)
 	{
-		auto instance = dynamic_cast<T*>(nodeList.at(i));
+		auto instance = qobject_cast<T*>(nodeList.at(i));
 		Q_CHECK_PTR(instance);
 		retList << instance;
 	}
@@ -558,7 +558,7 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 	// connect to signal
 	return QObject::connect(signaler, &QUaSignaler::signalNewInstance, targetObject ? targetObject : this,
 	[callback](QUaNode * node) {
-		auto specializedNode = dynamic_cast<T*>(node);
+		auto specializedNode = qobject_cast<T*>(node);
 		Q_CHECK_PTR(specializedNode);
 		callback(specializedNode);
 	}, Qt::QueuedConnection);
@@ -605,7 +605,7 @@ inline T * QUaServer::createEvent()
 	}
 	// get new c++ instance created in UA constructor
 	auto tmp = QUaNode::getNodeContext(newEventNodeId, this);
-	T * newEvent = dynamic_cast<T*>(tmp);
+	T * newEvent = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newEvent);
 	// return c++ event instance
 	return newEvent;
@@ -616,13 +616,13 @@ inline T * QUaServer::createEvent()
 template<typename T>
 inline T * QUaServer::nodeById(const QString &strNodeId)
 {
-	return dynamic_cast<T*>(this->nodeById(strNodeId));
+	return qobject_cast<T*>(this->nodeById(strNodeId));
 }
 
 template<typename T>
 inline T * QUaServer::browsePath(const QStringList & strBrowsePath) const
 {
-	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
+	return qobject_cast<T*>(this->browsePath(strBrowsePath));
 }
 
 template<typename M>
@@ -1042,7 +1042,7 @@ inline T * QUaBaseObject::createEvent()
     }
     // get new c++ instance created in UA constructor
     auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer);
-    T * newEvent = dynamic_cast<T*>(tmp);
+    T * newEvent = qobject_cast<T*>(tmp);
     Q_CHECK_PTR(newEvent);
     // return c++ event instance
     return newEvent;

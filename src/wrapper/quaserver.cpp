@@ -1397,7 +1397,12 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 	// get QUaNode references
 	for (int i = 0; i < retRefSet.count(); i++)
 	{
-		retList << QUaNode::getNodeContext(retRefSet[i], m_server);
+		// when browsing ObjectsFolder there are children with null context (Server object and children)
+		QUaNode * node = QUaNode::getNodeContext(retRefSet[i], m_server);
+		if (node)
+		{
+			retList << node;
+		}
 		UA_NodeId_clear(&retRefSet[i]);
 	}
 	return retList;
