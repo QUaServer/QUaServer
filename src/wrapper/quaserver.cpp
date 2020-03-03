@@ -2471,7 +2471,7 @@ UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, co
 QUaSession::QUaSession(QObject* parent/* = 0*/)
 	: QObject(parent)
 {
-
+	m_timestamp = QDateTime::currentDateTimeUtc();
 }
 
 QString QUaSession::sessionId() const
@@ -2507,4 +2507,9 @@ QString QUaSession::address() const
 quint16 QUaSession::port() const
 {
 	return m_intPort;
+}
+
+QDateTime QUaSession::timestamp() const
+{
+	return m_timestamp;
 }

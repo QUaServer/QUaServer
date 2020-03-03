@@ -121,7 +121,7 @@ namespace QUa
 
 	enum class LogCategory {
 		Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
-		SecurecChannel = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
+		SecureChannel  = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
 		Session        = UA_LogCategory::UA_LOGCATEGORY_SESSION,
 		Server         = UA_LogCategory::UA_LOGCATEGORY_SERVER,
 		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
@@ -140,9 +140,17 @@ struct QUaLog
 	QUaLog();
 	// consutructor accepting QString instead of QByteArray (to support generating messages with QObject::tr)
 	QUaLog(const QString& strMessage, const QUaLogLevel& logLevel, const QUaLogCategory& logCategory);
+	// operators to treat the type as a boolean (pointer)
+	QUaLog(const bool& b);
+	operator bool() const;
+	bool operator !() const;
+	void operator=(const bool& b);
+	bool operator==(const QUaLog& other) const;
+	// members
 	QByteArray     message;
 	QUaLogLevel    level;
 	QUaLogCategory category;
+	QDateTime      timestamp;
 };
 Q_DECLARE_METATYPE(QUaLog);
 

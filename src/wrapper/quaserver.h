@@ -49,34 +49,37 @@ class QUaSession : public QObject
 	friend class QUaServer;
 	Q_OBJECT
 
-	Q_PROPERTY(QString sessionId       READ sessionId      )
-	Q_PROPERTY(QString userName        READ userName       )
-	Q_PROPERTY(QString applicationName READ applicationName)
-	Q_PROPERTY(QString applicationUri  READ applicationUri )
-	Q_PROPERTY(QString productUri      READ productUri     )
-	Q_PROPERTY(QString address         READ address        )
-	Q_PROPERTY(quint16 port            READ port           )
+	Q_PROPERTY(QString   sessionId       READ sessionId      )
+	Q_PROPERTY(QString   userName        READ userName       )
+	Q_PROPERTY(QString   applicationName READ applicationName)
+	Q_PROPERTY(QString   applicationUri  READ applicationUri )
+	Q_PROPERTY(QString   productUri      READ productUri     )
+	Q_PROPERTY(QString   address         READ address        )
+	Q_PROPERTY(quint16   port            READ port           )
+    Q_PROPERTY(QDateTime timestamp       READ timestamp      )
 
 public:
 
     explicit QUaSession(QObject* parent = nullptr);
 
-	QString sessionId      () const;
-	QString userName       () const;
-	QString applicationName() const;
-	QString applicationUri () const;
-	QString productUri     () const;
-	QString address        () const;
-	quint16 port           () const;
+	QString   sessionId     () const;
+	QString   userName       () const;
+	QString   applicationName() const;
+	QString   applicationUri () const;
+	QString   productUri     () const;
+	QString   address        () const;
+	quint16   port           () const;
+    QDateTime timestamp      () const;
 
 private:
-	QString m_strSessionId;
-	QString m_strUserName;
-	QString m_strApplicationName;
-	QString m_strApplicationUri;
-	QString m_strProductUri;
-	QString m_strAddress;
-	quint16 m_intPort;
+	QString   m_strSessionId;
+	QString   m_strUserName;
+	QString   m_strApplicationName;
+	QString   m_strApplicationUri;
+	QString   m_strProductUri;
+	QString   m_strAddress;
+	quint16   m_intPort;
+    QDateTime m_timestamp;
 };
 
 class QUaServer : public QObject

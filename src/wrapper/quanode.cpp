@@ -1055,13 +1055,49 @@ QDebug operator<<(QDebug debug, const QUaReferenceType& refType)
 QUaLog::QUaLog()
 {
 	// default constructor required by Qt
+	message   = QByteArray();
+	timestamp = QDateTime::currentDateTimeUtc();
 }
 
 QUaLog::QUaLog(const QString        & strMessage,
 	           const QUaLogLevel    & logLevel, 
 	           const QUaLogCategory & logCategory)
 {
-	message  = strMessage.toUtf8();
-	level    = logLevel;
-	category = logCategory;
+	message   = strMessage.toUtf8();
+	level     = logLevel;
+	category  = logCategory;
+	timestamp = QDateTime::currentDateTimeUtc();
 }
+
+QUaLog::QUaLog(const bool& b)
+{
+	*this = b;
+}
+
+QUaLog::operator bool() const
+{
+	return !message.isNull();
+}
+
+bool QUaLog::operator!() const
+{
+	return message.isNull();
+}
+
+void QUaLog::operator=(const bool& b)
+{
+	if (!b)
+	{
+		*this = QUaLog();
+	}
+}
+
+bool QUaLog::operator==(const QUaLog& other) const
+{
+	return message == other.message &&
+		level == other.level &&
+		category == other.category &&
+		timestamp == other.timestamp;
+}
+
+
