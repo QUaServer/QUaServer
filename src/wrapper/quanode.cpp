@@ -1068,36 +1068,3 @@ QUaLog::QUaLog(const QString        & strMessage,
 	category  = logCategory;
 	timestamp = QDateTime::currentDateTimeUtc();
 }
-
-QUaLog::QUaLog(const bool& b)
-{
-	*this = b;
-}
-
-QUaLog::operator bool() const
-{
-	return !message.isNull();
-}
-
-bool QUaLog::operator!() const
-{
-	return message.isNull();
-}
-
-void QUaLog::operator=(const bool& b)
-{
-	if (!b)
-	{
-		*this = QUaLog();
-	}
-}
-
-bool QUaLog::operator==(const QUaLog& other) const
-{
-	return message == other.message &&
-		level == other.level &&
-		category == other.category &&
-		timestamp == other.timestamp;
-}
-
-
