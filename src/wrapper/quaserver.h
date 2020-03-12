@@ -829,7 +829,7 @@ inline bool QUaNode::deserializeInternal(
         // deserialize attrs (this can only generate warnings)
         this->deserializeAttrs(attrs, logOut);
     }
-    // get extsing children list to match hierachical forward references
+    // get existing children list to match hierachical forward references
     auto existingChildren = this->browseChildren();
     QHash<QString, QUaNode*> mapExistingChildren;
     for (auto child : existingChildren)
@@ -895,7 +895,7 @@ inline bool QUaNode::deserializeInternal(
             continue;
         }
         // check if already exists by browse name
-        if (!attrs.contains("browseName"))
+        if (!attrs.contains("browseName") || attrs.value("browseName").toString().isEmpty())
         {
             logOut.enqueue({
                 tr("Deserialized node %1 does not contain browseName attribute. Creating new instance.")
@@ -915,7 +915,11 @@ inline bool QUaNode::deserializeInternal(
                 if (existingBrowseName.count() > 1)
                 {
                     // if existingChildren does not contain an instance it meas it has already been deserialized
-                    while (!existingChildren.contains(existingBrowseName.first()) && existingBrowseName.count() > 0)
+                    while (
+                        !existingChildren.isEmpty() &&
+                        !existingChildren.contains(existingBrowseName.first()) && 
+                        existingBrowseName.count() > 0
+                        )
                     {
                         existingBrowseName.takeFirst();
                     }
@@ -925,7 +929,7 @@ inline bool QUaNode::deserializeInternal(
                         tr("All children of %1 with browseName %2 have been deserialized. Ignoring deserialization of forward reference to %3.")
                                 .arg(this->nodeId())
                                 .arg(strBrowseName)
-                                .arg(instance->nodeId()),
+                                .arg(forwRef.targetNodeId),
                             QUaLogLevel::Error,
                             QUaLogCategory::Serialization
                         });

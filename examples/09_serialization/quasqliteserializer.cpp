@@ -301,7 +301,7 @@ bool QUaSqliteSerializer::getOpenedDatabase(
 	if (!db.isOpen())
 	{
 		logOut << QUaLog({
-			QObject::tr("Error opening %1. Sql : %2")
+			QObject::tr("Error opening %1. Stopped (de)serialization. Sql : %2")
 				.arg(m_strSqliteDbName)
 				.arg(db.lastError().text()),
 			QUaLogLevel::Error,
@@ -323,36 +323,6 @@ bool QUaSqliteSerializer::tableExists(
 	Q_UNUSED(db);
 	tableExists = m_prepStmts.contains(strTableName);
 	return true;
-	/*
-	// query database for table
-	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT name FROM sqlite_master "
-		"WHERE type='table' AND name='%1' COLLATE NOCASE"
-	).arg(strTableName);
-	if (!query.exec(strStmt))
-	{
-		logOut << QUaLog({
-			QObject::tr("Error checking %1 table exists in %2 database. Sql : %3.")
-				.arg(strTableName)
-				.arg(m_strSqliteDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return false;
-	}
-	if (query.next())
-	{
-		tableExists = true;
-	}
-	else
-	{
-		tableExists = false;
-	}
-	return true;
-	*/
 }
 
 bool QUaSqliteSerializer::createNodesTable(
@@ -510,7 +480,7 @@ bool QUaSqliteSerializer::createTypeTable(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not create %1 table in %2 database. Stopped serialization. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -524,7 +494,7 @@ bool QUaSqliteSerializer::createTypeTable(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-			QObject::tr("Could not create %1_QUaNodeId index on %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not create %1_QUaNodeId index on %1 table in %2 database. Stopped serialization. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -552,7 +522,7 @@ bool QUaSqliteSerializer::createTypeTable(
 	if (!query.prepare(strStmt))
 	{
 		logOut << QUaLog({
-			QObject::tr("Error preparing statement %1 for %2 database. Sql : %3.")
+			QObject::tr("Error preparing statement %1 for %2 database. Stopped serialization. Sql : %3.")
 				.arg(strStmt)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -592,7 +562,7 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
-			QObject::tr("Error querying %1 table in %2 database. Sql : %3.")
+			QObject::tr("Error querying %1 table in %2 database. Stopped serialization. Sql : %3.")
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
@@ -694,7 +664,7 @@ bool QUaSqliteSerializer::addReferences(
 		if (!query.exec())
 		{
 			logOut << QUaLog({
-				QObject::tr("Could not insert new row in QUaForwardReference table in %1 database. Sql : %2.")
+				QObject::tr("Could not insert new row in QUaForwardReference table in %1 database. Stopped serialization. Sql : %2.")
 					.arg(m_strSqliteDbName)
 					.arg(query.lastError().text()),
 				QUaLogLevel::Error,
@@ -731,7 +701,7 @@ bool QUaSqliteSerializer::removeReferences(
 		if (!query.exec())
 		{
 			logOut << QUaLog({
-				QObject::tr("Could not remove row in QUaForwardReference table in %1 database. Sql : %2.")
+				QObject::tr("Could not remove row in QUaForwardReference table in %1 database. Stopped serialization. Sql : %2.")
 					.arg(m_strSqliteDbName)
 					.arg(query.lastError().text()),
 				QUaLogLevel::Error,
@@ -770,7 +740,7 @@ bool QUaSqliteSerializer::updateInstance(
 	if (!query.exec())
 	{
 		logOut << QUaLog({
-			QObject::tr("Could not update row with QUaNodeId = %1 in %2 table in %3 database. Sql : %4.")
+			QObject::tr("Could not update row with QUaNodeId = %1 in %2 table in %3 database. Stopped serialization. Sql : %4.")
 				.arg(nodeKey)
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
@@ -809,7 +779,7 @@ bool QUaSqliteSerializer::nodeAttributes(
 		if (!query.prepare(strStmt))
 		{
 			logOut << QUaLog({
-			QObject::tr("Failed to prepare statement %1 in %2 database. Sql : %3.")
+			QObject::tr("Failed to prepare statement %1 in %2 database. Stopped deserialization. Sql : %3.")
 					.arg(strStmt)
 					.arg(m_strSqliteDbName)
 					.arg(query.lastError().text()),
@@ -828,7 +798,7 @@ bool QUaSqliteSerializer::nodeAttributes(
 	if (!query.exec())
 	{
 		logOut << QUaLog({
-			QObject::tr("Failed to query %1 node id on %2 table in %3 database. Sql : %4.")
+			QObject::tr("Failed to query %1 node id on %2 table in %3 database. Stopped deserialization. Sql : %4.")
 				.arg(nodeId)
 				.arg(typeName)
 				.arg(m_strSqliteDbName)
@@ -841,13 +811,14 @@ bool QUaSqliteSerializer::nodeAttributes(
 	if (!query.next())
 	{
 		logOut << QUaLog({
-			QObject::tr("Node id %1 does not exist on %2 table in %3 database.")
+			QObject::tr("Node id %1 does not exist on %2 table in %3 database. Stopped deserialization.")
 				.arg(nodeId)
 				.arg(typeName)
 				.arg(m_strSqliteDbName),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
+		return false;
 	}
 	// loop columns
 	QSqlRecord rec = query.record();
@@ -889,7 +860,7 @@ bool QUaSqliteSerializer::nodeReferences(
 		if (!query.prepare(strStmt))
 		{
 			logOut << QUaLog({
-			QObject::tr("Failed to prepare statement %1 in %2 database. Sql : %3.")
+			QObject::tr("Failed to prepare statement %1 in %2 database. Stopped (de)serialization. Sql : %3.")
 					.arg(strStmt)
 					.arg(m_strSqliteDbName)
 					.arg(query.lastError().text()),
@@ -908,7 +879,7 @@ bool QUaSqliteSerializer::nodeReferences(
 	if (!query.exec())
 	{
 		logOut << QUaLog({
-			QObject::tr("Failed to query %1 node id on QUaForwardReference table in %2 database. Sql : %3.")
+			QObject::tr("Failed to query %1 node id on QUaForwardReference table in %2 database. Stopped (de)serialization. Sql : %3.")
 				.arg(nodeId)
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
