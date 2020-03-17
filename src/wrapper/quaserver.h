@@ -15,6 +15,9 @@
 #include <QUaGeneralModelChangeEvent>
 #include <QFunctionUtils>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_HISTORIZING
+#include <QUaHistoryBackend>
+#endif // UA_ENABLE_HISTORIZING
 
 // Enum Stuff
 typedef qint64 QUaEnumKey;
@@ -91,6 +94,9 @@ class QUaServer : public QObject
 	friend class QUaBaseEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	template <typename ClassType, typename R, bool IsMutable, typename... Args> friend struct QUaMethodTraitsBase;
+#ifdef UA_ENABLE_HISTORIZING
+    friend class QUaHistoryBackend;
+#endif // UA_ENABLE_HISTORIZING
 
 	Q_OBJECT
 
@@ -334,6 +340,12 @@ private:
 	void addChange(const QUaChangeStructureDataType& change);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+#ifdef UA_ENABLE_HISTORIZING
+    UA_HistoryDatabase m_historDatabase;
+    QUaHistoryBackend  m_historBackend;
+    UA_HistoryDataGathering getGathering() const;
+#endif // UA_ENABLE_HISTORIZING
+
 	// reset open62541 config
 	void resetConfig();
 
@@ -439,7 +451,7 @@ private:
 		                                 void                        **sessionContext);
 
 	static void newSession(QUaServer* server, 
-		                        const UA_NodeId* sessionId);
+		                   const UA_NodeId* sessionId);
 
 	static void closeSession(UA_Server        *server, 
 		                     UA_AccessControl *ac, 

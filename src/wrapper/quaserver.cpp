@@ -713,6 +713,13 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+#ifdef UA_ENABLE_HISTORIZING
+UA_HistoryDataGathering QUaServer::getGathering() const
+{
+	return static_cast<UA_HistoryDatabaseContext_default*>(m_historDatabase.context)->gathering;
+}
+#endif // UA_ENABLE_HISTORIZING
+
 void QUaServer::resetConfig()
 {
 	// clean old config and create new
@@ -796,6 +803,10 @@ void QUaServer::resetConfig()
 
 	config->maxSecureChannels = m_maxSecureChannels;
 	config->maxSessions       = m_maxSessions;
+
+#ifdef UA_ENABLE_HISTORIZING
+	config->historyDatabase = m_historDatabase;
+#endif // UA_ENABLE_HISTORIZING
 }
 
 UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
@@ -972,6 +983,11 @@ void QUaServer::setupServer()
 			m_listChanges.clear();
 		}, QUA_DEBOUNCE_PERIOD_MS);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+#ifdef UA_ENABLE_HISTORIZING
+	UA_HistoryDataGathering gathering = UA_HistoryDataGathering_Default(1000);
+	m_historDatabase = UA_HistoryDatabase_default(gathering);
+#endif // UA_ENABLE_HISTORIZING
 }
 
 UA_Logger QUaServer::getLogger()

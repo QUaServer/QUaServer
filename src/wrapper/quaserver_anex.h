@@ -396,3 +396,15 @@ typedef struct {
 #define USERNAME_POLICY  "open62541-username-policy"
 const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
 const UA_String username_policy = UA_STRING_STATIC(USERNAME_POLICY);
+
+
+#ifdef UA_ENABLE_HISTORIZING
+/*********************************************************************************************
+Copied from open62541, to be able to implement:
+
+QUaServer::getGathering
+*/
+typedef struct {
+    UA_HistoryDataGathering gathering;
+} UA_HistoryDatabaseContext_default;
+#endif // UA_ENABLE_HISTORIZING

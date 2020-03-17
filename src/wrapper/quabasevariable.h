@@ -84,8 +84,11 @@ class QUaBaseVariable : public QUaNode
 
 	Q_PROPERTY(double minimumSamplingInterval READ minimumSamplingInterval WRITE setMinimumSamplingInterval)
 
-	// Historizing is currently unsupported
+#ifndef UA_ENABLE_HISTORIZING
 	Q_PROPERTY(bool historizing READ historizing)
+#else
+	Q_PROPERTY(bool historizing WRITE setHistorizing)
+#endif // UA_ENABLE_HISTORIZING
 
 public:
 	explicit QUaBaseVariable(QUaServer *server);
@@ -122,8 +125,10 @@ public:
 	double            minimumSamplingInterval() const;
 	void              setMinimumSamplingInterval(const double &minimumSamplingInterval);
 	// Whether the Server is actively collecting data for the history of the Variable
-	// Currently unsupported by library (false)
 	bool              historizing() const;
+#ifdef UA_ENABLE_HISTORIZING
+	void              setHistorizing(const bool & historizing);
+#endif // UA_ENABLE_HISTORIZING
 	// set callback which is called before a read is performed
 	// call with the default argument for no pre-read callback
 	void              setReadCallback(const std::function<QVariant()>& readCallback=std::function<QVariant()>());
@@ -136,6 +141,15 @@ public:
 	// Default : write access false
 	bool              writeAccess() const;
 	void              setWriteAccess(const bool &writeAccess);
+
+#ifdef UA_ENABLE_HISTORIZING
+	// Default : read history access false
+	bool              readHistoryAccess() const;
+	void              setReadHistoryAccess(const bool& readHistoryAccess);
+	// Default : write history access false
+	bool              writeHistoryAccess() const;
+	void              setWriteHistoryAccess(const bool& writeHistoryAccess);
+#endif // UA_ENABLE_HISTORIZING
 
 	QString           dataTypeNodeId() const;
 

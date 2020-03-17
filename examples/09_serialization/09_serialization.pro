@@ -11,13 +11,16 @@ TEMPLATE = app
 
 INCLUDEPATH += $$PWD/
 
-SOURCES += main.cpp \
-    quasqliteserializer.cpp \
-    quaxmlserializer.cpp
+SOURCES += \
+main.cpp \
+quasqliteserializer.cpp \
+quaxmlserializer.cpp
 
-HEADERS += temperaturesensor.h \
-    quasqliteserializer.h \
-    quaxmlserializer.h
+HEADERS += \
+temperaturesensor.h \
+quasqliteserializer.h \
+quaxmlserializer.h
+    
 SOURCES += temperaturesensor.cpp
 
 include($$PWD/../../src/wrapper/quaserver.pri)

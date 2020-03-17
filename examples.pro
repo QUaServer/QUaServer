@@ -1,5 +1,4 @@
 TEMPLATE = subdirs
-CONFIG  += debug_and_release build_all
 # NOTE : had to move this pro file to repo's root directory because qmake does not work well on Linux when a subdir is out of $$PWD
 # names
 SUBDIRS += \
@@ -12,7 +11,8 @@ SUBDIRS += \
 06_users \
 07_encryption \
 08_events \
-09_serialization
+09_serialization \
+10_historizing
 # directories
 00_amalgamation.subdir  = $$PWD/src/amalgamation
 01_basics.subdir        = $$PWD/examples/01_basics
@@ -24,6 +24,7 @@ SUBDIRS += \
 07_encryption.subdir    = $$PWD/examples/07_encryption
 08_events.subdir        = $$PWD/examples/08_events
 09_serialization.subdir = $$PWD/examples/09_serialization
+10_historizing.subdir   = $$PWD/examples/10_historizing
 # dependencies
 00_amalgamation.depends  =
 01_basics.depends        = 00_amalgamation
@@ -35,3 +36,4 @@ SUBDIRS += \
 07_encryption.depends    = 00_amalgamation
 08_events.depends        = 00_amalgamation
 09_serialization.depends = 00_amalgamation
+10_historizing.depends   = 00_amalgamation

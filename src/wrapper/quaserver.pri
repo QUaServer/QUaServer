@@ -30,6 +30,11 @@ ua_events {
     $$PWD/quageneralmodelchangeevent.cpp
 }
 
+ua_historizing {
+    SOURCES += \
+    $$PWD/quahistorybackend.cpp
+}
+
 SOURCES += \   
     $$PWD/quatypesconverter.cpp
 
@@ -48,6 +53,11 @@ ua_events {
     $$PWD/quabaseevent.h \
     $$PWD/quageneralmodelchangeevent.h
 }
+
+ua_historizing {
+    HEADERS += \
+    $$PWD/quahistorybackend.h
+}
     
 HEADERS += \    
     $$PWD/quatypesconverter.h
@@ -62,11 +72,15 @@ DISTFILES += \
     $$PWD/QUaFolderObject \
     $$PWD/QUaCustomDataTypes
 
-
 ua_events {
     DISTFILES += \
     $$PWD/QUaBaseEvent \
     $$PWD/QUaGeneralModelChangeEvent
+}
+
+ua_historizing {
+    DISTFILES += \
+    $$PWD/QUaHistoryBackend
 }
 
 DISTFILES += \    

@@ -619,6 +619,41 @@ bool QUaBaseVariable::historizing() const
 	return outHistorizing;
 }
 
+#ifdef UA_ENABLE_HISTORIZING
+void QUaBaseVariable::setHistorizing(const bool& historizing)
+{
+	Q_CHECK_PTR(m_qUaServer);
+	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	// set historizing
+	auto st = UA_Server_writeHistorizing(m_qUaServer->m_server, m_nodeId, historizing);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	if (!historizing)
+	{
+		return;
+	}
+	// check if historizing already set
+	auto gathering = m_qUaServer->getGathering();
+	auto psetting = gathering.getHistorizingSetting(
+		m_qUaServer->m_server,
+		gathering.context,
+		&m_nodeId
+	);
+	if (psetting)
+	{
+		return;
+	}
+	// setup historizing 
+	UA_HistorizingNodeIdSettings setting;
+	setting.historizingBackend         = QUaHistoryBackend::m_historUaBackend;
+	setting.maxHistoryDataResponseSize = 1000; // max size client can ask for
+	setting.historizingUpdateStrategy  = UA_HISTORIZINGUPDATESTRATEGY_VALUESET; // when value updated or polling
+	st = gathering.registerNodeId(m_qUaServer->m_server, gathering.context, &m_nodeId, setting);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+}
+#endif // UA_ENABLE_HISTORIZING
+
 bool QUaBaseVariable::readAccess() const
 {
 	QUaAccessLevel accessLevel;
@@ -648,6 +683,38 @@ void QUaBaseVariable::setWriteAccess(const bool & writeAccess)
 	accessLevel.bits.bWrite = writeAccess;
 	this->setAccessLevel(accessLevel.intValue);
 }
+
+#ifdef UA_ENABLE_HISTORIZING
+bool QUaBaseVariable::readHistoryAccess() const
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	return accessLevel.bits.bHistoryRead;
+}
+
+void QUaBaseVariable::setReadHistoryAccess(const bool& readHistoryAccess)
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	accessLevel.bits.bHistoryRead = readHistoryAccess;
+	this->setAccessLevel(accessLevel.intValue);
+}
+
+bool QUaBaseVariable::writeHistoryAccess() const
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	return accessLevel.bits.bHistoryWrite;
+}
+
+void QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)
+{
+	QUaAccessLevel accessLevel;
+	accessLevel.intValue = this->accessLevel();
+	accessLevel.bits.bHistoryWrite = bHistoryWrite;
+	this->setAccessLevel(accessLevel.intValue);
+}
+#endif // UA_ENABLE_HISTORIZING
 
 // [STATIC]
 qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
