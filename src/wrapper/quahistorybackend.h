@@ -64,15 +64,12 @@ public:
 	) const;
 	// Mandatory : return the numPointsToRead data points for the given node,
 	//             starting from numPointsAlreadyRead within the given time range.
-	//             if startFromEnd is true, return numPointsToRead starting with the
-	//             most recent ones
 	QVector<DataPoint> readHistoryData(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,
 		const QDateTime &timeEnd,
 		const quint64   &numPointsAlreadyRead,
-		const quint64   &numPointsToRead,
-		const bool      &startFromEnd
+		const quint64   &numPointsToRead
 	) const;
 
 private:
@@ -92,7 +89,7 @@ private:
 	std::function<bool(const QString&, const QDateTime&)> m_hasTimestamp;
 	std::function<QDateTime(const QString&, const QDateTime&, const TimeMatch&)> m_findTimestamp;
 	std::function<quint64(const QString&, const QDateTime&, const QDateTime&)>   m_numDataPointsInRange;
-	std::function<QVector<QUaHistoryBackend::DataPoint>(const QString&, const QDateTime&, const QDateTime&, const quint64&, const quint64&, const bool&)> m_startFromEnd;
+	std::function<QVector<QUaHistoryBackend::DataPoint>(const QString&, const QDateTime&, const QDateTime&, const quint64&, const quint64&)> m_readHistoryData;
 
 
 };
@@ -161,21 +158,19 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 			);
 	};
 	// readHistoryData
-	m_startFromEnd = [&historizer](
+	m_readHistoryData = [&historizer](
 		const QString   &strNodeId, 
 		const QDateTime &timeStart, 
 		const QDateTime &timeEnd, 
 		const quint64   &numPointsAlreadyRead, 
-		const quint64   &numPointsToRead, 
-		const bool      &startFromEnd
+		const quint64   &numPointsToRead
 		) -> QVector<QUaHistoryBackend::DataPoint>{
 			return historizer.readHistoryData(
 				strNodeId,
 				timeStart,
 				timeEnd,
 				numPointsAlreadyRead,
-				numPointsToRead,
-				startFromEnd
+				numPointsToRead
 			);
 	};
 }

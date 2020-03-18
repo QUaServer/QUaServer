@@ -84,6 +84,7 @@ QDateTime QUaInMemoryHistoryBackend::findTimestamp(
 			else
 			{
 				// return closest key from below or last one if out of range
+				Q_ASSERT(timestamp <= *table.keyBegin());
 				auto iter = std::lower_bound(table.keyBegin(), table.keyEnd(), timestamp);
 				time = iter == table.keyEnd() ? table.lastKey() : *iter;
 			}
@@ -118,8 +119,7 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistoryBackend::readHistoryData
 	const QDateTime &timeStart, 
 	const QDateTime &timeEnd, 
 	const quint64   &numPointsAlreadyRead, 
-	const quint64   &numPointsToRead, 
-	const bool      &startFromEnd) const
+	const quint64   &numPointsToRead) const
 {
 	auto points = QVector<QUaHistoryBackend::DataPoint>();
 	if (!m_database.contains(strNodeId))
@@ -127,24 +127,17 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistoryBackend::readHistoryData
 		return points;
 	}
 	auto& table = m_database[strNodeId];
+	Q_ASSERT(timeStart <= timeEnd);
 	Q_ASSERT(table.contains(timeStart));
 	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
-	// get total range to copy
+	// get total range to read
 	auto iterIni = table.find(timeStart);
 	auto iterEnd = timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end();
 	// resize return value accordingly
 	points.resize(numPointsToRead);
-	// range of data points copy depend on direction
-	decltype(iterIni) iterCopy;
-	if (!startFromEnd)
-	{
-		iterCopy = iterIni + numPointsAlreadyRead;
-		
-	}
-	else
-	{
-		iterCopy = iterEnd - 1 - numPointsAlreadyRead - numPointsToRead;
-	}
+	// read from start point
+	auto iterCopy = iterIni + numPointsAlreadyRead;
+	Q_ASSERT(std::distance(iterCopy, iterEnd) <= std::distance(iterIni, iterEnd));
 	// copy data points
 	std::generate(points.begin(), points.end(),
 	[&iterCopy]() {

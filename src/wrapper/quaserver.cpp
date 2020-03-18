@@ -1184,16 +1184,16 @@ void QUaServer::start()
 	Q_UNUSED(st)
 		m_running = true;
 	QObject::connect(&m_iterWaitTimer, &QTimer::timeout, this,
-		[this]() {
-			// do not iterate if asked to stop
-			if (!m_running) { return; }
-			// iterate and restart
-			m_iterWaitTimer.stop();
-			auto msToWait = UA_Server_run_iterate(m_server, false);
-			msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.7 * msToWait));
-			msToWait = (std::max)(msToWait, static_cast<UA_UInt16>(1));
-			m_iterWaitTimer.start(msToWait);
-		});
+	[this]() {
+		// do not iterate if asked to stop
+		if (!m_running) { return; }
+		// iterate and restart
+		m_iterWaitTimer.stop();
+		auto msToWait = UA_Server_run_iterate(m_server, false);
+		msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.5 * msToWait));
+		msToWait = (std::max)(msToWait, static_cast<UA_UInt16>(1));
+		m_iterWaitTimer.start(msToWait);
+	}, Qt::QueuedConnection);
 	// start iterations
 	m_iterWaitTimer.start(1);
 	// emit event

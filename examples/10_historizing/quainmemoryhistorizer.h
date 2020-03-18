@@ -46,8 +46,7 @@ public:
 		const QDateTime &timeStart,
 		const QDateTime &timeEnd,
 		const quint64   &numPointsAlreadyRead,
-		const quint64   &numPointsToRead,
-		const bool      &startFromEnd
+		const quint64   &numPointsToRead
 	) const;
 
 private:

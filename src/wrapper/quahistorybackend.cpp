@@ -308,7 +308,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionContext);
 		Q_UNUSED(releaseContinuationPoints); // not used?
 		// get offset wrt to previous call
-		size_t numPointsAlreadyRead = 0;
+		size_t offset = 0;
 		if (continuationPoint->length > 0)
 		{
 			Q_ASSERT(continuationPoint->length == sizeof(size_t));
@@ -316,7 +316,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			{
 				return UA_STATUSCODE_BADCONTINUATIONPOINTINVALID;
 			}
-			numPointsAlreadyRead = *((size_t*)(continuationPoint->data));
+			offset = *((size_t*)(continuationPoint->data));
 		}
 		QString   strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
 		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
@@ -333,46 +333,38 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			"QUaHistoryBackend::copyDataValues",
 			"Error; invalid endIndex"
 		);		
-		// total num of points to copy (eventually, after possibly several calls)
-		size_t numPointsTotal   = srv->m_historBackend.numDataPointsInRange(strNodeId, timeStart, timeEnd); 
-		// total num of points missing to read
-		size_t numPointsMissing = numPointsTotal - numPointsAlreadyRead;
-		// num of points to be read on this call
-		size_t numPointsToRead  = (std::min)(valueSize, numPointsMissing);
+		// TODO : swap timestamps if reverse?
+		if (reverse)
+		{
+			Q_ASSERT(timeEnd <= timeStart);
+			auto timeTmp = timeEnd;
+			timeEnd   = timeStart;
+			timeStart = timeTmp;
+		}
+		else
+		{
+			Q_ASSERT(timeStart <= timeEnd);
+		}
 		// read data
 		QVector<DataPoint> points = srv->m_historBackend.readHistoryData(
 			strNodeId,
 			timeStart,
 			timeEnd,
-			static_cast<quint64>(numPointsAlreadyRead),
-			static_cast<quint64>(numPointsToRead),
-			reverse
+			static_cast<quint64>(offset),
+			static_cast<quint64>(valueSize)
 		);
 		// set provided values
-		Q_ASSERT(numPointsToRead == static_cast<size_t>(points.count()));
-		if (numPointsToRead != static_cast<size_t>(points.count()))
+		Q_ASSERT(valueSize == static_cast<size_t>(points.count()));
+		if (valueSize != static_cast<size_t>(points.count()))
 		{
 			*providedValues = 0;
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
-		*providedValues = numPointsToRead;
-		// calculate where (memory addresses) to copy the values
-		UA_DataValue * adressCopyStart = nullptr;
-		UA_DataValue * adressCopyEnd   = nullptr;
-		if (!reverse)
-		{
-			adressCopyStart = values + numPointsAlreadyRead;
-			adressCopyEnd   = values + numPointsAlreadyRead + numPointsToRead;
-		}
-		else
-		{
-			adressCopyStart = values + numPointsTotal - numPointsAlreadyRead - numPointsToRead;
-			adressCopyEnd   = values + numPointsTotal - numPointsAlreadyRead;
-		}
+		*providedValues = valueSize;
 		// copy data
-		auto iterIni = points.begin();
-		std::generate(adressCopyStart, adressCopyEnd,
-		[&iterIni, &range]() {
+		auto iterIni = !reverse ? points.begin() : points.end() - 1;
+		std::generate(values, values + valueSize,
+		[&iterIni, &range, &reverse]() {
 			UA_DataValue retVal;
 			if (range.dimensionsSize > 0)
 			{
@@ -382,17 +374,14 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			{
 				retVal = QUaHistoryBackend::dataPointToValue(iterIni);
 			}
-			iterIni++;
+			(!reverse) ? iterIni++ : iterIni--;
 			return retVal;
 		});
-		// calculate next offset (if haven't yet copied the full distance)
-		if (numPointsAlreadyRead + numPointsToRead < numPointsTotal)
-		{
-			outContinuationPoint->length = sizeof(size_t);
-			size_t t = sizeof(size_t);
-			outContinuationPoint->data = (UA_Byte*)UA_malloc(t);
-			*((size_t*)(outContinuationPoint->data)) = numPointsAlreadyRead + numPointsToRead;
-		}
+		// calculate next offset
+		outContinuationPoint->length = sizeof(size_t);
+		size_t t = sizeof(size_t);
+		outContinuationPoint->data = (UA_Byte*)UA_malloc(t);
+		*((size_t*)(outContinuationPoint->data)) = offset + valueSize;
 		// success
 		return UA_STATUSCODE_GOOD;
 	};
@@ -415,7 +404,7 @@ QUaHistoryBackend::QUaHistoryBackend()
 	m_hasTimestamp         = nullptr;
 	m_findTimestamp        = nullptr;
 	m_numDataPointsInRange = nullptr;
-	m_startFromEnd         = nullptr;
+	m_readHistoryData      = nullptr;
 }
 
 bool QUaHistoryBackend::writeHistoryData(
@@ -495,20 +484,18 @@ QUaHistoryBackend::readHistoryData(
 	const QDateTime &timeStart, 
 	const QDateTime &timeEnd, 
 	const quint64   &numPointsAlreadyRead, 
-	const quint64   &numPointsToRead, 
-	const bool      &startFromEnd) const
+	const quint64   &numPointsToRead) const
 {
-	if (!m_startFromEnd)
+	if (!m_readHistoryData)
 	{
 		return QVector<QUaHistoryBackend::DataPoint>();
 	}
-	return m_startFromEnd(
+	return m_readHistoryData(
 		strNodeId,
 		timeStart,
 		timeEnd,
 		numPointsAlreadyRead,
-		numPointsToRead,
-		startFromEnd
+		numPointsToRead
 	);
 }
 

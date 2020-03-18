@@ -1,5 +1,7 @@
 #include <QCoreApplication>
 #include <QDebug>
+#include <QTimer>
+#include <QRandomGenerator>
 
 #include <QUaServer>
 #include "quainmemoryhistorizer.h"
@@ -7,6 +9,7 @@
 int main(int argc, char* argv[])
 {
 	QCoreApplication a(argc, argv);
+	QTimer timer;
 
 	QUaServer server;
 	server.start();
@@ -15,22 +18,27 @@ int main(int argc, char* argv[])
 	QUaInMemoryHistoryBackend historizer;
 	server.setHistorizer(historizer);
 
-	// add test variable
+	// add test variables
 	QUaFolderObject* objsFolder = server.objectsFolder();
-	QUaBaseDataVariable* varBaseData = objsFolder->addBaseDataVariable("ns=1;s=my_variable");
-	varBaseData->setDisplayName("my_variable");
-	varBaseData->setBrowseName("my_variable");
-	varBaseData->setHistorizing(true);
-	varBaseData->setReadHistoryAccess(true);
-	varBaseData->setWriteAccess(true);
-	varBaseData->setValue(0);
-	QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant& value) {
-		qDebug() << "New value :" << value;
-	});
 
-	objsFolder->addMethod("add", [varBaseData](int val) {
-		varBaseData->setValue(val);
-	});
+	for (int i = 0; i < 10; i++)
+	{
+		// create int variable
+		auto varInt = objsFolder->addBaseDataVariable(QString("ns=1;s=Int%1").arg(i));
+		varInt->setDisplayName(QString("Int%1").arg(i));
+		varInt->setBrowseName(QString("Int%1").arg(i));
+		varInt->setHistorizing(true);
+		varInt->setReadHistoryAccess(true);
+		varInt->setWriteAccess(true);
+		varInt->setValue(0);
+		// set random value
+		QObject::connect(&timer, &QTimer::timeout, varInt, [varInt]() {
+			varInt->setValue(QRandomGenerator::global()->generate());
+		});
+	}
+
+	// update variable every half a second
+	timer.start(200);
 
 	return a.exec();
 }
