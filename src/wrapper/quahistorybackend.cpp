@@ -353,13 +353,13 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			static_cast<quint64>(offset),
 			static_cast<quint64>(valueSize)
 		);
-		// set provided values
-		Q_ASSERT(valueSize == static_cast<size_t>(points.count()));
+		// unexpected size considered error
 		if (valueSize != static_cast<size_t>(points.count()))
 		{
 			*providedValues = 0;
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
+		// set provided values
 		*providedValues = valueSize;
 		// copy data
 		auto iterIni = !reverse ? points.begin() : points.end() - 1;
@@ -386,19 +386,158 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		return UA_STATUSCODE_GOOD;
 	};
 
-	// TODO :
+	// Not Called from UaExpert : Returns the data value stored at a certain index in the database
+	result.getDataValue = [](
+		UA_Server*       server,
+		void*            hdbContext,
+		const UA_NodeId* sessionId,
+		void*            sessionContext,
+		const UA_NodeId* nodeId,
+		size_t           index) -> const UA_DataValue*
+	{
+		Q_UNUSED(hdbContext);
+		Q_UNUSED(sessionId);
+		Q_UNUSED(sessionContext);
+		QString   strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
+		QDateTime time = index == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index);
+		Q_ASSERT(time.isValid());
+		// get server
+		QUaServer* srv = QUaServer::getServerNodeContext(server);
+		// read data, reusing existing API
+		QVector<DataPoint> points = srv->m_historBackend.readHistoryData(
+			strNodeId,
+			time,
+			time,
+			0 /* 0 offset */,
+			1 /* read just 1 value */
+		);
+		// unexpected size considered error
+		if (static_cast<size_t>(points.count()) != 1)
+		{
+			return nullptr;
+		}
+		// TODO : find better way to store the instance of the returned address
+		static auto retVal = QUaHistoryBackend::dataPointToValue(points.begin());
+		return &retVal;
+	};
 
+	// Not Called from UaExpert : insert at given index, given index should not yet exist, else use update
+	result.insertDataValue = [](
+		UA_Server*          server,
+		void*               hdbContext,
+		const UA_NodeId*    sessionId,
+		void*               sessionContext,
+		const UA_NodeId*    nodeId,
+		const UA_DataValue* value) -> UA_StatusCode
+	{
+		Q_UNUSED(hdbContext);
+		Q_UNUSED(sessionId);
+		Q_UNUSED(sessionContext);
+		// get or create timestamp for point
+		if (!value->hasSourceTimestamp && !value->hasServerTimestamp)
+		{
+			return UA_STATUSCODE_BADINVALIDTIMESTAMP;
+		}
+		QString strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
+		auto    dataPoint = QUaHistoryBackend::dataValueToPoint(value);
+		// get server
+		QUaServer* srv = QUaServer::getServerNodeContext(server);
+		// call internal backend method
+		if (!srv->m_historBackend.writeHistoryData(
+			QUaTypesConverter::nodeIdToQString(*nodeId),
+			dataValueToPoint(value)
+		))
+		{
+			return UA_STATUSCODE_BADUNEXPECTEDERROR;
+		}
+		return UA_STATUSCODE_GOOD;
+	};
+
+	// Not Called from UaExpert : update at given index, given index should exist, else use insert
+	auto updateHistoryData = [](
+		UA_Server*          server,
+		void*               hdbContext,
+		const UA_NodeId*    sessionId,
+		void*               sessionContext,
+		const UA_NodeId*    nodeId,
+		const UA_DataValue* value) -> UA_StatusCode
+	{
+		Q_UNUSED(hdbContext);
+		Q_UNUSED(sessionId);
+		Q_UNUSED(sessionContext);
+		QString strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
+		auto    dataPoint = QUaHistoryBackend::dataValueToPoint(value);
+		// get server
+		QUaServer* srv = QUaServer::getServerNodeContext(server);
+		// call internal backend method
+		if (!srv->m_historBackend.updateHistoryData(
+			QUaTypesConverter::nodeIdToQString(*nodeId),
+			dataValueToPoint(value)
+		))
+		{
+			return UA_STATUSCODE_BADUNEXPECTEDERROR;
+		}
+		return UA_STATUSCODE_GOOD;
+	};
+	result.updateDataValue  = updateHistoryData;
+	result.replaceDataValue = updateHistoryData;
+
+	// Not Called from UaExpert : update at given index, given index should exist, else use insert
+	result.removeDataValue = [](
+		UA_Server*       server,
+		void*            hdbContext,
+		const UA_NodeId* sessionId,
+		void*            sessionContext,
+		const UA_NodeId* nodeId,
+		UA_DateTime      startTimestamp,
+		UA_DateTime      endTimestamp) -> UA_StatusCode
+	{
+		Q_UNUSED(hdbContext);
+		Q_UNUSED(sessionId);
+		Q_UNUSED(sessionContext);
+		QString   strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
+		QDateTime timeStart = startTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&startTimestamp);
+		QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
+		Q_ASSERT(timeStart.isValid());
+		// get server
+		QUaServer* srv = QUaServer::getServerNodeContext(server);
+		Q_ASSERT_X(
+			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart),
+			"QUaHistoryBackend::removeDataValue",
+			"Error; startIndex not found"
+		);
+		Q_ASSERT_X(
+			!timeEnd.isValid() || srv->m_historBackend.hasTimestamp(strNodeId, timeEnd),
+			"QUaHistoryBackend::removeDataValue",
+			"Error; invalid endIndex"
+		);
+		// call internal backend method
+		if (!srv->m_historBackend.removeHistoryData(
+			strNodeId,
+			timeStart,
+			timeEnd
+		))
+		{
+			return UA_STATUSCODE_BADUNEXPECTEDERROR;
+		}
+		return UA_STATUSCODE_GOOD;
+	};
+
+	// TODO : Not applicable?
+	result.deleteMembers = nullptr;
 	// This function is the high level interface for the ReadRaw operation. Set it to NULL if you use the low level API for your plugin.
 	result.getHistoryData = nullptr;
 	// Not used here
 	result.context = nullptr;
-
+	//
 	return result;
 }
 
 QUaHistoryBackend::QUaHistoryBackend()
 {
 	m_writeHistoryData     = nullptr;
+	m_updateHistoryData    = nullptr;
+	m_removeHistoryData    = nullptr;
 	m_firstTimestamp       = nullptr;
 	m_lastTimestamp        = nullptr;
 	m_hasTimestamp         = nullptr;
@@ -416,6 +555,29 @@ bool QUaHistoryBackend::writeHistoryData(
 		return false;
 	}
 	return m_writeHistoryData(strNodeId, dataPoint);
+}
+
+bool QUaHistoryBackend::updateHistoryData(
+	const QString   &strNodeId, 
+	const DataPoint &dataPoint)
+{
+	if (!m_updateHistoryData)
+	{
+		return false;
+	}
+	return m_updateHistoryData(strNodeId, dataPoint);
+}
+
+bool QUaHistoryBackend::removeHistoryData(
+	const QString   &strNodeId,
+	const QDateTime &timeStart, 
+	const QDateTime &timeEnd)
+{
+	if (!m_removeHistoryData)
+	{
+		return false;
+	}
+	return m_removeHistoryData(strNodeId, timeStart, timeEnd);
 }
 
 QDateTime QUaHistoryBackend::firstTimestamp(

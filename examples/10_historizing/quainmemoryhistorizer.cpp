@@ -11,6 +11,41 @@ bool QUaInMemoryHistoryBackend::writeHistoryData(
 	return true;
 }
 
+bool QUaInMemoryHistoryBackend::updateHistoryData(
+	const QString &strNodeId, 
+	const QUaHistoryBackend::DataPoint &dataPoint)
+{
+	Q_ASSERT(
+		m_database.contains(strNodeId) && 
+		m_database[strNodeId].contains(dataPoint.timestamp)
+	);
+	return this->writeHistoryData(strNodeId, dataPoint);
+}
+
+bool QUaInMemoryHistoryBackend::removeHistoryData(
+	const QString &strNodeId, 
+	const QDateTime &timeStart, 
+	const QDateTime &timeEnd)
+{
+	Q_ASSERT(timeStart <= timeEnd);
+	if (!m_database.contains(strNodeId))
+	{
+		return false;
+	}
+	auto& table = m_database[strNodeId];
+	Q_ASSERT(table.contains(timeStart));
+	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
+	// get total range to remove
+	auto iterIni = table.find(timeStart);
+	auto iterEnd = timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end();
+	// remove range
+	for (auto it = iterIni; it != iterEnd; it++)
+	{
+		table.erase(it);
+	}
+	return true;
+}
+
 QDateTime QUaInMemoryHistoryBackend::firstTimestamp(
 	const QString &strNodeId) const
 {
@@ -127,6 +162,7 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistoryBackend::readHistoryData
 		return points;
 	}
 	auto& table = m_database[strNodeId];
+	// NOTE : timeStart can be == timeEnd
 	Q_ASSERT(timeStart <= timeEnd);
 	Q_ASSERT(table.contains(timeStart));
 	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
@@ -138,7 +174,7 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistoryBackend::readHistoryData
 	// read from start point
 	auto iterCopy = iterIni + numPointsAlreadyRead;
 	Q_ASSERT(std::distance(iterCopy, iterEnd) <= std::distance(iterIni, iterEnd));
-	// copy data points
+	// copy return data points
 	std::generate(points.begin(), points.end(),
 	[&iterCopy]() {
 		QUaHistoryBackend::DataPoint retVal = {

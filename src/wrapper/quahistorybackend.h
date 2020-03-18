@@ -32,37 +32,48 @@ public:
 	template<typename T>
 	void setHistorizer(T& historizer);
 
-	// Mandatory : write a node's data point to backend
+	// write a node's data point to backend
 	bool writeHistoryData(
 		const QString   &strNodeId, 
 		const DataPoint &dataPoint
 	);
-	// Mandatory : return the timestamp of the first sample available for the given node
+	// update an existing node's data point in backend
+	bool updateHistoryData(
+		const QString   &strNodeId, 
+		const DataPoint &dataPoint
+	);
+	// remove an existing node's data points within a range
+	bool removeHistoryData(
+		const QString   &strNodeId,
+		const QDateTime &timeStart,
+		const QDateTime &timeEnd
+	); 
+	// return the timestamp of the first sample available for the given node
 	QDateTime firstTimestamp(
 		const QString &strNodeId
 	) const;
-	// Mandatory : return the timestamp of the latest sample available for the given node
+	// return the timestamp of the latest sample available for the given node
 	QDateTime lastTimestamp(
 		const QString &strNodeId
 	) const;
-	// Mandatory : check if given timestamp is available for the given node
+	// check if given timestamp is available for the given node
 	bool hasTimestamp(
 		const QString   &strNodeId,
 		const QDateTime &timestamp
 	) const;
-	// Mandatory : find a timestamp matching the criteria for the given node
+	// find a timestamp matching the criteria for the given node
 	QDateTime findTimestamp(
 		const QString   &strNodeId,
 		const QDateTime &timestamp,
 		const TimeMatch &match
 	) const;
-	// Mandatory : get the number for data points within a time range for the given node
+	// get the number for data points within a time range for the given node
 	quint64 numDataPointsInRange(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,
 		const QDateTime &timeEnd
 	) const;
-	// Mandatory : return the numPointsToRead data points for the given node,
+	// return the numPointsToRead data points for the given node,
 	//             starting from numPointsAlreadyRead within the given time range.
 	QVector<DataPoint> readHistoryData(
 		const QString   &strNodeId,
@@ -84,6 +95,8 @@ private:
 
 	// lambdas to capture historizer
 	std::function<bool(const QString&, const DataPoint&)> m_writeHistoryData;
+	std::function<bool(const QString&, const DataPoint&)> m_updateHistoryData;
+	std::function<bool(const QString&, const QDateTime&, const QDateTime&)> m_removeHistoryData;
 	std::function<QDateTime(const QString&)>              m_firstTimestamp;
 	std::function<QDateTime(const QString&)>              m_lastTimestamp;
 	std::function<bool(const QString&, const QDateTime&)> m_hasTimestamp;
@@ -105,6 +118,28 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 			return historizer.writeHistoryData(
 				strNodeId,
 				dataPoint
+			);
+	};
+	// updateHistoryData
+	m_updateHistoryData = [&historizer](
+		const QString   &strNodeId,
+		const DataPoint &dataPoint
+		) -> bool {
+			return historizer.updateHistoryData(
+				strNodeId,
+				dataPoint
+			);
+	};
+	// removeHistoryData
+	m_removeHistoryData = [&historizer](
+		const QString   &strNodeId,
+		const QDateTime &timeStart,
+		const QDateTime &timeEnd
+		) -> bool {
+			return historizer.removeHistoryData(
+				strNodeId,
+				timeStart,
+				timeEnd
 			);
 	};
 	// firstTimestamp
