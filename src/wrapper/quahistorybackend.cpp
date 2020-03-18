@@ -41,10 +41,20 @@ QUaHistoryBackend::DataPoint QUaHistoryBackend::dataValueToPoint(const UA_DataVa
 UA_DataValue QUaHistoryBackend::dataPointToValue(const DataPoint * point)
 {
 	UA_DataValue retVal;
+	// set values
 	retVal.value = QUaTypesConverter::uaVariantFromQVariant(point->value);
 	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point->timestamp, &retVal.serverTimestamp);
 	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point->timestamp, &retVal.sourceTimestamp);
 	retVal.status = point->status;
+	retVal.serverPicoseconds    = 0;
+	retVal.hasSourcePicoseconds = 0;
+	// let know it has htem
+	retVal.hasValue  = true;
+	retVal.hasStatus = true;
+	retVal.hasServerTimestamp = true;
+	retVal.hasSourceTimestamp = true;
+	retVal.hasServerPicoseconds = false;
+	retVal.hasSourcePicoseconds = false;
 	return retVal;
 }
 
@@ -112,6 +122,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		Q_UNUSED(nodeId);
+		Q_UNUSED(timestampsToReturn);
 		// simplify API by supporting all
 		return true;
 	};
@@ -396,28 +407,48 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 	return result;
 }
 
+QUaHistoryBackend::QUaHistoryBackend()
+{
+	m_writeHistoryData     = nullptr;
+	m_firstTimestamp       = nullptr;
+	m_lastTimestamp        = nullptr;
+	m_hasTimestamp         = nullptr;
+	m_findTimestamp        = nullptr;
+	m_numDataPointsInRange = nullptr;
+	m_startFromEnd         = nullptr;
+}
+
 bool QUaHistoryBackend::writeHistoryData(
 	const QString   &strNodeId, 
 	const DataPoint &dataPoint)
 {
-	// TODO
-	return false;
+	if (!m_writeHistoryData)
+	{
+		return false;
+	}
+	return m_writeHistoryData(strNodeId, dataPoint);
 }
 
 QDateTime QUaHistoryBackend::firstTimestamp(
 		const QString& strNodeId
 	) const
 {
-	// TODO
-	return QDateTime();
+	if (!m_firstTimestamp)
+	{
+		return QDateTime();
+	}
+	return m_firstTimestamp(strNodeId);
 }
 
 QDateTime QUaHistoryBackend::lastTimestamp(
 		const QString& strNodeId
 	) const
 {
-	// TODO
-	return QDateTime();
+	if (!m_lastTimestamp)
+	{
+		return QDateTime();
+	}
+	return m_lastTimestamp(strNodeId);
 }
 
 bool QUaHistoryBackend::hasTimestamp(
@@ -425,8 +456,11 @@ bool QUaHistoryBackend::hasTimestamp(
 		const QDateTime& timestamp
 	) const
 {
-	// TODO
-	return false;
+	if (!m_hasTimestamp)
+	{
+		return false;
+	}
+	return m_hasTimestamp(strNodeId, timestamp);
 }
 
 QDateTime QUaHistoryBackend::findTimestamp(
@@ -435,8 +469,11 @@ QDateTime QUaHistoryBackend::findTimestamp(
 		const TimeMatch &match
 	) const
 {
-	// TODO
-	return QDateTime();
+	if (!m_findTimestamp)
+	{
+		return QDateTime();
+	}
+	return m_findTimestamp(strNodeId, timestamp, match);
 }
 
 quint64 QUaHistoryBackend::numDataPointsInRange(
@@ -445,8 +482,11 @@ quint64 QUaHistoryBackend::numDataPointsInRange(
 		const QDateTime &timeEnd
 	) const
 {
-	// TODO
-	return 0;
+	if (!m_numDataPointsInRange)
+	{
+		return 0;
+	}
+	return m_numDataPointsInRange(strNodeId, timeStart, timeEnd);
 }
 
 QVector<QUaHistoryBackend::DataPoint> 
@@ -458,8 +498,18 @@ QUaHistoryBackend::readHistoryData(
 	const quint64   &numPointsToRead, 
 	const bool      &startFromEnd) const
 {
-	// TODO
-	return QVector<DataPoint>();
+	if (!m_startFromEnd)
+	{
+		return QVector<QUaHistoryBackend::DataPoint>();
+	}
+	return m_startFromEnd(
+		strNodeId,
+		timeStart,
+		timeEnd,
+		numPointsAlreadyRead,
+		numPointsToRead,
+		startFromEnd
+	);
 }
 
 

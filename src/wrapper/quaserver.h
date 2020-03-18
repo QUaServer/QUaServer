@@ -264,6 +264,12 @@ public:
 
     QList<const QUaSession*> sessions() const;
 
+#ifdef UA_ENABLE_HISTORIZING
+    // Historizing API
+    template<typename T>
+    void setHistorizer(T& historizer);
+#endif // UA_ENABLE_HISTORIZING
+
 signals:
 	void isRunningChanged            (const bool       &running           );
 	void portChanged                 (const quint16    &port              );
@@ -647,6 +653,15 @@ inline void QUaServer::setUserValidationCallback(const M & callback)
 		return callback(strUserName, strPassword);
 	};
 }
+
+#ifdef UA_ENABLE_HISTORIZING
+template<typename T>
+inline void QUaServer::setHistorizer(T& historizer)
+{
+    m_historBackend.setHistorizer<T>(historizer);
+}
+#endif // UA_ENABLE_HISTORIZING
+
 
 // -------- OTHER TYPES --------------------------------------------------
 

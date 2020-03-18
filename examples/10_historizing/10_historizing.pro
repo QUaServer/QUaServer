@@ -11,14 +11,14 @@ TEMPLATE = app
 
 INCLUDEPATH += $$PWD/
 
-#include($$PWD/../../src/amalgamation/open62541.pri)
-#
-#INCLUDEPATH += $$PWD/../../depends/open62541.git/include
-#INCLUDEPATH += $$PWD/../../depends/open62541.git/plugins/include
-#
-## NOTE : compile amalgamation with UA_ENABLE_HISTORIZING
-#
-SOURCES += main.cpp
+SOURCES += \
+main.cpp \
+quainmemoryhistorizer.cpp \
+quasqlitehistorizer.cpp
+
+HEADERS += \
+quainmemoryhistorizer.h \
+quasqlitehistorizer.h
 
 include($$PWD/../../src/wrapper/quaserver.pri)
 include($$PWD/../../src/helper/add_qt_path_win.pri)
