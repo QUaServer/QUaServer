@@ -83,8 +83,7 @@ public:
 		const QDateTime &timeEnd,
 		QQueue<QUaLog>  &logOut
 	) const;
-	// return the numPointsToRead data points for the given node,
-	//             starting from numPointsAlreadyRead within the given time range.
+	// return the numPointsToRead data points for the given node from the given start time
 	QVector<DataPoint> readHistoryData(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,

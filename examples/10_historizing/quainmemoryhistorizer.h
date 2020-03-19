@@ -65,8 +65,7 @@ public:
 		QQueue<QUaLog>  &logOut
 	) const;
 	// required API for QUaServer::setHistorizer
-	// return the numPointsToRead data points for the given node,
-	// starting from numPointsAlreadyRead within the given time range.
+	// return the numPointsToRead data points for the given node form the given start time
 	QVector<QUaHistoryBackend::DataPoint> readHistoryData(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,

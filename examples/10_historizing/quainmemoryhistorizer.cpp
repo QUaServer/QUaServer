@@ -130,6 +130,7 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 		});
 		return QDateTime();
 	}
+	// NOTE : the database might or might not contain the input timestamp
 	QDateTime time;
 	auto& table = m_database[strNodeId];
 	switch (match)
@@ -193,7 +194,10 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 		return 0;
 	}
 	auto& table = m_database[strNodeId];
+	// the database must contain the start timestamp
 	Q_ASSERT(table.contains(timeStart));
+	// if the end timestamp is valid, then it must be contained in the database
+	// else it means the API is requesting up to the most recent timestamp (end)
 	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
 	return static_cast<quint64>(std::distance(
 		table.find(timeStart), 
@@ -220,22 +224,18 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 		return points;
 	}
 	auto& table = m_database[strNodeId];
-	// NOTE : timeStart can be == timeEnd
 	Q_ASSERT(table.contains(timeStart));
 	// get total range to read
 	auto iterIni = table.find(timeStart);
 	// resize return value accordingly
 	points.resize(numPointsToRead);
-	// NOTE : the API might ask for values after the last one
-	//        in which case we shall return some invalid value
-	Q_ASSERT(numPointsToRead - 1 <= static_cast<quint64>(std::distance(iterIni, table.end())));
 	// copy return data points
 	std::generate(points.begin(), points.end(),
 	[&iterIni, &table]() {
 		QUaHistoryBackend::DataPoint retVal;
 		if (iterIni == table.end())
 		{
-			// return invalid
+			// NOTE : return an invalid value if API requests more values than available
 			return retVal;
 		}
 		retVal = {
