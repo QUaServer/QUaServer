@@ -127,7 +127,9 @@ namespace QUa
 		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
 		UserLand       = UA_LogCategory::UA_LOGCATEGORY_USERLAND,
 		SecurityPolicy = UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY,
-		Serialization
+		Serialization,
+		History,
+		Application
 	};
 	Q_ENUM_NS(LogCategory)
 }

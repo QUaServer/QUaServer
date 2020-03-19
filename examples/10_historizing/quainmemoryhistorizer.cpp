@@ -1,9 +1,11 @@
 #include "quainmemoryhistorizer.h"
 
-bool QUaInMemoryHistoryBackend::writeHistoryData(
+bool QUaInMemoryHistorizer::writeHistoryData(
 	const QString &strNodeId, 
-	const QUaHistoryBackend::DataPoint &dataPoint)
+	const QUaHistoryBackend::DataPoint &dataPoint,
+	QQueue<QUaLog> &logOut)
 {
+	Q_UNUSED(logOut);
 	m_database[strNodeId][dataPoint.timestamp] = {
 		dataPoint.value,
 		dataPoint.status
@@ -11,25 +13,35 @@ bool QUaInMemoryHistoryBackend::writeHistoryData(
 	return true;
 }
 
-bool QUaInMemoryHistoryBackend::updateHistoryData(
+bool QUaInMemoryHistorizer::updateHistoryData(
 	const QString &strNodeId, 
-	const QUaHistoryBackend::DataPoint &dataPoint)
+	const QUaHistoryBackend::DataPoint &dataPoint,
+	QQueue<QUaLog> &logOut)
 {
+	Q_UNUSED(logOut);
 	Q_ASSERT(
 		m_database.contains(strNodeId) && 
 		m_database[strNodeId].contains(dataPoint.timestamp)
 	);
-	return this->writeHistoryData(strNodeId, dataPoint);
+	return this->writeHistoryData(strNodeId, dataPoint, logOut);
 }
 
-bool QUaInMemoryHistoryBackend::removeHistoryData(
-	const QString &strNodeId, 
+bool QUaInMemoryHistorizer::removeHistoryData(
+	const QString   &strNodeId, 
 	const QDateTime &timeStart, 
-	const QDateTime &timeEnd)
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut)
 {
 	Q_ASSERT(timeStart <= timeEnd);
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error removing history data. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	auto& table = m_database[strNodeId];
@@ -46,44 +58,76 @@ bool QUaInMemoryHistoryBackend::removeHistoryData(
 	return true;
 }
 
-QDateTime QUaInMemoryHistoryBackend::firstTimestamp(
-	const QString &strNodeId) const
+QDateTime QUaInMemoryHistorizer::firstTimestamp(
+	const QString  &strNodeId,
+	QQueue<QUaLog> &logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error finding first history timestamp. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_database[strNodeId].firstKey();
 }
 
-QDateTime QUaInMemoryHistoryBackend::lastTimestamp(
-	const QString &strNodeId) const
+QDateTime QUaInMemoryHistorizer::lastTimestamp(
+	const QString  &strNodeId,
+	QQueue<QUaLog> &logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error finding most recent history timstamp. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_database[strNodeId].lastKey();
 }
 
-bool QUaInMemoryHistoryBackend::hasTimestamp(
+bool QUaInMemoryHistorizer::hasTimestamp(
 	const QString   &strNodeId, 
-	const QDateTime &timestamp) const
+	const QDateTime &timestamp,
+	QQueue<QUaLog>  &logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error finding history timestamp. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_database[strNodeId].contains(timestamp);
 }
 
-QDateTime QUaInMemoryHistoryBackend::findTimestamp(
+QDateTime QUaInMemoryHistorizer::findTimestamp(
 	const QString   &strNodeId, 
 	const QDateTime &timestamp, 
-	const QUaHistoryBackend::TimeMatch &match) const
+	const QUaHistoryBackend::TimeMatch &match,
+	QQueue<QUaLog>  &logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error finding history timestamp. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	QDateTime time;
@@ -131,13 +175,21 @@ QDateTime QUaInMemoryHistoryBackend::findTimestamp(
 	return time;
 }
 
-quint64 QUaInMemoryHistoryBackend::numDataPointsInRange(
+quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 	const QString   &strNodeId, 
 	const QDateTime &timeStart, 
-	const QDateTime &timeEnd) const
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error finding history points. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return 0;
 	}
 	auto& table = m_database[strNodeId];
@@ -149,16 +201,24 @@ quint64 QUaInMemoryHistoryBackend::numDataPointsInRange(
 	));
 }
 
-QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistoryBackend::readHistoryData(
+QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 	const QString   &strNodeId, 
 	const QDateTime &timeStart, 
 	const QDateTime &timeEnd, 
 	const quint64   &numPointsAlreadyRead, 
-	const quint64   &numPointsToRead) const
+	const quint64   &numPointsToRead,
+	QQueue<QUaLog>  &logOut) const
 {
 	auto points = QVector<QUaHistoryBackend::DataPoint>();
 	if (!m_database.contains(strNodeId))
 	{
+		logOut << QUaLog({
+			QObject::tr("Error reading history data. "
+				"History database does not contain table for node id %1")
+				.arg(strNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
 		return points;
 	}
 	auto& table = m_database[strNodeId];

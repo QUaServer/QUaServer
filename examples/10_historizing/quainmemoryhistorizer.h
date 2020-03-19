@@ -3,51 +3,68 @@
 
 #include <QUaHistoryBackend>
 
-class QUaInMemoryHistoryBackend
+class QUaInMemoryHistorizer
 {
 public:
 
-	// write data point to backend
+	// required API for QUaServer::setHistorizer
+	// write data point to backend, return true on success
 	bool writeHistoryData(
 		const QString &strNodeId,
-		const QUaHistoryBackend::DataPoint &dataPoint
+		const QUaHistoryBackend::DataPoint &dataPoint,
+		QQueue<QUaLog> &logOut
 	);
-	// update an existing node's data point in backend
+	// required API for QUaServer::setHistorizer
+	// update an existing node's data point in backend, return true on success
 	bool updateHistoryData(
 		const QString   &strNodeId, 
-		const QUaHistoryBackend::DataPoint &dataPoint
+		const QUaHistoryBackend::DataPoint &dataPoint,
+		QQueue<QUaLog> &logOut
 	);
-	// remove an existing node's data points within a range
+	// required API for QUaServer::setHistorizer
+	// remove an existing node's data points within a range, return true on success
 	bool removeHistoryData(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,
-		const QDateTime &timeEnd
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
 	); 
+	// required API for QUaServer::setHistorizer
 	// return the timestamp of the first sample available for the given node
 	QDateTime firstTimestamp(
-		const QString &strNodeId
+		const QString  &strNodeId,
+		QQueue<QUaLog> &logOut
 	) const;
+	// required API for QUaServer::setHistorizer
 	// return the timestamp of the latest sample available for the given node
 	QDateTime lastTimestamp(
-		const QString &strNodeId
+		const QString  &strNodeId,
+		QQueue<QUaLog> &logOut
 	) const;
-	// check if given timestamp is available for the given node
+	// required API for QUaServer::setHistorizer
+	// return true if given timestamp is available for the given node
 	bool hasTimestamp(
 		const QString   &strNodeId,
-		const QDateTime &timestamp
+		const QDateTime &timestamp,
+		QQueue<QUaLog>  &logOut
 	) const;
-	// find a timestamp matching the criteria for the given node
+	// required API for QUaServer::setHistorizer
+	// return a timestamp matching the criteria for the given node
 	QDateTime findTimestamp(
 		const QString   &strNodeId,
 		const QDateTime &timestamp,
-		const QUaHistoryBackend::TimeMatch& match
+		const QUaHistoryBackend::TimeMatch& match,
+		QQueue<QUaLog>  &logOut
 	) const;
-	// get the number for data points within a time range for the given node
+	// required API for QUaServer::setHistorizer
+	// return the number for data points within a time range for the given node
 	quint64 numDataPointsInRange(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,
-		const QDateTime &timeEnd
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
 	) const;
+	// required API for QUaServer::setHistorizer
 	// return the numPointsToRead data points for the given node,
 	// starting from numPointsAlreadyRead within the given time range.
 	QVector<QUaHistoryBackend::DataPoint> readHistoryData(
@@ -55,7 +72,8 @@ public:
 		const QDateTime &timeStart,
 		const QDateTime &timeEnd,
 		const quint64   &numPointsAlreadyRead,
-		const quint64   &numPointsToRead
+		const quint64   &numPointsToRead,
+		QQueue<QUaLog>  &logOut
 	) const;
 
 private:

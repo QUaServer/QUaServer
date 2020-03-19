@@ -634,7 +634,7 @@ void QUaBaseVariable::setHistorizing(const bool& historizing)
 	}
 	// check if historizing already set
 	auto gathering = m_qUaServer->getGathering();
-	auto psetting = gathering.getHistorizingSetting(
+	auto psetting  = gathering.getHistorizingSetting(
 		m_qUaServer->m_server,
 		gathering.context,
 		&m_nodeId

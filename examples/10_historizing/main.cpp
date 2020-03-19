@@ -4,7 +4,9 @@
 #include <QRandomGenerator>
 
 #include <QUaServer>
+
 #include "quainmemoryhistorizer.h"
+#include "quasqlitehistorizer.h"
 
 int main(int argc, char* argv[])
 {
@@ -15,7 +17,10 @@ int main(int argc, char* argv[])
 	server.start();
 
 	// set historizer (must live at least as long as the server)
-	QUaInMemoryHistoryBackend historizer;
+	QUaInMemoryHistorizer historizer;
+
+	//QUaSqliteHistorizer historizer;
+
 	server.setHistorizer(historizer);
 
 	// add test variables

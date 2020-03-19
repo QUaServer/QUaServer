@@ -58,6 +58,17 @@ UA_DataValue QUaHistoryBackend::dataPointToValue(const DataPoint * point)
 	return retVal;
 }
 
+void QUaHistoryBackend::processServerLog(
+	QUaServer* server, 
+	QQueue<QUaLog>& logOut
+)
+{
+	while (logOut.count() > 0)
+	{
+		emit server->logMessage(logOut.dequeue());
+	}
+}
+
 UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 {
 	UA_HistoryDataBackend result;
@@ -80,16 +91,19 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			return UA_STATUSCODE_BADNOTIMPLEMENTED;
 		}
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
-		
 		// call internal backend method
 		if (!srv->m_historBackend.writeHistoryData(
 			QUaTypesConverter::nodeIdToQString(*nodeId),
-			dataValueToPoint(value)
+			dataValueToPoint(value), 
+			logOut
 		))
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		return UA_STATUSCODE_GOOD;
 	};
 	// 1) This function returns UA_TRUE if the backend supports returning bounding values for a node. This function is mandatory.
@@ -110,11 +124,11 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 	};
 	// 2) This function returns UA_TRUE if the backend supports returning the requested timestamps for a node. This function is mandatory.
 	result.timestampsToReturnSupported = [](
-		UA_Server*                  server,
-		void*                       hdbContext,
-		const UA_NodeId*            sessionId,
-		void*                       sessionContext,
-		const UA_NodeId*            nodeId,
+		UA_Server* server,
+		void* hdbContext,
+		const UA_NodeId* sessionId,
+		void* sessionContext,
+		const UA_NodeId* nodeId,
 		const UA_TimestampsToReturn timestampsToReturn) -> UA_Boolean
 	{
 		Q_UNUSED(server);
@@ -155,11 +169,14 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// simplify API by considering that the timestamp is the index
 		QDateTime time = srv->m_historBackend.firstTimestamp(
-			QUaTypesConverter::nodeIdToQString(*nodeId)
+			QUaTypesConverter::nodeIdToQString(*nodeId), 
+			logOut
 		);
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// check
 		if (!time.isValid())
 		{
@@ -180,11 +197,14 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// simplify API by considering that the timestamp is the index
 		QDateTime time = srv->m_historBackend.lastTimestamp(
-			QUaTypesConverter::nodeIdToQString(*nodeId)
+			QUaTypesConverter::nodeIdToQString(*nodeId), 
+			logOut
 		);
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// check
 		if (!time.isValid())
 		{
@@ -194,30 +214,33 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		return static_cast<size_t>(time.toMSecsSinceEpoch());
 	};
 	// 6) It returns the index of a value in the database which matches certain criteria.
-	result.getDateTimeMatch = [](UA_Server          *server,
-		                         void               *hdbContext,
-		                         const UA_NodeId    *sessionId,
-		                         void               *sessionContext,
-		                         const UA_NodeId    *nodeId,
-		                         const UA_DateTime   timestamp,
-		                         const MatchStrategy strategy) -> size_t
+	result.getDateTimeMatch = [](UA_Server* server,
+		void*               hdbContext,
+		const UA_NodeId*    sessionId,
+		void*               sessionContext,
+		const UA_NodeId*    nodeId,
+		const UA_DateTime   timestamp,
+		const MatchStrategy strategy) -> size_t
 	{
 		Q_UNUSED(hdbContext);
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		QString strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
-		QDateTime time    = timestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&timestamp);
+		QDateTime time = timestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&timestamp);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// check if exact time stamp exists in history database
 		bool hasTimestamp = time.isValid() ? srv->m_historBackend.hasTimestamp(
 			strNodeId,
-			time
+			time, 
+			logOut
 		) : false;
 		// simplify API by simplifying the match
 		if ((strategy == MATCH_EQUAL || strategy == MATCH_EQUAL_OR_AFTER || strategy == MATCH_EQUAL_OR_BEFORE)
 			&& hasTimestamp)
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return static_cast<size_t>(time.toMSecsSinceEpoch());
 		}
 		// get match type
@@ -225,18 +248,18 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		switch (strategy) {
 		case MATCH_EQUAL_OR_AFTER:
 		case MATCH_AFTER:
-			{
-				// contains(timestamp) is handled before, so closest from above
-				match = TimeMatch::ClosestFromAbove;
-			}
-			break;
+		{
+			// contains(timestamp) is handled before, so closest from above
+			match = TimeMatch::ClosestFromAbove;
+		}
+		break;
 		case MATCH_EQUAL_OR_BEFORE:
 		case MATCH_BEFORE:
-			{
-				// contains(timestamp) is handled before, so closest from below
-				match = TimeMatch::ClosestFromBelow;
-			}
-			break;
+		{
+			// contains(timestamp) is handled before, so closest from below
+			match = TimeMatch::ClosestFromBelow;
+		}
+		break;
 		default:
 			Q_ASSERT(false);
 			break;
@@ -245,8 +268,10 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QDateTime outTime = srv->m_historBackend.findTimestamp(
 			strNodeId,
 			time,
-			match
+			match, 
+			logOut
 		);
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// check
 		if (!outTime.isValid())
 		{
@@ -272,18 +297,21 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
 		QDateTime timeEnd   = endIndex   == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		Q_ASSERT_X(
-			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart),
-			"QUaHistoryBackend::resultSize", 
+			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart, logOut),
+			"QUaHistoryBackend::resultSize",
 			"Error; startIndex not found"
 		);
 		Q_ASSERT_X(
-			timeEnd.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeEnd) ? true : endIndex == LLONG_MAX,
-			"QUaHistoryBackend::resultSize", 
+			timeEnd.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeEnd, logOut) ? true : endIndex == LLONG_MAX,
+			"QUaHistoryBackend::resultSize",
 			"Error; endIndex not found");
 		// get number of data points in time range
-		return static_cast<size_t>(srv->m_historBackend.numDataPointsInRange(strNodeId, timeStart, timeEnd));
+		auto res =  static_cast<size_t>(srv->m_historBackend.numDataPointsInRange(strNodeId, timeStart, timeEnd, logOut));
+		QUaHistoryBackend::processServerLog(srv, logOut);
+		return res;
 	};
 	// 8) It copies data values inside a certain range into a buffer.
 	result.copyDataValues = [](
@@ -322,17 +350,18 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
 		QDateTime timeEnd   = endIndex   == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		Q_ASSERT_X(
-			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart),
+			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart, logOut),
 			"QUaHistoryBackend::copyDataValues",
 			"Error; startIndex not found"
 		);
 		Q_ASSERT_X(
-			!timeEnd.isValid() || srv->m_historBackend.hasTimestamp(strNodeId, timeEnd),
+			!timeEnd.isValid() || srv->m_historBackend.hasTimestamp(strNodeId, timeEnd, logOut),
 			"QUaHistoryBackend::copyDataValues",
 			"Error; invalid endIndex"
-		);		
+		);
 		// TODO : swap timestamps if reverse?
 		if (reverse)
 		{
@@ -351,8 +380,10 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			timeStart,
 			timeEnd,
 			static_cast<quint64>(offset),
-			static_cast<quint64>(valueSize)
+			static_cast<quint64>(valueSize), 
+			logOut
 		);
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// unexpected size considered error
 		if (valueSize != static_cast<size_t>(points.count()))
 		{
@@ -364,19 +395,19 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// copy data
 		auto iterIni = !reverse ? points.begin() : points.end() - 1;
 		std::generate(values, values + valueSize,
-		[&iterIni, &range, &reverse]() {
-			UA_DataValue retVal;
-			if (range.dimensionsSize > 0)
-			{
-				UA_DataValue_backend_copyRange(QUaHistoryBackend::dataPointToValue(iterIni), retVal, range);
-			}
-			else
-			{
-				retVal = QUaHistoryBackend::dataPointToValue(iterIni);
-			}
-			(!reverse) ? iterIni++ : iterIni--;
-			return retVal;
-		});
+			[&iterIni, &range, &reverse]() {
+				UA_DataValue retVal;
+				if (range.dimensionsSize > 0)
+				{
+					UA_DataValue_backend_copyRange(QUaHistoryBackend::dataPointToValue(iterIni), retVal, range);
+				}
+				else
+				{
+					retVal = QUaHistoryBackend::dataPointToValue(iterIni);
+				}
+				(!reverse) ? iterIni++ : iterIni--;
+				return retVal;
+			});
 		// calculate next offset
 		outContinuationPoint->length = sizeof(size_t);
 		size_t t = sizeof(size_t);
@@ -402,6 +433,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QDateTime time = index == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index);
 		Q_ASSERT(time.isValid());
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// read data, reusing existing API
 		QVector<DataPoint> points = srv->m_historBackend.readHistoryData(
@@ -409,8 +441,10 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			time,
 			time,
 			0 /* 0 offset */,
-			1 /* read just 1 value */
+			1 /* read just 1 value */, 
+			logOut
 		);
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// unexpected size considered error
 		if (static_cast<size_t>(points.count()) != 1)
 		{
@@ -441,15 +475,19 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QString strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
 		auto    dataPoint = QUaHistoryBackend::dataValueToPoint(value);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// call internal backend method
 		if (!srv->m_historBackend.writeHistoryData(
 			QUaTypesConverter::nodeIdToQString(*nodeId),
-			dataValueToPoint(value)
+			dataValueToPoint(value), 
+			logOut
 		))
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		return UA_STATUSCODE_GOOD;
 	};
 
@@ -468,15 +506,19 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QString strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
 		auto    dataPoint = QUaHistoryBackend::dataValueToPoint(value);
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// call internal backend method
 		if (!srv->m_historBackend.updateHistoryData(
 			QUaTypesConverter::nodeIdToQString(*nodeId),
-			dataValueToPoint(value)
+			dataValueToPoint(value), 
+			logOut
 		))
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		return UA_STATUSCODE_GOOD;
 	};
 	result.updateDataValue  = updateHistoryData;
@@ -500,14 +542,15 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
 		Q_ASSERT(timeStart.isValid());
 		// get server
+		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		Q_ASSERT_X(
-			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart),
+			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart, logOut),
 			"QUaHistoryBackend::removeDataValue",
 			"Error; startIndex not found"
 		);
 		Q_ASSERT_X(
-			!timeEnd.isValid() || srv->m_historBackend.hasTimestamp(strNodeId, timeEnd),
+			!timeEnd.isValid() || srv->m_historBackend.hasTimestamp(strNodeId, timeEnd, logOut),
 			"QUaHistoryBackend::removeDataValue",
 			"Error; invalid endIndex"
 		);
@@ -515,11 +558,14 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		if (!srv->m_historBackend.removeHistoryData(
 			strNodeId,
 			timeStart,
-			timeEnd
+			timeEnd, 
+			logOut
 		))
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
 		}
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		return UA_STATUSCODE_GOOD;
 	};
 
@@ -548,96 +594,104 @@ QUaHistoryBackend::QUaHistoryBackend()
 
 bool QUaHistoryBackend::writeHistoryData(
 	const QString   &strNodeId, 
-	const DataPoint &dataPoint)
+	const DataPoint &dataPoint,
+	QQueue<QUaLog>  &logOut)
 {
 	if (!m_writeHistoryData)
 	{
 		return false;
 	}
-	return m_writeHistoryData(strNodeId, dataPoint);
+	return m_writeHistoryData(strNodeId, dataPoint, logOut);
 }
 
 bool QUaHistoryBackend::updateHistoryData(
 	const QString   &strNodeId, 
-	const DataPoint &dataPoint)
+	const DataPoint &dataPoint,
+	QQueue<QUaLog>  &logOut)
 {
 	if (!m_updateHistoryData)
 	{
 		return false;
 	}
-	return m_updateHistoryData(strNodeId, dataPoint);
+	return m_updateHistoryData(strNodeId, dataPoint, logOut);
 }
 
 bool QUaHistoryBackend::removeHistoryData(
 	const QString   &strNodeId,
 	const QDateTime &timeStart, 
-	const QDateTime &timeEnd)
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut)
 {
 	if (!m_removeHistoryData)
 	{
 		return false;
 	}
-	return m_removeHistoryData(strNodeId, timeStart, timeEnd);
+	return m_removeHistoryData(strNodeId, timeStart, timeEnd, logOut);
 }
 
 QDateTime QUaHistoryBackend::firstTimestamp(
-		const QString& strNodeId
+		const QString  &strNodeId,
+		QQueue<QUaLog> &logOut
 	) const
 {
 	if (!m_firstTimestamp)
 	{
 		return QDateTime();
 	}
-	return m_firstTimestamp(strNodeId);
+	return m_firstTimestamp(strNodeId, logOut);
 }
 
 QDateTime QUaHistoryBackend::lastTimestamp(
-		const QString& strNodeId
+		const QString  &strNodeId,
+		QQueue<QUaLog> &logOut
 	) const
 {
 	if (!m_lastTimestamp)
 	{
 		return QDateTime();
 	}
-	return m_lastTimestamp(strNodeId);
+	return m_lastTimestamp(strNodeId, logOut);
 }
 
 bool QUaHistoryBackend::hasTimestamp(
-		const QString& strNodeId, 
-		const QDateTime& timestamp
+		const QString   &strNodeId, 
+		const QDateTime &timestamp,
+		QQueue<QUaLog>  &logOut
 	) const
 {
 	if (!m_hasTimestamp)
 	{
 		return false;
 	}
-	return m_hasTimestamp(strNodeId, timestamp);
+	return m_hasTimestamp(strNodeId, timestamp, logOut);
 }
 
 QDateTime QUaHistoryBackend::findTimestamp(
 		const QString   &strNodeId, 
 		const QDateTime &timestamp, 
-		const TimeMatch &match
+		const TimeMatch &match,
+		QQueue<QUaLog>  &logOut
 	) const
 {
 	if (!m_findTimestamp)
 	{
 		return QDateTime();
 	}
-	return m_findTimestamp(strNodeId, timestamp, match);
+	return m_findTimestamp(strNodeId, timestamp, match, logOut);
 }
 
 quint64 QUaHistoryBackend::numDataPointsInRange(
 		const QString   &strNodeId, 
 		const QDateTime &timeStart, 
-		const QDateTime &timeEnd
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
 	) const
 {
 	if (!m_numDataPointsInRange)
 	{
 		return 0;
 	}
-	return m_numDataPointsInRange(strNodeId, timeStart, timeEnd);
+	return m_numDataPointsInRange(strNodeId, timeStart, timeEnd, logOut);
 }
 
 QVector<QUaHistoryBackend::DataPoint> 
@@ -646,7 +700,8 @@ QUaHistoryBackend::readHistoryData(
 	const QDateTime &timeStart, 
 	const QDateTime &timeEnd, 
 	const quint64   &numPointsAlreadyRead, 
-	const quint64   &numPointsToRead) const
+	const quint64   &numPointsToRead,
+	QQueue<QUaLog>  &logOut) const
 {
 	if (!m_readHistoryData)
 	{
@@ -657,7 +712,8 @@ QUaHistoryBackend::readHistoryData(
 		timeStart,
 		timeEnd,
 		numPointsAlreadyRead,
-		numPointsToRead
+		numPointsToRead,
+		logOut
 	);
 }
 
