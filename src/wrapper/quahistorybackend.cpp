@@ -335,8 +335,12 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		Q_UNUSED(releaseContinuationPoints); // not used?
+		// convert inputs
+		QString   strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
+		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
+		QDateTime timeEnd   = endIndex   == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
 		// get offset wrt to previous call
-		size_t offset = 0;
+		QDateTime timeStartOffset = timeStart;
 		if (continuationPoint->length > 0)
 		{
 			Q_ASSERT(continuationPoint->length == sizeof(size_t));
@@ -344,16 +348,26 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			{
 				return UA_STATUSCODE_BADCONTINUATIONPOINTINVALID;
 			}
-			offset = *((size_t*)(continuationPoint->data));
+			timeStartOffset = QDateTime::fromMSecsSinceEpoch(*((size_t*)(continuationPoint->data)));
+			Q_ASSERT(timeStartOffset > timeStart);
 		}
-		QString   strNodeId = QUaTypesConverter::nodeIdToQString(*nodeId);
-		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
-		QDateTime timeEnd   = endIndex   == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
 		// get server
 		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
+		// TODO : swap timestamps if reverse?
+		if (reverse)
+		{
+			Q_ASSERT(timeEnd <= timeStartOffset);
+			auto timeTmp    = timeEnd;
+			timeEnd         = timeStartOffset;
+			timeStartOffset = timeTmp;
+		}
+		else
+		{
+			Q_ASSERT(timeStartOffset <= timeEnd);
+		}
 		Q_ASSERT_X(
-			timeStart.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStart, logOut),
+			timeStartOffset.isValid() && srv->m_historBackend.hasTimestamp(strNodeId, timeStartOffset, logOut),
 			"QUaHistoryBackend::copyDataValues",
 			"Error; startIndex not found"
 		);
@@ -362,30 +376,16 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			"QUaHistoryBackend::copyDataValues",
 			"Error; invalid endIndex"
 		);
-		// TODO : swap timestamps if reverse?
-		if (reverse)
-		{
-			Q_ASSERT(timeEnd <= timeStart);
-			auto timeTmp = timeEnd;
-			timeEnd   = timeStart;
-			timeStart = timeTmp;
-		}
-		else
-		{
-			Q_ASSERT(timeStart <= timeEnd);
-		}
-		// read data
+		// read data, points must always come back in incresing timestamp order
 		QVector<DataPoint> points = srv->m_historBackend.readHistoryData(
 			strNodeId,
-			timeStart,
-			timeEnd,
-			static_cast<quint64>(offset),
-			static_cast<quint64>(valueSize), 
+			timeStartOffset,
+			static_cast<quint64>(valueSize + 1), // NOTE : ask one more to get correct continuation point
 			logOut
 		);
 		QUaHistoryBackend::processServerLog(srv, logOut);
 		// unexpected size considered error
-		if (valueSize != static_cast<size_t>(points.count()))
+		if (valueSize + 1 != static_cast<size_t>(points.count()))
 		{
 			*providedValues = 0;
 			return UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -393,7 +393,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// set provided values
 		*providedValues = valueSize;
 		// copy data
-		auto iterIni = !reverse ? points.begin() : points.end() - 1;
+		auto iterIni = !reverse ? points.begin() : points.end() - 2/*1*/; // NOTE : -2 because of the continuation point thing
 		std::generate(values, values + valueSize,
 			[&iterIni, &range, &reverse]() {
 				UA_DataValue retVal;
@@ -408,11 +408,16 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 				(!reverse) ? iterIni++ : iterIni--;
 				return retVal;
 			});
-		// calculate next offset
-		outContinuationPoint->length = sizeof(size_t);
-		size_t t = sizeof(size_t);
-		outContinuationPoint->data = (UA_Byte*)UA_malloc(t);
-		*((size_t*)(outContinuationPoint->data)) = offset + valueSize;
+		// extra requested point is to get timestamp as next continuation point
+		QDateTime timeStartOffsetNext = points.last().timestamp; 
+		if (timeStartOffsetNext.isValid())
+		{
+			Q_ASSERT(timeStartOffsetNext > timeStartOffset);
+			outContinuationPoint->length = sizeof(size_t);
+			size_t t = sizeof(size_t);
+			outContinuationPoint->data = (UA_Byte*)UA_malloc(t);
+			*((size_t*)(outContinuationPoint->data)) = timeStartOffsetNext.toMSecsSinceEpoch();
+		}
 		// success
 		return UA_STATUSCODE_GOOD;
 	};
@@ -439,8 +444,6 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QVector<DataPoint> points = srv->m_historBackend.readHistoryData(
 			strNodeId,
 			time,
-			time,
-			0 /* 0 offset */,
 			1 /* read just 1 value */, 
 			logOut
 		);
@@ -698,8 +701,6 @@ QVector<QUaHistoryBackend::DataPoint>
 QUaHistoryBackend::readHistoryData(
 	const QString   &strNodeId, 
 	const QDateTime &timeStart, 
-	const QDateTime &timeEnd, 
-	const quint64   &numPointsAlreadyRead, 
 	const quint64   &numPointsToRead,
 	QQueue<QUaLog>  &logOut) const
 {
@@ -710,8 +711,6 @@ QUaHistoryBackend::readHistoryData(
 	return m_readHistoryData(
 		strNodeId,
 		timeStart,
-		timeEnd,
-		numPointsAlreadyRead,
 		numPointsToRead,
 		logOut
 	);

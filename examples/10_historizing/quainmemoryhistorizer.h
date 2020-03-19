@@ -70,8 +70,6 @@ public:
 	QVector<QUaHistoryBackend::DataPoint> readHistoryData(
 		const QString   &strNodeId,
 		const QDateTime &timeStart,
-		const QDateTime &timeEnd,
-		const quint64   &numPointsAlreadyRead,
 		const quint64   &numPointsToRead,
 		QQueue<QUaLog>  &logOut
 	) const;

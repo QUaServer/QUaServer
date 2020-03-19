@@ -204,8 +204,6 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 	const QString   &strNodeId, 
 	const QDateTime &timeStart, 
-	const QDateTime &timeEnd, 
-	const quint64   &numPointsAlreadyRead, 
 	const quint64   &numPointsToRead,
 	QQueue<QUaLog>  &logOut) const
 {
@@ -223,26 +221,29 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 	}
 	auto& table = m_database[strNodeId];
 	// NOTE : timeStart can be == timeEnd
-	Q_ASSERT(timeStart <= timeEnd);
 	Q_ASSERT(table.contains(timeStart));
-	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
 	// get total range to read
 	auto iterIni = table.find(timeStart);
-	auto iterEnd = timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end();
 	// resize return value accordingly
 	points.resize(numPointsToRead);
-	// read from start point
-	auto iterCopy = iterIni + numPointsAlreadyRead;
-	Q_ASSERT(std::distance(iterCopy, iterEnd) <= std::distance(iterIni, iterEnd));
+	// NOTE : the API might ask for values after the last one
+	//        in which case we shall return some invalid value
+	Q_ASSERT(numPointsToRead - 1 <= static_cast<quint64>(std::distance(iterIni, table.end())));
 	// copy return data points
 	std::generate(points.begin(), points.end(),
-	[&iterCopy]() {
-		QUaHistoryBackend::DataPoint retVal = {
-			iterCopy.key(),
-			iterCopy.value().value,
-			iterCopy.value().status
+	[&iterIni, &table]() {
+		QUaHistoryBackend::DataPoint retVal;
+		if (iterIni == table.end())
+		{
+			// return invalid
+			return retVal;
+		}
+		retVal = {
+			iterIni.key(),
+			iterIni.value().value,
+			iterIni.value().status
 		};
-		iterCopy++;
+		iterIni++;
 		return retVal;
 	});
 	return points;
