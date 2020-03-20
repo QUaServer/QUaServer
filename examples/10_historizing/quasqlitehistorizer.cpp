@@ -1,6 +1,9 @@
 #include "quasqlitehistorizer.h"
 
 #include <QUaServer>
+
+#ifdef UA_ENABLE_HISTORIZING
+
 #include <QSqlError>
 #include <QSqlRecord>
 
@@ -153,6 +156,9 @@ bool QUaSqliteHistorizer::updateHistoryData(
 	QQueue<QUaLog>& logOut
 )
 {
+	Q_UNUSED(strNodeId);
+	Q_UNUSED(dataPoint);
+	Q_UNUSED(logOut);
 	// TODO : implement; left as exercise
 	return false;
 }
@@ -164,6 +170,10 @@ bool QUaSqliteHistorizer::removeHistoryData(
 	QQueue<QUaLog>& logOut
 )
 {
+	Q_UNUSED(strNodeId);
+	Q_UNUSED(timeStart);
+	Q_UNUSED(timeEnd);
+	Q_UNUSED(logOut);
 	// TODO : implement; left as exercise
 	return false;
 }
@@ -976,3 +986,5 @@ const QString QUaSqliteHistorizer::QtTypeToSqlType(const QMetaType::Type& qtType
 	);
 	return QUaSqliteHistorizer::m_hashTypes.value(qtType, "BLOB");
 }
+
+#endif // UA_ENABLE_HISTORIZING

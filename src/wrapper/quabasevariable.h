@@ -87,7 +87,7 @@ class QUaBaseVariable : public QUaNode
 #ifndef UA_ENABLE_HISTORIZING
 	Q_PROPERTY(bool historizing READ historizing)
 #else
-	Q_PROPERTY(bool historizing WRITE setHistorizing)
+	Q_PROPERTY(bool historizing READ historizing WRITE setHistorizing)
 #endif // UA_ENABLE_HISTORIZING
 
 public:

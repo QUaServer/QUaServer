@@ -1,6 +1,8 @@
 #ifndef QUAHISTORYBACKEND_H
 #define QUAHISTORYBACKEND_H
 
+#ifdef UA_ENABLE_HISTORIZING
+
 #include <QVector>
 #include <QVariant>
 #include <QDateTime>
@@ -233,5 +235,6 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 	};
 }
 
+#endif // UA_ENABLE_HISTORIZING
 
 #endif // QUAHISTORYBACKEND_H

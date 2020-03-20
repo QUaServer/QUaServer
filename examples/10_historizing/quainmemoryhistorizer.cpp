@@ -1,5 +1,7 @@
 #include "quainmemoryhistorizer.h"
 
+#ifdef UA_ENABLE_HISTORIZING
+
 bool QUaInMemoryHistorizer::writeHistoryData(
 	const QString &strNodeId, 
 	const QUaHistoryDataPoint& dataPoint,
@@ -248,3 +250,5 @@ QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
 	});
 	return points;
 }
+
+#endif // UA_ENABLE_HISTORIZING

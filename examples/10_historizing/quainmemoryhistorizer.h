@@ -3,6 +3,8 @@
 
 #include <QUaHistoryBackend>
 
+#ifdef UA_ENABLE_HISTORIZING
+
 class QUaInMemoryHistorizer
 {
 public:
@@ -83,5 +85,7 @@ private:
 	typedef QMap<QDateTime, DataPoint> DataPointTable;
 	QHash<QString, DataPointTable> m_database;
 };
+
+#endif // UA_ENABLE_HISTORIZING
 
 #endif // QUAINMEMORYHISTORIZER_H

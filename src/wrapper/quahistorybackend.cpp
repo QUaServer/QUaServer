@@ -2,6 +2,8 @@
 
 #include <QUaServer>
 
+#ifdef UA_ENABLE_HISTORIZING
+
 UA_StatusCode UA_DataValue_backend_copyRange(
 	const UA_DataValue &src, 
 	UA_DataValue &dst, 
@@ -716,4 +718,4 @@ QUaHistoryBackend::readHistoryData(
 	);
 }
 
-
+#endif // UA_ENABLE_HISTORIZING

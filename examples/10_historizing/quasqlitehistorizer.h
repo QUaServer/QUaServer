@@ -1,6 +1,8 @@
 #ifndef QUASQLITEHISTORIZER_H
 #define QUASQLITEHISTORIZER_H
 
+#ifdef UA_ENABLE_HISTORIZING
+
 #include <QUaHistoryBackend>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -157,5 +159,6 @@ private:
 	static const QString QtTypeToSqlType(const QMetaType::Type& qtType);
 };
 
+#endif // UA_ENABLE_HISTORIZING
 
 #endif // QUASQLITEHISTORIZER_H
