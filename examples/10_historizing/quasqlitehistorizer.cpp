@@ -28,6 +28,32 @@ QHash<int, QString> QUaSqliteHistorizer::m_hashTypes = {
 	{QMetaType::UnknownType    , "BLOB"   }
 };
 
+QUaSqliteHistorizer::QUaSqliteHistorizer()
+{
+	m_timeoutTransaction = 1000;
+	QObject::connect(&m_timerTransaction, &QTimer::timeout, &m_timerTransaction,
+	[this]() {
+		// stop timer until next write request
+		m_timerTransaction.stop();
+		// commit transaction
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(db, m_deferedLogOut))
+		{
+			return;
+		}
+		if (!db.commit())
+		{
+			m_deferedLogOut << QUaLog({
+				QObject::tr("Failed to commit transaction in %1 database. Sql : %2.")
+					.arg(m_strSqliteDbName)
+					.arg(db.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
+			});
+		}
+	}, Qt::QueuedConnection);
+}
+
 QUaSqliteHistorizer::~QUaSqliteHistorizer()
 {
 	if (!QSqlDatabase::contains(m_strSqliteDbName))
@@ -60,15 +86,36 @@ bool QUaSqliteHistorizer::setSqliteDbName(
 	return true;
 }
 
+int QUaSqliteHistorizer::transactionTimeout() const
+{
+	return m_timeoutTransaction;
+}
+
+void QUaSqliteHistorizer::setTransactionTimeout(const int& timeoutMs)
+{
+	m_timeoutTransaction = (std::max)(0, timeoutMs);
+}
+
 bool QUaSqliteHistorizer::writeHistoryData(
 	const QString &strNodeId,
 	const QUaHistoryBackend::DataPoint &dataPoint,
 	QQueue<QUaLog> &logOut
 )
 {
+	// check if there are any queued logs that need to be reported
+	if (!m_deferedLogOut.isEmpty())
+	{
+		logOut << m_deferedLogOut;
+		m_deferedLogOut.clear();
+	}
 	// get database handle
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+	// handle transactions
+	if (!this->handleTransactions(db, logOut))
 	{
 		return false;
 	}
@@ -660,7 +707,7 @@ bool QUaSqliteHistorizer::tableExists(
 	QQueue<QUaLog>& logOut)
 {
 	// save time by using cache instead of SQL
-	if (m_prepStmts.contains(strNodeId))
+	if (m_prepInsertStmts.contains(strNodeId))
 	{
 		tableExists = true;
 		return true;
@@ -702,7 +749,7 @@ bool QUaSqliteHistorizer::tableExists(
 	{
 		return false;
 	}
-	m_prepStmts[strNodeId] = query;
+	m_prepInsertStmts[strNodeId] = query;
 	return true;
 }
 
@@ -759,7 +806,7 @@ bool QUaSqliteHistorizer::createNodeTable(
 	{
 		return false;
 	}
-	m_prepStmts[strNodeId] = query;
+	m_prepInsertStmts[strNodeId] = query;
 	return true;
 }
 
@@ -770,8 +817,8 @@ bool QUaSqliteHistorizer::insertNewDataPoint(
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
-	Q_ASSERT(m_prepStmts.contains(strNodeId));
-	QSqlQuery& query = m_prepStmts[strNodeId];
+	Q_ASSERT(m_prepInsertStmts.contains(strNodeId));
+	QSqlQuery& query = m_prepInsertStmts[strNodeId];
 	query.bindValue(0, dataPoint.timestamp.toMSecsSinceEpoch());
 	query.bindValue(1, dataPoint.value);
 	query.bindValue(2, dataPoint.status);
@@ -811,6 +858,37 @@ bool QUaSqliteHistorizer::prepareInsertStmt(
 		});
 		return false;
 	}
+	return true;
+}
+
+bool QUaSqliteHistorizer::handleTransactions(
+	QSqlDatabase& db, 
+	QQueue<QUaLog>& logOut)
+{
+	// return success if transactions disabled
+	if (m_timeoutTransaction == 0)
+	{
+		return true;
+	}
+	// return success if transaction currently opened
+	if (m_timerTransaction.isActive())
+	{
+		return true;
+	}
+	// open new transaction if required
+	if (!db.transaction())
+	{
+		logOut << QUaLog({
+			QObject::tr("Failed to begin transaction in %1 database. Sql : %2.")
+				.arg(m_strSqliteDbName)
+				.arg(db.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return false;
+	}
+	// start timer to stop transaction after specified period (see constructor)
+	m_timerTransaction.start(m_timeoutTransaction);
 	return true;
 }
 

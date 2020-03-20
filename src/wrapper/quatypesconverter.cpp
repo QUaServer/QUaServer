@@ -1063,6 +1063,7 @@ namespace QUaTypesConverter {
 		// OPC-UA part 3, Table C.9
 		const QDateTime epochStart(QDate(1601, 1, 1), QTime(0, 0), Qt::UTC);
 		return epochStart.addMSecs(*data / UA_DATETIME_MSEC).toLocalTime();
+		// TODO : why .toLocalTime() though?
 	}
 	// specialization (QUuid)
 	template<>

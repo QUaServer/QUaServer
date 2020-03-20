@@ -4,18 +4,26 @@
 #include <QUaHistoryBackend>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QTimer>
 
 class QUaSqliteHistorizer
 {
 public:
+	QUaSqliteHistorizer();
 	~QUaSqliteHistorizer();
 
-	// set sqlite database to read from or write to
+	// set sqlite database file to read from or write to
 	QString sqliteDbName() const;
 	bool setSqliteDbName(
 		const QString& strSqliteDbName,
 		QQueue<QUaLog>& logOut
 	);
+
+	// time period between opening and commiting a database transaction
+	// this is implemented for performance reasons
+	// default is 1000ms, a value <= 0 disables the use of transactions
+	int transactionTimeout() const;
+	void setTransactionTimeout(const int &timeoutMs);
 	
 	// required API for QUaServer::setHistorizer
 	// write data point to backend, return true on success
@@ -85,7 +93,10 @@ public:
 
 private:
 	QString m_strSqliteDbName;
-	QHash<QString, QSqlQuery> m_prepStmts;
+	QHash<QString, QSqlQuery> m_prepInsertStmts;
+	QTimer m_timerTransaction;
+	int    m_timeoutTransaction;
+	QQueue<QUaLog> m_deferedLogOut;
 	// get database handle, creates it if not already
 	bool getOpenedDatabase(
 		QSqlDatabase &db, 
@@ -118,6 +129,11 @@ private:
 		QSqlQuery& query,
 		QQueue<QUaLog>& logOut
 	) const;
+	// check if transaction is needed
+	bool handleTransactions(
+		QSqlDatabase& db,
+		QQueue<QUaLog>& logOut
+	);
 
 	// return SQL type in string form, for given Qt type (only QUaServer supported types)
 	static QHash<int, QString> m_hashTypes;
