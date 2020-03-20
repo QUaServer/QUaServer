@@ -153,7 +153,7 @@ bool QUaSqliteHistorizer::updateHistoryData(
 	QQueue<QUaLog> &logOut
 )
 {
-	// TODO :
+	// TODO : implement; left as exercise
 	return false;
 }
 
@@ -164,7 +164,7 @@ bool QUaSqliteHistorizer::removeHistoryData(
 	QQueue<QUaLog>  &logOut
 )
 {
-	// TODO :
+	// TODO : implement; left as exercise
 	return false;
 }
 
@@ -197,18 +197,9 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"p.Time "
-		"FROM "
-			"\"%1\" p "
-		"ORDER BY "
-			"p.Time ASC "
-		"LIMIT "
-			"1;"
-	).arg(strNodeId);
-	if (!query.exec(strStmt))
+	// get prepared statement cache
+	QSqlQuery& query = m_prepStmts[strNodeId].firstTimestamp;
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for first timestamp in %2 database. Sql : %3.")
@@ -269,18 +260,9 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"p.Time "
-		"FROM "
-			"\"%1\" p "
-		"ORDER BY "
-			"p.Time DESC "
-		"LIMIT "
-			"1;"
-	).arg(strNodeId);
-	if (!query.exec(strStmt))
+	// get prepared statement cache
+	QSqlQuery& query = m_prepStmts[strNodeId].lastTimestamp;
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for last timestamp in %2 database. Sql : %3.")
@@ -342,16 +324,9 @@ bool QUaSqliteHistorizer::hasTimestamp(
 		return false;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"COUNT(*) "
-		"FROM "
-			"\"%1\" p "
-		"WHERE "
-			"p.Time = %2;"
-	).arg(strNodeId).arg(timestamp.toMSecsSinceEpoch());
-	if (!query.exec(strStmt))
+	QSqlQuery& query = m_prepStmts[strNodeId].hasTimestamp;
+	query.bindValue(0, timestamp.toMSecsSinceEpoch());
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for exact timestamp in %2 database. Sql : %3.")
@@ -413,40 +388,18 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt;
+	// get correct query
+	QSqlQuery query;
 	switch (match)
 	{
 		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
 		{
-			strStmt = QString(
-				"SELECT "
-					"p.Time "
-				"FROM "
-					"\"%1\" p "
-				"WHERE "
-					"p.Time > %2 "
-				"ORDER BY "
-					"p.Time ASC "
-				"LIMIT "
-					"1;"
-			).arg(strNodeId).arg(timestamp.toMSecsSinceEpoch());
+			query = m_prepStmts[strNodeId].findTimestampAbove;
 		}
 		break;
 		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
 		{
-			strStmt = QString(
-				"SELECT "
-					"p.Time "
-				"FROM "
-					"\"%1\" p "
-				"WHERE "
-					"p.Time < %2 "
-				"ORDER BY "
-					"p.Time DESC "
-				"LIMIT "
-					"1;"
-			).arg(strNodeId).arg(timestamp.toMSecsSinceEpoch());
+			query = m_prepStmts[strNodeId].findTimestampBelow;
 		}
 		break;
 		default:
@@ -455,7 +408,9 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 		}
 		break;
 	}
-	if (!query.exec(strStmt))
+	// set reference time
+	query.bindValue(0, timestamp.toMSecsSinceEpoch());
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table around timestamp in %2 database. Sql : %3.")
@@ -527,37 +482,19 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 		return 0;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt;
+	QSqlQuery query;
 	if (timeEnd.isValid())
 	{
-		strStmt = QString(
-			"SELECT "
-				"COUNT(*) "
-			"FROM "
-				"\"%1\" p "
-			"WHERE "
-				"p.Time >= %2 "
-			"AND "
-				"p.Time <= %3 "
-			"ORDER BY "
-				"p.Time ASC;"
-		).arg(strNodeId).arg(timeStart.toMSecsSinceEpoch()).arg(timeEnd.toMSecsSinceEpoch());
+		query = m_prepStmts[strNodeId].numDataPointsInRangeEndValid;
+		query.bindValue(0, timeStart.toMSecsSinceEpoch());
+		query.bindValue(1, timeEnd.toMSecsSinceEpoch());
 	}
 	else
 	{
-		strStmt = QString(
-			"SELECT "
-				"COUNT(*) "
-			"FROM "
-				"\"%1\" p "
-			"WHERE "
-				"p.Time >= %2 "
-			"ORDER BY "
-				"p.Time ASC;"
-		).arg(strNodeId).arg(timeStart.toMSecsSinceEpoch());
+		query = m_prepStmts[strNodeId].numDataPointsInRangeEndInvalid;
+		query.bindValue(0, timeStart.toMSecsSinceEpoch());
 	}
-	if (!query.exec(strStmt))
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for number of points in range in %2 database. Sql : %3.")
@@ -618,20 +555,10 @@ QVector<QUaHistoryBackend::DataPoint> QUaSqliteHistorizer::readHistoryData(
 		return points;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-			"p.Time, p.Value, p.Status "
-		"FROM "
-			"\"%1\" p "
-		"WHERE "
-			"p.Time >= %2 "
-		"ORDER BY "
-			"p.Time ASC "
-		"LIMIT "
-			"%3;"
-	).arg(strNodeId).arg(timeStart.toMSecsSinceEpoch()).arg(numPointsToRead);
-	if (!query.exec(strStmt))
+	QSqlQuery &query = m_prepStmts[strNodeId].readHistoryData;
+	query.bindValue(0, timeStart.toMSecsSinceEpoch());
+	query.bindValue(1, numPointsToRead);
+	if (!query.exec())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for data points in %2 database. Sql : %3.")
@@ -707,7 +634,7 @@ bool QUaSqliteHistorizer::tableExists(
 	QQueue<QUaLog>& logOut)
 {
 	// save time by using cache instead of SQL
-	if (m_prepInsertStmts.contains(strNodeId))
+	if (m_prepStmts.contains(strNodeId))
 	{
 		tableExists = true;
 		return true;
@@ -745,11 +672,10 @@ bool QUaSqliteHistorizer::tableExists(
 	}
 	tableExists = true;
 	// cache prepared statement if table exists
-	if (!this->prepareInsertStmt(strNodeId, query, logOut))
+	if (!this->prepareAllStmts(db, strNodeId, logOut))
 	{
 		return false;
 	}
-	m_prepInsertStmts[strNodeId] = query;
 	return true;
 }
 
@@ -802,11 +728,10 @@ bool QUaSqliteHistorizer::createNodeTable(
 		return false;
 	}
 	// cache prepared statement
-	if (!this->prepareInsertStmt(strNodeId, query, logOut))
+	if (!this->prepareAllStmts(db, strNodeId, logOut))
 	{
 		return false;
 	}
-	m_prepInsertStmts[strNodeId] = query;
 	return true;
 }
 
@@ -817,8 +742,8 @@ bool QUaSqliteHistorizer::insertNewDataPoint(
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
-	Q_ASSERT(m_prepInsertStmts.contains(strNodeId));
-	QSqlQuery& query = m_prepInsertStmts[strNodeId];
+	Q_ASSERT(m_prepStmts.contains(strNodeId));
+	QSqlQuery& query = m_prepStmts[strNodeId].writeHistoryData;
 	query.bindValue(0, dataPoint.timestamp.toMSecsSinceEpoch());
 	query.bindValue(1, dataPoint.value);
 	query.bindValue(2, dataPoint.status);
@@ -837,15 +762,166 @@ bool QUaSqliteHistorizer::insertNewDataPoint(
 	return true;
 }
 
-bool QUaSqliteHistorizer::prepareInsertStmt(
-	const QString& strNodeId, 
-	QSqlQuery& query,
-	QQueue<QUaLog>& logOut) const
+bool QUaSqliteHistorizer::prepareAllStmts(
+	QSqlDatabase& db,
+	const QString& strNodeId,
+	QQueue<QUaLog>& logOut)
 {
-	// create prepared statement for insert
-	auto strStmt = QString(
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt;
+	// prepared statement for insert
+	strStmt = QString(
 		"INSERT INTO \"%1\" (Time, Value, Status) VALUES (:Time, :Value, :Status);"
 	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].writeHistoryData = query;
+	// prepared statement for first timestamp
+	strStmt = QString(
+		"SELECT "
+			"p.Time "
+		"FROM "
+			"\"%1\" p "
+		"ORDER BY "
+			"p.Time ASC "
+		"LIMIT "
+			"1;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].firstTimestamp = query;
+	// prepared statement for last timestamp
+	strStmt = QString(
+		"SELECT "
+			"p.Time "
+		"FROM "
+			"\"%1\" p "
+		"ORDER BY "
+			"p.Time DESC "
+		"LIMIT "
+			"1;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].lastTimestamp = query;
+	// prepared statement for has timestamp
+	strStmt = QString(
+		"SELECT "
+			"COUNT(*) "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time = :Time;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].hasTimestamp = query;
+	// prepared statement for find timestamp from above
+	strStmt = QString(
+		"SELECT "
+			"p.Time "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time > :Time "
+		"ORDER BY "
+			"p.Time ASC "
+		"LIMIT "
+			"1;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].findTimestampAbove = query;
+	// prepared statement for find timestamp from below
+	strStmt = QString(
+		"SELECT "
+			"p.Time "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time < :Time "
+		"ORDER BY "
+			"p.Time DESC "
+		"LIMIT "
+			"1;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].findTimestampBelow = query;
+	// prepared statement for num points in range when end time is valid
+	strStmt = QString(
+		"SELECT "
+			"COUNT(*) "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time >= :TimeStart "
+		"AND "
+			"p.Time <= :TimeEnd "
+		"ORDER BY "
+			"p.Time ASC;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].numDataPointsInRangeEndValid = query;
+	// prepared statement for num points in range when end time is invalid
+	strStmt = QString(
+		"SELECT "
+			"COUNT(*) "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time >= :TimeStart "
+		"ORDER BY "
+			"p.Time ASC;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].numDataPointsInRangeEndInvalid = query;
+	// prepared statement for reading data points
+	strStmt = QString(
+		"SELECT "
+			"p.Time, p.Value, p.Status "
+		"FROM "
+			"\"%1\" p "
+		"WHERE "
+			"p.Time >= :Time "
+		"ORDER BY "
+			"p.Time ASC "
+		"LIMIT "
+			":Limit;"
+	).arg(strNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_prepStmts[strNodeId].readHistoryData = query;
+	// success
+	return true;
+}
+
+bool QUaSqliteHistorizer::prepareStmt(
+	QSqlQuery& query, 
+	const QString& strStmt,
+	QQueue<QUaLog>& logOut)
+{
 	if (!query.prepare(strStmt))
 	{
 		logOut << QUaLog({

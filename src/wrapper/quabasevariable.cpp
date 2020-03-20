@@ -646,6 +646,7 @@ void QUaBaseVariable::setHistorizing(const bool& historizing)
 	// setup historizing 
 	UA_HistorizingNodeIdSettings setting;
 	setting.historizingBackend         = QUaHistoryBackend::m_historUaBackend;
+	// TODO : make magic number for maxHistoryDataResponseSize configurable?
 	setting.maxHistoryDataResponseSize = 1000; // max size client can ask for
 	setting.historizingUpdateStrategy  = UA_HISTORIZINGUPDATESTRATEGY_VALUESET; // when value updated or polling
 	st = gathering.registerNodeId(m_qUaServer->m_server, gathering.context, &m_nodeId, setting);

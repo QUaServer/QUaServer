@@ -93,7 +93,6 @@ public:
 
 private:
 	QString m_strSqliteDbName;
-	QHash<QString, QSqlQuery> m_prepInsertStmts;
 	QTimer m_timerTransaction;
 	int    m_timeoutTransaction;
 	QQueue<QUaLog> m_deferedLogOut;
@@ -123,15 +122,33 @@ private:
 		const QUaHistoryBackend::DataPoint& dataPoint,
 		QQueue<QUaLog>& logOut
 	);
-	// prepare statement to insert history data points
-	bool prepareInsertStmt(
-		const QString& strNodeId,
-		QSqlQuery& query,
-		QQueue<QUaLog>& logOut
-	) const;
 	// check if transaction is needed
 	bool handleTransactions(
 		QSqlDatabase& db,
+		QQueue<QUaLog>& logOut
+	);
+	// prepared statements cache
+	struct PreparedStatements {
+		QSqlQuery writeHistoryData;
+		QSqlQuery firstTimestamp;
+		QSqlQuery lastTimestamp;
+		QSqlQuery hasTimestamp;
+		QSqlQuery findTimestampAbove;
+		QSqlQuery findTimestampBelow;
+		QSqlQuery numDataPointsInRangeEndValid;
+		QSqlQuery numDataPointsInRangeEndInvalid;
+		QSqlQuery readHistoryData;
+	};
+	QHash<QString, PreparedStatements> m_prepStmts;
+	// prepare statement to insert history data points
+	bool prepareAllStmts(
+		QSqlDatabase& db,
+		const QString& strNodeId,
+		QQueue<QUaLog>& logOut
+	);
+	bool prepareStmt(
+		QSqlQuery &query,
+		const QString &strStmt,
 		QQueue<QUaLog>& logOut
 	);
 
