@@ -98,8 +98,8 @@ void QUaSqliteHistorizer::setTransactionTimeout(const int& timeoutMs)
 
 bool QUaSqliteHistorizer::writeHistoryData(
 	const QString &strNodeId,
-	const QUaHistoryBackend::DataPoint &dataPoint,
-	QQueue<QUaLog> &logOut
+	const QUaHistoryDataPoint& dataPoint,
+	QQueue<QUaLog>& logOut
 )
 {
 	// check if there are any queued logs that need to be reported
@@ -132,7 +132,7 @@ bool QUaSqliteHistorizer::writeHistoryData(
 			dataPoint.value.type() < 1024 ?
 			dataPoint.value.type() :
 			dataPoint.value.userType()
-		);
+			);
 		if (!this->createNodeTable(db, strNodeId, dataType, logOut))
 		{
 			return false;
@@ -148,9 +148,9 @@ bool QUaSqliteHistorizer::writeHistoryData(
 }
 
 bool QUaSqliteHistorizer::updateHistoryData(
-	const QString   &strNodeId, 
-	const QUaHistoryBackend::DataPoint &dataPoint,
-	QQueue<QUaLog> &logOut
+	const QString& strNodeId,
+	const QUaHistoryDataPoint& dataPoint,
+	QQueue<QUaLog>& logOut
 )
 {
 	// TODO : implement; left as exercise
@@ -158,10 +158,10 @@ bool QUaSqliteHistorizer::updateHistoryData(
 }
 
 bool QUaSqliteHistorizer::removeHistoryData(
-	const QString   &strNodeId,
-	const QDateTime &timeStart,
-	const QDateTime &timeEnd,
-	QQueue<QUaLog>  &logOut
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const QDateTime& timeEnd,
+	QQueue<QUaLog>& logOut
 )
 {
 	// TODO : implement; left as exercise
@@ -169,8 +169,8 @@ bool QUaSqliteHistorizer::removeHistoryData(
 }
 
 QDateTime QUaSqliteHistorizer::firstTimestamp(
-	const QString  &strNodeId,
-	QQueue<QUaLog> &logOut
+	const QString& strNodeId,
+	QQueue<QUaLog>& logOut
 )
 {
 	// get database handle
@@ -193,7 +193,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -208,7 +208,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return QDateTime();
 	}
 	if (!query.next())
@@ -220,7 +220,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return QDateTime();
 	}
 	// get time key
@@ -232,8 +232,8 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 }
 
 QDateTime QUaSqliteHistorizer::lastTimestamp(
-	const QString  &strNodeId,
-	QQueue<QUaLog> &logOut
+	const QString& strNodeId,
+	QQueue<QUaLog>& logOut
 )
 {
 	// get database handle
@@ -256,7 +256,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -271,7 +271,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return QDateTime();
 	}
 	if (!query.next())
@@ -283,7 +283,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return QDateTime();
 	}
 	// get time key
@@ -295,9 +295,9 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 }
 
 bool QUaSqliteHistorizer::hasTimestamp(
-	const QString   &strNodeId,
-	const QDateTime &timestamp,
-	QQueue<QUaLog>  &logOut
+	const QString& strNodeId,
+	const QDateTime& timestamp,
+	QQueue<QUaLog>& logOut
 )
 {
 	// get database handle
@@ -320,7 +320,7 @@ bool QUaSqliteHistorizer::hasTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -335,7 +335,7 @@ bool QUaSqliteHistorizer::hasTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return false;
 	}
 	// exists if at least one result
@@ -348,20 +348,20 @@ bool QUaSqliteHistorizer::hasTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
 			QUaLogCategory::Serialization
-		});
+			});
 		return false;
 	}
 	QSqlRecord rec = query.record();
-	auto num   = query.value(0).toULongLong();
+	auto num = query.value(0).toULongLong();
 	bool found = num > 0;
 	return found;
 }
 
 QDateTime QUaSqliteHistorizer::findTimestamp(
-	const QString   &strNodeId,
-	const QDateTime &timestamp,
+	const QString& strNodeId,
+	const QDateTime& timestamp,
 	const QUaHistoryBackend::TimeMatch& match,
-	QQueue<QUaLog>  &logOut
+	QQueue<QUaLog>& logOut
 )
 {
 	// get database handle
@@ -384,7 +384,7 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -392,21 +392,21 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 	QSqlQuery query;
 	switch (match)
 	{
-		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
-		{
-			query = m_prepStmts[strNodeId].findTimestampAbove;
-		}
-		break;
-		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
-		{
-			query = m_prepStmts[strNodeId].findTimestampBelow;
-		}
-		break;
-		default:
-		{
-			Q_ASSERT(false);
-		}
-		break;
+	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+	{
+		query = m_prepStmts[strNodeId].findTimestampAbove;
+	}
+	break;
+	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+	{
+		query = m_prepStmts[strNodeId].findTimestampBelow;
+	}
+	break;
+	default:
+	{
+		Q_ASSERT(false);
+	}
+	break;
 	}
 	// set reference time
 	query.bindValue(0, timestamp.toMSecsSinceEpoch());
@@ -419,7 +419,7 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return QDateTime();
 	}
 	// if there is none return either first or last
@@ -427,21 +427,21 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 	{
 		switch (match)
 		{
-			case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
-			{
-				return this->lastTimestamp(strNodeId, logOut);
-			}
-			break;
-			case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
-			{
-				return this->firstTimestamp(strNodeId, logOut);
-			}
-			break;
-			default:
-			{
-				Q_ASSERT(false);
-			}
-			break;
+		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+		{
+			return this->lastTimestamp(strNodeId, logOut);
+		}
+		break;
+		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+		{
+			return this->firstTimestamp(strNodeId, logOut);
+		}
+		break;
+		default:
+		{
+			Q_ASSERT(false);
+		}
+		break;
 		}
 	}
 	// get time key
@@ -453,10 +453,10 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 }
 
 quint64 QUaSqliteHistorizer::numDataPointsInRange(
-	const QString   &strNodeId,
-	const QDateTime &timeStart,
-	const QDateTime &timeEnd,
-	QQueue<QUaLog>  &logOut)
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const QDateTime& timeEnd,
+	QQueue<QUaLog>& logOut)
 {
 	// get database handle
 	QSqlDatabase db;
@@ -478,7 +478,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return 0;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -503,7 +503,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return 0;
 	}
 	if (!query.next())
@@ -515,7 +515,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
 			QUaLogCategory::Serialization
-		});
+			});
 		return 0;
 	}
 	// get number of points in range
@@ -524,13 +524,13 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 	return num;
 }
 
-QVector<QUaHistoryBackend::DataPoint> QUaSqliteHistorizer::readHistoryData(
-	const QString   &strNodeId,
-	const QDateTime &timeStart,
-	const quint64   &numPointsToRead,
-	QQueue<QUaLog>  &logOut)
+QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const quint64& numPointsToRead,
+	QQueue<QUaLog>& logOut)
 {
-	auto points = QVector<QUaHistoryBackend::DataPoint>();
+	auto points = QVector<QUaHistoryDataPoint>();
 	// get database handle
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(db, logOut))
@@ -551,11 +551,11 @@ QVector<QUaHistoryBackend::DataPoint> QUaSqliteHistorizer::readHistoryData(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return points;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery &query = m_prepStmts[strNodeId].readHistoryData;
+	QSqlQuery& query = m_prepStmts[strNodeId].readHistoryData;
 	query.bindValue(0, timeStart.toMSecsSinceEpoch());
 	query.bindValue(1, numPointsToRead);
 	if (!query.exec())
@@ -567,30 +567,30 @@ QVector<QUaHistoryBackend::DataPoint> QUaSqliteHistorizer::readHistoryData(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return points;
 	}
 	while (query.next())
 	{
-		QSqlRecord rec   = query.record();
-		int timeKeyCol   = rec.indexOf("Time");
-		int valueKeyCol  = rec.indexOf("Value");
+		QSqlRecord rec = query.record();
+		int timeKeyCol = rec.indexOf("Time");
+		int valueKeyCol = rec.indexOf("Value");
 		int statusKeyCol = rec.indexOf("Status");
-		Q_ASSERT(timeKeyCol   >= 0);
-		Q_ASSERT(valueKeyCol  >= 0);
+		Q_ASSERT(timeKeyCol >= 0);
+		Q_ASSERT(valueKeyCol >= 0);
 		Q_ASSERT(statusKeyCol >= 0);
 		auto timeInt = query.value(timeKeyCol).toLongLong();
-		auto time    = QDateTime::fromMSecsSinceEpoch(timeInt);
-		auto value   = query.value(valueKeyCol);
-		auto status  = query.value(statusKeyCol).toUInt();
-		points << QUaHistoryBackend::DataPoint({
+		auto time = QDateTime::fromMSecsSinceEpoch(timeInt);
+		auto value = query.value(valueKeyCol);
+		auto status = query.value(statusKeyCol).toUInt();
+		points << QUaHistoryDataPoint({
 			time, value, status
-		});
+			});
 	}
 	// NOTE : return an invalid value if API requests more values than available
 	while (points.count() < numPointsToRead)
 	{
-		points << QUaHistoryBackend::DataPoint();
+		points << QUaHistoryDataPoint();
 	}
 	return points;
 }
@@ -621,7 +621,7 @@ bool QUaSqliteHistorizer::getOpenedDatabase(
 				.arg(db.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	return true;
@@ -644,13 +644,13 @@ bool QUaSqliteHistorizer::tableExists(
 	QSqlQuery query(db);
 	QString strStmt = QString(
 		"SELECT "
-			"name "
+		"name "
 		"FROM "
-			"sqlite_master "
+		"sqlite_master "
 		"WHERE "
-			"type='table' "
+		"type='table' "
 		"AND "
-			"name=\"%1\";"
+		"name=\"%1\";"
 	).arg(strNodeId);
 	if (!query.exec(strStmt))
 	{
@@ -661,7 +661,7 @@ bool QUaSqliteHistorizer::tableExists(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
-		});
+			});
 		return false;
 	}
 	// empty result if not exists
@@ -680,8 +680,8 @@ bool QUaSqliteHistorizer::tableExists(
 }
 
 bool QUaSqliteHistorizer::createNodeTable(
-	QSqlDatabase& db, 
-	const QString& strNodeId, 
+	QSqlDatabase& db,
+	const QString& strNodeId,
 	const QMetaType::Type& storeType,
 	QQueue<QUaLog>& logOut)
 {
@@ -696,11 +696,11 @@ bool QUaSqliteHistorizer::createNodeTable(
 			"[Status] INTEGER NOT NULL"
 		");"
 	)
-	.arg(strNodeId)
-	.arg(QUaSqliteHistorizer::QtTypeToSqlType(
+		.arg(strNodeId)
+		.arg(QUaSqliteHistorizer::QtTypeToSqlType(
 			static_cast<QMetaType::Type>(storeType)
 		)
-	);
+		);
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
@@ -710,7 +710,7 @@ bool QUaSqliteHistorizer::createNodeTable(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	// create unique index on [Time] key for faster queries
@@ -724,7 +724,7 @@ bool QUaSqliteHistorizer::createNodeTable(
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	// cache prepared statement
@@ -736,9 +736,9 @@ bool QUaSqliteHistorizer::createNodeTable(
 }
 
 bool QUaSqliteHistorizer::insertNewDataPoint(
-	QSqlDatabase& db, 
-	const QString& strNodeId, 
-	const QUaHistoryBackend::DataPoint& dataPoint, 
+	QSqlDatabase& db,
+	const QString& strNodeId,
+	const QUaHistoryDataPoint& dataPoint,
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());

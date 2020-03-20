@@ -1657,6 +1657,220 @@ Build and test the events example in [./examples/09_serialization](./examples/09
 
 ---
 
+## Historizing
+
+The *QUaServer* supports storing *histrical data* and exposing it through the *HistoryRead* service.
+
+To enable this functionality, build the library using the Qt project included in this repo using the `ua_historizing` configuration flag:
+
+```bash
+cd ./src/amalgamation
+# Windows
+qmake "CONFIG+=ua_historizing" -tp vc amalgamation.pro
+msbuild open62541.vcxproj
+# Linux
+qmake "CONFIG+=ua_historizing" amalgamation.pro
+make all
+```
+
+To update the examples to support *historizing*:
+
+```bash
+# Windows
+qmake "CONFIG+=ua_historizing" -r -tp vc examples.pro
+msbuild examples.sln
+# Linux
+qmake "CONFIG+=ua_historizing" -r examples.pro
+make all
+```
+
+To support *historizing*, `QUaServer` provides the `setHistorizer` method:
+
+```c++
+template<typename T>
+bool setHistorizer(T& historizer);
+```
+
+Where `T` is any C++ *type* implementing the following interface:
+
+```c++
+// required API for QUaServer::setHistorizer
+// write data point to backend, return true on success
+bool writeHistoryData(
+	const QString &strNodeId,
+	const QUaHistoryDataPoint &dataPoint,
+	QQueue<QUaLog> &logOut
+);
+// required API for QUaServer::setHistorizer
+// update an existing node's data point in backend, return true on success
+bool updateHistoryData(
+	const QString   &strNodeId, 
+	const QUaHistoryDataPoint &dataPoint,
+	QQueue<QUaLog> &logOut
+);
+// required API for QUaServer::setHistorizer
+// remove an existing node's data points within a range, return true on success
+bool removeHistoryData(
+	const QString   &strNodeId,
+	const QDateTime &timeStart,
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut
+); 
+// required API for QUaServer::setHistorizer
+// return the timestamp of the first sample available for the given node
+QDateTime firstTimestamp(
+	const QString  &strNodeId,
+	QQueue<QUaLog> &logOut
+) const;
+// required API for QUaServer::setHistorizer
+// return the timestamp of the latest sample available for the given node
+QDateTime lastTimestamp(
+	const QString  &strNodeId,
+	QQueue<QUaLog> &logOut
+) const;
+// required API for QUaServer::setHistorizer
+// return true if given timestamp is available for the given node
+bool hasTimestamp(
+	const QString   &strNodeId,
+	const QDateTime &timestamp,
+	QQueue<QUaLog>  &logOut
+) const;
+// required API for QUaServer::setHistorizer
+// return a timestamp matching the criteria for the given node
+QDateTime findTimestamp(
+	const QString   &strNodeId,
+	const QDateTime &timestamp,
+	const QUaHistoryBackend::TimeMatch& match,
+	QQueue<QUaLog>  &logOut
+) const;
+// required API for QUaServer::setHistorizer
+// return the number for data points within a time range for the given node
+quint64 numDataPointsInRange(
+	const QString   &strNodeId,
+	const QDateTime &timeStart,
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut
+) const;
+// required API for QUaServer::setHistorizer
+// return the numPointsToRead data points for the given node from the given start time
+QVector<QUaHistoryDataPoint> readHistoryData(
+	const QString   &strNodeId,
+	const QDateTime &timeStart,
+	const quint64   &numPointsToRead,
+	QQueue<QUaLog>  &logOut
+) const;
+```
+
+To allow **storing** data it is only necessary to implement `writeHistoryData`, while the other methods can return default values. The data will be saved to whatever media it is desired. 
+
+Implementing only `writeHistoryData`, means clients won't be able to access the historcal data remotely yet, for that it is necessary to implement more methods of the API, as explained further below.
+
+To *store* the data, the API passes the *NodeId* (`const QString &strNodeId`) of the variable to be historized.
+
+The `QUaHistoryDataPoint` structure (`const QUaHistoryDataPoint &dataPoint`) provides the information that needs to be stored:
+
+```c++
+struct QUaHistoryDataPoint
+{
+	QDateTime timestamp;
+	QVariant  value;
+	quint32   status;
+};
+```
+
+Whatever storage media is chosen, it must be *queriable* first, by *NodeId* and second, by *Timestamp*. 
+
+For example, if a `SQL` database is chosen for storage, one approach is to create one table for each *NodeId*. Each table having three columns for *time*, *value* and *status* respectively. To speed up queries, it is recommended to create *indexes* over the *time* column.
+
+Some *pseudo-SQL* code is used in this documentation to illustrate *possible* implementation of each API method. For example, to create each *NodeId* table:
+
+```sql
+CREATE TABLE ":NodeId" (
+	[:NodeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	[Time] INTEGER NOT NULL,
+	[Value] :DataType NOT NULL,
+	[Status] INTEGER NOT NULL
+);
+-- create index to optimize queries by time
+CREATE UNIQUE INDEX ":NodeId_Time" ON ":NodeId"(Time);
+```
+
+For `writeHistoryData`:
+
+```sql
+INSERT INTO ":NodeId" (Time, Value, Status) VALUES (:Time, :Value, :Status);
+```
+
+All the methods of the API should populate the `QQueue<QUaLog> &logOut` parameter with log entries describing any error occurred during the storing or querying process.
+
+To allow an OPC UA Client to **access** the historcal data remotely, it is necessary to further implement the `firstTimestamp`, `lastTimestamp`, `hasTimestamp`, `findTimestamp`, `numDataPointsInRange` and `readHistoryData`. The implementation of this methods is self-describing by their names. Below some *pseudo-SQL* to illustrate *possible* implementation:
+
+For `firstTimestamp`:
+
+```sql
+SELECT p.Time FROM ":NodeId" p ORDER BY p.Time ASC LIMIT 1;
+```
+
+For `lastTimestamp`:
+
+```sql
+SELECT p.Time FROM ":NodeId" p ORDER BY p.Time DESC LIMIT 1;
+```
+
+For `hasTimestamp`:
+
+```sql
+SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time = :Time;
+```
+
+For `findTimestamp`:
+
+```sql
+-- from above
+SELECT p.Time FROM ":NodeId" p WHERE p.Time > :Time ORDER BY p.Time ASC LIMIT 1;
+-- from below
+SELECT p.Time FROM ":NodeId" p WHERE p.Time < :Time ORDER BY p.Time DESC LIMIT 1;
+```
+
+For `numDataPointsInRange`:
+
+```sql
+SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time >= :TimeStart AND p.Time <= :TimeEnd ORDER BY p.Time ASC;
+```
+
+For `readHistoryData`:
+
+```sql
+SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time >= :TimeStart ORDER BY p.Time ASC;
+```
+
+To allow *modifying* historical data, the `updateHistoryData` and `removeHistoryData` should be implemented accordingly.
+
+Finally, to historize a variable, the `QUaBaseVariable::setHistorizing(const bool& historizing)` method should be called. And to allow clients to access its historical data remotelly, the `QUaBaseVariable::setReadHistoryAccess(const bool& readHistoryAccess)` method should be called. For example:
+
+```c++
+// create int variable
+auto varInt = objsFolder->addBaseDataVariable("ns=1;s=MyInt");
+varInt->setDisplayName("MyInt");
+varInt->setBrowseName("MyInt");
+varInt->setValue(0);
+// NOTE : must enable historizing for each variable
+varInt->setHistorizing(true);
+varInt->setReadHistoryAccess(true);
+```
+
+Similarly, to allow clients to modify the historical data, the `QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)` method should be called.
+
+The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data storage in memory, while the [quasqlitehistorizer.cpp](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical data storage using *Sqlite*.
+
+Note that these examples are provided for illustration purposes only and not for production. The user is encouraged to implement (and if possible, share) their own historizer implementations.
+
+### Historizing Example
+
+Build and test the historizing example in [./examples/10_historizing](./examples/10_historizing/main.cpp) to learn more.
+
+---
+
 ## License
 
 ### Amalgamation

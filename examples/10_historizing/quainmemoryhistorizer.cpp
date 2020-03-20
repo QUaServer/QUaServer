@@ -2,8 +2,8 @@
 
 bool QUaInMemoryHistorizer::writeHistoryData(
 	const QString &strNodeId, 
-	const QUaHistoryBackend::DataPoint &dataPoint,
-	QQueue<QUaLog> &logOut)
+	const QUaHistoryDataPoint& dataPoint,
+	QQueue<QUaLog>& logOut)
 {
 	Q_UNUSED(logOut);
 	m_database[strNodeId][dataPoint.timestamp] = {
@@ -14,23 +14,23 @@ bool QUaInMemoryHistorizer::writeHistoryData(
 }
 
 bool QUaInMemoryHistorizer::updateHistoryData(
-	const QString &strNodeId, 
-	const QUaHistoryBackend::DataPoint &dataPoint,
-	QQueue<QUaLog> &logOut)
+	const QString& strNodeId,
+	const QUaHistoryDataPoint& dataPoint,
+	QQueue<QUaLog>& logOut)
 {
 	Q_UNUSED(logOut);
 	Q_ASSERT(
-		m_database.contains(strNodeId) && 
+		m_database.contains(strNodeId) &&
 		m_database[strNodeId].contains(dataPoint.timestamp)
 	);
 	return this->writeHistoryData(strNodeId, dataPoint, logOut);
 }
 
 bool QUaInMemoryHistorizer::removeHistoryData(
-	const QString   &strNodeId, 
-	const QDateTime &timeStart, 
-	const QDateTime &timeEnd,
-	QQueue<QUaLog>  &logOut)
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const QDateTime& timeEnd,
+	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(timeStart <= timeEnd);
 	if (!m_database.contains(strNodeId))
@@ -41,7 +41,7 @@ bool QUaInMemoryHistorizer::removeHistoryData(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	auto& table = m_database[strNodeId];
@@ -59,8 +59,8 @@ bool QUaInMemoryHistorizer::removeHistoryData(
 }
 
 QDateTime QUaInMemoryHistorizer::firstTimestamp(
-	const QString  &strNodeId,
-	QQueue<QUaLog> &logOut) const
+	const QString& strNodeId,
+	QQueue<QUaLog>& logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
@@ -70,15 +70,15 @@ QDateTime QUaInMemoryHistorizer::firstTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	return m_database[strNodeId].firstKey();
 }
 
 QDateTime QUaInMemoryHistorizer::lastTimestamp(
-	const QString  &strNodeId,
-	QQueue<QUaLog> &logOut) const
+	const QString& strNodeId,
+	QQueue<QUaLog>& logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
@@ -88,16 +88,16 @@ QDateTime QUaInMemoryHistorizer::lastTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	return m_database[strNodeId].lastKey();
 }
 
 bool QUaInMemoryHistorizer::hasTimestamp(
-	const QString   &strNodeId, 
-	const QDateTime &timestamp,
-	QQueue<QUaLog>  &logOut) const
+	const QString& strNodeId,
+	const QDateTime& timestamp,
+	QQueue<QUaLog>& logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
@@ -107,17 +107,17 @@ bool QUaInMemoryHistorizer::hasTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return false;
 	}
 	return m_database[strNodeId].contains(timestamp);
 }
 
 QDateTime QUaInMemoryHistorizer::findTimestamp(
-	const QString   &strNodeId, 
-	const QDateTime &timestamp, 
-	const QUaHistoryBackend::TimeMatch &match,
-	QQueue<QUaLog>  &logOut) const
+	const QString& strNodeId,
+	const QDateTime& timestamp,
+	const QUaHistoryBackend::TimeMatch& match,
+	QQueue<QUaLog>& logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
@@ -127,7 +127,7 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return QDateTime();
 	}
 	// NOTE : the database might or might not contain the input timestamp
@@ -135,52 +135,52 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 	auto& table = m_database[strNodeId];
 	switch (match)
 	{
-		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+	{
+		if (table.contains(timestamp) &&
+			table.constFind(timestamp) + 1 != table.end())
 		{
-			if (table.contains(timestamp) &&
-				table.constFind(timestamp) + 1 != table.end())
-			{
-				// return next key if available
-				auto iter = table.find(timestamp) + 1;
-				time = iter.key();
-			}
-			else
-			{
-				// return closest key from above or last one if out of range
-				auto iter = std::upper_bound(table.keyBegin(), table.keyEnd(), timestamp);
-				time = iter == table.keyEnd() ? table.lastKey() : *iter;
-			}
+			// return next key if available
+			auto iter = table.find(timestamp) + 1;
+			time = iter.key();
 		}
-		break;
-		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+		else
 		{
-			if (table.contains(timestamp) &&
-				table.constFind(timestamp) != table.begin())
-			{
-				// return previous key if available
-				auto iter = table.find(timestamp) - 1;
-				time = iter.key();
-			}
-			else
-			{
-				// return closest key from below or last one if out of range
-				Q_ASSERT(timestamp <= *table.keyBegin());
-				auto iter = std::lower_bound(table.keyBegin(), table.keyEnd(), timestamp);
-				time = iter == table.keyEnd() ? table.lastKey() : *iter;
-			}
+			// return closest key from above or last one if out of range
+			auto iter = std::upper_bound(table.keyBegin(), table.keyEnd(), timestamp);
+			time = iter == table.keyEnd() ? table.lastKey() : *iter;
 		}
-		break;
-		default:
+	}
+	break;
+	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+	{
+		if (table.contains(timestamp) &&
+			table.constFind(timestamp) != table.begin())
+		{
+			// return previous key if available
+			auto iter = table.find(timestamp) - 1;
+			time = iter.key();
+		}
+		else
+		{
+			// return closest key from below or last one if out of range
+			Q_ASSERT(timestamp <= *table.keyBegin());
+			auto iter = std::lower_bound(table.keyBegin(), table.keyEnd(), timestamp);
+			time = iter == table.keyEnd() ? table.lastKey() : *iter;
+		}
+	}
+	break;
+	default:
 		break;
 	}
 	return time;
 }
 
 quint64 QUaInMemoryHistorizer::numDataPointsInRange(
-	const QString   &strNodeId, 
-	const QDateTime &timeStart, 
-	const QDateTime &timeEnd,
-	QQueue<QUaLog>  &logOut) const
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const QDateTime& timeEnd,
+	QQueue<QUaLog>& logOut) const
 {
 	if (!m_database.contains(strNodeId))
 	{
@@ -190,7 +190,7 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return 0;
 	}
 	auto& table = m_database[strNodeId];
@@ -200,18 +200,18 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 	// else it means the API is requesting up to the most recent timestamp (end)
 	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
 	return static_cast<quint64>(std::distance(
-		table.find(timeStart), 
+		table.find(timeStart),
 		timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end()
 	));
 }
 
-QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
-	const QString   &strNodeId, 
-	const QDateTime &timeStart, 
-	const quint64   &numPointsToRead,
-	QQueue<QUaLog>  &logOut) const
+QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
+	const QString& strNodeId,
+	const QDateTime& timeStart,
+	const quint64& numPointsToRead,
+	QQueue<QUaLog>& logOut) const
 {
-	auto points = QVector<QUaHistoryBackend::DataPoint>();
+	auto points = QVector<QUaHistoryDataPoint>();
 	if (!m_database.contains(strNodeId))
 	{
 		logOut << QUaLog({
@@ -220,7 +220,7 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 				.arg(strNodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-		});
+			});
 		return points;
 	}
 	auto& table = m_database[strNodeId];
@@ -231,8 +231,8 @@ QVector<QUaHistoryBackend::DataPoint> QUaInMemoryHistorizer::readHistoryData(
 	points.resize(numPointsToRead);
 	// copy return data points
 	std::generate(points.begin(), points.end(),
-	[&iterIni, &table]() {
-		QUaHistoryBackend::DataPoint retVal;
+		[&iterIni, &table]() {
+			QUaHistoryDataPoint retVal;
 		if (iterIni == table.end())
 		{
 			// NOTE : return an invalid value if API requests more values than available
