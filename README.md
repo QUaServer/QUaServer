@@ -1841,7 +1841,7 @@ SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time >= :TimeStart AND p.Time <= :TimeE
 For `readHistoryData`:
 
 ```sql
-SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time >= :TimeStart ORDER BY p.Time ASC;
+SELECT p.Time, p.Value, p.Status FROM":NodeId" p WHERE p.Time >= :Time ORDER BY p.Time ASC LIMIT :Limit;
 ```
 
 To allow *modifying* historical data, the `updateHistoryData` and `removeHistoryData` should be implemented accordingly.
