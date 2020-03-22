@@ -909,42 +909,18 @@ void QUaServer::setupServer()
 	m_pobjectsFolder->setParent(this);
 	m_pobjectsFolder->setObjectName("Objects");
 	// register base types (for all types)
-	m_mapTypes.insert(QString(QUaBaseVariable::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE    ));
-	m_mapTypes.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
-	m_mapTypes.insert(QString(QUaProperty::staticMetaObject        .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ));
-	m_mapTypes.insert(QString(QUaBaseObject::staticMetaObject      .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ));
-	m_mapTypes.insert(QString(QUaFolderObject::staticMetaObject    .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ));
-	m_hashMetaObjects.insert(QString(QUaBaseVariable::staticMetaObject    .className()), QUaBaseVariable::staticMetaObject    );
-	m_hashMetaObjects.insert(QString(QUaBaseDataVariable::staticMetaObject.className()), QUaBaseDataVariable::staticMetaObject);
-	m_hashMetaObjects.insert(QString(QUaProperty::staticMetaObject        .className()), QUaProperty::staticMetaObject        );
-	m_hashMetaObjects.insert(QString(QUaBaseObject::staticMetaObject      .className()), QUaBaseObject::staticMetaObject      );
-	m_hashMetaObjects.insert(QString(QUaFolderObject::staticMetaObject    .className()), QUaFolderObject::staticMetaObject    );
+	this->registerSpecificationType<QUaBaseVariable>    (UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE    ), true);
+	this->registerSpecificationType<QUaBaseDataVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
+	this->registerSpecificationType<QUaProperty>        (UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ));
+	this->registerSpecificationType<QUaBaseObject>      (UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ));
+	this->registerSpecificationType<QUaFolderObject>    (UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_mapTypes.insert(QString(QUaBaseEvent::staticMetaObject              .className()), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE              ));
-	m_mapTypes.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
-	m_hashMetaObjects.insert(QString(QUaBaseEvent::staticMetaObject              .className()), QUaBaseEvent::staticMetaObject              );
-	m_hashMetaObjects.insert(QString(QUaGeneralModelChangeEvent::staticMetaObject.className()), QUaGeneralModelChangeEvent::staticMetaObject);
+	this->registerSpecificationType<QUaBaseEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE), true);
+	this->registerSpecificationType<QUaGeneralModelChangeEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// set context for base types (for instantiable types)
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE        ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE      ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_UNUSED(st);
-	// register constructors (for instantiable types)
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), QUaBaseDataVariable::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE), QUaProperty::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE), QUaBaseObject::staticMetaObject);
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE), QUaFolderObject::staticMetaObject);
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	this->registerTypeLifeCycle(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE), QUaGeneralModelChangeEvent::staticMetaObject);
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 	// add default supported references
 	m_hashHierRefTypes.insert({ "Organizes"          , "OrganizedBy"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES          ));
 	m_hashHierRefTypes.insert({ "HasOrderedComponent", "OrderedComponentOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT));
@@ -1493,7 +1469,7 @@ void QUaServer::registerTypeLifeCycle(const UA_NodeId* typeNodeId, const QMetaOb
 
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = &QUaServer::uaConstructor;
-	lifecycle.destructor = &QUaServer::uaDestructor;
+	lifecycle.destructor  = &QUaServer::uaDestructor;
 
 	auto st = UA_Server_setNodeTypeLifecycle(m_server, *typeNodeId, lifecycle);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -1898,12 +1874,16 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 	}
 }
 
-UA_NodeId QUaServer::createInstance(const QMetaObject& metaObject, QUaNode* parentNode, const QString& strNodeId/* = ""*/)
+UA_NodeId QUaServer::createInstance(
+	const QMetaObject& metaObject, 
+	QUaNode* parentNode, 
+	const QString& strNodeId/* = ""*/)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createInstance", "Unsupported base class. It must derive from QUaNode");
+		Q_ASSERT_X(false, "QUaServer::createInstance", 
+			"Unsupported base class. It must derive from QUaNode");
 		return UA_NODEID_NULL;
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
@@ -1911,7 +1891,8 @@ UA_NodeId QUaServer::createInstance(const QMetaObject& metaObject, QUaNode* pare
 	// check if inherits BaseEventType, in which case this method cannot be used
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createInstance", "Cannot use createInstance to create Events. Use createEvent method instead");
+		Q_ASSERT_X(false, "QUaServer::createInstance", 
+			"Cannot use createInstance to create Events. Use createEvent method instead");
 		return UA_NODEID_NULL;
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -2013,12 +1994,16 @@ UA_NodeId QUaServer::createInstance(const QMetaObject& metaObject, QUaNode* pare
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_NodeId QUaServer::createEvent(const QMetaObject& metaObject, const UA_NodeId& nodeIdOriginator, const QStringList* defaultProperties)
+UA_NodeId QUaServer::createEvent(
+	const QMetaObject& metaObject, 
+	const UA_NodeId& nodeIdOriginator, 
+	const QStringList* defaultProperties)
 {
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createEvent", "Unsupported event class. It must derive from QUaBaseEvent");
+		Q_ASSERT_X(false, "QUaServer::createEvent", 
+			"Unsupported event class. It must derive from QUaBaseEvent");
 		return UA_NODEID_NULL;
 	}
 	// try to get typeEvtId, if null, then register it

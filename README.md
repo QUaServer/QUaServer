@@ -1861,7 +1861,7 @@ varInt->setReadHistoryAccess(true);
 
 Similarly, to allow clients to modify the historical data, the `QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)` method should be called.
 
-The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data storage in memory, while the [quasqlitehistorizer.cpp](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical data storage using *Sqlite*.
+The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data storage in memory, while the [`quasqlitehistorizer.cpp`](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical data storage using *Sqlite*.
 
 Note that these examples are provided for illustration purposes only and not for production. The user is encouraged to implement (and if possible, share) their own historizer implementations.
 

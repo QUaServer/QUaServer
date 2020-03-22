@@ -477,6 +477,34 @@ public:
 	// list for known (62541 standard) types, empty by default, overwrite for subtypes
 	static const QStringList DefaultProperties;
 
+	// to check if has default props static member
+	template <typename T, typename = void>
+	struct HasStaticDefaultProperties
+		: std::false_type
+	{};
+
+	template <typename T>
+	struct HasStaticDefaultProperties<T,
+		typename std::enable_if<std::is_same<decltype(T::DefaultProperties), const QStringList>::value>::type>
+		: std::true_type
+	{};
+
+	template<typename T>
+	inline static
+	typename std::enable_if<HasStaticDefaultProperties<T>::value, const QStringList*>::type
+	getDefaultPropertiesRef()
+	{
+		return &(T::DefaultProperties);
+	}
+
+	template<typename T>
+	inline static
+	typename std::enable_if<!HasStaticDefaultProperties<T>::value, const QStringList*>::type
+	getDefaultPropertiesRef()
+	{
+		return &(QUaNode::DefaultProperties);
+	}
+
 signals:
 
 	void displayNameChanged(const QString& displayName);
@@ -640,32 +668,6 @@ inline void QUaNode::setUserExecutableCallback(const M & callback)
 	m_userExecutableCallback = [callback](const QString &strUserName) {
 		return callback(strUserName);
 	};
-}
-
-// to check if has default props static member
-template <typename T, typename = void>
-struct HasStaticDefaultProperties
-	: std::false_type
-{};
-
-template <typename T>
-struct HasStaticDefaultProperties<T,
-	typename std::enable_if<std::is_same<decltype(T::DefaultProperties), const QStringList>::value>::type>
-	: std::true_type
-{};
-
-template<typename T>
-typename std::enable_if<HasStaticDefaultProperties<T>::value, const QStringList*>::type
-getDefaultPropertiesRef()
-{
-	return &(T::DefaultProperties);
-}
-
-template<typename T>
-typename std::enable_if<!HasStaticDefaultProperties<T>::value, const QStringList*>::type
-getDefaultPropertiesRef()
-{
-	return &(QUaNode::DefaultProperties);
 }
 
 #endif // QUASERVERNODE_H

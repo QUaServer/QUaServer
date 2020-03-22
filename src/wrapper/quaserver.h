@@ -17,6 +17,11 @@
 #ifdef UA_ENABLE_HISTORIZING
 #include <QUaHistoryBackend>
 #endif // UA_ENABLE_HISTORIZING
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#include <QUaConditionVariable>
+//#include <QUaStateVariable>
+//#include <QUaTwoStateVariable>
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 // Enum Stuff
 typedef qint64 QUaEnumKey;
@@ -404,6 +409,8 @@ private:
 	void setupServer();
 	UA_Logger getLogger();
 	// types
+    template<typename T>
+    void registerSpecificationType(const UA_NodeId& nodeId, const bool abstract = false);
 	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
 	template<typename T, typename M>
@@ -540,7 +547,8 @@ private:
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newNodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
-	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent and used in QUaBaseEvent::QUaBaseEvent
+	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent 
+    //        and used in QUaBaseEvent::QUaBaseEvent
 	const UA_NodeId   * m_newEventOriginatorNodeId;
 	const QStringList * m_newEventDefaultProperties;
 };
@@ -586,6 +594,24 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 	// create callback as std::function and bind
 	std::function<void(T*)> f = std::bind(callback, pObj, std::placeholders::_1);
 	return this->instanceCreated<T>(T::staticMetaObject, pObj, f);
+}
+
+template<typename T>
+inline void QUaServer::registerSpecificationType(const UA_NodeId& nodeId, const bool abstract/* = false*/)
+{
+    m_mapTypes.insert(QString(T::staticMetaObject.className()), nodeId);
+    m_hashMetaObjects.insert(QString(T::staticMetaObject.className()), T::staticMetaObject);
+    if (abstract)
+    {
+        return;
+    }
+    // set node context only if instatiable
+    auto st = UA_Server_setNodeContext(m_server, nodeId, (void*)this);
+    Q_ASSERT(st == UA_STATUSCODE_GOOD);
+    // TODO : maybe need to move QUaServer::registerTypeLifeCycle and
+    //        QUaServer::uaConstructor to templated versions to support
+    //        reading 
+    this->registerTypeLifeCycle(nodeId, T::staticMetaObject);
 }
 
 template<typename T, typename M>
@@ -658,10 +684,14 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 template<typename T>
 inline T * QUaServer::createEvent()
 {
-	const QStringList * defaultProperties = getDefaultPropertiesRef<T>();
+	const QStringList * defaultProperties = QUaNode::getDefaultPropertiesRef<T>();
 	Q_ASSERT(defaultProperties);
 	// instantiate first in OPC UA
-	UA_NodeId newEventNodeId = this->createEvent(T::staticMetaObject, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), defaultProperties);
+	UA_NodeId newEventNodeId = this->createEvent(
+        T::staticMetaObject, 
+        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER),
+        defaultProperties
+    );
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
 		return nullptr;
@@ -1108,7 +1138,7 @@ inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
 template<typename T>
 inline T * QUaBaseObject::createEvent()
 {
-    const QStringList * defaultProperties = getDefaultPropertiesRef<T>();
+    const QStringList * defaultProperties = QUaNode::getDefaultPropertiesRef<T>();
     Q_ASSERT(defaultProperties);
     // instantiate first in OPC UA
     UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId, defaultProperties);

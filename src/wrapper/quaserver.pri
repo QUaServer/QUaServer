@@ -26,6 +26,13 @@ ua_events || ua_alarms_conditions {
     $$PWD/quageneralmodelchangeevent.cpp
 }
 
+ua_alarms_conditions {
+    SOURCES += \
+    $$PWD/quaconditionvariable.cpp \
+    $$PWD/quastatevariable.cpp \
+    $$PWD/quatwostatevariable.cpp
+}
+
 ua_historizing {
     SOURCES += \
     $$PWD/quahistorybackend.cpp
@@ -50,6 +57,13 @@ ua_events || ua_alarms_conditions {
     $$PWD/quageneralmodelchangeevent.h
 }
 
+ua_alarms_conditions {
+    HEADERS += \
+    $$PWD/quaconditionvariable.h \
+    $$PWD/quastatevariable.h \
+    $$PWD/quatwostatevariable.h
+}
+
 ua_historizing {
     HEADERS += \
     $$PWD/quahistorybackend.h
@@ -72,6 +86,13 @@ ua_events || ua_alarms_conditions {
     DISTFILES += \
     $$PWD/QUaBaseEvent \
     $$PWD/QUaGeneralModelChangeEvent
+}
+
+ua_alarms_conditions {
+    DISTFILES += \
+    $$PWD/QUaConditionVariable \
+    $$PWD/QUaStateVariable \
+    $$PWD/QUaTwoStateVariable
 }
 
 ua_historizing {
