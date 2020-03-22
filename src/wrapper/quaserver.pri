@@ -1,9 +1,5 @@
 include($$PWD/../amalgamation/open62541.pri)
 
-ua_events {
-    include($$PWD/../../depends/QFunctionUtils.git/src/qfunctionutils.pri)
-}
-
 QT     += core
 CONFIG += c++11
 CONFIG -= flat
@@ -24,7 +20,7 @@ SOURCES += \
     $$PWD/quafolderobject.cpp \
     $$PWD/quacustomdatatypes.cpp
 
-ua_events {
+ua_events || ua_alarms_conditions {
     SOURCES += \
     $$PWD/quabaseevent.cpp \
     $$PWD/quageneralmodelchangeevent.cpp
@@ -48,7 +44,7 @@ HEADERS += \
     $$PWD/quafolderobject.h \
     $$PWD/quacustomdatatypes.h
 
-ua_events {
+ua_events || ua_alarms_conditions {
     HEADERS += \
     $$PWD/quabaseevent.h \
     $$PWD/quageneralmodelchangeevent.h
@@ -72,7 +68,7 @@ DISTFILES += \
     $$PWD/QUaFolderObject \
     $$PWD/QUaCustomDataTypes
 
-ua_events {
+ua_events || ua_alarms_conditions {
     DISTFILES += \
     $$PWD/QUaBaseEvent \
     $$PWD/QUaGeneralModelChangeEvent

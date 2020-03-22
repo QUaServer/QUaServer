@@ -119,7 +119,7 @@ void QUaBaseEvent::trigger()
 		m_qUaServer->m_server,
 		m_nodeId,           // nodeId if the event
 		m_nodeIdOriginator, // originating node
-		NULL,               // the EventId of the new event
+		&m_outEventId,      // the EventId of the new event
 		false               // (do not) delete event node
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);

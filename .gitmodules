@@ -4,7 +4,3 @@
 [submodule "depends/mbedtls.git"]
 	path = depends/mbedtls.git
 	url = https://github.com/ARMmbed/mbedtls.git
-[submodule "depends/QFunctionUtils.git"]
-	path = depends/QFunctionUtils.git
-	url = https://github.com/juangburgos/QFunctionUtils.git
-	branch = master

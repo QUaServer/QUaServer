@@ -10,6 +10,19 @@ int main(int argc, char *argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
+	QObject::connect(&server, &QUaServer::logMessage,
+    [](const QUaLog &log) {
+        qDebug() 
+			<< "["   << log.timestamp.toLocalTime().toString("dd.MM.yyyy hh:mm:ss.zzz")
+			<< "]["  << log.level
+			<< "]["  << log.category
+			<< "] :" << log.message;
+    });
+	QObject::connect(&server, &QUaServer::clientConnected,
+	[](const QUaSession * sessionData)
+	{
+		qDebug() << "Connected" << sessionData->address() << ":" << sessionData->port() << "|" << sessionData->applicationName();
+	});
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 	auto obj = objsFolder->addBaseObject();

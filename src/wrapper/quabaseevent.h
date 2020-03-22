@@ -107,6 +107,8 @@ private:
 
 	// Used to trigger the event
 	UA_NodeId m_nodeIdOriginator;
+	// EventId of last triggered event
+	UA_ByteString m_outEventId;
 
 };
 

@@ -125,16 +125,9 @@ typedef enum {
     UA_SERVERLIFECYLE_RUNNING
 } UA_ServerLifecycle;
 
-typedef struct UA_SessionManager {
-    LIST_HEAD(session_list, session_list_entry) sessions; // doubly-linked list of sessions
-    UA_UInt32 currentSessionCount;
-    UA_Server* server;
-} UA_SessionManager;
-
 struct ContinuationPoint;
 
 typedef struct UA_SessionHeader {
-    LIST_ENTRY(UA_SessionHeader) pointers;
     UA_NodeId authenticationToken;
     UA_SecureChannel* channel; /* The pointer back to the SecureChannel in the session. */
 } UA_SessionHeader;
@@ -164,6 +157,9 @@ typedef struct {
 #endif
 } UA_Session;
 
+extern "C" UA_Session *
+UA_Server_getSessionById(UA_Server * server, const UA_NodeId * sessionId);
+
 typedef void (*UA_ApplicationCallback)(void* application, void* data);
 
 typedef struct UA_DelayedCallback {
@@ -188,6 +184,7 @@ typedef struct UA_TimerZip UA_TimerZip;
 ZIP_HEAD(UA_TimerIdZip, UA_TimerEntry);
 typedef struct UA_TimerIdZip UA_TimerIdZip;
 
+/* Only for a single thread. Protect by a mutex if required. */
 typedef struct {
     UA_TimerZip root; /* The root of the time-sorted zip tree */
     UA_TimerIdZip idRoot; /* The root of the id-sorted zip tree */
@@ -197,23 +194,23 @@ typedef struct {
 struct UA_WorkQueue {
     /* Worker threads and work queue. Without multithreading, work is executed
        immediately. */
-#ifdef UA_ENABLE_MULTITHREADING
+#if UA_MULTITHREADING >= 200
     UA_Worker* workers;
     size_t workersSize;
 
     /* Work queue */
     SIMPLEQ_HEAD(, UA_DelayedCallback) dispatchQueue; /* Dispatch queue for the worker threads */
-    pthread_mutex_t dispatchQueue_accessMutex; /* mutex for access to queue */
-    pthread_cond_t dispatchQueue_condition; /* so the workers don't spin if the queue is empty */
-    pthread_mutex_t dispatchQueue_conditionMutex; /* mutex for access to condition variable */
+    UA_LOCK_TYPE(dispatchQueue_accessMutex) /* mutex for access to queue */
+        pthread_cond_t dispatchQueue_condition; /* so the workers don't spin if the queue is empty */
+    UA_LOCK_TYPE(dispatchQueue_conditionMutex) /* mutex for access to condition variable */
 #endif
 
     /* Delayed callbacks
      * To be executed after all curretly dispatched works has finished */
-    SIMPLEQ_HEAD(, UA_DelayedCallback) delayedCallbacks;
-#ifdef UA_ENABLE_MULTITHREADING
-    pthread_mutex_t delayedCallbacks_accessMutex;
-    UA_DelayedCallback* delayedCallbacks_checkpoint;
+        SIMPLEQ_HEAD(, UA_DelayedCallback) delayedCallbacks;
+#if UA_MULTITHREADING >= 200
+    UA_LOCK_TYPE(delayedCallbacks_accessMutex)
+        UA_DelayedCallback* delayedCallbacks_checkpoint;
     size_t delayedCallbacks_sinceDispatch; /* How many have been added since we
                                             * tried to dispatch callbacks? */
 #endif
@@ -231,32 +228,26 @@ typedef struct {
     UA_SOCKET mdnsSocket;
     UA_Boolean mdnsMainSrvAdded;
 
+    /* Full Domain Name of server itself. Used to detect if received mDNS message was from itself */
+    UA_String selfFqdnMdnsRecord;
+
     LIST_HEAD(, serverOnNetwork_list_entry) serverOnNetwork;
-    size_t serverOnNetworkSize;
 
     UA_UInt32 serverOnNetworkRecordIdCounter;
     UA_DateTime serverOnNetworkRecordIdLastReset;
 
     /* hash mapping domain name to serverOnNetwork list entry */
-    struct serverOnNetwork_hash_entry* serverOnNetworkHash[SERVER_ON_NETWORK_HASH_PRIME];
+    struct serverOnNetwork_hash_entry* serverOnNetworkHash[SERVER_ON_NETWORK_HASH_SIZE];
 
     UA_Server_serverOnNetworkCallback serverOnNetworkCallback;
     void* serverOnNetworkCallbackData;
 
-#  ifdef UA_ENABLE_MULTITHREADING
+#if UA_MULTITHREADING >= 200
     pthread_t mdnsThread;
     UA_Boolean mdnsRunning;
 #  endif
 # endif /* UA_ENABLE_DISCOVERY_MULTICAST */
 } UA_DiscoveryManager;
-
-typedef struct {
-    TAILQ_HEAD(, channel_entry) channels; // doubly-linked list of channels
-    UA_UInt32 currentChannelCount;
-    UA_UInt32 lastChannelId;
-    UA_UInt32 lastTokenId;
-    UA_Server* server;
-} UA_SecureChannelManager;
 
 // NOTE : just gave it a name in order to be able to use
 //        TAILQ_LAST in QUaServer::newSession
@@ -264,6 +255,11 @@ TAILQ_HEAD(channel_list, channel_entry);
 
 typedef enum {
     UA_SECURECHANNELSTATE_FRESH,
+    UA_SECURECHANNELSTATE_HEL_SENT,
+    UA_SECURECHANNELSTATE_HEL_RECEIVED,
+    UA_SECURECHANNELSTATE_ACK_SENT,
+    UA_SECURECHANNELSTATE_ACK_RECEIVED,
+    UA_SECURECHANNELSTATE_OPN_SENT,
     UA_SECURECHANNELSTATE_OPEN,
     UA_SECURECHANNELSTATE_CLOSED
 } UA_SecureChannelState;
@@ -273,18 +269,21 @@ typedef TAILQ_HEAD(UA_MessageQueue, UA_Message) UA_MessageQueue;
 struct UA_SecureChannel {
     UA_SecureChannelState   state;
     UA_MessageSecurityMode  securityMode;
-    /* We use three tokens because when switching tokens the client is allowed to accept
-     * messages with the old token for up to 25% of the lifetime after the token would have timed out.
-     * For messages that are sent, the new token is already used, which is contained in the securityToken
-     * variable. The nextSecurityToken variable holds a newly issued token, that will be automatically
-     * revolved into the securityToken variable. This could be done with two variables, but would require
-     * greater changes to the current code. This could be done in the future after the client and networking
-     * structure has been reworked, which would make this easier to implement. */
-    UA_ChannelSecurityToken securityToken; /* the channelId is contained in the securityToken */
-    UA_ChannelSecurityToken nextSecurityToken;
-    UA_ChannelSecurityToken previousSecurityToken;
+    UA_ConnectionConfig     config;
 
-    /* The endpoint and context of the channel */
+    /* Rules for revolving the token with a renew OPN request: The client is
+     * allowed to accept messages with the old token until the OPN response has
+     * arrived. The server accepts the old token until one message secured with
+     * the new token has arrived.
+     *
+     * We recognize whether nextSecurityToken contains a valid next token if the
+     * ChannelId is not 0. */
+    UA_ChannelSecurityToken securityToken;     /* Also contains the channelId */
+    UA_ChannelSecurityToken nextSecurityToken; /* Only used by the server. The next token
+                                                * is put here when sending the OPN
+                                                * response. */
+
+                                                /* The endpoint and context of the channel */
     const UA_SecurityPolicy* securityPolicy;
     void* channelContext; /* For interaction with the security policy */
     UA_Connection* connection;
@@ -300,8 +299,18 @@ struct UA_SecureChannel {
     UA_UInt32 receiveSequenceNumber;
     UA_UInt32 sendSequenceNumber;
 
-    LIST_HEAD(, UA_SessionHeader) sessions;
-    UA_MessageQueue messages;
+    /* The standard does not forbid a SecureChannel to carry several Sessions.
+     * But this is not supported here. So clients need one SecureChannel for
+     * every Session. */
+    UA_SessionHeader* session;
+
+    UA_ByteString incompleteChunk; /* A half-received chunk (TCP is a
+                                    * streaming protocol) is stored here */
+    UA_MessageQueue messages;      /* Received full chunks grouped into the
+                                    * messages */
+    UA_Boolean retryReceived;      /* Processing of received chunks was stopped
+                                    * e.g. after an OPN message. Retry
+                                    * processing remaining chunks. */
 };
 
 typedef struct channel_entry {
@@ -317,14 +326,20 @@ struct UA_Server {
     UA_DateTime endTime; /* Zeroed out. If a time is set, then the server shuts
                           * down once the time has been reached */
 
-                          /* Nodestore */
-    void* nsCtx;
-
     UA_ServerLifecycle state;
 
-    /* Security */
-    UA_SecureChannelManager secureChannelManager;
-    UA_SessionManager sessionManager;
+    /* SecureChannels */
+    TAILQ_HEAD(, channel_entry) channels;
+    UA_UInt32 lastChannelId;
+    UA_UInt32 lastTokenId;
+
+#if UA_MULTITHREADING >= 100
+    UA_AsyncManager asyncManager;
+#endif
+
+    /* Session Management */
+    LIST_HEAD(session_list, session_list_entry) sessions;
+    UA_UInt32 sessionCount;
     UA_Session adminSession; /* Local access to the services (for startup and
                               * maintenance) uses this Session with all possible
                               * access rights (Session Id: 1) */
@@ -357,27 +372,60 @@ struct UA_Server {
     /* To be cast to UA_LocalMonitoredItem to get the callback and context */
     LIST_HEAD(LocalMonitoredItems, UA_MonitoredItem) localMonitoredItems;
     UA_UInt32 lastLocalMonitoredItemId;
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    LIST_HEAD(conditionSourcelisthead, UA_ConditionSource) headConditionSource;
+#endif//UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #endif
 
     /* Publish/Subscribe */
 #ifdef UA_ENABLE_PUBSUB
     UA_PubSubManager pubSubManager;
 #endif
+
+#if UA_MULTITHREADING >= 100
+    UA_LOCK_TYPE(networkMutex)
+        UA_LOCK_TYPE(serviceMutex)
+#endif
+
+        /* Statistics */
+        UA_ServerStatistics serverStats;
 };
 
-extern "C" UA_StatusCode
-UA_SecureChannelManager_init(UA_SecureChannelManager* cm, UA_Server* server);
+//extern "C" UA_StatusCode
+//UA_SecureChannelManager_init(UA_SecureChannelManager* cm, UA_Server* server);
+//
+///* Remove a all securechannels */
+//extern "C" void
+//UA_SecureChannelManager_deleteMembers(UA_SecureChannelManager* cm);
+//
+//extern "C" UA_StatusCode
+//UA_SessionManager_init(UA_SessionManager* sm, UA_Server* server);
+//
+///* Deletes all sessions */
+//extern "C" void UA_SessionManager_deleteMembers(UA_SessionManager* sm);
 
-/* Remove a all securechannels */
-extern "C" void
-UA_SecureChannelManager_deleteMembers(UA_SecureChannelManager* cm);
+typedef enum {
+    UA_DIAGNOSTICEVENT_CLOSE,
+    UA_DIAGNOSTICEVENT_REJECT,
+    UA_DIAGNOSTICEVENT_SECURITYREJECT,
+    UA_DIAGNOSTICEVENT_TIMEOUT,
+    UA_DIAGNOSTICEVENT_ABORT,
+    UA_DIAGNOSTICEVENT_PURGE
+} UA_DiagnosticEvent;
 
-extern "C" UA_StatusCode
-UA_SessionManager_init(UA_SessionManager* sm, UA_Server* server);
+extern "C"
+void UA_Server_cleanupSessions(UA_Server* server, UA_DateTime nowMonotonic);
 
-/* Deletes all sessions */
-extern "C" void UA_SessionManager_deleteMembers(UA_SessionManager* sm);
+extern "C"
+void UA_Server_removeSession(UA_Server * server, session_list_entry * sentry, UA_DiagnosticEvent event);
 
+extern "C"
+void UA_Server_deleteSecureChannels(UA_Server* server);
+
+extern "C"
+void removeSecureChannel(UA_Server * server, channel_entry * entry, UA_DiagnosticEvent event);
 
 /*********************************************************************************************
 Copied from open62541, to be able to implement:
@@ -388,12 +436,13 @@ set AccessControlContext::allowAnonymous
 */
 
 typedef struct {
-    UA_Boolean                allowAnonymous;
-    size_t                    usernamePasswordLoginSize;
+    UA_Boolean allowAnonymous;
+    size_t usernamePasswordLoginSize;
     UA_UsernamePasswordLogin* usernamePasswordLogin;
 } AccessControlContext;
+
 #define ANONYMOUS_POLICY "open62541-anonymous-policy"
-#define USERNAME_POLICY  "open62541-username-policy"
+#define USERNAME_POLICY "open62541-username-policy"
 const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
 const UA_String username_policy = UA_STRING_STATIC(USERNAME_POLICY);
 

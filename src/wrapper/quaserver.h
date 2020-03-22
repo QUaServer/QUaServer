@@ -13,7 +13,6 @@
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #include <QUaBaseEvent>
 #include <QUaGeneralModelChangeEvent>
-#include <QFunctionUtils>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_HISTORIZING
 #include <QUaHistoryBackend>
@@ -42,9 +41,52 @@ class QUaSignaler : public QObject
 {
 	Q_OBJECT
 public:
-    explicit QUaSignaler(QObject *parent = nullptr) : QObject(parent) { };
+    explicit QUaSignaler(QObject *parent = nullptr) 
+        : QObject(parent) 
+    { 
+        m_processing = false;
+        QObject::connect(
+            this,
+            &QUaSignaler::sendEvent,
+            this,
+            &QUaSignaler::on_sendEvent,
+            Qt::QueuedConnection
+        );
+    };
+    template <typename M1 = const std::function<void(void)>&>
+    inline void execLater(M1&& func)
+    {
+        m_funcs.enqueue(func);
+        if (m_processing)
+        {
+            return;
+        }
+        m_processing = true;
+        emit this->sendEvent(QPrivateSignal());
+    };
+    inline bool processing() const
+    {
+        return m_processing;
+    };
 signals:
 	void signalNewInstance(QUaNode *node);
+    // can only be emitted internally
+    void sendEvent(QPrivateSignal);
+private slots:
+    inline void on_sendEvent()
+    {
+        Q_ASSERT(m_processing);
+        if (m_funcs.isEmpty())
+        {
+            m_processing = false;
+            return;
+        }
+        m_funcs.dequeue()();
+        emit this->sendEvent(QPrivateSignal());
+    };
+private:
+    bool m_processing;
+    QQueue<std::function<void(void)>> m_funcs;
 };
 
 class QUaSession : public QObject
@@ -340,9 +382,9 @@ private:
 
 	// change event instance to notify client when nodes added or removed
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    QUaSignaler m_changeEventSignaler;
 	QUaGeneralModelChangeEvent * m_changeEvent;
 	QUaChangesList m_listChanges; // buffer
-	std::function<void(void)> m_triggerChanges;
 	void addChange(const QUaChangeStructureDataType& change);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

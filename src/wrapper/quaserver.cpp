@@ -3,7 +3,6 @@
 #include <QMetaProperty>
 #include <QTimer>
 
-#define QUA_DEBOUNCE_PERIOD_MS 50
 #define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
@@ -451,34 +450,17 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 void QUaServer::newSession(QUaServer* server,
 	                       const UA_NodeId* sessionId)
 {
-	// get session data
-	QString strApplicationName;
-	QString strApplicationUri;
-	QString strProductUri;
-	auto sm = &server->m_server->sessionManager;
-	session_list_entry* current, * temp_s;
-	LIST_FOREACH_SAFE(current, &sm->sessions, pointers, temp_s) 
-	{
-		UA_Session* session = &current->session;
-		if (!UA_NodeId_equal(&session->sessionId, sessionId))
-		{
-			continue;
-		}
-		UA_ApplicationDescription clientDescription = session->clientDescription;
-		Q_ASSERT(clientDescription.applicationType == UA_APPLICATIONTYPE_CLIENT);
-		strApplicationUri  = QUaTypesConverter::uaStringToQString(clientDescription.applicationUri);
-		strProductUri      = QUaTypesConverter::uaStringToQString(clientDescription.productUri);
-		strApplicationName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&clientDescription.applicationName);
-		break;
-	}
+	UA_Session* session = UA_Server_getSessionById(server->m_server, sessionId);
+	Q_ASSERT(session);
+	UA_ApplicationDescription clientDescription = session->clientDescription;
+	QString strApplicationUri  = QUaTypesConverter::uaStringToQString(clientDescription.applicationUri);
+	QString strProductUri      = QUaTypesConverter::uaStringToQString(clientDescription.productUri);
+	QString strApplicationName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&clientDescription.applicationName);
 	// get connection data
 	QString strAddress;
 	quint16 intPort;
-	auto cm = &server->m_server->secureChannelManager;
-	// assume new connection is always the last one on the list
-	// sonce we do not have a mechanism to associate it with the sessionId
-	channel_entry* last = TAILQ_LAST(&cm->channels, channel_list);
-	UA_Connection* connection = last->channel.connection;
+	// get connection reference from channel
+	UA_Connection* connection = session->header.channel->connection;
 	// get peer name (address) from socket fd
 	auto sockFd = connection->sockfd;
 	sockaddr address;
@@ -535,7 +517,12 @@ void QUaServer::closeSession(UA_Server        * server,
 	Q_UNUSED(ac);
 	// get server
 	QUaServer *srv = QUaServer::getServerNodeContext(server);
-	// remove session form hash
+	// remove session from hash
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	if (!srv->m_hashSessions.contains(*sessionId))
+	{
+		return;
+	}
 	auto session = srv->m_hashSessions.take(*sessionId);
 	emit srv->clientDisconnected(session);
 	session->deleteLater();
@@ -709,7 +696,20 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 		return;
 	}
 	m_listChanges.append(change);
-	m_triggerChanges();
+	// if trigger already scheduled, then ealry exit
+	if (m_changeEventSignaler.processing())
+	{
+		return;
+	}
+	// exec trigger on next event loop iteration
+	m_changeEventSignaler.execLater([this]() {
+		// trigger
+		m_changeEvent->setChanges(m_listChanges);
+		m_changeEvent->setTime(QDateTime::currentDateTimeUtc());
+		m_changeEvent->trigger();
+		// clean list of changes buffer
+		m_listChanges.clear();
+	});
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -724,12 +724,43 @@ void QUaServer::resetConfig()
 {
 	// clean old config and create new
 	UA_ServerConfig * config = UA_Server_getConfig(m_server);
-	// NOTE : UA_ServerConfig_clean(config); called internally by UA_ServerConfig_setXXX
+	// NOTE : cannot call UA_ServerConfig_clean because it cleans node store
+	//        so we just call the parts that interest us
+	//UA_ServerConfig_clean(config);
+	/* Network Layers */
+	for (size_t i = 0; i < config->networkLayersSize; ++i)
+		config->networkLayers[i].clear(&config->networkLayers[i]);
+	UA_free(config->networkLayers);
+	config->networkLayers = NULL;
+	config->networkLayersSize = 0;
+	UA_String_deleteMembers(&config->customHostname);
+	config->customHostname = UA_STRING_NULL;
+	/* Security Policy */
+	for (size_t i = 0; i < config->securityPoliciesSize; ++i) {
+		UA_SecurityPolicy* policy = &config->securityPolicies[i];
+		policy->clear(policy);
+	}
+	UA_free(config->securityPolicies);
+	config->securityPolicies = NULL;
+	config->securityPoliciesSize = 0;
+	/* Endoints */
+	for (size_t i = 0; i < config->endpointsSize; ++i)
+		UA_EndpointDescription_deleteMembers(&config->endpoints[i]);
+	UA_free(config->endpoints);
+	config->endpoints = NULL;
+	config->endpointsSize = 0;
+	/* Certificate Validation */
+	if (config->certificateVerification.clear)
+		config->certificateVerification.clear(&config->certificateVerification);
+	/* Access Control */
+	if (config->accessControl.clear)
+		config->accessControl.clear(&config->accessControl);
+
 #ifndef UA_ENABLE_ENCRYPTION
 	// convert cert if valid
 	UA_ByteString cert;
 	UA_ByteString* ptrCert = QUaServer::parseCertificate(m_byteCertificate, cert, m_byteCertificateInternal);
-	UA_ServerConfig_setMinimal(config, m_port, ptrCert);
+	auto st = UA_ServerConfig_setMinimal(config, m_port, ptrCert);
 #else
 	// convert cert if valid (should contain public key)
 	UA_ByteString cert;
@@ -741,7 +772,7 @@ void QUaServer::resetConfig()
 	if (ptrPriv)
 	{
 		// create config with port, certificate and private key for encryption
-		UA_ServerConfig_setDefaultWithSecurityPolicies(
+		auto st = UA_ServerConfig_setDefaultWithSecurityPolicies(
 			config,
 			m_port,
 			ptrCert,
@@ -757,10 +788,10 @@ void QUaServer::resetConfig()
 	else
 	{
 		// create config with port and certificate only (no encryption)
-		UA_ServerConfig_setMinimal(config, m_port, ptrCert);
+		auto st = UA_ServerConfig_setMinimal(config, m_port, ptrCert);
 	}
 #endif
-
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// setup logger
 	config->logger = this->getLogger();
 
@@ -797,8 +828,8 @@ void QUaServer::resetConfig()
 	// NOTE : use about updating config->applicationDescription.
 	//        In UA_ServerConfig_new_customBuffer we have
 	//        conf->endpointsSize = 1;
-	UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
-
+	st = UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// setup server limits
 
 	config->maxSecureChannels = m_maxSecureChannels;
@@ -807,6 +838,7 @@ void QUaServer::resetConfig()
 #ifdef UA_ENABLE_HISTORIZING
 	config->historyDatabase = m_historDatabase;
 #endif // UA_ENABLE_HISTORIZING
+	Q_UNUSED(st);
 }
 
 UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
@@ -972,16 +1004,6 @@ void QUaServer::setupServer()
 	m_changeEvent->setSourceName(this->applicationName());
 	m_changeEvent->setMessage("Node added or removed.");
 	m_changeEvent->setSeverity(1);
-	// create debounced trigerring function
-	m_triggerChanges = QFunctionUtils::Debounce(
-		[this]() {
-			// trigger
-			m_changeEvent->setChanges(m_listChanges);
-			m_changeEvent->setTime(QDateTime::currentDateTimeUtc());
-			m_changeEvent->trigger();
-			// clean list of changes buffer
-			m_listChanges.clear();
-		}, QUA_DEBOUNCE_PERIOD_MS);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_HISTORIZING
@@ -1181,8 +1203,8 @@ void QUaServer::start()
 	// start open62541 server
 	auto st = UA_Server_run_startup(m_server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st)
-		m_running = true;
+	Q_UNUSED(st);
+	m_running = true;
 	QObject::connect(&m_iterWaitTimer, &QTimer::timeout, this,
 	[this]() {
 		// do not iterate if asked to stop
@@ -1210,11 +1232,14 @@ void QUaServer::stop()
 	m_iterWaitTimer.stop();
 	m_iterWaitTimer.disconnect();
 	UA_Server_run_shutdown(m_server);
-
 	// [FIX] remove channels and sessions
-	UA_SecureChannelManager_deleteMembers(&m_server->secureChannelManager);
-	UA_SessionManager_deleteMembers(&m_server->sessionManager);
-
+	// NOTE : cannot use UA_Server_cleanupSessions because it only removed timedout sessions
+	session_list_entry* current, * temp;
+	LIST_FOREACH_SAFE(current, &m_server->sessions, pointers, temp) {
+		UA_Server_removeSession(m_server, current, UA_DIAGNOSTICEVENT_CLOSE);
+	}
+	// void UA_Server_deleteSecureChannels(UA_Server * server);
+	UA_Server_deleteSecureChannels(m_server);
 	// emit event
 	emit this->isRunningChanged(m_running);
 }
@@ -1979,7 +2004,7 @@ UA_NodeId QUaServer::createInstance(const QMetaObject& metaObject, QUaNode* pare
 		parentNode->nodeId(),
 		parentNode->typeDefinitionNodeId(),
 		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-		});
+	});
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// return new instance node id
