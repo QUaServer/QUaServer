@@ -254,6 +254,8 @@ public:
 	// check if a reference type is already registered
 	bool referenceTypeRegistered(const QUaReferenceType& refType) const;
 
+    // check if a node id is available (not used), not necessarily by an instance, but could be a type for example
+    bool isNodeIdUsed(const QString& strNodeId) const;
 	// create instance of a given (variable or object) type
 	template<typename T>
 	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
@@ -746,16 +748,24 @@ inline bool QUaNode::serialize(T& serializer, QQueue<QUaLog>& logOut)
 {
     if (!this->serializeStart<T>(serializer, logOut))
     {
+        for (auto& log : logOut)
+        { emit this->server()->logMessage(log); }
         return false;
     }
     if (!this->serializeInternal<T>(serializer, logOut))
     {
+        for (auto& log : logOut)
+        { emit this->server()->logMessage(log); }
         return false;
     }
     if (!this->serializeEnd<T>(serializer, logOut))
     {
+        for (auto& log : logOut)
+        { emit this->server()->logMessage(log); }
         return false;
     }
+    for (auto& log : logOut)
+    { emit this->server()->logMessage(log); }
     return true;
 }
 
@@ -823,6 +833,9 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
 {
     if (!this->deserializeStart<T>(deserializer, logOut))
     {
+        for (auto &log : logOut)
+        { emit this->server()->logMessage(log); }
+        // stop deserializing
         return false;
     }
     QString typeName = this->className();
@@ -836,6 +849,8 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
         logOut
     ))
     {
+        for (auto &log : logOut)
+        { emit this->server()->logMessage(log); }
         // stop deserializing
         return false;
     }
@@ -850,6 +865,9 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
         this == m_qUaServer->objectsFolder()
     ))
     {
+        for (auto &log : logOut)
+        { emit this->server()->logMessage(log); }
+        // stop deserializing
         return false;
     }
     // non-hierarchical at the end
@@ -880,8 +898,13 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     }
     if (!this->deserializeEnd<T>(deserializer, logOut))
     {
+       for (auto &log : logOut)
+        { emit this->server()->logMessage(log); }
+        // stop deserializing
         return false;
     }
+    for (auto& log : logOut)
+    { emit this->server()->logMessage(log); }
     return true;
 }
 
@@ -934,10 +957,12 @@ inline bool QUaNode::deserializeInternal(
     }
     // get existing children list to match hierachical forward references
     auto existingChildren = this->browseChildren();
-    QHash<QString, QUaNode*> mapExistingChildren;
+    QHash<QString, QUaNode*> mapExistingChildrenNodeIds;
+    QHash<QString, QList<QUaNode*>> mapExistingChildrenBrowseName;
     for (auto child : existingChildren)
     {
-        mapExistingChildren[child->nodeId()] = child;
+        mapExistingChildrenNodeIds[child->nodeId()] = child;
+        mapExistingChildrenBrowseName[child->browseName()] << child;
     }
     // loop deserialized forward references
     for (auto &forwRef : forwardRefs)
@@ -979,7 +1004,7 @@ inline bool QUaNode::deserializeInternal(
         if (attrs.contains("browseName") && !attrs.value("browseName").toString().isEmpty())
         {
             QString strBrowseName = attrs.value("browseName").toString();
-            auto existingBrowseName = this->browseChildren(strBrowseName);
+            auto existingBrowseName = mapExistingChildrenBrowseName.value(strBrowseName, QList<QUaNode*>());
             // deserialize existing
             if (existingBrowseName.count() > 0)
             {
@@ -1019,7 +1044,6 @@ inline bool QUaNode::deserializeInternal(
                     if (existingBrowseName.count() == 0 && 
                         instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
                     {
-                        qDebug() << instance->className();
                         logOut.enqueue({
                         tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
                         "Ignoring deserialization of forward reference to %4.")
@@ -1052,7 +1076,6 @@ inline bool QUaNode::deserializeInternal(
                     instance = existingBrowseName.takeFirst();
                     if (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
                     {
-                        qDebug() << instance->className();
                         logOut.enqueue({
                         tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
                         "Ignoring deserialization of forward reference to %4.")
@@ -1086,10 +1109,10 @@ inline bool QUaNode::deserializeInternal(
             }
         } // end by browse name
         // check if child already exists by node id and type matches
-        if (mapExistingChildren.contains(forwRef.targetNodeId) &&
-            mapExistingChildren[forwRef.targetNodeId]->className().compare(forwRef.targetType, Qt::CaseSensitive) == 0)
+        if (mapExistingChildrenNodeIds.contains(forwRef.targetNodeId) &&
+            mapExistingChildrenNodeIds[forwRef.targetNodeId]->className().compare(forwRef.targetType, Qt::CaseSensitive) == 0)
         {
-            QUaNode* instance = mapExistingChildren.take(forwRef.targetNodeId);
+            QUaNode* instance = mapExistingChildrenNodeIds.take(forwRef.targetNodeId);
             // remove from existingChildren to mark it as deserialized
             existingChildren.removeOne(instance);
             // deserialize (recursive)
@@ -1111,7 +1134,7 @@ inline bool QUaNode::deserializeInternal(
         // no existing children matched by browse name nor by node id and type
         // so we must create a new one but before, check node id does not exist
         QString strTargetNodeId = forwRef.targetNodeId;
-        if (this->server()->nodeById(strTargetNodeId))
+        if (this->server()->isNodeIdUsed(strTargetNodeId))
         {
             logOut.enqueue({
                 tr("Forward reference of %1 with node id %2 (type %3) already exists elsewhere in server. Instantiating with random node id.")

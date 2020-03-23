@@ -1922,19 +1922,16 @@ UA_NodeId QUaServer::createInstanceInternal(
 	UA_NodeId reqNodeId = UA_NODEID_NULL;
 	if (!strReqNodeId.isEmpty())
 	{
+		// check if requested node id exists
+		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		Q_ASSERT_X(!isUsed, "QUaServer::createInstance", "Requested NodeId already exists");
+		if (isUsed)
+		{
+			UA_NodeId_clear(&reqNodeId);
+			UA_QualifiedName_clear(&browseName);
+			return UA_NODEID_NULL;
+		}
 		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	}
-	// check if requested node id exists
-	// TODO : create a nodeExists() method?
-	UA_NodeId testNodeId = UA_NODEID_NULL;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &testNodeId);
-	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::createInstance", "Requested NodeId already exists");
-	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
-	{
-		UA_NodeId_clear(&reqNodeId);
-		UA_NodeId_clear(&testNodeId);
-		UA_QualifiedName_clear(&browseName);
-		return UA_NODEID_NULL;
 	}
 	// NOTE : calling UA_Server_addXXX below will trigger QUaServer::uaConstructor
 	// which will instantiate the respective Qt instance and binding
@@ -1981,7 +1978,6 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	// clean up
 	UA_NodeId_clear(&reqNodeId);
-	UA_NodeId_clear(&testNodeId);
 	// NOTE : do not UA_NodeId_clear(&typeNodeId); or value in m_mapTypes gets corrupted
 	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
@@ -2353,6 +2349,22 @@ const QList<QUaReferenceType> QUaServer::referenceTypes() const
 bool QUaServer::referenceTypeRegistered(const QUaReferenceType& refType) const
 {
 	return m_hashRefTypes.contains(refType);
+}
+
+bool QUaServer::isNodeIdUsed(const QString& strNodeId) const
+{
+	QString strReqNodeId = strNodeId.trimmed();
+	UA_NodeId reqNodeId = UA_NODEID_NULL;
+	if (!strReqNodeId.isEmpty())
+	{
+		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
+	}
+	// check if requested node id exists
+	UA_NodeId testNodeId = UA_NODEID_NULL;
+	auto st = UA_Server_readNodeId(m_server, reqNodeId, &testNodeId);
+	UA_NodeId_clear(&reqNodeId);
+	UA_NodeId_clear(&testNodeId);
+	return st == UA_STATUSCODE_GOOD;
 }
 
 QUaFolderObject * QUaServer::objectsFolder() const
