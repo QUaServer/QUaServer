@@ -336,7 +336,6 @@ class QUaNode : public QObject
 protected:
 	// list for known children (standard instance declarations)
 	static const QStringList mandatoryChildrenBrowseNames();
-	static const QStringList optionalChildrenBrowseNames ();
 
 public:
 	typedef decltype(&QUaNode::mandatoryChildrenBrowseNames) MC;

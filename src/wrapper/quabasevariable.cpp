@@ -61,7 +61,6 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(nodeId);
 	Q_UNUSED(range);
-	Q_UNUSED(data);
 	// get variable from context
 #ifdef QT_DEBUG 
 	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
@@ -79,8 +78,19 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 		var->m_bInternalWrite = false;
 		return;
 	}
+	// TODO : check if much performance gain if use *data
 	// emit value changed
 	emit var->valueChanged(var->value());
+	// emit source timestamp changed
+	if (data->hasSourceTimestamp)
+	{
+		emit var->sourceTimestampChanged(var->sourceTimestamp());
+	}
+	// emit server timestamp changed
+	if (data->hasServerTimestamp)
+	{
+		emit var->serverTimestampChanged(var->serverTimestamp());
+	}
 }
 
 // [STATIC]
@@ -120,8 +130,10 @@ void QUaBaseVariable::onRead(UA_Server             *server,
 	}
 }
 
-QUaBaseVariable::QUaBaseVariable(QUaServer *server)
-	: QUaNode(server)
+QUaBaseVariable::QUaBaseVariable(
+	QUaServer* server,
+	const MC& mandatoryChildren
+) : QUaNode(server, mandatoryChildren)
 {
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
 	//          the constructor is called automagically by this library, and m_newNodeNodeId and
@@ -174,10 +186,16 @@ QVariant QUaBaseVariable::value() const
 	return outVar;
 }
 
-void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/* = QMetaType::UnknownType*/)
+void QUaBaseVariable::setValue(
+	const QVariant        &value, 
+	const QDateTime       &sourceTimestamp /*= QDateTime()*/,
+	const QDateTime       &serverTimestamp /*= QDateTime()*/,
+	const QMetaType::Type &newTypeConst    /*= QMetaType::UnknownType*/
+)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	auto newType = newTypeConst;
 	if (newType == QMetaType::UnknownType)
 	{
 		newType = (QMetaType::Type)value.type();
@@ -250,9 +268,7 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	// convert to UA_Variant and set new value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
 	m_bInternalWrite = true;
-	auto st = UA_Server_writeValue(m_qUaServer->m_server,
-		m_nodeId,
-		tmpVar);
+	auto st = this->setValueInternal(tmpVar, UA_STATUSCODE_GOOD, sourceTimestamp, serverTimestamp);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// clean up
@@ -274,9 +290,115 @@ void QUaBaseVariable::setValue(const QVariant & value, QMetaType::Type newType/*
 	//Q_ASSERT(this->dataTypeInternal() == m_type);
 }
 
+QDateTime QUaBaseVariable::sourceTimestamp() const
+{
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_SOURCE
+	);
+	QDateTime time = QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&value.sourceTimestamp);
+	// TODO : clean?
+	return time;
+}
+
+void QUaBaseVariable::setSourceTimestamp(const QDateTime& sourceTimestamp)
+{
+	// get value
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_BOTH
+	);
+	// set value
+	UA_WriteValue wv;
+	UA_WriteValue_init(&wv);
+	wv.nodeId         = m_nodeId;
+	wv.attributeId    = UA_ATTRIBUTEID_VALUE;
+	wv.value.value    = value.value;
+	wv.value.hasValue = value.hasValue;
+	if (sourceTimestamp.isValid())
+	{
+		QUaTypesConverter::uaVariantFromQVariantScalar(sourceTimestamp, &wv.value.sourceTimestamp);
+		wv.value.hasSourceTimestamp = true;
+	}
+	wv.value.serverTimestamp      = value.serverTimestamp     ;
+	wv.value.hasServerTimestamp   = value.hasServerTimestamp  ;
+	wv.value.serverPicoseconds    = value.serverPicoseconds   ;
+	wv.value.sourcePicoseconds    = value.sourcePicoseconds   ;
+	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
+	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
+	wv.value.status               = value.status;
+	wv.value.hasStatus            = value.status;
+	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+}
+
+QDateTime QUaBaseVariable::serverTimestamp() const
+{
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_SERVER
+	);
+	QDateTime time = QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&value.serverTimestamp);
+	// TODO : clean?
+	return time;
+}
+
+void QUaBaseVariable::setServerTimestamp(const QDateTime& serverTimestamp)
+{
+		// get value
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_BOTH
+	);
+	// set value
+	UA_WriteValue wv;
+	UA_WriteValue_init(&wv);
+	wv.nodeId         = m_nodeId;
+	wv.attributeId    = UA_ATTRIBUTEID_VALUE;
+	wv.value.value    = value.value;
+	wv.value.hasValue = value.hasValue;
+	wv.value.sourceTimestamp    = value.sourceTimestamp;
+	wv.value.hasSourceTimestamp = value.hasSourceTimestamp;
+	if (serverTimestamp.isValid())
+	{
+		QUaTypesConverter::uaVariantFromQVariantScalar(serverTimestamp, &wv.value.serverTimestamp);
+		wv.value.hasServerTimestamp = true;
+	}
+	wv.value.serverPicoseconds    = value.serverPicoseconds   ;
+	wv.value.sourcePicoseconds    = value.sourcePicoseconds   ;
+	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
+	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
+	wv.value.status               = value.status;
+	wv.value.hasStatus            = value.status;
+	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+}
+
 QMetaType::Type QUaBaseVariable::dataType() const
 {
-	return m_dataType;
+return m_dataType;
 }
 
 QString QUaBaseVariable::dataTypeNodeId() const
@@ -318,7 +440,6 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		m_nodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
 	// get old value
 	QVariant oldValue = this->value();
 	// handle array
@@ -360,11 +481,8 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	// set converted or default value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue, dataType);
 	m_bInternalWrite = true;
-	st = UA_Server_writeValue(m_qUaServer->m_server,
-		m_nodeId,
-		tmpVar);
+	st = this->setValueInternal(tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
 	// clean up
 	UA_Variant_clear(&tmpVar);
 	// set new type
@@ -422,7 +540,6 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 		m_nodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
 	// get old value
 	QVariant oldValue = this->value();
 	// handle array
@@ -449,11 +566,8 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 	// set converted or default value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
 	m_bInternalWrite = true;
-	st = UA_Server_writeValue(m_qUaServer->m_server,
-		m_nodeId,
-		tmpVar);
+	st = this->setValueInternal(tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
 	// clean up
 	UA_Variant_clear(&tmpVar);
 	// change data type
@@ -461,7 +575,6 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 		m_nodeId,
 		enumTypeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
 	// update cache
 	m_dataType = QMetaType::Int;
 	Q_ASSERT(this->dataTypeInternal() == m_dataType);
@@ -490,6 +603,42 @@ QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 	UA_NodeId_clear(&outDataType);
 	return type;
+}
+
+UA_StatusCode QUaBaseVariable::setValueInternal(
+	const UA_Variant    &value,
+	const UA_StatusCode &status,
+	const QDateTime     &sourceTimestamp, 
+	const QDateTime     &serverTimestamp)
+{
+	// set value
+	UA_WriteValue wv;
+	UA_WriteValue_init(&wv);
+	wv.nodeId         = m_nodeId;
+	wv.attributeId    = UA_ATTRIBUTEID_VALUE;
+	wv.value.value    = value;
+	wv.value.hasValue = 1;
+	if (sourceTimestamp.isValid())
+	{
+		QUaTypesConverter::uaVariantFromQVariantScalar(sourceTimestamp, &wv.value.sourceTimestamp);
+		wv.value.hasSourceTimestamp = true;
+	}
+	if (serverTimestamp.isValid())
+	{
+		QUaTypesConverter::uaVariantFromQVariantScalar(serverTimestamp, &wv.value.serverTimestamp);
+		wv.value.hasServerTimestamp = true;
+	}
+	wv.value.serverPicoseconds = 0;
+	wv.value.sourcePicoseconds = 0;
+	wv.value.hasServerPicoseconds = false;
+	wv.value.hasSourcePicoseconds = false;
+	// TODO : handle status subset, but which subset is relevant for value quality?
+	// open62541.git/deps/ua-nodeset/Schema/StatusCode.csv
+	wv.value.status    = status;
+	wv.value.hasStatus = true;
+	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
+	// TODO : cleanup wv ?
+	return st;
 }
 
 qint32 QUaBaseVariable::valueRank() const

@@ -13,7 +13,10 @@ class QUaTwoStateVariable : public QUaStateVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QUaTwoStateVariable(QUaServer *server);
+	Q_INVOKABLE explicit QUaTwoStateVariable(
+		QUaServer* server,
+		const MC& mandatoryChildren = &QUaTwoStateVariable::mandatoryChildrenBrowseNames
+	);
 
 
 };

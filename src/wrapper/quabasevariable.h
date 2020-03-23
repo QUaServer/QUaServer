@@ -73,8 +73,10 @@ class QUaBaseVariable : public QUaNode
 	// Variable Attributes
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
+	Q_PROPERTY(QDateTime         sourceTimestamp     READ sourceTimestamp     WRITE setSourceTimestamp NOTIFY sourceTimestampChanged)
+	Q_PROPERTY(QDateTime         serverTimestamp     READ serverTimestamp     WRITE setServerTimestamp NOTIFY serverTimestampChanged)
 	Q_PROPERTY(QUaDataType       dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
-	Q_PROPERTY(qint32            valueRank           READ valueRank           WRITE setValueRank     NOTIFY valueRankChanged       )
+	Q_PROPERTY(qint32            valueRank           READ valueRank           WRITE setValueRank       NOTIFY valueRankChanged      )
 	Q_PROPERTY(QVector<quint32>  arrayDimensions     READ arrayDimensions    /*NOTE : Read-only      NOTIFY arrayDimensionsChanged*/)
 	Q_PROPERTY(quint8            accessLevel         READ accessLevel         WRITE setAccessLevel /* NOTIFY accessLevelChanged */  )
 
@@ -91,7 +93,10 @@ class QUaBaseVariable : public QUaNode
 #endif // UA_ENABLE_HISTORIZING
 
 public:
-	explicit QUaBaseVariable(QUaServer *server);
+	explicit QUaBaseVariable(
+		QUaServer* server,
+		const MC& mandatoryChildren = &QUaBaseVariable::mandatoryChildrenBrowseNames
+	);
 
 	// Attributes API
 
@@ -99,7 +104,17 @@ public:
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
 	// Use QVariant::fromValue or use casting to force a dataType
 	QVariant          value() const;
-	void              setValue(const QVariant &value, QMetaType::Type newType = QMetaType::UnknownType);
+	void              setValue(
+		const QVariant        &value, 
+		const QDateTime       &sourceTimestamp = QDateTime(),
+		const QDateTime       &serverTimestamp = QDateTime(),
+		const QMetaType::Type &newType         = QMetaType::UnknownType
+	);
+	// Changing timestamps does not affect value
+	QDateTime sourceTimestamp() const;
+	void      setSourceTimestamp(const QDateTime& sourceTimestamp);
+	QDateTime serverTimestamp() const;
+	void      setServerTimestamp(const QDateTime& serverTimestamp);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost
@@ -160,6 +175,8 @@ public:
 	
 signals:
 	void valueChanged(const QVariant &value);
+	void sourceTimestampChanged(const QDateTime& sourceTimestamp);
+	void serverTimestampChanged(const QDateTime& serverTimestamp);
 	void valueRankChanged(const quint32 &valueRank);
 
 private:
@@ -187,6 +204,12 @@ private:
 
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
 	QMetaType::Type dataTypeInternal() const;
+	UA_StatusCode setValueInternal(
+		const UA_Variant    &value,
+		const UA_StatusCode &status = UA_STATUSCODE_GOOD,
+		const QDateTime     &sourceTimestamp = QDateTime(),
+		const QDateTime     &serverTimestamp = QDateTime()
+	);
 };
 
 #endif // QUABASEVARIABLE_H

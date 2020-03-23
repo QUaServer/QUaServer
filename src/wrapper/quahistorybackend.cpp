@@ -49,7 +49,7 @@ UA_DataValue QUaHistoryBackend::dataPointToValue(const QUaHistoryDataPoint* poin
 	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point->timestamp, &retVal.sourceTimestamp);
 	retVal.status = point->status;
 	retVal.serverPicoseconds = 0;
-	retVal.hasSourcePicoseconds = 0;
+	retVal.sourcePicoseconds = 0;
 	// let know it has htem
 	retVal.hasValue = true;
 	retVal.hasStatus = true;

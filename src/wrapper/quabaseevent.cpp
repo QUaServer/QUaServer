@@ -15,12 +15,7 @@ const QStringList QUaBaseEvent::mandatoryChildrenBrowseNames()
 		<< "ReceiveTime"
 		<< "Message"
 		<< "Severity";
-}
-
-const QStringList QUaBaseEvent::optionalChildrenBrowseNames()
-{
-	return QUaBaseObject::optionalChildrenBrowseNames() + QStringList()
-		<< "LocalTime";
+	// TODO : "LocalTime" optional
 }
 
 QUaBaseEvent::QUaBaseEvent(
@@ -107,7 +102,12 @@ QString QUaBaseEvent::message() const
 
 void QUaBaseEvent::setMessage(const QString & strMessage)
 {
-	this->getMessage()->setValue(strMessage, METATYPE_LOCALIZEDTEXT);
+	this->getMessage()->setValue(
+		strMessage, 
+		QDateTime(),
+		QDateTime(),
+		METATYPE_LOCALIZEDTEXT
+	);
 }
 
 quint16 QUaBaseEvent::severity() const

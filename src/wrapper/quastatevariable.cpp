@@ -1,7 +1,9 @@
 #include "quastatevariable.h"
 
-QUaStateVariable::QUaStateVariable(QUaServer *server)
-	: QUaBaseDataVariable(server)
+QUaStateVariable::QUaStateVariable(
+	QUaServer* server,
+	const MC& mandatoryChildren
+) : QUaBaseDataVariable(server, mandatoryChildren)
 {
 
 }

@@ -923,6 +923,9 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaBaseEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE), true);
 	this->registerSpecificationType<QUaGeneralModelChangeEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
@@ -930,7 +933,14 @@ void QUaServer::setupServer()
 	m_hashHierRefTypes.insert({ "Organizes"          , "OrganizedBy"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES          ));
 	m_hashHierRefTypes.insert({ "HasOrderedComponent", "OrderedComponentOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT));
 	m_hashHierRefTypes.insert({ "HasComponent"       , "ComponentOf"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT       ));
-	m_hashHierRefTypes.insert({ "HasProperty"        , "PropertyOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY        ));
+	m_hashHierRefTypes.insert({ "HasProperty"        , "PropertyOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY        ));	
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	// hierarchical
+	m_hashHierRefTypes.insert({ "HasTrueSubState" , "IsTrueSubStateOf"  }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASTRUESUBSTATE ));
+	m_hashHierRefTypes.insert({ "HasFalseSubState", "IsFalseSubStateOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASFALSESUBSTATE));
+	// non-hierarchical
+	m_hashRefTypes.insert({ "HasCondition" , "IsConditionOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCONDITION));
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	m_hashRefTypes.unite(m_hashHierRefTypes);
 
 	// read initial values for server description

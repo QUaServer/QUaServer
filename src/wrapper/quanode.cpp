@@ -10,13 +10,6 @@ const QStringList QUaNode::mandatoryChildrenBrowseNames()
 	return QStringList();
 }
 
-const QStringList QUaNode::optionalChildrenBrowseNames()
-{
-	return QStringList();
-}
-
-
-//QUaNode::QUaNode(QUaServer *server)
 QUaNode::QUaNode(
 	QUaServer* server, 
 	const MC & mandatoryChildren

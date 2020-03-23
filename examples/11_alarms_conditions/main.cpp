@@ -23,15 +23,15 @@ int main(int argc, char *argv[])
 	});
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
-	auto obj = objsFolder->addBaseObject();
-	obj->setDisplayName("obj");
-	obj->setBrowseName ("obj");
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	
+	auto cond = objsFolder->addChild<QUaConditionVariable>();
+	cond->setBrowseName("ConditionVariable");
+	cond->setDisplayName("ConditionVariable");
+	cond->setWriteAccess(true);
 
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 	server.start();
 

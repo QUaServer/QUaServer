@@ -15,7 +15,10 @@ class QUaBaseDataVariable : public QUaBaseVariable
 {
     Q_OBJECT
 public:
-	Q_INVOKABLE explicit QUaBaseDataVariable(QUaServer *server);
+	Q_INVOKABLE explicit QUaBaseDataVariable(
+		QUaServer* server,
+		const MC& mandatoryChildren = &QUaBaseDataVariable::mandatoryChildrenBrowseNames
+	);
 
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
