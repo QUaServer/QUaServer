@@ -38,8 +38,10 @@ UA_StatusCode QUaBaseObject::methodCallback(UA_Server        * server,
 	return obj->m_hashMethods[*methodId](input, output);
 }
 
-QUaBaseObject::QUaBaseObject(QUaServer *server)
-	: QUaNode(server)
+QUaBaseObject::QUaBaseObject(
+	QUaServer *server,
+	const MC& mandatoryChildren
+) : QUaNode(server, mandatoryChildren)
 {
 
 }

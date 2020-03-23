@@ -5,10 +5,22 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
-// empty list of default variables for a node
-const QStringList QUaNode::DefaultProperties = QStringList();
+const QStringList QUaNode::mandatoryChildrenBrowseNames()
+{
+	return QStringList();
+}
 
-QUaNode::QUaNode(QUaServer *server)
+const QStringList QUaNode::optionalChildrenBrowseNames()
+{
+	return QStringList();
+}
+
+
+//QUaNode::QUaNode(QUaServer *server)
+QUaNode::QUaNode(
+	QUaServer* server, 
+	const MC & mandatoryChildren
+)
 {
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
 	//          the constructor is called automagically by this library, and m_newNodeNodeId and
@@ -17,6 +29,9 @@ QUaNode::QUaNode(QUaServer *server)
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
 	Q_CHECK_PTR(server->m_newNodeMetaObject);
+	// NOTE : thes ecan be nullptr because during deserialization we bind children manually
+	//Q_CHECK_PTR(server->m_newNodeMandatoryChildren);
+	//Q_CHECK_PTR(server->m_newNodeOptionalChildren);
 	const UA_NodeId   &nodeId     = *server->m_newNodeNodeId;
 	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
 	// check
@@ -32,14 +47,14 @@ QUaNode::QUaNode(QUaServer *server)
 	// ignore objects folder
 	UA_NodeId objectsFolderNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
 	if (UA_NodeId_equal(&nodeId, &objectsFolderNodeId))
-	{
-		return;
+	{ 
+		return; 
 	}
 	// get all UA children in advance, because if none, then better early exit
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(nodeId, server);
 	if (chidrenNodeIds.count() <= 0)
-	{
-		return;
+	{ 
+		return; 
 	}
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
 	QHash<QString, UA_NodeId> mapChildren;
@@ -63,21 +78,16 @@ QUaNode::QUaNode(QUaServer *server)
 		{
 			// check if available in meta-system
 			if (!QMetaType::metaObjectForType(metaProperty.userType()))
-			{
-				continue;
-			}
+			{ continue; }
 			// check if OPC UA relevant type
 			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaProperty.userType());
 			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
-			{
-				continue;
-			}
+			{ continue; }
 			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QOpcUaServerNodeFactory", "Qt MetaProperty type cannot inherit from Class.");
+			Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QUaNode Constructor", 
+				"Qt MetaProperty type cannot inherit from Class.");
 			if (propMetaObject.inherits(&metaObject))
-			{
-				continue;
-			}
+			{ continue; }
 		}
 		// inc number of valid props
 		numProps++;
@@ -95,39 +105,47 @@ QUaNode::QUaNode(QUaServer *server)
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to query children by object name
-	} // for props
-	// handle events
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// handle variables of known types defined in the standard (not custom types)
-	auto listDefaultProps = server->m_newEventDefaultProperties;
-	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	} // for each prop
+	// handle mandatory children of instance declarations
+	auto mandatoryList = mandatoryChildren();
+	for (int i = 0; i < mandatoryList.count(); i++)
 	{
-		for (int i = 0; i < listDefaultProps->count(); i++)
-		{
-			QString strBrowseName = listDefaultProps->at(i);
-			Q_ASSERT(mapChildren.contains(strBrowseName));
-			// get child nodeId for child
-			auto childNodeId = mapChildren.take(strBrowseName);
-			// get node context (C++ instance)
-			auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
-			Q_CHECK_PTR(nodeInstance);
-			// assign C++ parent
-			nodeInstance->setParent(this);
-			nodeInstance->setObjectName(strBrowseName);
-		}
-		Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Event children not bound properly.");
-		return;
+		QString strBrowseName = mandatoryList.at(i);
+		Q_ASSERT(mapChildren.contains(strBrowseName));
+		// get child nodeId for child
+		auto childNodeId = mapChildren.take(strBrowseName);
+		// get node context (C++ instance)
+		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+		Q_CHECK_PTR(nodeInstance);
+		// assign C++ parent
+		nodeInstance->setParent(this);
+		nodeInstance->setObjectName(strBrowseName);
 	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	//// handle optional children of instance declarations
+	//auto optionalList = optionalChildren();
+	//for (int i = 0; i < optionalList.count(); i++)
+	//{
+	//	QString strBrowseName = optionalList.at(i);
+	//	if (!mapChildren.contains(strBrowseName))
+	//	{
+	//		continue;
+	//	}
+	//	// get child nodeId for child
+	//	auto childNodeId = mapChildren.take(strBrowseName);
+	//	// get node context (C++ instance)
+	//	auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+	//	Q_CHECK_PTR(nodeInstance);
+	//	// assign C++ parent
+	//	nodeInstance->setParent(this);
+	//	nodeInstance->setObjectName(strBrowseName);
+	//}
+	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
+	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
 	// cleanup
 	for (int i = 0; i < chidrenNodeIds.count(); i++)
 	{
 		UA_NodeId_clear(&chidrenNodeIds[i]);
 	}
-	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
-	Q_ASSERT_X(mapChildren.count()      == 0        &&
-		       chidrenNodeIds.count()   == numProps &&
-		       this->children().count() == numProps, "QUaNode::QUaNode", "Children not bound properly.");
 }
 
 QUaNode::~QUaNode()
@@ -887,6 +905,11 @@ bool QUaNode::userExecutable(const QString & strUserName)
 	}
 	// else allow
 	return true;
+}
+
+QString QUaNode::className() const
+{
+	return QString(this->metaObject()->className());
 }
 
 // NOTE : need to cleanup result after calling this method

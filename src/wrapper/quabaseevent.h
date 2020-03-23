@@ -40,7 +40,10 @@ friend class QUaBaseObject;
 
 public:
 	// NOTE : Q_INVOKABLE removed on purpose because this class should not be instantiable
-	explicit QUaBaseEvent(QUaServer *server);
+	explicit QUaBaseEvent(
+		QUaServer *server,
+		const MC& mandatoryChildren = &QUaBaseEvent::mandatoryChildrenBrowseNames
+	);
 
 	// Event Properties API
 
@@ -78,8 +81,10 @@ public:
 	// Triggers the event and updates eventId, sourceNode, eventType and receiveTime
 	void trigger();
 
-	// This is used in QUaNode constructor to add event properties defined in standard as children QObjects
-	static const QStringList DefaultProperties;
+protected:
+	// list for known children (standard instance declarations)
+	static const QStringList mandatoryChildrenBrowseNames();
+	static const QStringList optionalChildrenBrowseNames ();
 
 private:
 	// ByteString : 

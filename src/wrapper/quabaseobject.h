@@ -47,7 +47,10 @@ class QUaBaseObject : public QUaNode
 friend class QUaServer;
 
 public:
-	Q_INVOKABLE explicit QUaBaseObject(QUaServer *server);
+	Q_INVOKABLE explicit QUaBaseObject(
+		QUaServer *server,
+		const MC& mandatoryChildren = &QUaBaseObject::mandatoryChildrenBrowseNames
+	);
 
 	// Attributes API
 

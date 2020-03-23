@@ -25,15 +25,18 @@ class QUaGeneralModelChangeEvent : public QUaBaseEvent
 friend class QUaServer;
 
 public:
-	Q_INVOKABLE explicit QUaGeneralModelChangeEvent(QUaServer *server);
+	Q_INVOKABLE explicit QUaGeneralModelChangeEvent(
+		QUaServer *server,
+		const MC& mandatoryChildren = &QUaGeneralModelChangeEvent::mandatoryChildrenBrowseNames
+	);
 
 
 	QUaChangesList changes() const;
 	void           setChanges(const QUaChangesList &listVerbs);
 
-	// This is used in QUaServer::createEvent and QUaNode constructor to 
-	// add event properties defined in standard as children QObjects
-	static const QStringList DefaultProperties;
+protected:
+	// list for known children (standard instance declarations)
+	static const QStringList mandatoryChildrenBrowseNames();
 
 private:
 	// ChangeStructureDataType (PArt 5 - 11.14) : UA_ModelChangeStructureDataType

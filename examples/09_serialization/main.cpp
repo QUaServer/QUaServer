@@ -47,14 +47,14 @@ void setupDefaultAddressSpace(QUaServer &server)
 	objSubSubBase->setDisplayName("my_subsub_object");
 
 	// create some instances of custom type
-	auto sensor1 = objSubSubBase->addChild<TemperatureSensor>();
+	auto sensor1 = objSubSubBase->addChild<TemperatureSensor>("ns=1;s=sensor1");
 	sensor1->setDisplayName("Sensor1");
 	sensor1->setBrowseName("Sensor1");
-	auto sensor2 = objSubSubBase->addChild<TemperatureSensor>();
+	auto sensor2 = objSubSubBase->addChild<TemperatureSensor>("ns=1;s=sensor2");
 	sensor2->setDisplayName("Sensor2");
 	sensor2->setBrowseName("Sensor2");
 	sensor2->turnOn();
-	auto sensor3 = objSubSubBase->addChild<TemperatureSensor>();
+	auto sensor3 = objSubSubBase->addChild<TemperatureSensor>("ns=1;s=sensor3");
 	sensor3->setDisplayName("Sensor3");
 	sensor3->setBrowseName("Sensor3");
 	sensor3->currentValue()->setValue(1.2345);

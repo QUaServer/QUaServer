@@ -329,12 +329,21 @@ class QUaNode : public QObject
 		Q_PROPERTY(QString nodeId     READ nodeId)
 		Q_PROPERTY(QString nodeClass  READ nodeClass)
 
-		// Other
+		// Other Properties
 
 		Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
 
+protected:
+	// list for known children (standard instance declarations)
+	static const QStringList mandatoryChildrenBrowseNames();
+	static const QStringList optionalChildrenBrowseNames ();
+
 public:
-	explicit QUaNode(QUaServer* server);
+	typedef decltype(&QUaNode::mandatoryChildrenBrowseNames) MC;
+	explicit QUaNode(
+		QUaServer* server, 
+		const MC &mandatoryChildren = &QUaNode::mandatoryChildrenBrowseNames
+	);
 
 	// Virtual destructor is necessary to call derived class destructor when delete is called on pointer to base class
 	// this can be useful when the library must delete a node because it was requested through the network
@@ -447,6 +456,8 @@ public:
 
 	// Serialization API
 
+	QString className() const;
+
 	// T must implement:
 	// bool T::writeInstance(
 	// 	const QString& nodeId,
@@ -474,36 +485,7 @@ public:
 	template<typename T>
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
-	// list for known (62541 standard) types, empty by default, overwrite for subtypes
-	static const QStringList DefaultProperties;
 
-	// to check if has default props static member
-	template <typename T, typename = void>
-	struct HasStaticDefaultProperties
-		: std::false_type
-	{};
-
-	template <typename T>
-	struct HasStaticDefaultProperties<T,
-		typename std::enable_if<std::is_same<decltype(T::DefaultProperties), const QStringList>::value>::type>
-		: std::true_type
-	{};
-
-	template<typename T>
-	inline static
-	typename std::enable_if<HasStaticDefaultProperties<T>::value, const QStringList*>::type
-	getDefaultPropertiesRef()
-	{
-		return &(T::DefaultProperties);
-	}
-
-	template<typename T>
-	inline static
-	typename std::enable_if<!HasStaticDefaultProperties<T>::value, const QStringList*>::type
-	getDefaultPropertiesRef()
-	{
-		return &(QUaNode::DefaultProperties);
-	}
 
 signals:
 

@@ -432,13 +432,18 @@ private:
 	void addMetaProperties(const QMetaObject &parentMetaObject);
 	void addMetaMethods   (const QMetaObject &parentMetaObject);
 
-	UA_NodeId createInstance(const QMetaObject &metaObject, QUaNode * parentNode, const QString &strNodeId = "");
+	UA_NodeId createInstanceInternal(
+        const QMetaObject &metaObject, 
+        QUaNode * parentNode, 
+        const QString &strNodeId
+    );
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 	// create instance of a given event type
-	UA_NodeId createEvent(const QMetaObject &metaObject, const UA_NodeId &nodeIdOriginator, const QStringList * defaultProperties);
-
+	UA_NodeId createEventInternal(
+        const QMetaObject &metaObject, 
+        const UA_NodeId &nodeIdOriginator
+    );
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	void bindCppInstanceWithUaNode(QUaNode * nodeInstance, UA_NodeId &nodeId);
@@ -550,7 +555,6 @@ private:
 	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent 
     //        and used in QUaBaseEvent::QUaBaseEvent
 	const UA_NodeId   * m_newEventOriginatorNodeId;
-	const QStringList * m_newEventDefaultProperties;
 };
 
 template<typename T>
@@ -599,8 +603,9 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 template<typename T>
 inline void QUaServer::registerSpecificationType(const UA_NodeId& nodeId, const bool abstract/* = false*/)
 {
-    m_mapTypes.insert(QString(T::staticMetaObject.className()), nodeId);
-    m_hashMetaObjects.insert(QString(T::staticMetaObject.className()), T::staticMetaObject);
+    auto& metaObject = T::staticMetaObject;
+    m_mapTypes.insert(QString(metaObject.className()), nodeId);
+    m_hashMetaObjects.insert(QString(metaObject.className()), metaObject);
     if (abstract)
     {
         return;
@@ -608,10 +613,10 @@ inline void QUaServer::registerSpecificationType(const UA_NodeId& nodeId, const 
     // set node context only if instatiable
     auto st = UA_Server_setNodeContext(m_server, nodeId, (void*)this);
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
-    // TODO : maybe need to move QUaServer::registerTypeLifeCycle and
-    //        QUaServer::uaConstructor to templated versions to support
-    //        reading 
-    this->registerTypeLifeCycle(nodeId, T::staticMetaObject);
+    // NOTE : cannot move all the registering stuff to templated versions
+    //        because we need recursive upstream regitration to base classes
+    //        in order to maintain a simple to use API
+    this->registerTypeLifeCycle(nodeId, metaObject);
 }
 
 template<typename T, typename M>
@@ -664,7 +669,11 @@ template<typename T>
 inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNodeId/* = ""*/)
 {
 	// instantiate first in OPC UA
-	UA_NodeId newInstanceNodeId = this->createInstance(T::staticMetaObject, parentNode, strNodeId);
+	UA_NodeId newInstanceNodeId = this->createInstanceInternal(
+        T::staticMetaObject, 
+        parentNode, 
+        strNodeId
+    );
 	if (UA_NodeId_isNull(&newInstanceNodeId))
 	{
 		UA_NodeId_clear(&newInstanceNodeId);
@@ -680,17 +689,13 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 }
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 template<typename T>
 inline T * QUaServer::createEvent()
 {
-	const QStringList * defaultProperties = QUaNode::getDefaultPropertiesRef<T>();
-	Q_ASSERT(defaultProperties);
 	// instantiate first in OPC UA
-	UA_NodeId newEventNodeId = this->createEvent(
+	UA_NodeId newEventNodeId = this->createEventInternal(
         T::staticMetaObject, 
-        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER),
-        defaultProperties
+        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)
     );
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
@@ -703,7 +708,6 @@ inline T * QUaServer::createEvent()
 	// return c++ event instance
 	return newEvent;
 }
-
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 template<typename T>
@@ -792,7 +796,7 @@ inline bool QUaNode::serializeInternal(T& serializer, QQueue<QUaLog> &logOut)
 {
     if(!serializer.writeInstance(
         this->nodeId(),
-        this->metaObject()->className(),
+        this->className(),
         this->serializeAttrs(),
         this->serializeRefs(),
         logOut
@@ -821,7 +825,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     {
         return false;
     }
-    QString typeName = this->metaObject()->className();
+    QString typeName = this->className();
     QMap<QString, QVariant> attrs;
     QList<QUaForwardReference> forwardRefs;
     if (!deserializer.readInstance(
@@ -944,7 +948,7 @@ inline bool QUaNode::deserializeInternal(
             nonHierRefs[this] << forwRef;
             continue;
         }
-        // validate ref typeName
+        // validate ref child typeName
         QString typeName = forwRef.targetType;
         if (!this->server()->isMetaObjectRegistered(typeName))
         {
@@ -957,7 +961,7 @@ inline bool QUaNode::deserializeInternal(
             });
             continue;
         }
-        // deserialize hierarchical ref
+        // deserialize hierarchical ref child
         QMap<QString, QVariant> attrs;
         QList<QUaForwardReference> forwardRefs;
         if (!deserializer.readInstance(
@@ -971,39 +975,8 @@ inline bool QUaNode::deserializeInternal(
             // stop deserializing
             return false;
         }
-        // check if already exists by node id
-        if (mapExistingChildren.contains(forwRef.targetNodeId))
-        {
-            QUaNode* instance = mapExistingChildren.take(forwRef.targetNodeId);
-            // remove from existingChildren to mark it as deserialized
-            existingChildren.removeOne(instance);
-            // deserialize (recursive)
-            bool ok = instance->deserializeInternal<T>(
-                deserializer,
-                attrs,
-                forwardRefs,
-                nonHierRefs,
-                logOut,
-                instance == m_qUaServer->objectsFolder()
-                );
-            if (!ok)
-            {
-                return ok;
-            }
-            // continue
-            continue;
-        }
-        // check if already exists by browse name
-        if (!attrs.contains("browseName") || attrs.value("browseName").toString().isEmpty())
-        {
-            logOut.enqueue({
-                tr("Deserialized node %1 does not contain browseName attribute. Creating new instance.")
-                    .arg(forwRef.targetNodeId),
-                QUaLogLevel::Warning,
-                QUaLogCategory::Serialization
-            });
-        }
-        else
+        // check if ref child already exists by browse name
+        if (attrs.contains("browseName") && !attrs.value("browseName").toString().isEmpty())
         {
             QString strBrowseName = attrs.value("browseName").toString();
             auto existingBrowseName = this->browseChildren(strBrowseName);
@@ -1025,28 +998,73 @@ inline bool QUaNode::deserializeInternal(
                     if (existingBrowseName.count() == 0)
                     {
                         logOut.enqueue({
-                        tr("All children of %1 with browseName %2 have been deserialized. Ignoring deserialization of forward reference to %3.")
+                        tr("All children of %1 with browseName %2 have been deserialized. "
+                        "Ignoring deserialization of forward reference to %3 (type %4).")
                                 .arg(this->nodeId())
                                 .arg(strBrowseName)
-                                .arg(forwRef.targetNodeId),
+                                .arg(forwRef.targetNodeId)
+                                .arg(forwRef.targetType),
                             QUaLogLevel::Error,
                             QUaLogCategory::Serialization
                         });
                         continue;
                     }
                     instance = existingBrowseName.takeFirst();
-                    logOut.enqueue({
-                        tr("Node %1 contains more than one children with the same browseName attribute %2. Deserializing over instance with node id %3.")
-                            .arg(this->nodeId())
-                            .arg(strBrowseName)
-                            .arg(instance->nodeId()),
-                        QUaLogLevel::Warning,
-                        QUaLogCategory::Serialization
-                    });
+                    // get the first one with the same type
+                    while (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0 &&
+                        existingBrowseName.count() > 0)
+                    {
+                        instance = existingBrowseName.takeFirst();
+                    }
+                    if (existingBrowseName.count() == 0 && 
+                        instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
+                    {
+                        qDebug() << instance->className();
+                        logOut.enqueue({
+                        tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
+                        "Ignoring deserialization of forward reference to %4.")
+                                .arg(this->nodeId())
+                                .arg(strBrowseName)
+                                .arg(forwRef.targetType)
+                                .arg(forwRef.targetNodeId),
+                            QUaLogLevel::Error,
+                            QUaLogCategory::Serialization
+                        });
+                        continue;
+                    }
+                    if (existingBrowseName.count() > 0)
+                    {
+                        logOut.enqueue({
+                            tr("Node %1 contains more than one children with the same browseName attribute %2 and type %3. "
+                            "Deserializing over instance with node id %4.")
+                                .arg(this->nodeId())
+                                .arg(strBrowseName)
+                                .arg(forwRef.targetType)
+                                .arg(instance->nodeId()),
+                            QUaLogLevel::Warning,
+                            QUaLogCategory::Serialization
+                        });
+                    }
                 }
                 else
                 {
+                    // get only child instance with matching browse name
                     instance = existingBrowseName.takeFirst();
+                    if (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
+                    {
+                        qDebug() << instance->className();
+                        logOut.enqueue({
+                        tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
+                        "Ignoring deserialization of forward reference to %4.")
+                                .arg(this->nodeId())
+                                .arg(strBrowseName)
+                                .arg(forwRef.targetType)
+                                .arg(forwRef.targetNodeId),
+                            QUaLogLevel::Error,
+                            QUaLogCategory::Serialization
+                        });
+                        continue;
+                    }
                 }
                 // remove from existingChildren to mark it as deserialized
                 existingChildren.removeOne(instance);
@@ -1058,31 +1076,62 @@ inline bool QUaNode::deserializeInternal(
                     nonHierRefs,
                     logOut,
                     instance == m_qUaServer->objectsFolder()
-                    );
+                );
                 if (!ok)
                 {
                     return ok;
                 }
-                // continue
+                // continue next ref child
                 continue;
             }
-        }
-        // before creating new, check node id does not exist
-        if (this->server()->nodeById(forwRef.targetNodeId))
+        } // end by browse name
+        // check if child already exists by node id and type matches
+        if (mapExistingChildren.contains(forwRef.targetNodeId) &&
+            mapExistingChildren[forwRef.targetNodeId]->className().compare(forwRef.targetType, Qt::CaseSensitive) == 0)
+        {
+            QUaNode* instance = mapExistingChildren.take(forwRef.targetNodeId);
+            // remove from existingChildren to mark it as deserialized
+            existingChildren.removeOne(instance);
+            // deserialize (recursive)
+            bool ok = instance->deserializeInternal<T>(
+                deserializer,
+                attrs,
+                forwardRefs,
+                nonHierRefs,
+                logOut,
+                instance == m_qUaServer->objectsFolder()
+            );
+            if (!ok)
+            {
+                return ok;
+            }
+            // continue next ref child
+            continue;
+        } // end by node id
+        // no existing children matched by browse name nor by node id and type
+        // so we must create a new one but before, check node id does not exist
+        QString strTargetNodeId = forwRef.targetNodeId;
+        if (this->server()->nodeById(strTargetNodeId))
         {
             logOut.enqueue({
-                tr("Cannot instantiate forward reference of %1 because node id %2 already exists elsewhere in server. Ignoring.")
+                tr("Forward reference of %1 with node id %2 (type %3) already exists elsewhere in server. Instantiating with random node id.")
                         .arg(this->nodeId())
-                        .arg(forwRef.targetNodeId),
-                    QUaLogLevel::Error,
+                        .arg(strTargetNodeId)
+                        .arg(forwRef.targetType),
+                    QUaLogLevel::Warning,
                     QUaLogCategory::Serialization
             });
-            continue;
+            // empty node id means use random node id
+            strTargetNodeId.clear();
         }
         // to create new first get metaobject
         QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
         // instantiate first in OPC UA
-        UA_NodeId newInstanceNodeId = this->server()->createInstance(metaObject, this, forwRef.targetNodeId);
+        UA_NodeId newInstanceNodeId = this->server()->createInstanceInternal(
+            metaObject, 
+            this, 
+            strTargetNodeId
+        );
         if (UA_NodeId_isNull(&newInstanceNodeId))
         {
             UA_NodeId_clear(&newInstanceNodeId);
@@ -1107,7 +1156,7 @@ inline bool QUaNode::deserializeInternal(
             nonHierRefs,
             logOut,
             instance == m_qUaServer->objectsFolder()
-            );
+        );
         if (!ok)
         {
             return ok;
@@ -1138,10 +1187,11 @@ inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
 template<typename T>
 inline T * QUaBaseObject::createEvent()
 {
-    const QStringList * defaultProperties = QUaNode::getDefaultPropertiesRef<T>();
-    Q_ASSERT(defaultProperties);
     // instantiate first in OPC UA
-    UA_NodeId newEventNodeId = m_qUaServer->createEvent(T::staticMetaObject, m_nodeId, defaultProperties);
+    UA_NodeId newEventNodeId = m_qUaServer->createEventInternal(
+        T::staticMetaObject, 
+        m_nodeId
+    );
     if (UA_NodeId_isNull(&newEventNodeId))
     {
         return nullptr;

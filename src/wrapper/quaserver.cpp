@@ -78,7 +78,6 @@ void QUaServer::uaDestructor(UA_Server       * server,
 		return;
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 	// if convertible could mean:
 	// 1) this is a child of a node being deleted programatically 
 	//    this one does not require to call C++ delete because Qt will take care of it
@@ -134,7 +133,8 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// ignore if new instance is due to new type registration
 		UA_Server_readNodeClass(server->m_server, topBoundParentNodeId, &outNodeClass);
-		Q_ASSERT_X(outNodeClass != UA_NODECLASS_UNSPECIFIED, "QUaServer::uaConstructor", "Something went wrong while getting parent info.");
+		Q_ASSERT_X(outNodeClass != UA_NODECLASS_UNSPECIFIED, "QUaServer::uaConstructor", 
+			"Something went wrong while getting parent info.");
 		if(outNodeClass != UA_NODECLASS_OBJECT && outNodeClass != UA_NODECLASS_VARIABLE)
 		{
 			UA_NodeId_clear(&topBoundParentNodeId);
@@ -155,16 +155,21 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 			break;
 		}
 	}
-	// create new instance (and bind it to UA, in base types happens in constructor, in derived class is done by QOpcUaServerNodeFactory)
-	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server) found.");
-	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer reference
-	//        we temporarily store in the QUaServer reference the UA_NodeId and QMetaObject values needed to
-	//        instantiate the new node.
+	// create new instance (and bind it to UA, in base types happens in constructor, 
+	// in derived class is done by QOpcUaServerNodeFactory)
+	Q_ASSERT_X(metaObject.constructorCount() > 0, "QUaServer::uaConstructor", 
+		"Failed instantiation. No matching Q_INVOKABLE constructor with signature "
+		"CONSTRUCTOR(QUaServer *server) found.");
+	// NOTE : to simplify user API, we minimize QUaNode arguments to just a QUaServer 
+	// reference we temporarily store in the QUaServer reference the UA_NodeId and 
+	// QMetaObject values needed to instantiate the new node.
 	server->m_newNodeNodeId     = nodeId;
 	server->m_newNodeMetaObject = &metaObject;
 	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
 	auto * pQObject = metaObject.newInstance(Q_ARG(QUaServer*, server));
-	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", "Failed instantiation. No matching Q_INVOKABLE constructor with signature CONSTRUCTOR(QUaServer *server) found.");
+	Q_ASSERT_X(pQObject, "QUaServer::uaConstructor", 
+		"Failed instantiation. No matching Q_INVOKABLE constructor with signature "
+		"CONSTRUCTOR(QUaServer *server) found.");
 	auto* newInstance = qobject_cast<QUaNode*>(pQObject);
 	Q_CHECK_PTR(newInstance);
 	if (!newInstance)
@@ -1874,10 +1879,11 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 	}
 }
 
-UA_NodeId QUaServer::createInstance(
-	const QMetaObject& metaObject, 
-	QUaNode* parentNode, 
-	const QString& strNodeId/* = ""*/)
+UA_NodeId QUaServer::createInstanceInternal(
+	const QMetaObject& metaObject,
+	QUaNode* parentNode,
+	const QString& strNodeId
+)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
@@ -1930,9 +1936,12 @@ UA_NodeId QUaServer::createInstance(
 		UA_QualifiedName_clear(&browseName);
 		return UA_NODEID_NULL;
 	}
-	// check if variable or object
-	// NOTE : a type is considered to inherit itself (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
+	// NOTE : calling UA_Server_addXXX below will trigger QUaServer::uaConstructor
+	// which will instantiate the respective Qt instance and binding
 	UA_NodeId nodeIdNewInstance;
+	// check if variable or object 
+	// NOTE : a type is considered to inherit itself 
+	// (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
 		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
@@ -1994,10 +2003,9 @@ UA_NodeId QUaServer::createInstance(
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_NodeId QUaServer::createEvent(
+UA_NodeId QUaServer::createEventInternal(
 	const QMetaObject& metaObject, 
-	const UA_NodeId& nodeIdOriginator, 
-	const QStringList* defaultProperties)
+	const UA_NodeId& nodeIdOriginator)
 {
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
@@ -2017,7 +2025,6 @@ UA_NodeId QUaServer::createEvent(
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
 	// set originator node id temporarily
 	m_newEventOriginatorNodeId = &nodeIdOriginator;
-	m_newEventDefaultProperties = defaultProperties;
 	// create event instance
 	UA_NodeId nodeIdNewEvent;
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);

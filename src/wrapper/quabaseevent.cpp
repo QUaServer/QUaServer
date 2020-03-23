@@ -4,19 +4,29 @@
 
 #include <QUaServer>
 
-const QStringList QUaBaseEvent::DefaultProperties = QStringList()
-<< "EventId"
-<< "EventType"
-<< "SourceNode"
-<< "SourceName"
-<< "Time"
-<< "ReceiveTime"
-//<< "LocalTime" // NOTE : removed because is optional and open62541 now does not add it
-<< "Message"
-<< "Severity";
+const QStringList QUaBaseEvent::mandatoryChildrenBrowseNames()
+{
+	return QUaBaseObject::mandatoryChildrenBrowseNames() + QStringList()
+		<< "EventId"
+		<< "EventType"
+		<< "SourceNode"
+		<< "SourceName"
+		<< "Time"
+		<< "ReceiveTime"
+		<< "Message"
+		<< "Severity";
+}
 
-QUaBaseEvent::QUaBaseEvent(QUaServer *server)
-	: QUaBaseObject(server)
+const QStringList QUaBaseEvent::optionalChildrenBrowseNames()
+{
+	return QUaBaseObject::optionalChildrenBrowseNames() + QStringList()
+		<< "LocalTime";
+}
+
+QUaBaseEvent::QUaBaseEvent(
+	QUaServer *server,
+	const MC& mandatoryChildren
+) : QUaBaseObject(server, mandatoryChildren)
 {
 	// copy temp originator nodeId, this was user can trigger the event in its derived class constructor
 	m_nodeIdOriginator = *server->m_newEventOriginatorNodeId;
