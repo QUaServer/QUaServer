@@ -465,6 +465,12 @@ void QUaServer::newSession(QUaServer* server,
 	QString strAddress;
 	quint16 intPort;
 	// get connection reference from channel
+	// NOTE : when pausing the application on a breakpoint,
+	// below condition is true and can crash the session
+	if (!session->header.channel)
+	{
+		return;
+	}
 	UA_Connection* connection = session->header.channel->connection;
 	// get peer name (address) from socket fd
 	auto sockFd = connection->sockfd;

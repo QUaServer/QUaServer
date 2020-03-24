@@ -302,7 +302,8 @@ QDateTime QUaBaseVariable::sourceTimestamp() const
 		UA_TIMESTAMPSTORETURN_SOURCE
 	);
 	QDateTime time = QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&value.sourceTimestamp);
-	// TODO : clean?
+	// clean up
+	UA_DataValue_clear(&value);
 	return time;
 }
 
@@ -337,10 +338,15 @@ void QUaBaseVariable::setSourceTimestamp(const QDateTime& sourceTimestamp)
 	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
 	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
 	wv.value.status               = value.status;
-	wv.value.hasStatus            = value.status;
+	// NOTE : alternate hasStatus value to force notifying timestamp change
+	// otherwise change is not sent to clients through subscription
+	wv.value.hasStatus            = !value.hasStatus;
 	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// clean up
+	UA_DataValue_clear(&value);
+	UA_WriteValue_clear(&wv);
 }
 
 QDateTime QUaBaseVariable::serverTimestamp() const
@@ -355,7 +361,8 @@ QDateTime QUaBaseVariable::serverTimestamp() const
 		UA_TIMESTAMPSTORETURN_SERVER
 	);
 	QDateTime time = QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&value.serverTimestamp);
-	// TODO : clean?
+	// clean up
+	UA_DataValue_clear(&value);
 	return time;
 }
 
@@ -390,10 +397,15 @@ void QUaBaseVariable::setServerTimestamp(const QDateTime& serverTimestamp)
 	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
 	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
 	wv.value.status               = value.status;
-	wv.value.hasStatus            = value.status;
+	// NOTE : alternate hasStatus value to force notifying timestamp change
+	// otherwise change is not sent to clients through subscription
+	wv.value.hasStatus            = !value.hasStatus;
 	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// clean up
+	UA_DataValue_clear(&value);
+	UA_WriteValue_clear(&wv);
 }
 
 QMetaType::Type QUaBaseVariable::dataType() const
@@ -637,7 +649,8 @@ UA_StatusCode QUaBaseVariable::setValueInternal(
 	wv.value.status    = status;
 	wv.value.hasStatus = true;
 	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
-	// TODO : cleanup wv ?
+	// NOTE : do not clean up, this is done by calling methods over the UA_Variant
+	//UA_WriteValue_clear(&wv);
 	return st;
 }
 
