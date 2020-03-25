@@ -9,8 +9,8 @@
 
 // Part 5 - 6.4 : BaseEventType
 /*
-This EventType is defined in Part 3 (see Part 3 - 4.6 : Event Model). Its representation in the AddressSpace is formally
-defined in Table 23 (of Part 5).
+This EventType is defined in Part 3 (see Part 3 - 4.6 : Event Model). 
+
 HasProperty | Variable | EventId     | ByteString       | PropertyType | Mandatory
 HasProperty | Variable | EventType   | NodeId           | PropertyType | Mandatory
 HasProperty | Variable | SourceNode  | NodeId           | PropertyType | Mandatory
@@ -67,8 +67,7 @@ public:
 	// Time (in UTC) the OPC UA Server received the Event from the underlying device of another Server (ServerTimestamp).
 	QDateTime receiveTime() const;
 
-	// NOTE : this property is optional, 
-	//        it is not created until one of these methods is called
+	// NOTE : optional; not created until one of these methods is called
 	// TimeZone of the time the Event occurred.
 	QTimeZone localTime() const;
 	void setLocalTime(const QTimeZone &localTimeZone);

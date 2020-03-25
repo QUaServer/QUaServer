@@ -1,5 +1,7 @@
 #include "quaconditionvariable.h"
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #include <QUaProperty>
 
 const QStringList QUaConditionVariable::mandatoryChildrenBrowseNames()
@@ -52,3 +54,5 @@ QUaProperty* QUaConditionVariable::getSourceTimestamp()
 {
 	return this->findChild<QUaProperty*>("SourceTimestamp");
 }
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

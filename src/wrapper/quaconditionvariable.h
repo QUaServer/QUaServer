@@ -3,6 +3,8 @@
 
 #include <QUaBaseDataVariable>
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 class QUaProperty;
 
 // Part 9 - 5.3 : ConditionVariableType
@@ -10,6 +12,8 @@ class QUaProperty;
 Various information elements of a Condition are not considered to be states. However, a change
 in their value is considered important and supposed to trigger an Event Notification. These
 information elements are called ConditionVariable.
+
+HasProperty | Variable | SourceTimestamp | UtcTime | PropertyType | Mandatory
 
 */
 
@@ -27,12 +31,16 @@ public:
 		const MC& mandatoryChildren = &QUaConditionVariable::mandatoryChildrenBrowseNames
 	);
 
+	// value : data type is BaseDataType (anything)
+
 	void setValue(
 		const QVariant        &value, 
 		const QDateTime       &sourceTimestamp = QDateTime(),
 		const QDateTime       &serverTimestamp = QDateTime(),
 		const QMetaType::Type &newType         = QMetaType::UnknownType
 	) override;
+
+	// children
 
 	// The time of the last change of the Value of this ConditionVariable
 	// It shall be the same time that would be returned from the Read Service inside the DataValue
@@ -47,6 +55,8 @@ private:
 	QUaProperty* getSourceTimestamp();
 
 };
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #endif // QUACONDITIONVARIABLE_H
 

@@ -15,7 +15,6 @@ const QStringList QUaBaseEvent::mandatoryChildrenBrowseNames()
 		<< "ReceiveTime"
 		<< "Message"
 		<< "Severity";
-	// TODO : "LocalTime" optional
 }
 
 QUaBaseEvent::QUaBaseEvent(

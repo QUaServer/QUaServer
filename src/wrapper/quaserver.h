@@ -19,8 +19,8 @@
 #endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #include <QUaConditionVariable>
-//#include <QUaStateVariable>
-//#include <QUaTwoStateVariable>
+#include <QUaStateVariable>
+#include <QUaTwoStateVariable>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 // Enum Stuff
@@ -144,6 +144,10 @@ class QUaServer : public QObject
 #ifdef UA_ENABLE_HISTORIZING
     friend class QUaHistoryBackend;
 #endif // UA_ENABLE_HISTORIZING
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    friend class QUaStateVariable;
+    friend class QUaTwoStateVariable;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 	Q_OBJECT
 
@@ -385,6 +389,8 @@ private:
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
+    static QHash<QString  , const void * > m_hashDefAttrs;
+
 	QUaValidationCallback m_validationCallback;
 
 	// change event instance to notify client when nodes added or removed

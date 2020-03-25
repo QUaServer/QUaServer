@@ -445,7 +445,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	// early exit if already same
 	if (dataType == m_dataType)
 	{
-
+		return;
 	}
 	// need to "reset" dataType before setting a new value
 	auto st = UA_Server_writeDataType(m_qUaServer->m_server,

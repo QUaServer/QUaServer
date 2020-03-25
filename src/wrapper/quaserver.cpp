@@ -5,6 +5,8 @@
 
 #define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
+QHash<QString, const void*> QUaServer::m_hashDefAttrs;
+
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
 	                                   void            * sessionContext, 
@@ -931,6 +933,8 @@ void QUaServer::setupServer()
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
+	this->registerSpecificationType<QUaStateVariable    >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE    ));
+	this->registerSpecificationType<QUaTwoStateVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE ));
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -1310,15 +1314,18 @@ void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNo
 	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QUaServer::registerType", "Base object type not registered.");
 	// check if requested node id defined
 	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	// check if requested node id exists
-	UA_NodeId outNodeId;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
-	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerType", "Requested NodeId already exists");
-	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	UA_NodeId reqNodeId = UA_NODEID_NULL;
+	if (!strReqNodeId.isEmpty())
 	{
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		return;
+		// check if requested node id exists
+		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		Q_ASSERT_X(!isUsed, "QUaServer::registerType", "Requested NodeId already exists");
+		if (isUsed)
+		{
+			UA_QualifiedName_clear(&browseName);
+			return;
+		}
+		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// check if variable or object
 	if (metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
@@ -1943,7 +1950,6 @@ UA_NodeId QUaServer::createInstanceInternal(
 		Q_ASSERT_X(!isUsed, "QUaServer::createInstance", "Requested NodeId already exists");
 		if (isUsed)
 		{
-			UA_NodeId_clear(&reqNodeId);
 			UA_QualifiedName_clear(&browseName);
 			return UA_NODEID_NULL;
 		}
@@ -1957,10 +1963,18 @@ UA_NodeId QUaServer::createInstanceInternal(
 	// (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
-		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
-		// [NOTE] do not set rank or arrayDimensions because they are permanent
-		//        is better to just set array dimensions on Variant value and leave rank as ANY
-		vAttr.valueRank = UA_VALUERANK_ANY;
+		// some types require special attrs because open62541 checks them
+		UA_VariableAttributes vAttr;
+		if (QUaServer::m_hashDefAttrs.contains(strClassName))
+		{
+			vAttr = *(static_cast<const UA_VariableAttributes*>(
+				QUaServer::m_hashDefAttrs[strClassName]
+			));
+		}
+		else
+		{
+			vAttr = UA_VariableAttributes_default;
+		}
 		// add variable
 		auto st = UA_Server_addVariableNode(m_server,
 			reqNodeId,            // requested nodeId
@@ -1978,7 +1992,18 @@ UA_NodeId QUaServer::createInstanceInternal(
 	{
 		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 			metaObject.className() == QUaBaseObject::staticMetaObject.className());
-		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+		// some types require special attrs because open62541 checks them
+		UA_ObjectAttributes oAttr;
+		if (QUaServer::m_hashDefAttrs.contains(strClassName))
+		{
+			oAttr = *(static_cast<const UA_ObjectAttributes*>(
+				QUaServer::m_hashDefAttrs[strClassName]
+				));
+		}
+		else
+		{
+			oAttr = UA_ObjectAttributes_default;
+		}
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
 			reqNodeId,            // requested nodeId
@@ -2083,18 +2108,19 @@ void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumM
 	UA_DataTypeAttributes ddaatt = UA_DataTypeAttributes_default;
 	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
 	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
-
 	// check if requested node id defined
 	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = strReqNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	// check if requested node id exists
-	UA_NodeId outNodeId;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &outNodeId);
-	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerEnum", "Requested NodeId already exists");
-	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
+	UA_NodeId reqNodeId = UA_NODEID_NULL;
+	if (!strReqNodeId.isEmpty())
 	{
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		return;
+		// check if requested node id exists
+		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		Q_ASSERT_X(!isUsed, "QUaServer::registerEnum", "Requested NodeId already exists");
+		if (isUsed)
+		{
+			return;
+		}
+		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// if null, then assign one because is feaking necessary
 	// https://github.com/open62541/open62541/issues/2584
@@ -2103,7 +2129,7 @@ void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumM
 		// [IMPORTANT] : _ALLOC version is necessary
 		reqNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName);
 	}
-	st = UA_Server_addDataTypeNode(m_server,
+	auto st = UA_Server_addDataTypeNode(m_server,
 		reqNodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_ENUMERATION),
 		UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE),
@@ -2314,17 +2340,14 @@ bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QSt
 	UA_NodeId reqNodeId = UA_NODEID_NULL;
 	if (!strReqNodeId.isEmpty())
 	{
+		// check if requested node id exists
+		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		Q_ASSERT_X(!isUsed, "QUaServer::registerReferenceType", "Requested NodeId already exists");
+		if (isUsed)
+		{
+			return false;
+		}
 		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	}
-	// check if requested node id exists
-	UA_NodeId testNodeId = UA_NODEID_NULL;
-	auto st = UA_Server_readNodeId(m_server, reqNodeId, &testNodeId);
-	Q_ASSERT_X(st == UA_STATUSCODE_BADNODEIDUNKNOWN, "QUaServer::registerReference", "Requested NodeId already exists");
-	if (st != UA_STATUSCODE_BADNODEIDUNKNOWN)
-	{
-		UA_NodeId_clear(&reqNodeId);
-		UA_NodeId_clear(&testNodeId);
-		return false;
 	}
 	// get namea and stuff
 	QByteArray byteForwardName = refType.strForwardName.toUtf8();
@@ -2337,7 +2360,7 @@ bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QSt
 	refattr.displayName = UA_LOCALIZEDTEXT((char*)(""), byteForwardName.data());
 	refattr.inverseName = UA_LOCALIZEDTEXT((char*)(""), byteInverseName.data());
 	UA_NodeId outNewNodeId;
-	st = UA_Server_addReferenceTypeNode(
+	auto st = UA_Server_addReferenceTypeNode(
 		m_server,
 		reqNodeId,
 		UA_NODEID_NUMERIC(0, UA_NS0ID_NONHIERARCHICALREFERENCES),

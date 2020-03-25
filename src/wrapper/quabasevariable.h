@@ -178,12 +178,16 @@ public:
 
 	static qint32            GetValueRankFromQVariant      (const QVariant &varValue);
 	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
-	
+
 signals:
 	void valueChanged(const QVariant &value);
 	void sourceTimestampChanged(const QDateTime& sourceTimestamp);
 	void serverTimestampChanged(const QDateTime& serverTimestamp);
 	void valueRankChanged(const quint32 &valueRank);
+
+protected:
+	// cache type for performance
+	QMetaType::Type m_dataType;
 
 private:
 	static void onWrite(UA_Server             *server, 
@@ -202,8 +206,6 @@ private:
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
 
-	// cache type for performance
-	QMetaType::Type m_dataType; 
 	bool m_bInternalWrite;
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;

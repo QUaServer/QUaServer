@@ -26,15 +26,22 @@ int main(int argc, char *argv[])
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	auto cond = objsFolder->addChild<QUaConditionVariable>();
-	cond->setBrowseName("ConditionVariable");
-	cond->setDisplayName("ConditionVariable");
-	cond->setDataType(QMetaType::Double);
-	cond->setWriteAccess(true);
-
+	auto condVar = objsFolder->addChild<QUaConditionVariable>();
+	condVar->setBrowseName("ConditionVariable");
+	condVar->setDisplayName("ConditionVariable");
+	condVar->setDataType(QMetaType::Double);
+	condVar->setWriteAccess(true);
 	objsFolder->addMethod("UpdateConditionVariable", 
-	[cond](double value) {
-		cond->setValue(value);
+	[condVar](double value) {
+		condVar->setValue(value);
+	});
+
+	auto twoStVar = objsFolder->addChild<QUaTwoStateVariable>();
+	twoStVar->setBrowseName("TwoStateVariable");
+	twoStVar->setDisplayName("TwoStateVariable");
+	objsFolder->addMethod("UpdateTwoStateVariable", 
+	[twoStVar](QString currentStateName) {
+		twoStVar->setCurrentStateName(currentStateName);
 	});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
