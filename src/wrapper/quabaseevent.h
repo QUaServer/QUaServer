@@ -66,12 +66,13 @@ public:
 	void setTime(const QDateTime &dateTime);
 	// Time (in UTC) the OPC UA Server received the Event from the underlying device of another Server (ServerTimestamp).
 	QDateTime receiveTime() const;
-/*
-	// NOTE : removed because is optional and open62541 now does not add it
+
+	// NOTE : this property is optional, 
+	//        it is not created until one of these methods is called
 	// TimeZone of the time the Event occurred.
 	QTimeZone localTime() const;
 	void setLocalTime(const QTimeZone &localTimeZone);
-*/
+
 	// Human-readable description of the Event.
 	QString message() const;
 	void setMessage(const QString &strMessage);

@@ -392,10 +392,11 @@ public:
 	QList<QUaNode*> browseChildren(const QString& strBrowseName = QString()) const;
 
 	// just get the first one
+	// if instantiateOptional then create optional child of instance declaration (if child exists in type)
 	template<typename T>
-	T* browseChild(const QString& strBrowseName = QString()) const;
+	T* browseChild(const QString& strBrowseName, const bool& instantiateOptional = false);
 	// specialization
-	QUaNode* browseChild(const QString& strBrowseName = QString()) const;
+	QUaNode* browseChild(const QString& strBrowseName, const bool& instantiateOptional = false);
 
 	bool hasChild(const QString& strBrowseName);
 
@@ -522,11 +523,30 @@ private:
 
 	static int getPropsOffsetHelper(const QMetaObject& metaObject);
 
+	static UA_NodeId typeDefinitionNodeId(const UA_NodeId &nodeId, UA_Server* server);
+	static UA_NodeId superTypeDefinitionNodeId(const UA_NodeId &typeNodeId, UA_Server* server);
+
+	static UA_StatusCode addOptionalVariableField(
+		UA_Server*              server, 
+		const UA_NodeId*        originNode,
+		const UA_QualifiedName* fieldName,
+		const UA_VariableNode*  optionalVariableFieldNode,
+		UA_NodeId*              outOptionalVariable
+	);
+	static UA_StatusCode addOptionalObjectField(
+		UA_Server*              server, 
+		const UA_NodeId*        originNode,
+		const UA_QualifiedName* fieldName,
+		const UA_ObjectNode*    optionalObjectFieldNode,
+		UA_NodeId*              outOptionalObject);
+
 	QSet<UA_NodeId> getRefsInternal(const QUaReferenceType& ref, const bool& isForward = true) const;
 	// NOTE : need internal because user might reimplement public
 	QUaWriteMask   userWriteMaskInternal(const QString& strUserName);
 	QUaAccessLevel userAccessLevelInternal(const QString& strUserName);
 	bool           userExecutableInternal(const QString& strUserName);
+
+	QUaNode* instantiateOptionalChild(const QString& strBrowseName);
 
 	// Serialization API
 	const QMap<QString, QVariant>    serializeAttrs() const;
@@ -600,15 +620,17 @@ inline QList<T*> QUaNode::browseChildren(const QString& strBrowseName/* = QStrin
 }
 
 template<typename T>
-inline T* QUaNode::browseChild(const QString& strBrowseName/* = QString()*/) const
+inline T* QUaNode::browseChild(
+	const QString& strBrowseName, 
+	const bool& instantiateOptional)
 {
-	return dynamic_cast<T*>(this->browseChild(strBrowseName));
+	return qobject_cast<T*>(this->browseChild(strBrowseName, instantiateOptional));
 }
 
 template<typename T>
 inline T* QUaNode::browsePath(const QStringList& strBrowsePath) const
 {
-	return dynamic_cast<T*>(this->browsePath(strBrowsePath));
+	return qobject_cast<T*>(this->browsePath(strBrowsePath));
 }
 
 template<typename T>
@@ -618,7 +640,7 @@ inline QList<T*> QUaNode::findReferences(const QUaReferenceType&ref, const bool 
 	QList<QUaNode*> nodeList = findReferences(ref, isForward);
 	for (int i = 0; i < nodeList.count(); i++)
 	{
-		T* ref = dynamic_cast<T*>(nodeList.at(i));
+		T* ref = qobject_cast<T*>(nodeList.at(i));
 		if (ref)
 		{
 			retList.append(ref);

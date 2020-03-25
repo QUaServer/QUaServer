@@ -393,18 +393,11 @@ struct UA_Server {
         UA_ServerStatistics serverStats;
 };
 
-//extern "C" UA_StatusCode
-//UA_SecureChannelManager_init(UA_SecureChannelManager* cm, UA_Server* server);
-//
-///* Remove a all securechannels */
-//extern "C" void
-//UA_SecureChannelManager_deleteMembers(UA_SecureChannelManager* cm);
-//
-//extern "C" UA_StatusCode
-//UA_SessionManager_init(UA_SessionManager* sm, UA_Server* server);
-//
-///* Deletes all sessions */
-//extern "C" void UA_SessionManager_deleteMembers(UA_SessionManager* sm);
+/*********************************************************************************************
+Copied from open62541, to be able to implement:
+
+QUaServer::stop
+*/
 
 typedef enum {
     UA_DIAGNOSTICEVENT_CLOSE,
@@ -457,3 +450,63 @@ typedef struct {
     UA_HistoryDataGathering gathering;
 } UA_HistoryDatabaseContext_default;
 #endif // UA_ENABLE_HISTORIZING
+
+/*********************************************************************************************
+Copied from open62541, to be able to implement:
+
+QUaNode::instantiateOptionalChild
+*/
+
+/***************************/
+/* Nodestore Access Macros */
+/***************************/
+
+#define UA_NODESTORE_NEW(server, nodeClass)                             \
+    server->config.nodestore.newNode(server->config.nodestore.context, nodeClass)
+
+#define UA_NODESTORE_DELETE(server, node)                               \
+    server->config.nodestore.deleteNode(server->config.nodestore.context, node)
+
+#define UA_NODESTORE_GET(server, nodeid)                                \
+    server->config.nodestore.getNode(server->config.nodestore.context, nodeid)
+
+#define UA_NODESTORE_RELEASE(server, node)                              \
+    server->config.nodestore.releaseNode(server->config.nodestore.context, node)
+
+#define UA_NODESTORE_GETCOPY(server, nodeid, outnode)                      \
+    server->config.nodestore.getNodeCopy(server->config.nodestore.context, \
+                                         nodeid, outnode)
+
+#define UA_NODESTORE_INSERT(server, node, addedNodeId)                    \
+    server->config.nodestore.insertNode(server->config.nodestore.context, \
+                                        node, addedNodeId)
+
+#define UA_NODESTORE_REPLACE(server, node)                              \
+    server->config.nodestore.replaceNode(server->config.nodestore.context, node)
+
+#define UA_NODESTORE_REMOVE(server, nodeId)                             \
+    server->config.nodestore.removeNode(server->config.nodestore.context, nodeId)
+
+#define CONDITION_ASSERT_RETURN_RETVAL(retval, logMessage, deleteFunction)                \
+    {                                                                                     \
+        if(retval != UA_STATUSCODE_GOOD) {                                                \
+            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,                  \
+                         logMessage". StatusCode %s", UA_StatusCode_name(retval));        \
+            deleteFunction                                                                \
+            return retval;                                                                \
+        }                                                                                 \
+    }
+
+#define CONDITION_ASSERT_RETURN_VOID(retval, logMessage, deleteFunction)                  \
+    {                                                                                     \
+        if(retval != UA_STATUSCODE_GOOD) {                                                \
+            UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,                  \
+                         logMessage". StatusCode %s", UA_StatusCode_name(retval));        \
+            deleteFunction                                                                \
+            return;                                                                       \
+        }                                                                                 \
+    }
+
+extern "C"
+const UA_Node *
+getNodeType(UA_Server * server, const UA_Node * node);

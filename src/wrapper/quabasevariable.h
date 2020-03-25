@@ -103,7 +103,9 @@ public:
 	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
 	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
 	// Use QVariant::fromValue or use casting to force a dataType
+	virtual
 	QVariant          value() const;
+	virtual
 	void              setValue(
 		const QVariant        &value, 
 		const QDateTime       &sourceTimestamp = QDateTime(),
@@ -111,9 +113,13 @@ public:
 		const QMetaType::Type &newType         = QMetaType::UnknownType
 	);
 	// Changing timestamps does not affect value
+	virtual
 	QDateTime sourceTimestamp() const;
+	virtual
 	void      setSourceTimestamp(const QDateTime& sourceTimestamp);
+	virtual
 	QDateTime serverTimestamp() const;
+	virtual
 	void      setServerTimestamp(const QDateTime& serverTimestamp);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted

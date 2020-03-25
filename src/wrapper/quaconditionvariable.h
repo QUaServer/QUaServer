@@ -27,11 +27,20 @@ public:
 		const MC& mandatoryChildren = &QUaConditionVariable::mandatoryChildrenBrowseNames
 	);
 
+	void setValue(
+		const QVariant        &value, 
+		const QDateTime       &sourceTimestamp = QDateTime(),
+		const QDateTime       &serverTimestamp = QDateTime(),
+		const QMetaType::Type &newType         = QMetaType::UnknownType
+	) override;
+
 	// The time of the last change of the Value of this ConditionVariable
 	// It shall be the same time that would be returned from the Read Service inside the DataValue
 	// structure for the ConditionVariable Value Attribute.
-	QDateTime sourceTimestamp() const;
-	void setSourceTimestamp(const QDateTime& dateTime);
+	void setSourceTimestamp(const QDateTime& sourceTimestamp) override;
+
+private slots:
+	void on_setSourceTimestampChanged(const QDateTime& sourceTimestamp);
 
 private:
 	// UtcTime : 

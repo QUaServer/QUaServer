@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 
 	// Create event with server as originator
 	auto server_event = server.createEvent<MyEvent>();
+	server_event->setDisplayName("MyServerEvent");
 
 	objsFolder->addMethod("triggerServerEvent", [&server_event]() {
 		if (!server_event)
@@ -40,9 +41,11 @@ int main(int argc, char *argv[])
 			return;
 		}
 		// Set server_event information
+		auto time = QDateTime::currentDateTime();
+		server_event->setLocalTime(time.timeZone());
 		server_event->setSourceName("Server");
 		server_event->setMessage("An event occured in the server");
-		server_event->setTime(QDateTime::currentDateTimeUtc());
+		server_event->setTime(time.toUTC());
 		server_event->setSeverity(100);
 		// Trigger server_event
 		server_event->trigger();	
@@ -61,6 +64,7 @@ int main(int argc, char *argv[])
 	obj->setEventNotifierSubscribeToEvents();
 	// Create event with object as originator
 	auto obj_event = obj->createEvent<MyEvent>();
+	obj_event->setDisplayName("MyObjectEvent");
 
 	objsFolder->addMethod("triggerObjectEvent", [&obj_event]() {
 		if (!obj_event)

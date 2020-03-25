@@ -82,7 +82,6 @@ QDateTime QUaBaseEvent::receiveTime() const
 	return const_cast<QUaBaseEvent*>(this)->getReceiveTime()->value().toDateTime().toUTC();
 }
 
-/*
 // NOTE : removed because is optional and open62541 now does not add it
 QTimeZone QUaBaseEvent::localTime() const
 {
@@ -91,9 +90,13 @@ QTimeZone QUaBaseEvent::localTime() const
 
 void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
 {
-	this->getLocalTime()->setValue(QVariant::fromValue(localTimeZone), METATYPE_TIMEZONEDATATYPE);
+	this->getLocalTime()->setValue(
+		QVariant::fromValue(localTimeZone), 
+		QDateTime(), 
+		QDateTime(), 
+		METATYPE_TIMEZONEDATATYPE
+	);
 }
-*/
 
 QString QUaBaseEvent::message() const
 {
@@ -138,47 +141,47 @@ void QUaBaseEvent::trigger()
 
 QUaProperty * QUaBaseEvent::getEventId() 
 {
-	return this->findChild<QUaProperty*>("EventId");
+	return this->browseChild<QUaProperty>("EventId");
 }
 
-QUaProperty * QUaBaseEvent::getEventType()
+QUaProperty* QUaBaseEvent::getEventType()
 {
-	return this->findChild<QUaProperty*>("EventType");
+	return this->browseChild<QUaProperty>("EventType");
 }
 
-QUaProperty * QUaBaseEvent::getSourceNode()
+QUaProperty* QUaBaseEvent::getSourceNode()
 {
-	return this->findChild<QUaProperty*>("SourceNode");
+	return this->browseChild<QUaProperty>("SourceNode");
 }
 
-QUaProperty * QUaBaseEvent::getSourceName()
+QUaProperty* QUaBaseEvent::getSourceName()
 {
-	return this->findChild<QUaProperty*>("SourceName");
+	return this->browseChild<QUaProperty>("SourceName");
 }
 
-QUaProperty * QUaBaseEvent::getTime()
+QUaProperty* QUaBaseEvent::getTime()
 {
-	return this->findChild<QUaProperty*>("Time");
+	return this->browseChild<QUaProperty>("Time");
 }
 
-QUaProperty * QUaBaseEvent::getReceiveTime()
+QUaProperty* QUaBaseEvent::getReceiveTime()
 {
-	return this->findChild<QUaProperty*>("ReceiveTime");
+	return this->browseChild<QUaProperty>("ReceiveTime");
 }
 
-QUaProperty * QUaBaseEvent::getLocalTime()
+QUaProperty* QUaBaseEvent::getLocalTime()
 {
-	return this->findChild<QUaProperty*>("LocalTime");
+	return this->browseChild<QUaProperty>("LocalTime", true);
 }
 
-QUaProperty * QUaBaseEvent::getMessage()
+QUaProperty* QUaBaseEvent::getMessage()
 {
-	return this->findChild<QUaProperty*>("Message");
+	return this->browseChild<QUaProperty>("Message");
 }
 
-QUaProperty * QUaBaseEvent::getSeverity()
+QUaProperty* QUaBaseEvent::getSeverity()
 {
-	return this->findChild<QUaProperty*>("Severity");
+	return this->browseChild<QUaProperty>("Severity");
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
