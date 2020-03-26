@@ -4,16 +4,9 @@
 
 #include <QUaServer>
 
-const QStringList QUaGeneralModelChangeEvent::mandatoryChildrenBrowseNames()
-{
-	return QUaBaseEvent::mandatoryChildrenBrowseNames() + QStringList()
-		<< "Changes";
-}
-
 QUaGeneralModelChangeEvent::QUaGeneralModelChangeEvent(
-	QUaServer *server,
-	const MC& mandatoryChildren
-) : QUaBaseEvent(server, mandatoryChildren)
+	QUaServer *server
+) : QUaBaseEvent(server)
 {
 	
 }
@@ -48,9 +41,5 @@ QUaProperty * QUaGeneralModelChangeEvent::getChanges() const
 {
 	return this->findChild<QUaProperty*>("Changes");
 }
-
-
-
-
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

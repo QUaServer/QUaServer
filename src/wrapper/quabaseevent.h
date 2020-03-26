@@ -38,15 +38,10 @@ friend class QUaServer;
 friend class QUaNode;
 friend class QUaBaseObject;
 
-protected:
-	// list for known children (standard instance declarations)
-	static const QStringList mandatoryChildrenBrowseNames();
-
 public:
 	// NOTE : Q_INVOKABLE removed on purpose because this class should not be instantiable
 	explicit QUaBaseEvent(
-		QUaServer *server,
-		const MC& mandatoryChildren = &QUaBaseEvent::mandatoryChildrenBrowseNames
+		QUaServer *server
 	);
 
 	// Event Properties API

@@ -333,15 +333,9 @@ class QUaNode : public QObject
 
 		Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
 
-protected:
-	// list for known children (standard instance declarations)
-	static const QStringList mandatoryChildrenBrowseNames();
-
 public:
-	typedef decltype(&QUaNode::mandatoryChildrenBrowseNames) MC;
 	explicit QUaNode(
-		QUaServer* server, 
-		const MC &mandatoryChildren = &QUaNode::mandatoryChildrenBrowseNames
+		QUaServer* server
 	);
 
 	// Virtual destructor is necessary to call derived class destructor when delete is called on pointer to base class
@@ -520,6 +514,9 @@ private:
 
 	static QString getBrowseName(const UA_NodeId& nodeId, QUaServer* server);
 	static QString getBrowseName(const UA_NodeId& nodeId, UA_Server* server);
+
+	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server);
+	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server);
 
 	static int getPropsOffsetHelper(const QMetaObject& metaObject);
 

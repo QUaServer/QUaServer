@@ -26,17 +26,12 @@ friend class QUaServer;
 
 public:
 	Q_INVOKABLE explicit QUaGeneralModelChangeEvent(
-		QUaServer *server,
-		const MC& mandatoryChildren = &QUaGeneralModelChangeEvent::mandatoryChildrenBrowseNames
+		QUaServer *server
 	);
 
 
 	QUaChangesList changes() const;
 	void           setChanges(const QUaChangesList &listVerbs);
-
-protected:
-	// list for known children (standard instance declarations)
-	static const QStringList mandatoryChildrenBrowseNames();
 
 private:
 	// ChangeStructureDataType (PArt 5 - 11.14) : UA_ModelChangeStructureDataType

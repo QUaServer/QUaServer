@@ -4,23 +4,9 @@
 
 #include <QUaServer>
 
-const QStringList QUaBaseEvent::mandatoryChildrenBrowseNames()
-{
-	return QUaBaseObject::mandatoryChildrenBrowseNames() + QStringList()
-		<< "EventId"
-		<< "EventType"
-		<< "SourceNode"
-		<< "SourceName"
-		<< "Time"
-		<< "ReceiveTime"
-		<< "Message"
-		<< "Severity";
-}
-
 QUaBaseEvent::QUaBaseEvent(
-	QUaServer *server,
-	const MC& mandatoryChildren
-) : QUaBaseObject(server, mandatoryChildren)
+	QUaServer *server
+) : QUaBaseObject(server)
 {
 	// copy temp originator nodeId, this was user can trigger the event in its derived class constructor
 	m_nodeIdOriginator = *server->m_newEventOriginatorNodeId;

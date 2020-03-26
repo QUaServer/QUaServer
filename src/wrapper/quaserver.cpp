@@ -6,6 +6,7 @@
 #define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
 QHash<QString, const void*> QUaServer::m_hashDefAttrs;
+QHash<QString, QStringList> QUaServer::m_hashMandatoryChildren;
 
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
@@ -1284,7 +1285,10 @@ void QUaServer::setMaxSessions(const quint16& maxSessions)
 	emit this->maxSessionsChanged(m_maxSessions);
 }
 
-void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNodeId/* = ""*/)
+void QUaServer::registerTypeInternal(
+	const QMetaObject& metaObject, 
+	const QString& strNodeId/* = ""*/
+)
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
@@ -1309,7 +1313,7 @@ void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNo
 	if (!m_mapTypes.contains(strBaseClassName))
 	{
 		// recursive
-		this->registerType(*metaObject.superClass());
+		this->registerTypeInternal(*metaObject.superClass());
 	}
 	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QUaServer::registerType", "Base object type not registered.");
 	// check if requested node id defined
@@ -1378,8 +1382,10 @@ void QUaServer::registerType(const QMetaObject& metaObject, const QString& strNo
 	// add to registered types map
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	m_hashMetaObjects.insert(strClassName, metaObject);
+	// register for default mandatory children and so on
+	this->registerTypeDefaults(newTypeNodeId, metaObject);
 	// register constructor/destructor
-	this->registerTypeLifeCycle(&newTypeNodeId, metaObject);
+	this->registerTypeLifeCycle(newTypeNodeId, metaObject);
 	// register meta-enums
 	this->registerMetaEnums(metaObject);
 	// register meta-properties
@@ -1405,7 +1411,7 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
-		this->registerType(metaObject);
+		this->registerTypeInternal(metaObject);
 		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
@@ -1473,35 +1479,68 @@ void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QString& strNodeId
 
 void QUaServer::registerTypeLifeCycle(const UA_NodeId& typeNodeId, const QMetaObject& metaObject)
 {
-	this->registerTypeLifeCycle(&typeNodeId, metaObject);
-}
-
-void QUaServer::registerTypeLifeCycle(const UA_NodeId* typeNodeId, const QMetaObject& metaObject)
-{
-	Q_CHECK_PTR(typeNodeId);
-	Q_ASSERT(!UA_NodeId_isNull(typeNodeId));
-	if (UA_NodeId_isNull(typeNodeId))
+	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
+	if (UA_NodeId_isNull(&typeNodeId))
 	{
 		return;
 	}
-	// add constructor
-	Q_ASSERT_X(!m_hashConstructors.contains(*typeNodeId), "QUaServer::registerType", "Constructor for type already exists.");
+	// add custom constructor
+	Q_ASSERT_X(!m_hashConstructors.contains(typeNodeId), "QUaServer::registerType", "Constructor for type already exists.");
 	// NOTE : we need constructors to be lambdas in order to cache metaobject in capture
 	//        because type context is already the server instance where type was registered
 	//        so we can differentiate the server instance in the static ::uaConstructor callback
 	//        TLDR; to support multiple server instances in an application
-	m_hashConstructors[*typeNodeId] = [metaObject, this](const UA_NodeId* instanceNodeId, void** nodeContext) {
+	m_hashConstructors[typeNodeId] = [metaObject, this](const UA_NodeId* instanceNodeId, void** nodeContext) {
 		// call static method
 		return QUaServer::uaConstructor(this, instanceNodeId, nodeContext, metaObject);
 	};
-
+	// set generic constructor (that calls custom one internally)
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = &QUaServer::uaConstructor;
 	lifecycle.destructor  = &QUaServer::uaDestructor;
-
-	auto st = UA_Server_setNodeTypeLifecycle(m_server, *typeNodeId, lifecycle);
+	auto st = UA_Server_setNodeTypeLifecycle(m_server, typeNodeId, lifecycle);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
+}
+
+void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObject& metaObject)
+{
+	// cache mandatory children for new type if another QUaServer instance has not yet done it
+	QString strClassName = QString(metaObject.className());
+	if (QUaServer::m_hashMandatoryChildren.contains(strClassName))
+	{
+		return;
+	}
+	// copy mandatory from parent type
+	QString strParentClassName = QString(metaObject.superClass()->className());
+	Q_ASSERT(
+		QUaServer::m_hashMandatoryChildren.contains(strParentClassName) ||
+		metaObject.superClass() == &QUaNode::staticMetaObject
+	);
+	QUaServer::m_hashMandatoryChildren[strClassName] =
+		QUaServer::m_hashMandatoryChildren.value(strParentClassName, QStringList());
+	// get mandatory
+	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
+	for (auto childNodeId : chidrenNodeIds)
+	{
+		if (!QUaNode::hasMandatoryModellingRule(childNodeId, m_server))
+		{
+			continue;
+		}
+		// sometimes children repeat parent's mandatory, no need to add twice
+		QString strMandatoryBrowseName = QUaNode::getBrowseName(childNodeId, m_server);
+		if (QUaServer::m_hashMandatoryChildren[strClassName].contains(strMandatoryBrowseName))
+		{
+			continue;
+		}
+		QUaServer::m_hashMandatoryChildren[strClassName]
+			<< strMandatoryBrowseName;
+	}
+	// cleanup
+	for (int i = 0; i < chidrenNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&chidrenNodeIds[i]);
+	}
 }
 
 void QUaServer::registerMetaEnums(const QMetaObject& parentMetaObject)
@@ -1575,7 +1614,7 @@ void QUaServer::addMetaProperties(const QMetaObject& parentMetaObject)
 			propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
 			if (UA_NodeId_isNull(&propTypeNodeId))
 			{
-				this->registerType(propMetaObject);
+				this->registerTypeInternal(propMetaObject);
 				propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
 			}
 			// set is variable
@@ -1930,7 +1969,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
-		this->registerType(metaObject);
+		this->registerTypeInternal(metaObject);
 		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
@@ -1998,7 +2037,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		{
 			oAttr = *(static_cast<const UA_ObjectAttributes*>(
 				QUaServer::m_hashDefAttrs[strClassName]
-				));
+			));
 		}
 		else
 		{
@@ -2056,7 +2095,7 @@ UA_NodeId QUaServer::createEventInternal(
 	UA_NodeId typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeEvtId))
 	{
-		this->registerType(metaObject);
+		this->registerTypeInternal(metaObject);
 		typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));

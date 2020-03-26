@@ -21,14 +21,9 @@ class QUaConditionVariable : public QUaBaseDataVariable
 {
     Q_OBJECT
 
-protected:
-	// list for known children (standard instance declarations)
-	static const QStringList mandatoryChildrenBrowseNames();
-
 public:
 	Q_INVOKABLE explicit QUaConditionVariable(
-		QUaServer* server,
-		const MC& mandatoryChildren = &QUaConditionVariable::mandatoryChildrenBrowseNames
+		QUaServer* server
 	);
 
 	// value : data type is BaseDataType (anything)

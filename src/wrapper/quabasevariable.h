@@ -94,8 +94,7 @@ class QUaBaseVariable : public QUaNode
 
 public:
 	explicit QUaBaseVariable(
-		QUaServer* server,
-		const MC& mandatoryChildren = &QUaBaseVariable::mandatoryChildrenBrowseNames
+		QUaServer* server
 	);
 
 	// Attributes API

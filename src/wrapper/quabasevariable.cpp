@@ -131,9 +131,8 @@ void QUaBaseVariable::onRead(UA_Server             *server,
 }
 
 QUaBaseVariable::QUaBaseVariable(
-	QUaServer* server,
-	const MC& mandatoryChildren
-) : QUaNode(server, mandatoryChildren)
+	QUaServer* server
+) : QUaNode(server)
 {
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
 	//          the constructor is called automagically by this library, and m_newNodeNodeId and

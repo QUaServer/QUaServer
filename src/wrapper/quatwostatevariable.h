@@ -53,8 +53,7 @@ class QUaTwoStateVariable : public QUaStateVariable
 
 public:
 	Q_INVOKABLE explicit QUaTwoStateVariable(
-		QUaServer* server,
-		const MC& mandatoryChildren = &QUaTwoStateVariable::mandatoryChildrenBrowseNames
+		QUaServer* server
 	);
 
 	// value : current state as human readable name (maps to value attribute)

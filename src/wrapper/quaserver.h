@@ -390,6 +390,7 @@ private:
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
     static QHash<QString  , const void * > m_hashDefAttrs;
+    static QHash<QString  , QStringList  > m_hashMandatoryChildren;
 
 	QUaValidationCallback m_validationCallback;
 
@@ -419,7 +420,7 @@ private:
 	// types
     template<typename T>
     void registerSpecificationType(const UA_NodeId& nodeId, const bool abstract = false);
-	void registerType(const QMetaObject &metaObject, const QString &strNodeId = "");
+	void registerTypeInternal(const QMetaObject &metaObject, const QString &strNodeId = "");
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
 	template<typename T, typename M>
 	QMetaObject::Connection instanceCreated(
@@ -434,7 +435,7 @@ private:
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
 	// lifecycle
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
-	void registerTypeLifeCycle(const UA_NodeId *typeNodeId, const QMetaObject &metaObject);
+    void registerTypeDefaults (const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	// meta
 	void registerMetaEnums(const QMetaObject &parentMetaObject);
 	void addMetaProperties(const QMetaObject &parentMetaObject);
@@ -569,7 +570,7 @@ template<typename T>
 inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)
 {
 	// call internal method
-	this->registerType(T::staticMetaObject, strNodeId);
+	this->registerTypeInternal(T::staticMetaObject, strNodeId);
 }
 
 template<typename T>
@@ -614,11 +615,13 @@ inline void QUaServer::registerSpecificationType(const UA_NodeId& nodeId, const 
     auto& metaObject = T::staticMetaObject;
     m_mapTypes.insert(QString(metaObject.className()), nodeId);
     m_hashMetaObjects.insert(QString(metaObject.className()), metaObject);
+    // register for default mandatory children and so on
+    this->registerTypeDefaults(nodeId, metaObject);
+    // set node context only if instatiable
     if (abstract)
     {
         return;
     }
-    // set node context only if instatiable
     auto st = UA_Server_setNodeContext(m_server, nodeId, (void*)this);
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
     // NOTE : cannot move all the registering stuff to templated versions

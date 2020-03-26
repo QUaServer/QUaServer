@@ -39,9 +39,8 @@ UA_StatusCode QUaBaseObject::methodCallback(UA_Server        * server,
 }
 
 QUaBaseObject::QUaBaseObject(
-	QUaServer *server,
-	const MC& mandatoryChildren
-) : QUaNode(server, mandatoryChildren)
+	QUaServer *server
+) : QUaNode(server)
 {
 
 }

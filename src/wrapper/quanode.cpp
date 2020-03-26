@@ -7,14 +7,8 @@
 
 #include "quaserver_anex.h"
 
-const QStringList QUaNode::mandatoryChildrenBrowseNames()
-{
-	return QStringList();
-}
-
 QUaNode::QUaNode(
-	QUaServer* server, 
-	const MC & mandatoryChildren
+	QUaServer* server
 )
 {
 	// [NOTE] : constructor of any QUaNode-derived class is not meant to be called by the user
@@ -29,6 +23,7 @@ QUaNode::QUaNode(
 	//Q_CHECK_PTR(server->m_newNodeOptionalChildren);
 	const UA_NodeId   &nodeId     = *server->m_newNodeNodeId;
 	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
+	QString strClassName = QString(metaObject.className());
 	// check
 	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
 	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it
@@ -102,7 +97,8 @@ QUaNode::QUaNode(
 		//        so in the end we have to query children by object name
 	} // for each prop
 	// handle mandatory children of instance declarations
-	auto mandatoryList = mandatoryChildren();
+	Q_ASSERT(QUaServer::m_hashMandatoryChildren.contains(strClassName));
+	const auto &mandatoryList = QUaServer::m_hashMandatoryChildren[strClassName];
 	for (int i = 0; i < mandatoryList.count(); i++)
 	{
 		QString strBrowseName = mandatoryList.at(i);
@@ -116,24 +112,6 @@ QUaNode::QUaNode(
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(strBrowseName);
 	}
-	//// handle optional children of instance declarations
-	//auto optionalList = optionalChildren();
-	//for (int i = 0; i < optionalList.count(); i++)
-	//{
-	//	QString strBrowseName = optionalList.at(i);
-	//	if (!mapChildren.contains(strBrowseName))
-	//	{
-	//		continue;
-	//	}
-	//	// get child nodeId for child
-	//	auto childNodeId = mapChildren.take(strBrowseName);
-	//	// get node context (C++ instance)
-	//	auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
-	//	Q_CHECK_PTR(nodeInstance);
-	//	// assign C++ parent
-	//	nodeInstance->setParent(this);
-	//	nodeInstance->setObjectName(strBrowseName);
-	//}
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
 	// cleanup
@@ -1340,6 +1318,42 @@ QString QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
 	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
 	UA_QualifiedName_clear(&outBrowseName);
 	return strBrowseName;
+}
+
+bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server)
+{
+	return QUaNode::hasMandatoryModellingRule(nodeId, server->m_server);
+}
+
+bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server)
+{
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
+	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE);
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT; // in specific UA_NS0ID_MODELLINGRULE_MANDATORY 78 /* Object */
+	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // no info needed, only existance
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	bool isMandatory = false;
+	if (bRes.referencesSize > 0)
+	{
+		Q_ASSERT(bRes.referencesSize == 1);
+		// check if modelling rule is mandatory
+		UA_ReferenceDescription rDesc = bRes.references[0];
+		isMandatory = UA_NodeId_equal(
+			&rDesc.nodeId.nodeId, 
+			&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)
+		);		
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return isMandatory;
 }
 
 int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)

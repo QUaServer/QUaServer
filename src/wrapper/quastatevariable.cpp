@@ -14,16 +14,9 @@ UA_VariableAttributes QUaStateVariable::m_vAttr = []() {
 	return vAttr;
 }();
 
-const QStringList QUaStateVariable::mandatoryChildrenBrowseNames()
-{
-	return QUaBaseDataVariable::mandatoryChildrenBrowseNames() + QStringList()
-		<< "Id";
-}
-
 QUaStateVariable::QUaStateVariable(
-	QUaServer* server,
-	const MC& mandatoryChildren
-) : QUaBaseDataVariable(server, mandatoryChildren)
+	QUaServer* server
+) : QUaBaseDataVariable(server)
 {
 
 }

@@ -16,9 +16,8 @@ UA_VariableAttributes QUaTwoStateVariable::m_vAttr = []() {
 }();
 
 QUaTwoStateVariable::QUaTwoStateVariable(
-	QUaServer* server,
-	const MC& mandatoryChildren
-) : QUaStateVariable(server, mandatoryChildren)
+	QUaServer* server
+) : QUaStateVariable(server)
 {
 	m_dataType = METATYPE_LOCALIZEDTEXT;
 }

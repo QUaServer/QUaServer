@@ -4,16 +4,9 @@
 
 #include <QUaProperty>
 
-const QStringList QUaConditionVariable::mandatoryChildrenBrowseNames()
-{
-	return QUaBaseDataVariable::mandatoryChildrenBrowseNames() + QStringList()
-		<< "SourceTimestamp";
-}
-
 QUaConditionVariable::QUaConditionVariable(
-	QUaServer* server,
-	const MC& mandatoryChildren
-) : QUaBaseDataVariable(server, mandatoryChildren)
+	QUaServer* server
+) : QUaBaseDataVariable(server)
 {
 	// set child property initial value
 	this->getSourceTimestamp()->setValue(QUaBaseVariable::sourceTimestamp());
