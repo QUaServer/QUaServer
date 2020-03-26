@@ -140,7 +140,7 @@ QUaBaseVariable::QUaBaseVariable(
 	//          is used in QUaServer::uaConstructor
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
-	m_dataType = QMetaType::UnknownType;
+	m_dataType = this->dataTypeInternal();
 	// this should not be needed since stored in m_nodeId already??:
 	//    const UA_NodeId &nodeId = *server->m_newNodeNodeId;
 	// sets also write callback to emit onWrite signal
@@ -693,7 +693,7 @@ QVector<quint32> QUaBaseVariable::arrayDimensions() const
 	// convert UA_Variant to QList<quint32>
 	QVector<quint32> retArr;
 	Q_ASSERT(outArrayDimensions.type == &UA_TYPES[UA_TYPES_UINT32]);
-	auto data = (quint32*)outArrayDimensions.data;
+	auto data = static_cast<quint32*>(outArrayDimensions.data);
 	for (int i = 0; i < (int)outArrayDimensions.arrayLength; i++)
 	{
 		retArr.append(data[i]);

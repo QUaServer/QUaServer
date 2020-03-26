@@ -209,6 +209,8 @@ private:
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;
 
+	protected:
+
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
 	QMetaType::Type dataTypeInternal() const;
 	UA_StatusCode setValueInternal(

@@ -5,9 +5,6 @@
 
 #define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
-QHash<QString, const void*> QUaServer::m_hashDefAttrs;
-QHash<QString, QStringList> QUaServer::m_hashMandatoryChildren;
-
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
 	                                   void            * sessionContext, 
@@ -1507,18 +1504,18 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 {
 	// cache mandatory children for new type if another QUaServer instance has not yet done it
 	QString strClassName = QString(metaObject.className());
-	if (QUaServer::m_hashMandatoryChildren.contains(strClassName))
+	if (m_hashMandatoryChildren.contains(strClassName))
 	{
 		return;
 	}
 	// copy mandatory from parent type
 	QString strParentClassName = QString(metaObject.superClass()->className());
-	Q_ASSERT(
-		QUaServer::m_hashMandatoryChildren.contains(strParentClassName) ||
-		metaObject.superClass() == &QUaNode::staticMetaObject
-	);
-	QUaServer::m_hashMandatoryChildren[strClassName] =
-		QUaServer::m_hashMandatoryChildren.value(strParentClassName, QStringList());
+	Q_ASSERT_X(
+		m_hashMandatoryChildren.contains(strParentClassName) ||
+		metaObject.superClass() == &QUaNode::staticMetaObject,
+		"QUaServer::registerTypeDefaults", "Parent must already be registered.");
+	m_hashMandatoryChildren[strClassName] =
+		m_hashMandatoryChildren.value(strParentClassName, QStringList());
 	// get mandatory
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
 	for (auto childNodeId : chidrenNodeIds)
@@ -1529,11 +1526,11 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		}
 		// sometimes children repeat parent's mandatory, no need to add twice
 		QString strMandatoryBrowseName = QUaNode::getBrowseName(childNodeId, m_server);
-		if (QUaServer::m_hashMandatoryChildren[strClassName].contains(strMandatoryBrowseName))
+		if (m_hashMandatoryChildren[strClassName].contains(strMandatoryBrowseName))
 		{
 			continue;
 		}
-		QUaServer::m_hashMandatoryChildren[strClassName]
+		m_hashMandatoryChildren[strClassName]
 			<< strMandatoryBrowseName;
 	}
 	// cleanup
@@ -2002,20 +1999,22 @@ UA_NodeId QUaServer::createInstanceInternal(
 	// (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
 	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
-		// some types require special attrs because open62541 checks them
-		UA_VariableAttributes vAttr;
-		if (QUaServer::m_hashDefAttrs.contains(strClassName))
-		{
-			vAttr = *(static_cast<const UA_VariableAttributes*>(
-				QUaServer::m_hashDefAttrs[strClassName]
-			));
-		}
-		else
-		{
-			vAttr = UA_VariableAttributes_default;
-		}
+		// some types require the attrs to match because open62541 checks them
+		UA_VariableAttributes vAttr = UA_VariableAttributes_default;
+		auto st = UA_Server_readDataType(m_server, typeNodeId, &vAttr.dataType);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		st = UA_Server_readValueRank(m_server, typeNodeId, &vAttr.valueRank);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		UA_Variant outArrayDimensions;
+		st = UA_Server_readArrayDimensions(m_server, typeNodeId, &outArrayDimensions);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		vAttr.arrayDimensionsSize = outArrayDimensions.arrayLength;
+		vAttr.arrayDimensions = static_cast<quint32*>(outArrayDimensions.data);
 		// add variable
-		auto st = UA_Server_addVariableNode(m_server,
+		UA_Server_addVariableNode(m_server,
 			reqNodeId,            // requested nodeId
 			parentNode->m_nodeId, // parent
 			referenceTypeId,      // parent relation with child
@@ -2026,23 +2025,13 @@ UA_NodeId QUaServer::createInstanceInternal(
 			&nodeIdNewInstance); // set new nodeId to new instance
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
+		UA_Variant_clear(&outArrayDimensions);
 	}
 	else
 	{
 		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 			metaObject.className() == QUaBaseObject::staticMetaObject.className());
-		// some types require special attrs because open62541 checks them
-		UA_ObjectAttributes oAttr;
-		if (QUaServer::m_hashDefAttrs.contains(strClassName))
-		{
-			oAttr = *(static_cast<const UA_ObjectAttributes*>(
-				QUaServer::m_hashDefAttrs[strClassName]
-			));
-		}
-		else
-		{
-			oAttr = UA_ObjectAttributes_default;
-		}
+		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
 			reqNodeId,            // requested nodeId

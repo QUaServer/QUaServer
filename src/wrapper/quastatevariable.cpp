@@ -4,16 +4,6 @@
 
 #include <QUaServer>
 
-UA_VariableAttributes QUaStateVariable::m_vAttr = []() {
-	// register address
-	QString strClassName = QString(QUaStateVariable::staticMetaObject.className());
-	QUaServer::m_hashDefAttrs[strClassName] = &QUaStateVariable::m_vAttr;
-	// init
-	auto vAttr = UA_VariableAttributes_default;
-	vAttr.valueRank = UA_VALUERANK_SCALAR;
-	return vAttr;
-}();
-
 QUaStateVariable::QUaStateVariable(
 	QUaServer* server
 ) : QUaBaseDataVariable(server)

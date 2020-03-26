@@ -389,8 +389,7 @@ private:
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
-    static QHash<QString  , const void * > m_hashDefAttrs;
-    static QHash<QString  , QStringList  > m_hashMandatoryChildren;
+    QHash<QString         , QStringList  > m_hashMandatoryChildren;
 
 	QUaValidationCallback m_validationCallback;
 

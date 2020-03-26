@@ -68,9 +68,6 @@ private:
 	// LocalizedText
 	QUaProperty* getEffectiveDisplayName();
 
-	// open62541 does not let instantiate if attributes do not match spec
-	static UA_VariableAttributes m_vAttr;
-
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -4,22 +4,11 @@
 
 #include <QUaServer>
 
-UA_VariableAttributes QUaTwoStateVariable::m_vAttr = []() {
-	// register address
-	QString strClassName = QString(QUaTwoStateVariable::staticMetaObject.className());
-	QUaServer::m_hashDefAttrs[strClassName] = &QUaTwoStateVariable::m_vAttr;
-	// init
-	auto vAttr = UA_VariableAttributes_default;
-	vAttr.valueRank = UA_VALUERANK_SCALAR;
-	vAttr.dataType  = UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);
-	return vAttr;
-}();
-
 QUaTwoStateVariable::QUaTwoStateVariable(
 	QUaServer* server
 ) : QUaStateVariable(server)
 {
-	m_dataType = METATYPE_LOCALIZEDTEXT;
+	
 }
 
 QString QUaTwoStateVariable::currentStateName() const

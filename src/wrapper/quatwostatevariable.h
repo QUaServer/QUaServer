@@ -121,9 +121,6 @@ private:
 	// LocalizedText
 	QUaProperty* getFalseState();
 
-	// open62541 does not let instantiate if attributes do not match spec
-	static UA_VariableAttributes m_vAttr;
-
 };
 
 #endif // QUATWOSTATEVARIABLE_H

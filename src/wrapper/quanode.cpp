@@ -97,8 +97,8 @@ QUaNode::QUaNode(
 		//        so in the end we have to query children by object name
 	} // for each prop
 	// handle mandatory children of instance declarations
-	Q_ASSERT(QUaServer::m_hashMandatoryChildren.contains(strClassName));
-	const auto &mandatoryList = QUaServer::m_hashMandatoryChildren[strClassName];
+	Q_ASSERT(m_qUaServer->m_hashMandatoryChildren.contains(strClassName));
+	const auto &mandatoryList = m_qUaServer->m_hashMandatoryChildren[strClassName];
 	for (int i = 0; i < mandatoryList.count(); i++)
 	{
 		QString strBrowseName = mandatoryList.at(i);
