@@ -30,7 +30,9 @@ ua_alarms_conditions {
     SOURCES += \
     $$PWD/quaconditionvariable.cpp \
     $$PWD/quastatevariable.cpp \
-    $$PWD/quatwostatevariable.cpp
+    $$PWD/quatwostatevariable.cpp \
+    $$PWD/quacondition.cpp \
+    $$PWD/quaacknowledgeablecondition.cpp
 }
 
 ua_historizing {
@@ -61,7 +63,9 @@ ua_alarms_conditions {
     HEADERS += \
     $$PWD/quaconditionvariable.h \
     $$PWD/quastatevariable.h \
-    $$PWD/quatwostatevariable.h
+    $$PWD/quatwostatevariable.h \
+    $$PWD/quacondition.h \
+    $$PWD/quaacknowledgeablecondition.h
 }
 
 ua_historizing {
@@ -92,7 +96,9 @@ ua_alarms_conditions {
     DISTFILES += \
     $$PWD/QUaConditionVariable \
     $$PWD/QUaStateVariable \
-    $$PWD/QUaTwoStateVariable
+    $$PWD/QUaTwoStateVariable \
+    $$PWD/QUaCondition \
+    $$PWD/QUaAcknowledgeableCondition
 }
 
 ua_historizing {

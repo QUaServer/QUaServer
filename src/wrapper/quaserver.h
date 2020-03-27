@@ -436,9 +436,9 @@ private:
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
     void registerTypeDefaults (const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	// meta
-	void registerMetaEnums(const QMetaObject &parentMetaObject);
-	void addMetaProperties(const QMetaObject &parentMetaObject);
-	void addMetaMethods   (const QMetaObject &parentMetaObject);
+	void registerMetaEnums(const QMetaObject &metaObject);
+	void addMetaProperties(const QMetaObject &metaObject);
+	void addMetaMethods   (const QMetaObject &metaObject);
 
 	UA_NodeId createInstanceInternal(
         const QMetaObject &metaObject, 
@@ -459,8 +459,20 @@ private:
 	bool isMetaObjectRegistered(const QString& strClassName) const;
 	QMetaObject getRegisteredMetaObject(const QString& strClassName) const;
 
-	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>> m_hashConstructors;
-	QHash< UA_NodeId, std::function<UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>      > m_hashMethods;
+	QHash< UA_NodeId, std::function<
+        /* 
+        RetCode(nodeId, nodeContext), captures QUaServer*, metaObject -> calls
+        QUaServer::uaConstructor(this, instanceNodeId, nodeContext, metaObject) -> calls
+        metaObject.newInstance 
+        */
+        UA_StatusCode(const UA_NodeId *nodeId, void ** nodeContext)>
+    > m_hashConstructors;
+	QHash< UA_NodeId, std::function<
+        /* RetCode(objectContext, input, output) captures QUaServer*, methIdx  -> calls
+        QUaServer::callMetaMethod(this, object, metaMethod, input, output) -> calls
+        metaMethod.invoke */
+        UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>
+    > m_hashMethods;
 
 	static UA_NodeId getReferenceTypeId(const QMetaObject &parentMetaObject, const QMetaObject &childMetaObject);
 
@@ -496,6 +508,12 @@ private:
 		                                const UA_Variant *input,
 		                                size_t            outputSize,
 		                                UA_Variant       *output);
+
+    static UA_StatusCode callMetaMethod(QUaServer         *server,
+                                        QUaBaseObject     *object, 
+                                        const QMetaMethod &metaMethod,
+                                        const UA_Variant  *input, 
+                                        UA_Variant        *output);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 
