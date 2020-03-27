@@ -1012,6 +1012,161 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	return newInstance;
 }
 
+
+bool QUaNode::hasOptionalMethod(const QString& strMethodName) const
+{
+	// get all ua methods of INSTANCE
+	auto methodsNodeIds = QUaNode::getMethodsNodeIds(m_nodeId, m_qUaServer->m_server);
+	for (auto methNodeId : methodsNodeIds)
+	{
+		// ignore if not optional
+		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
+		{
+			continue;
+		}
+		// ignore if browse name does not match
+		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) == 0)
+		{
+			// cleanup
+			for (int i = 0; i < methodsNodeIds.count(); i++)
+			{
+				UA_NodeId_clear(&methodsNodeIds[i]);
+			}
+			return true;
+		}
+	}
+	// cleanup
+	for (int i = 0; i < methodsNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&methodsNodeIds[i]);
+	}
+	return false;
+}
+
+bool QUaNode::addOptionalMethod(const QString& strMethodName)
+{
+	// do not add twice
+	if (this->hasOptionalMethod(strMethodName))
+	{
+		return true;
+	}
+	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
+	// get all ua methods of TYPE
+	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
+	UA_NodeId methodNodeId = UA_NODEID_NULL;
+	for (auto methNodeId : methodsNodeIds)
+	{
+		// ignore if not optional
+		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
+		{
+			continue;
+		}
+		// ignore if browse name does not match
+		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+		{
+			continue;
+		}
+		methodNodeId = methNodeId;
+		break;
+	}
+	Q_ASSERT_X(!UA_NodeId_isNull(&methodNodeId),
+		"QUaNode::addOptionalMethod", "Could not find optional method.");
+	if (UA_NodeId_isNull(&methodNodeId))
+	{
+		// cleanup
+		for (int i = 0; i < methodsNodeIds.count(); i++)
+		{
+			UA_NodeId_clear(&methodsNodeIds[i]);
+		}
+		UA_NodeId_clear(&typeNodeId);
+		return false;
+	}
+	// add reference from instance to method
+	auto st = UA_Server_addReference(
+		m_qUaServer->m_server,
+		m_nodeId,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		{ methodNodeId, UA_STRING_NULL, 0 },
+		true
+	);
+	// cleanup
+	for (int i = 0; i < methodsNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&methodsNodeIds[i]);
+	}
+	UA_NodeId_clear(&typeNodeId);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool QUaNode::removeOptionalMethod(const QString& strMethodName)
+{
+	// do not remove twice
+	if (!this->hasOptionalMethod(strMethodName))
+	{
+		return true;
+	}
+	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
+	// get all ua methods of TYPE
+	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
+	UA_NodeId methodNodeId = UA_NODEID_NULL;
+	for (auto methNodeId : methodsNodeIds)
+	{
+		// ignore if not optional
+		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
+		{
+			continue;
+		}
+		// ignore if browse name does not match
+		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+		{
+			continue;
+		}
+		methodNodeId = methNodeId;
+		break;
+	}
+	Q_ASSERT_X(!UA_NodeId_isNull(&methodNodeId),
+		"QUaNode::addOptionalMethod", "Could not find optional method.");
+	if (UA_NodeId_isNull(&methodNodeId))
+	{
+		// cleanup
+		for (int i = 0; i < methodsNodeIds.count(); i++)
+		{
+			UA_NodeId_clear(&methodsNodeIds[i]);
+		}
+		UA_NodeId_clear(&typeNodeId);
+		return false;
+	}
+	// remove reference from instance to method
+	auto st = UA_Server_deleteReference(
+		m_qUaServer->m_server,
+		m_nodeId,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		true,
+		{ methodNodeId, UA_STRING_NULL, 0 },
+		true
+	);
+	// cleanup
+	for (int i = 0; i < methodsNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&methodsNodeIds[i]);
+	}
+	UA_NodeId_clear(&typeNodeId);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return false;
+	}
+	return true;
+}
+
 const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 {
 	QMap<QString, QVariant> retMap;
@@ -1375,7 +1530,7 @@ bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* serv
 	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // no info needed, only existance
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
 	bool isMandatory = false;
 	if (bRes.referencesSize > 0)
 	{
@@ -1386,6 +1541,42 @@ bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* serv
 			&rDesc.nodeId.nodeId, 
 			&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)
 		);		
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return isMandatory;
+}
+
+bool QUaNode::hasOptionalModellingRule(const UA_NodeId& nodeId, QUaServer* server)
+{
+	return QUaNode::hasOptionalModellingRule(nodeId, server->m_server);
+}
+
+bool QUaNode::hasOptionalModellingRule(const UA_NodeId& nodeId, UA_Server* server)
+{
+	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
+	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE);
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT; // in specific UA_NS0ID_MODELLINGRULE_OPTIONAL 80 /* Object */
+	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // no info needed, only existance
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	bool isMandatory = false;
+	if (bRes.referencesSize > 0)
+	{
+		Q_ASSERT(bRes.referencesSize == 1);
+		// check if modelling rule is mandatory
+		UA_ReferenceDescription rDesc = bRes.references[0];
+		isMandatory = UA_NodeId_equal(
+			&rDesc.nodeId.nodeId,
+			&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL)
+		);
 	}
 	// cleanup
 	UA_BrowseDescription_deleteMembers(bDesc);

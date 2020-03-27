@@ -10,20 +10,13 @@
 #include <QUaBaseDataVariable>
 #include <QUaProperty>
 #include <QUaBaseObject>
+#ifdef UA_ENABLE_HISTORIZING
+#include <QUaHistoryBackend>
+#endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #include <QUaBaseEvent>
 #include <QUaGeneralModelChangeEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-#ifdef UA_ENABLE_HISTORIZING
-#include <QUaHistoryBackend>
-#endif // UA_ENABLE_HISTORIZING
-#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-#include <QUaConditionVariable>
-#include <QUaStateVariable>
-#include <QUaTwoStateVariable>
-#include <QUaCondition>
-#include <QUaAcknowledgeableCondition>
-#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 // Enum Stuff
 typedef qint64 QUaEnumKey;
@@ -476,46 +469,67 @@ private:
         UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>
     > m_hashMethods;
 
-	static UA_NodeId getReferenceTypeId(const QMetaObject &parentMetaObject, const QMetaObject &childMetaObject);
+	static UA_NodeId getReferenceTypeId(
+        const QMetaObject &parentMetaObject, 
+        const QMetaObject &childMetaObject
+    );
 
-	static UA_StatusCode uaConstructor(UA_Server        *server,
-		                               const UA_NodeId  *sessionId, 
-		                               void             *sessionContext,
-		                               const UA_NodeId  *typeNodeId, 
-		                               void             *typeNodeContext,
-		                               const UA_NodeId  *nodeId, 
-		                               void            **nodeContext);
+	static UA_StatusCode uaConstructor(
+        UA_Server        *server,
+        const UA_NodeId  *sessionId, 
+        void             *sessionContext,
+        const UA_NodeId  *typeNodeId, 
+        void             *typeNodeContext,
+        const UA_NodeId  *nodeId, 
+        void            **nodeContext
+    );
 
-	static void uaDestructor(UA_Server        *server,
-		                     const UA_NodeId  *sessionId, 
-		                     void             *sessionContext,
-		                     const UA_NodeId  *typeNodeId, 
-		                     void             *typeNodeContext,
-		                     const UA_NodeId  *nodeId, 
-		                     void            **nodeContext);
+	static void uaDestructor(
+        UA_Server        *server,
+        const UA_NodeId  *sessionId, 
+        void             *sessionContext,
+        const UA_NodeId  *typeNodeId, 
+        void             *typeNodeContext,
+        const UA_NodeId  *nodeId, 
+        void            **nodeContext
+    );
 
-	static UA_StatusCode uaConstructor(QUaServer         *server,
-		                               const UA_NodeId   *nodeId, 
-		                               void             **nodeContext,
-		                               const QMetaObject &metaObject);
+	static UA_StatusCode uaConstructor(
+        QUaServer         *server,
+        const UA_NodeId   *nodeId, 
+        void             **nodeContext,
+        const QMetaObject &metaObject
+    );
 
-	static UA_StatusCode methodCallback(UA_Server        *server,
-		                                const UA_NodeId  *sessionId,
-		                                void             *sessionContext,
-		                                const UA_NodeId  *methodId,
-		                                void             *methodContext,
-		                                const UA_NodeId  *objectId,
-		                                void             *objectContext,
-		                                size_t            inputSize,
-		                                const UA_Variant *input,
-		                                size_t            outputSize,
-		                                UA_Variant       *output);
+	static UA_StatusCode methodCallback(
+        UA_Server        *server,
+        const UA_NodeId  *sessionId,
+        void             *sessionContext,
+        const UA_NodeId  *methodId,
+        void             *methodContext,
+        const UA_NodeId  *objectId,
+        void             *objectContext,
+        size_t            inputSize,
+        const UA_Variant *input,
+        size_t            outputSize,
+        UA_Variant       *output
+    );
 
-    static UA_StatusCode callMetaMethod(QUaServer         *server,
-                                        QUaBaseObject     *object, 
-                                        const QMetaMethod &metaMethod,
-                                        const UA_Variant  *input, 
-                                        UA_Variant        *output);
+    static UA_StatusCode callMetaMethod(
+        QUaServer         *server,
+        QUaBaseObject     *object, 
+        const QMetaMethod &metaMethod,
+        const UA_Variant  *input, 
+        UA_Variant        *output
+    );
+
+    static void bindMethod(
+        QUaServer       *server,
+        const UA_NodeId *methodNodeId,
+        const int       &metaMethodIndex
+    );
+
+    static QHash<QString, int> metaMethodIndexes(const QMetaObject& metaObject);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 
@@ -528,7 +542,12 @@ private:
 
 	static QUaServer * getServerNodeContext(UA_Server * server);
 
-	static UA_StatusCode addEnumValues(UA_Server * server, UA_NodeId * parent, const UA_UInt32 numEnumValues, const QOpcUaEnumValue * enumValues);
+	static UA_StatusCode addEnumValues(
+        UA_Server             *server, 
+        UA_NodeId             *parent, 
+        const UA_UInt32        numEnumValues, 
+        const QOpcUaEnumValue *enumValues
+    );
 
 	static UA_StatusCode activateSession(UA_Server                    *server, 
 		                                 UA_AccessControl             *ac,

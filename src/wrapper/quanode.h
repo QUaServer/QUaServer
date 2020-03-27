@@ -495,6 +495,12 @@ signals:
 protected:
 	// to be able to reuse methods in subclasses
 	QUaServer* m_qUaServer;
+	// check if instance has an optional method with given browse name
+	bool hasOptionalMethod(const QString& strMethodName) const;
+	// gets optional method from type and adds a reference from this instance to the method
+	bool addOptionalMethod(const QString& strMethodName);
+	// removes the reference by the method above
+	bool removeOptionalMethod(const QString& strMethodName);
 
 private:
 	// INSTANCE NodeId
@@ -521,6 +527,9 @@ private:
 
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server);
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server);
+
+	static bool hasOptionalModellingRule(const UA_NodeId& nodeId, QUaServer* server);
+	static bool hasOptionalModellingRule(const UA_NodeId& nodeId, UA_Server* server);
 
 	static int getPropsOffsetHelper(const QMetaObject& metaObject);
 	// NOTE : need to cleanup result after calling this method

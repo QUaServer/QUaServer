@@ -1,5 +1,13 @@
 #include "quaserver_anex.h"
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#include <QUaConditionVariable>
+#include <QUaStateVariable>
+#include <QUaTwoStateVariable>
+#include <QUaCondition>
+#include <QUaAcknowledgeableCondition>
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #include <QMetaProperty>
 #include <QTimer>
 
@@ -333,6 +341,74 @@ UA_StatusCode QUaServer::callMetaMethod(
 	}
 	// return success status
 	return (UA_StatusCode)UA_STATUSCODE_GOOD;
+}
+
+void QUaServer::bindMethod(
+	QUaServer       *server, 
+	const UA_NodeId *methodNodeId, 
+	const int       &metaMethodIndex)
+{
+	// register callback in open62541
+	auto st = setMethodNode_callback(server->m_server, *methodNodeId, &QUaServer::methodCallback);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	// set QUaServer* instance as method context
+	st = UA_Server_setNodeContext(
+		server->m_server,
+		*methodNodeId,
+		static_cast<void*>(server)
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	Q_ASSERT_X(!server->m_hashMethods.contains(*methodNodeId), "QUaServer::registerTypeDefaults",
+		"Cannot register same method more than once.");
+	if (server->m_hashMethods.contains(*methodNodeId))
+	{
+		return;
+	}
+	// NOTE : had to cache the method's index in lambda capture because caching 
+	//        metaMethod directly was not working in some cases the internal data
+	//        of the metaMethod was deleted which resulted in access violation
+	server->m_hashMethods[*methodNodeId] = [metaMethodIndex, server](
+		void* objectContext,
+		const UA_Variant* input,
+		UA_Variant* output)
+	{
+		// get object instance that owns method
+#ifdef QT_DEBUG 
+		QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
+		Q_ASSERT_X(object,
+			"QUaServer::bindMethod",
+			"Cannot call method on invalid C++ object.");
+#else
+		QUaBaseObject* object = static_cast<QObject*>(objectContext);
+#endif // QT_DEBUG 
+		if (!object)
+		{
+			return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+		}
+		// get meta method
+		auto metaMethod = object->metaObject()->method(metaMethodIndex);
+		return QUaServer::callMetaMethod(server, object, metaMethod, input, output);
+	};
+}
+
+QHash<QString, int> QUaServer::metaMethodIndexes(const QMetaObject& metaObject)
+{
+	QHash<QString, int> retHash;
+	for (int methIdx = metaObject.methodOffset(); methIdx < metaObject.methodCount(); methIdx++)
+	{
+		QMetaMethod metaMethod = metaObject.method(methIdx);
+		// validate id method (not signal, slot or constructor)
+		auto methodType = metaMethod.methodType();
+		if (methodType != QMetaMethod::Method)
+		{
+			continue;
+		}
+		// add method
+		auto strMethName = metaMethod.name();
+		retHash[strMethName] = methIdx;
+	}
+	return retHash;
 }
 
 bool QUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
@@ -1648,34 +1724,22 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	}
 	// get qt type methods by name
 	// loop meta methods and find out which ones inherit from
-	QHash<QString, int> hashQtMethods;
-	for (int methIdx = metaObject.methodOffset(); methIdx < metaObject.methodCount(); methIdx++)
-	{
-		QMetaMethod metaMethod = metaObject.method(methIdx);
-		// validate id method (not signal, slot or constructor)
-		auto methodType = metaMethod.methodType();
-		if (methodType != QMetaMethod::Method)
-		{
-			continue;
-		}
-		// add method
-		auto strMethName = metaMethod.name();
-		hashQtMethods[strMethName] = methIdx;
-	}
-	// get mandatory ua methods
+	QHash<QString, int> hashQtMethods = QUaServer::metaMethodIndexes(metaObject);
+	// get all ua methods
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_server);
 	// try to match ua methods with qt meta methods (by browse name)
 	for (auto methodNodeId : methodsNodeIds)
 	{
-		// ignore if not mandatory
-		if (!QUaNode::hasMandatoryModellingRule(methodNodeId, m_server))
+		// ignore if not mandatory or optional
+		if (!QUaNode::hasMandatoryModellingRule(methodNodeId, m_server) &&
+			!QUaNode::hasOptionalModellingRule(methodNodeId, m_server))
 		{
 			continue;
 		}
 		// check mandatory ua method exists on qt type
 		QString strMethBrowseName = QUaNode::getBrowseName(methodNodeId, m_server);
 		Q_ASSERT_X(hashQtMethods.contains(strMethBrowseName), "QUaServer::registerTypeDefaults",
-			"Qt type does not implement mandatory method.");
+			"Qt type does not implement method. Qt types must implement both mandatory and optional.");
 		if (!hashQtMethods.contains(strMethBrowseName))
 		{
 			qDebug() << "Error Registering" << strMethBrowseName << "for" << strClassName;
@@ -1684,51 +1748,10 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 
 		// TODO : check arguments and return types
 
-		// register callback in open62541
-		auto st = setMethodNode_callback(m_server, methodNodeId, &QUaServer::methodCallback);
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		// set QUaServer* instance as method context
-		st = UA_Server_setNodeContext(
-			m_server,
-			methodNodeId,
-			static_cast<void*>(this)
-		);
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
-		Q_ASSERT_X(!m_hashMethods.contains(methodNodeId), "QUaServer::registerTypeDefaults", 
-			"Cannot register same method more than once.");
-		if (m_hashMethods.contains(methodNodeId))
-		{
-			continue;
-		}
-		// NOTE : had to cache the method's index in lambda capture because caching 
-		//        metaMethod directly was not working in some cases the internal data
-		//        of the metaMethod was deleted which resulted in access violation
 		int methIdx = hashQtMethods[strMethBrowseName];
-		m_hashMethods[methodNodeId] = [methIdx, this](
-			void* objectContext,
-			const UA_Variant* input,
-			UA_Variant* output)
-		{
-			// get object instance that owns method
-#ifdef QT_DEBUG 
-			QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
-			Q_ASSERT_X(object,
-				"QUaServer::registerTypeDefaults",
-				"Cannot call method on invalid C++ object.");
-#else
-			QUaBaseObject* object = static_cast<QObject*>(objectContext);
-#endif // QT_DEBUG 
-			if (!object)
-			{
-				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
-			}
-			// get meta method
-			auto metaMethod = object->metaObject()->method(methIdx);
-			return QUaServer::callMetaMethod(this, object, metaMethod, input, output);
-		};
+		QUaServer::bindMethod(this, &methodNodeId, methIdx);
 	}
-	// cleanup for mandatory methods
+	// cleanup for all ua methods
 	for (int i = 0; i < methodsNodeIds.count(); i++)
 	{
 		UA_NodeId_clear(&methodsNodeIds[i]);

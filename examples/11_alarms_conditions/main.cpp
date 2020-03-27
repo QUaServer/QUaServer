@@ -3,6 +3,14 @@
 
 #include <QUaServer>
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#include <QUaConditionVariable>
+#include <QUaStateVariable>
+#include <QUaTwoStateVariable>
+#include <QUaCondition>
+#include <QUaAcknowledgeableCondition>
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
@@ -47,6 +55,11 @@ int main(int argc, char *argv[])
 	auto condObj = objsFolder->addChild<QUaAcknowledgeableCondition>();
 	condObj->setBrowseName("MyAcknowledgeableCondition");
 	condObj->setDisplayName("MyAcknowledgeableCondition");
+	condObj->setConfirmAllowed(true);
+	condObj->addMethod("setConfirmAllowed",
+	[condObj](bool confirmable) {
+		condObj->setConfirmAllowed(confirmable);
+	});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

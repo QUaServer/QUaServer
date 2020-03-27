@@ -17,6 +17,22 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 		<< "EventId" << EventId << "Comment" << Comment;
 }
 
+void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
+{
+	qDebug() << "Called Confirm on" << this->browseName()
+		<< "EventId" << EventId << "Comment" << Comment;
+}
 
+bool QUaAcknowledgeableCondition::confirmAllowed() const
+{
+	return this->hasOptionalMethod("Confirm");
+}
+
+void QUaAcknowledgeableCondition::setConfirmAllowed(const bool& confirmAllowed)
+{
+	confirmAllowed ?
+		this->addOptionalMethod("Confirm") :
+		this->removeOptionalMethod("Confirm");
+}
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

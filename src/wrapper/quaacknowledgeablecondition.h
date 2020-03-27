@@ -25,9 +25,12 @@ public:
 
 	Q_INVOKABLE void Acknowledge(QByteArray EventId, QString Comment);
 
+	Q_INVOKABLE void Confirm(QByteArray EventId, QString Comment);
+
+	bool confirmAllowed() const;
+	void setConfirmAllowed(const bool & confirmAllowed);
 
 private:
-
 
 };
 
