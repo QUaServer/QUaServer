@@ -228,6 +228,10 @@ UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
 	Q_ASSERT(srv->m_hashMethods.contains(*methodId));
+	if (!srv->m_hashMethods.contains(*methodId))
+	{
+		return (UA_StatusCode)UA_STATUSCODE_BADINTERNALERROR;
+	}
 	// get method from node callbacks map and call it
 	return srv->m_hashMethods[*methodId](objectContext, input, output);
 }
@@ -1032,6 +1036,8 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
 	this->registerSpecificationType<QUaStateVariable    >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE    ));
 	this->registerSpecificationType<QUaTwoStateVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE ));
+	this->registerSpecificationType<QUaCondition               >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
+	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -1479,6 +1485,8 @@ void QUaServer::registerTypeInternal(
 	m_mapTypes.insert(strClassName, newTypeNodeId);
 	m_hashMetaObjects.insert(strClassName, metaObject);
 	// register for default mandatory children and so on
+	// in case our custom type inherits from a spec type
+	// which contains mandatory children
 	this->registerTypeDefaults(newTypeNodeId, metaObject);
 	// register constructor/destructor
 	this->registerTypeLifeCycle(newTypeNodeId, metaObject);
@@ -1601,7 +1609,7 @@ void QUaServer::registerTypeLifeCycle(const UA_NodeId& typeNodeId, const QMetaOb
 
 void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObject& metaObject)
 {
-	// cache mandatory children for new type if another QUaServer instance has not yet done it
+	// cache mandatory children if not done before
 	QString strClassName = QString(metaObject.className());
 	if (m_hashMandatoryChildren.contains(strClassName))
 	{
@@ -1615,10 +1623,11 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		"QUaServer::registerTypeDefaults", "Parent must already be registered.");
 	m_hashMandatoryChildren[strClassName] =
 		m_hashMandatoryChildren.value(strParentClassName, QStringList());
-	// get mandatory
+	// get mandatory children browse names
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
 	for (auto childNodeId : chidrenNodeIds)
 	{
+		// ignore if not mandatory
 		if (!QUaNode::hasMandatoryModellingRule(childNodeId, m_server))
 		{
 			continue;
@@ -1632,10 +1641,97 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		m_hashMandatoryChildren[strClassName]
 			<< strMandatoryBrowseName;
 	}
-	// cleanup
+	// cleanup for mandatory children
 	for (int i = 0; i < chidrenNodeIds.count(); i++)
 	{
 		UA_NodeId_clear(&chidrenNodeIds[i]);
+	}
+	// get qt type methods by name
+	// loop meta methods and find out which ones inherit from
+	QHash<QString, int> hashQtMethods;
+	for (int methIdx = metaObject.methodOffset(); methIdx < metaObject.methodCount(); methIdx++)
+	{
+		QMetaMethod metaMethod = metaObject.method(methIdx);
+		// validate id method (not signal, slot or constructor)
+		auto methodType = metaMethod.methodType();
+		if (methodType != QMetaMethod::Method)
+		{
+			continue;
+		}
+		// add method
+		auto strMethName = metaMethod.name();
+		hashQtMethods[strMethName] = methIdx;
+	}
+	// get mandatory ua methods
+	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_server);
+	// try to match ua methods with qt meta methods (by browse name)
+	for (auto methodNodeId : methodsNodeIds)
+	{
+		// ignore if not mandatory
+		if (!QUaNode::hasMandatoryModellingRule(methodNodeId, m_server))
+		{
+			continue;
+		}
+		// check mandatory ua method exists on qt type
+		QString strMethBrowseName = QUaNode::getBrowseName(methodNodeId, m_server);
+		Q_ASSERT_X(hashQtMethods.contains(strMethBrowseName), "QUaServer::registerTypeDefaults",
+			"Qt type does not implement mandatory method.");
+		if (!hashQtMethods.contains(strMethBrowseName))
+		{
+			qDebug() << "Error Registering" << strMethBrowseName << "for" << strClassName;
+			continue;
+		}
+
+		// TODO : check arguments and return types
+
+		// register callback in open62541
+		auto st = setMethodNode_callback(m_server, methodNodeId, &QUaServer::methodCallback);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		// set QUaServer* instance as method context
+		st = UA_Server_setNodeContext(
+			m_server,
+			methodNodeId,
+			static_cast<void*>(this)
+		);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		Q_ASSERT_X(!m_hashMethods.contains(methodNodeId), "QUaServer::registerTypeDefaults", 
+			"Cannot register same method more than once.");
+		if (m_hashMethods.contains(methodNodeId))
+		{
+			continue;
+		}
+		// NOTE : had to cache the method's index in lambda capture because caching 
+		//        metaMethod directly was not working in some cases the internal data
+		//        of the metaMethod was deleted which resulted in access violation
+		int methIdx = hashQtMethods[strMethBrowseName];
+		m_hashMethods[methodNodeId] = [methIdx, this](
+			void* objectContext,
+			const UA_Variant* input,
+			UA_Variant* output)
+		{
+			// get object instance that owns method
+#ifdef QT_DEBUG 
+			QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
+			Q_ASSERT_X(object,
+				"QUaServer::registerTypeDefaults",
+				"Cannot call method on invalid C++ object.");
+#else
+			QUaBaseObject* object = static_cast<QObject*>(objectContext);
+#endif // QT_DEBUG 
+			if (!object)
+			{
+				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
+			}
+			// get meta method
+			auto metaMethod = object->metaObject()->method(methIdx);
+			return QUaServer::callMetaMethod(this, object, metaMethod, input, output);
+		};
+	}
+	// cleanup for mandatory methods
+	for (int i = 0; i < methodsNodeIds.count(); i++)
+	{
+		UA_NodeId_clear(&methodsNodeIds[i]);
 	}
 }
 
@@ -1818,20 +1914,19 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 	UA_NodeId parentTypeNodeId = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
 	Q_ASSERT(!UA_NodeId_isNull(&parentTypeNodeId));
 	// loop meta methods and find out which ones inherit from
-	int methCount = parentMetaObject.methodCount();
-	for (int methIdx = parentMetaObject.methodOffset(); methIdx < methCount; methIdx++)
+	for (int methIdx = parentMetaObject.methodOffset(); methIdx < parentMetaObject.methodCount(); methIdx++)
 	{
-		QMetaMethod metamethod = parentMetaObject.method(methIdx);
+		QMetaMethod metaMethod = parentMetaObject.method(methIdx);
 		// validate id method (not signal, slot or constructor)
-		auto methodType = metamethod.methodType();
+		auto methodType = metaMethod.methodType();
 		if (methodType != QMetaMethod::Method)
 		{
 			continue;
 		}
 		// validate return type
-		auto returnType = (QMetaType::Type)metamethod.returnType();
+		auto returnType  = (QMetaType::Type)metaMethod.returnType();
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
-		bool isEnumType = this->m_hashEnums.contains(metamethod.typeName());
+		bool isEnumType  = this->m_hashEnums.contains(metaMethod.typeName());
 		bool isArrayType = QUaTypesConverter::isQTypeArray(returnType);
 		bool isValidType = isSupported || isEnumType || isArrayType;
 		// NOTE : enums are QMetaType::UnknownType
@@ -1848,7 +1943,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			returnType = QUaTypesConverter::getQArrayType(returnType);
 		}
 		// create return type
-		UA_Argument   outputArgumentInstance;
+		UA_Argument  outputArgumentInstance;
 		UA_Argument* outputArgument = nullptr;
 		if (returnType != QMetaType::Void)
 		{
@@ -1857,7 +1952,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 				(char*)"Result Value");
 			outputArgumentInstance.name = QUaTypesConverter::uaStringFromQString((char*)"Result");
 			outputArgumentInstance.dataType = isEnumType ?
-				this->m_hashEnums.value(QString(metamethod.typeName())) :
+				this->m_hashEnums.value(QString(metaMethod.typeName())) :
 				QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
 			outputArgumentInstance.valueRank = isArrayType ?
 				UA_VALUERANK_ONE_DIMENSION :
@@ -1865,20 +1960,20 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			outputArgument = &outputArgumentInstance;
 		}
 		// validate argument types and create them
-		Q_ASSERT_X(metamethod.parameterCount() <= 10,
+		Q_ASSERT_X(metaMethod.parameterCount() <= 10,
 			"QUaServer::addMetaMethods",
 			"No more than 10 arguments supported in MetaMethod.");
-		if (metamethod.parameterCount() > 10)
+		if (metaMethod.parameterCount() > 10)
 		{
 			continue;
 		}
 		QVector<UA_Argument> vectArgs;
-		auto listArgNames = metamethod.parameterNames();
-		Q_ASSERT(listArgNames.count() == metamethod.parameterCount());
-		auto listTypeNames = metamethod.parameterTypes();
-		for (int k = 0; k < metamethod.parameterCount(); k++)
+		auto listArgNames = metaMethod.parameterNames();
+		Q_ASSERT(listArgNames.count() == metaMethod.parameterCount());
+		auto listTypeNames = metaMethod.parameterTypes();
+		for (int k = 0; k < metaMethod.parameterCount(); k++)
 		{
-			auto argType = (QMetaType::Type)metamethod.parameterType(k);
+			auto argType = (QMetaType::Type)metaMethod.parameterType(k);
 			isSupported = QUaTypesConverter::isSupportedQType(argType);
 			isEnumType = this->m_hashEnums.contains(listTypeNames[k]);
 			isArrayType = QUaTypesConverter::isQTypeArray(argType);
@@ -1920,7 +2015,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			continue;
 		}
 		// add method
-		auto strMethName = metamethod.name();
+		auto strMethName = metaMethod.name();
 		// add method node
 		UA_MethodAttributes methAttr = UA_MethodAttributes_default;
 		methAttr.executable = true;
@@ -1939,7 +2034,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			UA_QUALIFIEDNAME(1, strMethName.data()),
 			methAttr,
 			&QUaServer::methodCallback,
-			metamethod.parameterCount(),
+			metaMethod.parameterCount(),
 			vectArgs.data(),
 			outputArgument ? 1 : 0,
 			outputArgument,
@@ -1971,10 +2066,14 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			UA_Variant* output) 
 		{
 			// get object instance that owns method
+#ifdef QT_DEBUG 
 			QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
 			Q_ASSERT_X(object,
-				"QUaServer::addMetaMethods",
+				"QUaServer::registerTypeDefaults",
 				"Cannot call method on invalid C++ object.");
+#else
+			QUaBaseObject* object = static_cast<QObject*>(objectContext);
+#endif // QT_DEBUG 
 			if (!object)
 			{
 				return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -2001,13 +2100,8 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// check if inherits BaseEventType, in which case this method cannot be used
-	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
-	{
-		Q_ASSERT_X(false, "QUaServer::createInstance", 
-			"Cannot use createInstance to create Events. Use createEvent method instead");
-		return UA_NODEID_NULL;
-	}
+	// NOTE : do not check metaObject.inherits(&QUaBaseEvent::staticMetaObject)
+	//        because conditions (which inherit BaseEvent) can be instantiated
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// try to get typeNodeId, if null, then register it
 	QString   strClassName = QString(metaObject.className());

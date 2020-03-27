@@ -23,6 +23,11 @@ public:
 		QUaServer *server
 	);
 
+	Q_INVOKABLE void Enable();
+
+	Q_INVOKABLE void Disable();
+
+	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment);
 
 
 private:

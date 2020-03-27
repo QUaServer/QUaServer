@@ -23,6 +23,7 @@ public:
 		QUaServer *server
 	);
 
+	Q_INVOKABLE void Acknowledge(QByteArray EventId, QString Comment);
 
 
 private:

@@ -21,6 +21,8 @@
 #include <QUaConditionVariable>
 #include <QUaStateVariable>
 #include <QUaTwoStateVariable>
+#include <QUaCondition>
+#include <QUaAcknowledgeableCondition>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 // Enum Stuff
@@ -418,7 +420,7 @@ private:
 	UA_Logger getLogger();
 	// types
     template<typename T>
-    void registerSpecificationType(const UA_NodeId& nodeId, const bool abstract = false);
+    void registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract = false);
 	void registerTypeInternal(const QMetaObject &metaObject, const QString &strNodeId = "");
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
 	template<typename T, typename M>
@@ -484,13 +486,13 @@ private:
 		                               const UA_NodeId  *nodeId, 
 		                               void            **nodeContext);
 
-	static void uaDestructor         (UA_Server        *server,
-		                              const UA_NodeId  *sessionId, 
-		                              void             *sessionContext,
-		                              const UA_NodeId  *typeNodeId, 
-		                              void             *typeNodeContext,
-		                              const UA_NodeId  *nodeId, 
-		                              void            **nodeContext);
+	static void uaDestructor(UA_Server        *server,
+		                     const UA_NodeId  *sessionId, 
+		                     void             *sessionContext,
+		                     const UA_NodeId  *typeNodeId, 
+		                     void             *typeNodeContext,
+		                     const UA_NodeId  *nodeId, 
+		                     void            **nodeContext);
 
 	static UA_StatusCode uaConstructor(QUaServer         *server,
 		                               const UA_NodeId   *nodeId, 
@@ -627,24 +629,24 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 }
 
 template<typename T>
-inline void QUaServer::registerSpecificationType(const UA_NodeId& nodeId, const bool abstract/* = false*/)
+inline void QUaServer::registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract/* = false*/)
 {
     auto& metaObject = T::staticMetaObject;
-    m_mapTypes.insert(QString(metaObject.className()), nodeId);
+    m_mapTypes.insert(QString(metaObject.className()), typeNodeId);
     m_hashMetaObjects.insert(QString(metaObject.className()), metaObject);
     // register for default mandatory children and so on
-    this->registerTypeDefaults(nodeId, metaObject);
+    this->registerTypeDefaults(typeNodeId, metaObject);
     // set node context only if instatiable
     if (abstract)
     {
         return;
     }
-    auto st = UA_Server_setNodeContext(m_server, nodeId, (void*)this);
+    auto st = UA_Server_setNodeContext(m_server, typeNodeId, (void*)this);
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
     // NOTE : cannot move all the registering stuff to templated versions
     //        because we need recursive upstream regitration to base classes
     //        in order to maintain a simple to use API
-    this->registerTypeLifeCycle(nodeId, metaObject);
+    this->registerTypeLifeCycle(typeNodeId, metaObject);
 }
 
 template<typename T, typename M>

@@ -643,102 +643,98 @@ namespace QUaTypesConverter {
 		return retVar;
 	}
 
-    UA_Boolean UA_NodeId_equal_helper(const UA_NodeId *n1, const UA_NodeId n2)
-    {
-        return UA_NodeId_equal(n1, &n2);
-    }
-
 	QMetaType::Type uaTypeNodeIdToQType(const UA_NodeId * nodeId)
 	{
 		if (nodeId == nullptr) {
 			return QMetaType::UnknownType;
 		}
-        if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)))
+        if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)))
 		{
 			return QMetaType::UnknownType;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)))
 		{
 			return QMetaType::Bool;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)))
 		{
 			return QMetaType::Char;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)))
 		{
 			return QMetaType::UChar;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)))
 		{
 			return QMetaType::Short;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)))
 		{
 			return QMetaType::UShort;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)))
 		{
 			return QMetaType::Int;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)) ||
+			     UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)))
 		{
 			return QMetaType::UInt;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)))
 		{
 			return QMetaType::LongLong;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)))
 		{
 			return QMetaType::ULongLong;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)))
 		{
 			return QMetaType::Float;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)))
 		{
 			return QMetaType::Double;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)))
 		{
 			return QMetaType::QString;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)))
 		{
 			return QMetaType::QDateTime;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)))
 		{
 			return QMetaType::QUuid;
 		}
-        else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)))
 		{
 			return QMetaType::QByteArray;
 		}
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_UTCTIME)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UTCTIME)))
 		{
 			return QMetaType::QDateTime;
 		}
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)))
 		{
 			return METATYPE_NODEID;
 		}
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)))
 		{
 			return METATYPE_TIMEZONEDATATYPE;
 		}
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)))
 		{
 			return METATYPE_LOCALIZEDTEXT;
 		}
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)))
 		{
 			return METATYPE_IMAGE;
 		}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-		else if (UA_NodeId_equal_helper(nodeId, UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE)))
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE)))
 		{
 			return METATYPE_CHANGESTRUCTUREDATATYPE;
 		}

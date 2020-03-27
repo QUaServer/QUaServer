@@ -11,6 +11,12 @@ QUaAcknowledgeableCondition::QUaAcknowledgeableCondition(
 	
 }
 
+void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Comment)
+{
+	qDebug() << "Called Acknowledge on" << this->browseName()
+		<< "EventId" << EventId << "Comment" << Comment;
+}
+
 
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

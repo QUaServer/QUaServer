@@ -1246,7 +1246,7 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
 	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
-	bDesc->resultMask      = UA_BROWSERESULTMASK_BROWSENAME | UA_BROWSERESULTMASK_DISPLAYNAME; // bring only useful info | UA_BROWSERESULTMASK_ALL;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // only need node ids
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
 	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
@@ -1275,6 +1275,45 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 	UA_BrowseResult_deleteMembers(&bRes);
 	// return
 	return retListChildren;
+}
+
+// NOTE : need to cleanup result after calling this method
+QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, QUaServer* server)
+{
+	return QUaNode::getMethodsNodeIds(parentNodeId, server->m_server);
+}
+
+// NOTE : need to cleanup result after calling this method
+QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server)
+{
+	QList<UA_NodeId> retListMethods;
+	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
+	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
+	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
+	bDesc->includeSubtypes = false;
+	bDesc->nodeClassMask = UA_NODECLASS_METHOD; // only methods
+	bDesc->resultMask = UA_BROWSERESULTMASK_NONE; // only need node ids
+	// browse
+	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
+	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	while (bRes.referencesSize > 0)
+	{
+		for (size_t i = 0; i < bRes.referencesSize; i++)
+		{
+			UA_ReferenceDescription rDesc = bRes.references[i];
+			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
+			retListMethods.append(nodeId);
+		}
+		UA_BrowseResult_deleteMembers(&bRes);
+		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
+	}
+	// cleanup
+	UA_BrowseDescription_deleteMembers(bDesc);
+	UA_BrowseDescription_delete(bDesc);
+	UA_BrowseResult_deleteMembers(&bRes);
+	// return
+	return retListMethods;
 }
 
 QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, QUaServer * server)

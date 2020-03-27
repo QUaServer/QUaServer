@@ -502,15 +502,19 @@ private:
 
 	// Static Helpers
 
+	// NOTE : need to cleanup result after calling this method
 	static UA_NodeId getParentNodeId(const UA_NodeId& childNodeId, QUaServer* server);
 	static UA_NodeId getParentNodeId(const UA_NodeId& childNodeId, UA_Server* server);
-
+	// NOTE : need to cleanup result after calling this method
 	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId& parentNodeId, QUaServer* server);
 	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
+	// NOTE : need to cleanup result after calling this method
+	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, QUaServer* server);
+	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
 
 	static QUaNode* getNodeContext(const UA_NodeId& nodeId, QUaServer* server);
 	static QUaNode* getNodeContext(const UA_NodeId& nodeId, UA_Server* server);
-	static void* getVoidContext(const UA_NodeId& nodeId, UA_Server* server);
+	static void*    getVoidContext(const UA_NodeId& nodeId, UA_Server* server);
 
 	static QString getBrowseName(const UA_NodeId& nodeId, QUaServer* server);
 	static QString getBrowseName(const UA_NodeId& nodeId, UA_Server* server);
@@ -519,7 +523,7 @@ private:
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server);
 
 	static int getPropsOffsetHelper(const QMetaObject& metaObject);
-
+	// NOTE : need to cleanup result after calling this method
 	static UA_NodeId typeDefinitionNodeId(const UA_NodeId &nodeId, UA_Server* server);
 	static UA_NodeId superTypeDefinitionNodeId(const UA_NodeId &typeNodeId, UA_Server* server);
 

@@ -510,3 +510,15 @@ QUaNode::instantiateOptionalChild
 extern "C"
 const UA_Node *
 getNodeType(UA_Server * server, const UA_Node * node);
+
+/*********************************************************************************************
+Copied from open62541, to be able to implement:
+
+QUaServer::registerTypeDefaults
+*/
+
+extern "C"
+UA_StatusCode
+setMethodNode_callback(UA_Server * server,
+    const UA_NodeId methodNodeId,
+    UA_MethodCallback methodCallback);

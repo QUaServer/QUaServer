@@ -27,22 +27,26 @@ int main(int argc, char *argv[])
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 	auto condVar = objsFolder->addChild<QUaConditionVariable>();
-	condVar->setBrowseName("ConditionVariable");
-	condVar->setDisplayName("ConditionVariable");
+	condVar->setBrowseName("MyConditionVariable");
+	condVar->setDisplayName("MyConditionVariable");
 	condVar->setDataType(QMetaType::Double);
 	condVar->setWriteAccess(true);
-	objsFolder->addMethod("UpdateConditionVariable", 
+	objsFolder->addMethod("UpdateMyConditionVariable", 
 	[condVar](double value) {
 		condVar->setValue(value);
 	});
 
 	auto twoStVar = objsFolder->addChild<QUaTwoStateVariable>();
-	twoStVar->setBrowseName("TwoStateVariable");
-	twoStVar->setDisplayName("TwoStateVariable");
-	objsFolder->addMethod("UpdateTwoStateVariable", 
+	twoStVar->setBrowseName("MyTwoStateVariable");
+	twoStVar->setDisplayName("MyTwoStateVariable");
+	objsFolder->addMethod("UpdateMyTwoStateVariable", 
 	[twoStVar](QString currentStateName) {
 		twoStVar->setCurrentStateName(currentStateName);
 	});
+
+	auto condObj = objsFolder->addChild<QUaAcknowledgeableCondition>();
+	condObj->setBrowseName("MyAcknowledgeableCondition");
+	condObj->setDisplayName("MyAcknowledgeableCondition");
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
