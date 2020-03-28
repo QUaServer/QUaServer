@@ -80,7 +80,7 @@ public:
 	// Triggers the event and updates eventId, sourceNode, eventType and receiveTime
 	void trigger();
 
-private:
+protected:
 	// ByteString : 
 	QUaProperty  * getEventId();
 	// NodeId : 

@@ -30,7 +30,7 @@ public:
 	bool confirmAllowed() const;
 	void setConfirmAllowed(const bool & confirmAllowed);
 
-private:
+protected:
 
 };
 

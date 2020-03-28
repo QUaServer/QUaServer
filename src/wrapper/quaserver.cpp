@@ -1189,6 +1189,7 @@ void QUaServer::setupServer()
 #ifdef UA_ENABLE_HISTORIZING
 	UA_HistoryDataGathering gathering = UA_HistoryDataGathering_Default(1000);
 	m_historDatabase = UA_HistoryDatabase_default(gathering);
+	config->historyDatabase = m_historDatabase;
 #endif // UA_ENABLE_HISTORIZING
 }
 
@@ -2226,6 +2227,21 @@ UA_NodeId QUaServer::createInstanceInternal(
 		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
 	});
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+	// if child is condition, add non-hierarchical reference and default props
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	if (metaObject.inherits(&QUaCondition::staticMetaObject))
+	{
+		// add HasCondition reference
+		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
+		auto condition = qobject_cast<QUaCondition*>(tmp);
+		Q_CHECK_PTR(condition);
+		parentNode->addReference({ "HasCondition" , "IsConditionOf" }, condition, true);
+		// set SourceNode
+		condition->setSourceNode(parentNode->nodeId());
+		condition->setSourceName(parentNode->browseName());
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 	// return new instance node id
 	return nodeIdNewInstance;

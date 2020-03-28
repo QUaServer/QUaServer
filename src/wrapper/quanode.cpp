@@ -850,51 +850,49 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 // NOTE : code borrowed from UA_Server_addConditionOptionalField
 QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 {
-	// convert browse name to qualified name
-	UA_QualifiedName fieldName;
-	fieldName.namespaceIndex = 0;
-	fieldName.name = QUaTypesConverter::uaStringFromQString(strBrowseName);
-	// get type node id
+	// look if optional child really in model
+	UA_NodeId optionalFieldNodeId = UA_NODEID_NULL;
 	UA_NodeId typeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
-	// else check if optional child of instance declaration exists
-	UA_BrowsePathResult bpr;
-	bpr.statusCode = UA_STATUSCODE_BADINTERNALERROR;
-	// need to look into type hierarchy recursivelly up starting from type of this
-	while (bpr.statusCode != UA_STATUSCODE_GOOD)
+	QList<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeId, m_qUaServer->m_server);
+	for (auto childNodeId : childrenNodeIds)
 	{
-		// exit condition
-		if (UA_NodeId_equal(&typeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)) ||
-			UA_NodeId_equal(&typeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)))
+		// ignore if not optional
+		if (!QUaNode::hasOptionalModellingRule(childNodeId, m_qUaServer->m_server))
 		{
-			UA_BrowsePathResult_deleteMembers(&bpr);
-			UA_NodeId_clear(&typeId);
-			UA_QualifiedName_deleteMembers(&fieldName);
+			UA_NodeId_clear(&childNodeId);
+			continue;
 		}
-		// browse
-		bpr = UA_Server_browseSimplifiedBrowsePath(
-			m_qUaServer->m_server,
-			typeId,
-			1,
-			&fieldName
-		);
-		// find super type for next iteration
-		UA_NodeId typeIdOld = typeId;
-		typeId = QUaNode::superTypeDefinitionNodeId(typeIdOld, m_qUaServer->m_server);
-		UA_NodeId_clear(&typeIdOld);
+		// ignore if browse name does not match
+		QString childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
+		if (childBrowseName.compare(strBrowseName, Qt::CaseSensitive) != 0)
+		{
+			UA_NodeId_clear(&childNodeId);
+			continue;
+		}
+		// copy, do not clear because will be used later
+		optionalFieldNodeId = childNodeId;
 	}
-	UA_NodeId_clear(&typeId);
-	// get instance declaration node id (orignal, we need a copy of this one)
-	UA_NodeId optionalFieldNodeId = bpr.targets[0].targetId.nodeId;
-	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(m_qUaServer->m_server, &optionalFieldNodeId);
-	if (NULL == optionalFieldNode) 
+	if (UA_NodeId_isNull(&optionalFieldNodeId))
 	{
 		UA_LOG_WARNING(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Couldn't find optional Field Node in ConditionType. StatusCode %s",
 			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
-		UA_QualifiedName_deleteMembers(&fieldName);
-		UA_BrowsePathResult_deleteMembers(&bpr);
 		return nullptr;
 	}
+	// get the internal node
+	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(m_qUaServer->m_server, &optionalFieldNodeId);
+	UA_NodeId_clear(&optionalFieldNodeId);
+	if (optionalFieldNode == NULL) 
+	{
+		UA_LOG_WARNING(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
+			"Couldn't find optional Field Node in ConditionType. StatusCode %s",
+			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
+		return nullptr;
+	}
+	// convert browse name to qualified name
+	UA_QualifiedName fieldName;
+	fieldName.namespaceIndex = 0;
+	fieldName.name = QUaTypesConverter::uaStringFromQString(strBrowseName);
 	// instantiate according to type
 	UA_NodeId outOptionalNode;
 	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
@@ -914,7 +912,6 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 				"Adding Condition Optional Variable Field failed. StatusCode %s",
 				UA_StatusCode_name(retval));
 			UA_QualifiedName_deleteMembers(&fieldName);
-			UA_BrowsePathResult_deleteMembers(&bpr);
 			return nullptr;
 		}
 		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
@@ -934,26 +931,22 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 				"Adding Condition Optional Object Field failed. StatusCode %s",
 				UA_StatusCode_name(retval));
 			UA_QualifiedName_deleteMembers(&fieldName);
-			UA_BrowsePathResult_deleteMembers(&bpr);
 			return nullptr;
 		}
 		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
 	}
 	break;
 	case UA_NODECLASS_METHOD:
-		// TODO : not supported
+		// NOTE : use QUaNode::addOptionalMethod instead
 		UA_QualifiedName_deleteMembers(&fieldName);
-		UA_BrowsePathResult_deleteMembers(&bpr);
 		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
 		return nullptr;
 	default:
 		UA_QualifiedName_deleteMembers(&fieldName);
-		UA_BrowsePathResult_deleteMembers(&bpr);
 		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
 		return nullptr;
 	}
 	UA_QualifiedName_deleteMembers(&fieldName);
-	UA_BrowsePathResult_deleteMembers(&bpr);
 	// if we reached here, the optional field has been instantiated
 	// if the type of the optional field is registered in QUaServer then
 	// it has been boud to its corresponding Qt type ad there is nothing

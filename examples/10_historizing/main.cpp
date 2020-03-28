@@ -18,8 +18,6 @@ int main(int argc, char* argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
-	// NOTE : historizing only works if server started
-	server.start();
 	QObject::connect(&server, &QUaServer::logMessage,
     [](const QUaLog &log) {
         qDebug() 
@@ -59,10 +57,10 @@ int main(int argc, char* argv[])
 		auto varInt = objsFolder->addBaseDataVariable(QString("ns=1;s=Int%1").arg(i));
 		varInt->setDisplayName(QString("Int%1").arg(i));
 		varInt->setBrowseName(QString("Int%1").arg(i));
-		varInt->setValue(0);
 		// NOTE : must enable historizing for each variable
 		varInt->setHistorizing(true);
 		varInt->setReadHistoryAccess(true);
+		varInt->setValue(0);
 		// set random value
 		QObject::connect(&timer, &QTimer::timeout, varInt, [varInt]() {
 			varInt->setValue(QRandomGenerator::global()->generate());
@@ -71,6 +69,9 @@ int main(int argc, char* argv[])
 	// update variable every half a second
 	timer.start(500);
 #endif // UA_ENABLE_HISTORIZING
+
+	// start server
+	server.start();
 
 	return a.exec();
 }
