@@ -15,12 +15,18 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 {
 	qDebug() << "Called Acknowledge on" << this->browseName()
 		<< "EventId" << EventId << "Comment" << Comment;
+
+	// set last comment
+	this->setComment(Comment);
 }
 
 void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 {
 	qDebug() << "Called Confirm on" << this->browseName()
 		<< "EventId" << EventId << "Comment" << Comment;
+
+	// set last comment
+	this->setComment(Comment);
 }
 
 bool QUaAcknowledgeableCondition::confirmAllowed() const

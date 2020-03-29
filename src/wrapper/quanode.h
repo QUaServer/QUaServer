@@ -16,6 +16,7 @@ class QUaProperty;
 class QUaBaseDataVariable;
 class QUaBaseObject;
 class QUaFolderObject;
+class QUaSession;
 
 #include <QUaTypesConverter>
 
@@ -519,6 +520,8 @@ signals:
 protected:
 	// to be able to reuse methods in subclasses
 	QUaServer* m_qUaServer;
+	// to check which session is calling a service (read, write, method call, etc)
+	const QUaSession* currentSession() const;
 	// check if instance has an optional method with given browse name
 	bool hasOptionalMethod(const QString& strMethodName) const;
 	// gets optional method from type and adds a reference from this instance to the method

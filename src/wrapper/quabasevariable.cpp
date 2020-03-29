@@ -142,14 +142,12 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 		                      const UA_NumericRange *range,
 		                      const UA_DataValue    *data)
 {
-	Q_UNUSED(server);
-	Q_UNUSED(sessionId);
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(nodeId);
 	Q_UNUSED(range);
 	// get variable from context
 #ifdef QT_DEBUG 
-	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
+	auto var = qobject_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
 	Q_CHECK_PTR(var);
 #else
 	auto var = static_cast<QUaBaseVariable*>(nodeContext);
@@ -164,6 +162,21 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 		var->m_bInternalWrite = false;
 		return;
 	}
+	// get server
+	void* serverContext = nullptr;
+	auto st = UA_Server_getNodeContext(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), &serverContext);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+#ifdef QT_DEBUG 
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(serverContext));
+	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(serverContext);
+#endif // QT_DEBUG 
+	// check session
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
+		srv->m_hashSessions[*sessionId] : nullptr;
 	// emit value changed
 	emit var->valueChanged(var->value());
 	// emit status changed
@@ -190,23 +203,38 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 }
 
 // [STATIC]
-void QUaBaseVariable::onRead(UA_Server             *server, 
-		                      const UA_NodeId       *sessionId,
-		                      void                  *sessionContext, 
-		                      const UA_NodeId       *nodeId,
-		                      void                  *nodeContext, 
-		                      const UA_NumericRange *range,
-		                      const UA_DataValue    *data)
+void QUaBaseVariable::onRead(
+	UA_Server             *server, 
+	const UA_NodeId       *sessionId,
+	void                  *sessionContext, 
+	const UA_NodeId       *nodeId,
+	void                  *nodeContext, 
+	const UA_NumericRange *range,
+	const UA_DataValue    *data
+)
 {
-	Q_UNUSED(server);
-	Q_UNUSED(sessionId);
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(nodeId);
 	Q_UNUSED(range);
 	Q_UNUSED(data);
+	// get server
+	void* serverContext = nullptr;
+	auto st = UA_Server_getNodeContext(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), &serverContext);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+#ifdef QT_DEBUG 
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(serverContext));
+	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(serverContext);
+#endif // QT_DEBUG 
+	// check session
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
+		srv->m_hashSessions[*sessionId] : nullptr;
 	// get variable from context
 #ifdef QT_DEBUG 
-	auto var = dynamic_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
+	auto var = qobject_cast<QUaBaseVariable*>(static_cast<QObject*>(nodeContext));
 	Q_CHECK_PTR(var);
 #else
 	auto var = static_cast<QUaBaseVariable*>(nodeContext);
@@ -349,17 +377,16 @@ void QUaBaseVariable::setValue(
 			newType = oldType;
 		}
 	}
-	else if (newValue.canConvert(oldType)) // scalar
+	else if (newType != oldType && newValue.canConvert(oldType)) // scalar
 	{
 		// preserve dataType if possible
 		newValue.convert(oldType);
 		newType = oldType;
-	}
-	// if new value dataType does not match the old value dataType
-	// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"	
-	if (newType != oldType &&
-		!newValue.canConvert(oldType))
+	}	
+	else if (newType != oldType && !newValue.canConvert(oldType))
 	{
+		// if new value dataType does not match the old value dataType
+		// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"
 		auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 			m_nodeId,
 			UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));

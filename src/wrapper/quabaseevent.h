@@ -53,6 +53,7 @@ public:
 	QString eventType() const;
 	// Node that the Event originated from. If is not specific to a Node, then is set to null. 
 	QString sourceNode() const;
+	void    setSourceNode(const QString& sourceNodeId);
 	// Description of the source of the Event.
 	QString sourceName() const;
 	void setSourceName(const QString &strSourceName);
@@ -72,8 +73,8 @@ public:
 	void setMessage(const QString &strMessage);
 	// Urgency of the Event. Value from 1 to 1000, with 1 being the lowest severity and 1000 being the highest. 
 	// A severity of 1 indicates an Event is informational, while 1000 would indicates catastrophic nature.
-	quint16 severity() const;
-	void setSeverity(const quint16 &intSeverity);
+	virtual quint16 severity() const;
+	virtual void setSeverity(const quint16 &intSeverity);
 
 	// Custom Event API
 

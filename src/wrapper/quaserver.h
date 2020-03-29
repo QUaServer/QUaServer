@@ -388,6 +388,12 @@ private:
 
 	QUaValidationCallback m_validationCallback;
 
+    const QUaSession* m_currentSession;
+
+    static QString m_anonUser;
+    static QString m_anonUserToken;
+    static QStringList m_anonUsers;
+
 	// change event instance to notify client when nodes added or removed
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     QUaSignaler m_changeEventSignaler;

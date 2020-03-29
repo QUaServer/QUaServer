@@ -30,20 +30,9 @@ QUaCondition::QUaCondition(
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// set default : good
 	this->setQuality(QUaStatus::Good);
+	// set default : 0
+	this->setLastSeverity(0);
 }
-
-void QUaCondition::setSourceNode(const QString& sourceNodeId)
-{
-	return this->getSourceNode()->setValue(
-		sourceNodeId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
-}
-
-
 
 QString QUaCondition::conditionClassId() const
 {
@@ -54,7 +43,7 @@ void QUaCondition::setConditionClassId(const QString& conditionClassId)
 {
 	this->getConditionClassId()->setValue(
 		conditionClassId,
-		QUaStatusCode(),
+		QUaStatus::Good,
 		QDateTime(),
 		QDateTime(),
 		METATYPE_NODEID
@@ -209,6 +198,14 @@ void QUaCondition::setLastSeverity(const quint16& lastSeverity)
 	this->getLastSeverity()->setValue(lastSeverity);
 }
 
+void QUaCondition::setSeverity(const quint16& intSeverity)
+{
+	// set last severity before writing new
+	this->setLastSeverity(this->severity());
+	// set new severity
+	QUaBaseEvent::setSeverity(intSeverity);
+}
+
 QString QUaCondition::comment() const
 {
 	return const_cast<QUaCondition*>(this)->getComment()->value().toString();
@@ -217,6 +214,12 @@ QString QUaCondition::comment() const
 void QUaCondition::setComment(const QString& comment)
 {
 	this->getComment()->setValue(comment);
+	auto session = this->currentSession();
+	if (!session)
+	{
+		return;
+	}
+	this->setClientUserId(session->userName());
 }
 
 QString QUaCondition::clientUserId() const
@@ -243,6 +246,9 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 {
 	qDebug() << "Called AddComment on" << this->browseName()
 		<< "EventId" << EventId << "Comment" << Comment;
+
+	// set last comment
+	this->setComment(Comment);
 }
 
 QUaProperty* QUaCondition::getConditionClassId()

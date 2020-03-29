@@ -22,7 +22,6 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	                                   void            ** nodeContext)
 {
 	Q_UNUSED(server);
-	Q_UNUSED(sessionId); 
 	Q_UNUSED(sessionContext); 
 	// get server from context object
 #ifdef QT_DEBUG 
@@ -35,8 +34,12 @@ UA_StatusCode QUaServer::uaConstructor(UA_Server       * server,
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
-	Q_ASSERT(srv->m_hashConstructors.contains(*typeNodeId));
+	// check session (objects can be created or destroyed without client connected)
+	//Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
+		srv->m_hashSessions[*sessionId] : nullptr;
 	// get method from type constructors map and call it
+	Q_ASSERT(srv->m_hashConstructors.contains(*typeNodeId));
 	auto st = srv->m_hashConstructors[*typeNodeId](nodeId, nodeContext);
 	// emit new instance signal if appropriate
 	if (srv->m_hashSignalers.contains(*typeNodeId))
@@ -65,12 +68,32 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	Q_UNUSED(typeNodeContext);
 	Q_UNUSED(typeNodeId);
 	Q_UNUSED(sessionContext);
-	Q_UNUSED(sessionId);
+	// get server
+	void* serverContext = nullptr;
+	auto st = UA_Server_getNodeContext(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), &serverContext);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+#ifdef QT_DEBUG 
+	auto srv = qobject_cast<QUaServer*>(static_cast<QObject*>(serverContext));
+	Q_CHECK_PTR(srv);
+#else
+	auto srv = static_cast<QUaServer*>(serverContext);
+#endif // QT_DEBUG 
+	// check session (objects can be created or destroyed without client connected)
+	//Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
+		srv->m_hashSessions[*sessionId] : nullptr;
+	// get node
 	void * context;
-	auto st = UA_Server_getNodeContext(server, *nodeId, &context);
+	st = UA_Server_getNodeContext(server, *nodeId, &context);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// try to convert to node
+#ifdef QT_DEBUG 
 	auto node = qobject_cast<QUaNode*>(static_cast<QObject*>(context));
+	Q_ASSERT(node);
+#else
+	auto node = static_cast<QUaNode*>(context);
+#endif // QT_DEBUG 
 	// early exit if not convertible (this call was triggered by ~QUaNode)
 	if (!node)
 	{
@@ -219,7 +242,6 @@ UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 	                                    UA_Variant       * output)
 {
 	Q_UNUSED(server        );
-	Q_UNUSED(sessionId     );
 	Q_UNUSED(sessionContext);
 	Q_UNUSED(objectId      );
 	Q_UNUSED(inputSize     );
@@ -235,6 +257,11 @@ UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
 	{
 		return (UA_StatusCode)UA_STATUSCODE_BADUNEXPECTEDERROR;
 	}
+	// check session
+	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
+		srv->m_hashSessions[*sessionId] : nullptr;
+	// check method
 	Q_ASSERT(srv->m_hashMethods.contains(*methodId));
 	if (!srv->m_hashMethods.contains(*methodId))
 	{
@@ -503,6 +530,12 @@ UA_StatusCode QUaServer::addEnumValues(UA_Server * server, UA_NodeId * parent, c
 	return retVal;
 }
 
+QString QUaServer::m_anonUser      = QObject::tr("[Anonymous]");
+QString QUaServer::m_anonUserToken = QObject::tr("[Anonymous:EmptyToken]");
+QStringList QUaServer::m_anonUsers = QStringList() 
+	<< QUaServer::m_anonUser
+	<< QUaServer::m_anonUserToken;
+
 // Copied from activateSession_default in open62541 and then modified to use custom stuff
 UA_StatusCode QUaServer::activateSession(UA_Server                    * server, 
 	                                     UA_AccessControl             * ac, 
@@ -526,7 +559,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		// NOTE : custom code : add session to hash
 		Q_ASSERT(!srv->m_hashSessions.contains(*sessionId));
         srv->m_hashSessions.insert(*sessionId, new QUaSession(srv));
-        srv->m_hashSessions[*sessionId]->m_strUserName = "";
+        srv->m_hashSessions[*sessionId]->m_strUserName = QUaServer::m_anonUserToken;
 
 		// notify client connected
 		QUaServer::newSession(srv, sessionId);
@@ -561,7 +594,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
         {
             srv->m_hashSessions.insert(*sessionId, new QUaSession(srv));
         }
-        srv->m_hashSessions[*sessionId]->m_strUserName = "";
+        srv->m_hashSessions[*sessionId]->m_strUserName = QUaServer::m_anonUser;
 
 		// notify client connected
 		QUaServer::newSession(srv, sessionId);
@@ -734,7 +767,7 @@ UA_UInt32 QUaServer::getUserRightsMask(UA_Server        *server,
 	// get user
     QString strUserName = srv->m_hashSessions[*sessionId]->m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
+	if (!srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -768,7 +801,7 @@ UA_Byte QUaServer::getUserAccessLevel(UA_Server        *server,
 	// get user
     QString strUserName = srv->m_hashSessions[*sessionId]->m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
+	if (!srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -807,7 +840,7 @@ UA_Boolean QUaServer::getUserExecutable(UA_Server        *server,
 	// get user
     QString strUserName = srv->m_hashSessions[*sessionId]->m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
+	if (!srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -839,7 +872,7 @@ UA_Boolean QUaServer::getUserExecutableOnObject(UA_Server        *server,
 	// get user
     QString strUserName = srv->m_hashSessions[*sessionId]->m_strUserName;
 	// check if user still exists
-	if (!strUserName.isEmpty() && !srv->userExists(strUserName))
+	if (!srv->userExists(strUserName))
 	{
 		// TODO : wait until officially supported
 		// https://github.com/open62541/open62541/issues/2617
@@ -2725,11 +2758,12 @@ QStringList QUaServer::userNames() const
 
 bool QUaServer::userExists(const QString & strUserName) const
 {
+	Q_ASSERT(!strUserName.isEmpty());
 	if (strUserName.isEmpty())
 	{
 		return false;
 	}
-	return m_hashUsers.contains(strUserName);
+	return m_anonUsers.contains(strUserName) || m_hashUsers.contains(strUserName);
 }
 
 QList<const QUaSession*> QUaServer::sessions() const

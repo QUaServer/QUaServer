@@ -42,6 +42,17 @@ QString QUaBaseEvent::sourceNode() const
 	return const_cast<QUaBaseEvent*>(this)->getSourceNode()->value().toString();
 }
 
+void QUaBaseEvent::setSourceNode(const QString& sourceNodeId)
+{
+	return this->getSourceNode()->setValue(
+		sourceNodeId,
+		QUaStatusCode(),
+		QDateTime(),
+		QDateTime(),
+		METATYPE_NODEID
+	);
+}
+
 QString QUaBaseEvent::sourceName() const
 {
 	return const_cast<QUaBaseEvent*>(this)->getSourceName()->value().toString();

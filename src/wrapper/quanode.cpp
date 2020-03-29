@@ -1005,6 +1005,10 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	return newInstance;
 }
 
+const QUaSession* QUaNode::currentSession() const
+{
+	return m_qUaServer->m_currentSession;
+}
 
 bool QUaNode::hasOptionalMethod(const QString& strMethodName) const
 {

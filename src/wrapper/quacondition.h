@@ -38,6 +38,13 @@ Recommended state names for EnabledState are described in Annex A.
 Condition Type | State Variable | False State Name | True State Name
 ConditionType  | EnabledState   | Disabled         | Enabled
 
+Events are only generated for Conditions that have their Retain field set to True and for the
+initial transition of the Retain field from True to False.
+
+The NodeId of the Condition instance is used as ConditionId. It is not explicitly modelled as a
+component of the ConditionType. However, it can be requested with a
+SimpleAttributeOperand (see Table 10) in the SelectClause of the EventFilter
+
 */
 
 class QUaTwoStateVariable;
@@ -58,7 +65,7 @@ public:
 
 	// SourceNode Property identifies the ConditionSource. 
 	// If the ConditionSource is not a Node in the AddressSpace, the NodeId is set to NULL. 
-	void setSourceNode(const QString &sourceNodeId);
+	// void setSourceNode(const QString &sourceNodeId);
 
 	// children
 
@@ -180,15 +187,26 @@ public:
 	QUaStatus quality() const;
 	void      setQuality(const QUaStatus& quality);
 
-	//
+	// LastSeverity provides the previous severity of the ConditionBranch. Initially this Variable
+	// contains a zero value; it will return a value only after a severity change.The new severity is
+	// supplied via the Severity Property, which is inherited from the BaseEventType.
+	// (Events are only generated for Conditions that have their Retain field set to True)
 	quint16 lastSeverity() const;
 	void    setLastSeverity(const quint16& lastSeverity);
+	virtual void setSeverity(const quint16& intSeverity) override;
 
-	//
+	// Comment contains the last comment provided for a certain state (ConditionBranch). It may have
+	// been provided by an AddComment Method, some other Method or in some other manner.The
+	// initial value of this Variable is NULL, unless it is provided in some other manner.If a Method
+	// provides as an option the ability to set a Comment, then the value of this Variable is reset to
+	// NULL if an optional comment is not provided.
 	QString comment() const;
 	void    setComment(const QString& comment);
 
-	// 
+	// ClientUserId is related to the Comment field and contains the identity of the user who inserted
+	// the most recent Comment.The logic to obtain the ClientUserId is defined in OPC Part 5.
+	// (The ClientUserId is obtained directly or indirectly from the UserIdentityToken passed by the Client
+	// in the ActivateSession Service call)
 	QString clientUserId() const;
 	void    setClientUserId(const QString& clientUserId);
 
