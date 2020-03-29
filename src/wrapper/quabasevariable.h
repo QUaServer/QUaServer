@@ -55,8 +55,8 @@ public:
 	QUaDataType(const QMetaType::Type& metaType);
     QUaDataType(const QString& strType);
     QUaDataType(const QByteArray& byteType);
-	operator QMetaType::Type();
-	operator QString();
+	operator QMetaType::Type() const;
+	operator QString() const;
 	bool operator==(const QMetaType::Type& metaType);
 	void operator=(const QString& strType);
 
@@ -67,12 +67,44 @@ private:
 
 Q_DECLARE_METATYPE(QUaDataType);
 
+inline uint qHash(const QUaStatus& key, uint seed)
+{
+	Q_UNUSED(seed);
+	return static_cast<uint>(key);
+}
+
+class QUaStatusCode
+{
+
+public:
+	QUaStatusCode();
+	QUaStatusCode(const QUaStatus& uaStatus);
+	QUaStatusCode(const UA_StatusCode& intStatus);
+	QUaStatusCode(const QString& strStatus);
+	QUaStatusCode(const QByteArray& byteType);
+	operator QUaStatus() const;
+	operator UA_StatusCode() const;
+	operator QString() const;
+	bool operator==(const QUaStatus& uaStatus);
+	void operator=(const QString& strStatus);
+
+	static QString longDescription(const QUaStatusCode& statusCode);
+
+private:
+	QUaStatus m_status;
+	static QMetaEnum m_metaEnum;
+	static QHash<QUaStatus, QString> m_descriptions;
+};
+
+Q_DECLARE_METATYPE(QUaStatusCode);
+
 class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
 	// Variable Attributes
 
 	Q_PROPERTY(QVariant          value               READ value               WRITE setValue           NOTIFY valueChanged          )
+	Q_PROPERTY(QUaStatusCode     statusCode          READ statusCode          WRITE setStatusCode      NOTIFY statusCodeChanged     )
 	Q_PROPERTY(QDateTime         sourceTimestamp     READ sourceTimestamp     WRITE setSourceTimestamp NOTIFY sourceTimestampChanged)
 	Q_PROPERTY(QDateTime         serverTimestamp     READ serverTimestamp     WRITE setServerTimestamp NOTIFY serverTimestampChanged)
 	Q_PROPERTY(QUaDataType       dataType            READ dataType            WRITE setDataType    /* NOTIFY dataTypeChanged    */  )
@@ -99,27 +131,48 @@ public:
 
 	// Attributes API
 
-	// If the new value is the same dataType or convertible to the old dataType, the old dataType is preserved
-	// If the new value has a new type different and not convertible to the old dataType, the dataType is updated
-	// Use QVariant::fromValue or use casting to force a dataType
-	virtual
-	QVariant          value() const;
-	virtual
-	void              setValue(
+	// The data value.If the StatusCode indicates an error then the value is to be
+	// ignoredand the Server shall set it to null.
+	// - If the new value is the same dataType or convertible to the old dataType, 
+	//   the old dataType is preserved
+	// - If the new value has a new type different and not convertible to the old dataType, 
+	//   the dataType is updated
+	// - If newDataType is defined, the new type is forced
+	virtual QVariant value() const;
+	virtual void     setValue(
 		const QVariant        &value, 
+		const QUaStatus       &statusCode      = QUaStatus::Good,
 		const QDateTime       &sourceTimestamp = QDateTime(),
 		const QDateTime       &serverTimestamp = QDateTime(),
-		const QMetaType::Type &newType         = QMetaType::UnknownType
+		const QMetaType::Type &newDataType     = QMetaType::UnknownType
 	);
-	// Changing timestamps does not affect value
-	virtual
-	QDateTime sourceTimestamp() const;
-	virtual
-	void      setSourceTimestamp(const QDateTime& sourceTimestamp);
-	virtual
-	QDateTime serverTimestamp() const;
-	virtual
-	void      setServerTimestamp(const QDateTime& serverTimestamp);
+	// The sourceTimestamp is used to reflect the timestamp that was applied to a Variable 
+	// value by the data source. The sourceTimestamp shall be UTC time and should indicate 
+	// the time of the last change of the value or statusCode.
+	// In the case of a bad or uncertain status sourceTimestamp is used to reflect the time 
+	// that the source recognized the non - good status or the time the Server last tried 
+	// to recover from the bad or uncertain status.
+	virtual QDateTime sourceTimestamp() const;
+	virtual void      setSourceTimestamp(const QDateTime& sourceTimestamp);
+	// The serverTimestamp is used to reflect the time that the Server received a Variable 
+	// value or knew it to be accurate. In the case of a bad or uncertain status, serverTimestamp 
+	// is used to reflect the time that the Server received the status or that the Server 
+	// last tried to recover from the bad or uncertain status.
+	virtual QDateTime serverTimestamp() const;
+	virtual void      setServerTimestamp(const QDateTime& serverTimestamp);
+	// The StatusCode is used to indicate the conditions under which a Variable value was generated,
+	// and thereby can be used as an indicator of the usability of the value.
+	// - A StatusCode with severity Good means that the value is of good quality.
+	// - A StatusCode with severity Uncertain means that the quality of the value is uncertain for
+	//   reasons indicated by the SubCode.
+	// - A StatusCode with severity Bad means that the value is not usable for reasons indicated by
+	//   the SubCode.
+	// A Server, which does not support status information, shall return a severity code of Good. 
+	// It is also acceptable for a Server to simply return a severity and a non - specific(0) SubCode.
+	// If the Server has no known value - in particular when Severity is BAD, it shall return a
+	// NULL value
+	QUaStatus statusCode() const;
+	void      setStatusCode(const QUaStatus& statusCode);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost
@@ -179,10 +232,11 @@ public:
 	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
 
 signals:
-	void valueChanged(const QVariant &value);
-	void sourceTimestampChanged(const QDateTime& sourceTimestamp);
-	void serverTimestampChanged(const QDateTime& serverTimestamp);
-	void valueRankChanged(const quint32 &valueRank);
+	void valueChanged          (const QVariant&      value          );
+	void statusCodeChanged     (const QUaStatusCode& statusCode     );
+	void sourceTimestampChanged(const QDateTime&     sourceTimestamp);
+	void serverTimestampChanged(const QDateTime&     serverTimestamp);
+	void valueRankChanged      (const quint32&       valueRank      );
 
 protected:
 	// cache type for performance

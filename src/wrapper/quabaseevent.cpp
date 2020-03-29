@@ -77,6 +77,7 @@ void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
 {
 	this->getLocalTime()->setValue(
 		QVariant::fromValue(localTimeZone), 
+		QUaStatusCode(),
 		QDateTime(), 
 		QDateTime(), 
 		METATYPE_TIMEZONEDATATYPE
@@ -92,6 +93,7 @@ void QUaBaseEvent::setMessage(const QString & strMessage)
 {
 	this->getMessage()->setValue(
 		strMessage, 
+		QUaStatusCode(),
 		QDateTime(),
 		QDateTime(),
 		METATYPE_LOCALIZEDTEXT

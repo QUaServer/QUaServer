@@ -167,9 +167,18 @@ public:
 	QString   enabledStateFalseState() const;
 	void      setEnabledStateFalseState(const QString& falseState);
 
-	//
-	quint32 quality() const;
-	void    setQuality(const quint32& quality);
+	// Quality reveals the status of process values or other resources that this Condition instance is
+	// based upon. Values for the Quality can be any of the OPC StatusCodes defined in OPC Part 8 as well 
+	// as Good, Uncertainand Bad as defined in OPC Part 4. These StatusCodes are similar to but slightly 
+	// more generic than the description of data quality in the various field bus specifications.
+	// It is the responsibility of the Server to map internal status information to these codes.
+	// A Server that supports no quality information shall return Good.
+	// This quality can also reflect the communication status associated with the system that this value
+	// or resource is based on and from which this Alarm was received. For communication errors to
+	// the underlying system, especially those that result in some unavailable Event fields, the quality
+	// shall be Bad_NoCommunication error.
+	QUaStatus quality() const;
+	void      setQuality(const QUaStatus& quality);
 
 	//
 	quint16 lastSeverity() const;

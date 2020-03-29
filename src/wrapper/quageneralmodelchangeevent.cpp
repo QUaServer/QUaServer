@@ -31,6 +31,7 @@ void QUaGeneralModelChangeEvent::setChanges(const QUaChangesList & listVerbs)
 {
 	this->getChanges()->setValue(
 		QVariant::fromValue(listVerbs), 
+		QUaStatusCode(),
 		QDateTime(), 
 		QDateTime(), 
 		METATYPE_CHANGESTRUCTUREDATATYPE

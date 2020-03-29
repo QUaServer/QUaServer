@@ -380,7 +380,7 @@ void QUaServer::bindMethod(
 			"QUaServer::bindMethod",
 			"Cannot call method on invalid C++ object.");
 #else
-		QUaBaseObject* object = static_cast<QObject*>(objectContext);
+		QUaBaseObject* object = static_cast<QUaBaseObject*>(objectContext);
 #endif // QT_DEBUG 
 		if (!object)
 		{
@@ -1069,6 +1069,7 @@ void QUaServer::setupServer()
 	{
 		qRegisterMetaType<QUaEnumEntry>("QUaEnumEntry");
 	}
+	// data type
 	if (QMetaType::type("QUaDataType") == QMetaType::UnknownType)
 	{
 		qRegisterMetaType<QUaDataType>("QUaDataType");
@@ -1078,6 +1079,17 @@ void QUaServer::setupServer()
 	});
 	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
 		return QUaDataType(strType);
+	});
+	// status code
+	if (QMetaType::type("QUaStatusCode") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaStatusCode>("QUaStatusCode");
+	}
+	QMetaType::registerConverter<QUaStatusCode, QString>([](QUaStatusCode statusCode) {
+		return statusCode.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaStatusCode>([](QString strStatusCode) {
+		return QUaStatusCode(strStatusCode);
 	});
 	// Server stuff
 	UA_StatusCode st;
@@ -2096,7 +2108,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 				"QUaServer::registerTypeDefaults",
 				"Cannot call method on invalid C++ object.");
 #else
-			QUaBaseObject* object = static_cast<QObject*>(objectContext);
+			QUaBaseObject* object = static_cast<QUaBaseObject*>(objectContext);
 #endif // QT_DEBUG 
 			if (!object)
 			{

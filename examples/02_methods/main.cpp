@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
+	server.registerEnum<QUaStatus>();
 
 	// logging
 
@@ -35,14 +36,17 @@ int main(int argc, char *argv[])
 	varNumber->setDataType(QMetaType::Double);
 
 	objsFolder->addMethod("incrementNumberBy", 
-	[&varNumber](double increment) {
+	[&varNumber](double increment, QUaStatus status) {
 		if (!varNumber)
 		{
 			return false;
 		}
 		double currentValue = varNumber->value().toDouble();
 		double newValue = currentValue + increment;
-		varNumber->setValue(newValue);
+		varNumber->setValue(
+			newValue,
+			status
+		);
 		return true;
 	});
 

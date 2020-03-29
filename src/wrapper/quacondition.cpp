@@ -10,8 +10,6 @@ QUaCondition::QUaCondition(
 	QUaServer *server
 ) : QUaBaseEvent(server)
 {
-	// TODO : ConditionName = BrowseName
-
 	// set default : BaseConditionClassType node id
 	this->setConditionClassId(
 		QUaTypesConverter::nodeIdToQString(
@@ -30,13 +28,15 @@ QUaCondition::QUaCondition(
 	this->setEnabledStateCurrentStateName("Disabled");
 	this->setEnabledStateId(false);
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
-
+	// set default : good
+	this->setQuality(QUaStatus::Good);
 }
 
 void QUaCondition::setSourceNode(const QString& sourceNodeId)
 {
 	return this->getSourceNode()->setValue(
 		sourceNodeId,
+		QUaStatusCode(),
 		QDateTime(),
 		QDateTime(),
 		METATYPE_NODEID
@@ -54,6 +54,7 @@ void QUaCondition::setConditionClassId(const QString& conditionClassId)
 {
 	this->getConditionClassId()->setValue(
 		conditionClassId,
+		QUaStatusCode(),
 		QDateTime(),
 		QDateTime(),
 		METATYPE_NODEID
@@ -79,6 +80,7 @@ void QUaCondition::setConditionSubClassId(const QString& conditionSubClassId)
 {
 	this->getConditionSubClassId()->setValue(
 		conditionSubClassId,
+		QUaStatusCode(),
 		QDateTime(),
 		QDateTime(),
 		METATYPE_NODEID
@@ -114,6 +116,7 @@ void QUaCondition::setBranchId(const QString& branchId)
 {
 	this->getBranchId()->setValue(
 		branchId,
+		QUaStatusCode(),
 		QDateTime(),
 		QDateTime(),
 		METATYPE_NODEID
@@ -180,14 +183,20 @@ void QUaCondition::setEnabledStateFalseState(const QString& falseState)
 	this->getEnabledState()->setFalseState(falseState);
 }
 
-quint32 QUaCondition::quality() const
+QUaStatus QUaCondition::quality() const
 {
-	return const_cast<QUaCondition*>(this)->getQuality()->value().toUInt();
+	return QUaStatus(const_cast<QUaCondition*>(this)->getQuality()->value().toUInt());
 }
 
-void QUaCondition::setQuality(const quint32& quality)
+void QUaCondition::setQuality(const QUaStatus& quality)
 {
-	this->getQuality()->setValue(quality);
+	this->getQuality()->setValue(
+		static_cast<quint32>(quality),
+		QUaStatus::Good,
+		QDateTime(),
+		QDateTime(),
+		METATYPE_STATUSCODE
+	);
 }
 
 quint16 QUaCondition::lastSeverity() const

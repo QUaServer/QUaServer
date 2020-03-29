@@ -30,6 +30,7 @@ public:
 
 	void setValue(
 		const QVariant        &value, 
+		const QUaStatus       &statusCode      = QUaStatus::Good,
 		const QDateTime       &sourceTimestamp = QDateTime(),
 		const QDateTime       &serverTimestamp = QDateTime(),
 		const QMetaType::Type &newType         = QMetaType::UnknownType

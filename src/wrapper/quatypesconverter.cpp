@@ -268,6 +268,8 @@ namespace QUaTypesConverter {
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 		case METATYPE_NODEID:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID);        // 16 : UA_NodeId
+		case METATYPE_STATUSCODE:
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE);    // 19 : UA_StatusCode
 		case METATYPE_TIMEZONEDATATYPE:
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE); // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 		case METATYPE_LOCALIZEDTEXT:
@@ -325,6 +327,8 @@ namespace QUaTypesConverter {
 			return &UA_TYPES[UA_TYPES_BYTESTRING];    // 14 : UA_ByteString : UA_String * A sequence of octets. */
 		case METATYPE_NODEID:
 			return &UA_TYPES[UA_TYPES_NODEID];        // 16 : UA_NodeId : { ... }
+		case METATYPE_STATUSCODE:
+			return &UA_TYPES[UA_TYPES_STATUSCODE];    // 19 : UA_StatusCode : uint32_t
 		case METATYPE_LOCALIZEDTEXT:
 			return &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];    // 20  : UA_LocalizedText : { UA_String locale; UA_String text; }
 #ifdef UA_TYPES_IMAGEPNG
@@ -404,7 +408,9 @@ namespace QUaTypesConverter {
 			return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 		case METATYPE_NODEID:          // 16 : UA_NodeId : { ... }
 			return uaVariantFromQVariantScalar<UA_NodeId    , QString>(var, uaType);
-		case METATYPE_LOCALIZEDTEXT:    // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
+		case METATYPE_STATUSCODE:      // 19 : UA_StatusCode : uint32_t
+			return uaVariantFromQVariantScalar<UA_StatusCode, quint32>(var, uaType);
+		case METATYPE_LOCALIZEDTEXT:   // 20 : UA_LocalizedText : { UA_String locale; UA_String text; }
 			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
 		case METATYPE_IMAGE:
 			return uaVariantFromQVariantScalar<UA_ByteString  , QByteArray>(var, uaType);
@@ -676,8 +682,7 @@ namespace QUaTypesConverter {
 		{
 			return QMetaType::Int;
 		}
-        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)) ||
-			     UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)))
+        else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)))
 		{
 			return QMetaType::UInt;
 		}
@@ -720,6 +725,10 @@ namespace QUaTypesConverter {
 		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)))
 		{
 			return METATYPE_NODEID;
+		}
+		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)))
+		{
+			return METATYPE_STATUSCODE;
 		}
 		else if (UA_NodeId_equal(nodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)))
 		{
@@ -786,6 +795,8 @@ namespace QUaTypesConverter {
 			return QMetaType::QByteArray;
 		case UA_TYPES_NODEID:
 			return METATYPE_NODEID;
+		case UA_TYPES_STATUSCODE:
+			return METATYPE_STATUSCODE;
 		case UA_TYPES_LOCALIZEDTEXT:
 			return METATYPE_LOCALIZEDTEXT;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -851,6 +862,8 @@ namespace QUaTypesConverter {
 			return uaVariantToQVariantScalar<QDateTime  , UA_DateTime  >(uaVariant, QMetaType::QDateTime);
 		case UA_TYPES_NODEID:
 			return uaVariantToQVariantScalar<QString    , UA_NodeId    >(uaVariant, METATYPE_NODEID);
+		case UA_TYPES_STATUSCODE:
+			return uaVariantToQVariantScalar<quint32    , UA_StatusCode>(uaVariant, METATYPE_STATUSCODE);
 		case UA_TYPES_LOCALIZEDTEXT:
 			return uaVariantToQVariantScalar<QString    , UA_LocalizedText   >(uaVariant, METATYPE_LOCALIZEDTEXT);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS

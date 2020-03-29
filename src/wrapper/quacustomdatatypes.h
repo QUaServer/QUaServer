@@ -28,6 +28,9 @@ Q_DECLARE_METATYPE(QTimeZone);
 #define METATYPE_OFFSET_IMAGE 5
 #define METATYPE_IMAGE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_IMAGE)
 
+#define METATYPE_OFFSET_STATUSCODE 6
+#define METATYPE_STATUSCODE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_STATUSCODE)
+
 struct QUaChangeStructureDataType
 {
 	enum Verb

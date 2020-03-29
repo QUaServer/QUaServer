@@ -50,6 +50,7 @@ void QUaStateVariable::setEffectiveDisplayName(const QString& effectiveDisplayNa
 {
 	this->getEffectiveDisplayName()->setValue(
 		effectiveDisplayName,
+		QUaStatus::Good,
 		QDateTime(),
 		QDateTime(),
 		METATYPE_LOCALIZEDTEXT

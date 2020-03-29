@@ -19,12 +19,13 @@ QUaConditionVariable::QUaConditionVariable(
 
 void QUaConditionVariable::setValue(
 	const QVariant& value, 
+	const QUaStatus& statusCode,
 	const QDateTime& sourceTimestamp, 
 	const QDateTime& serverTimestamp, 
 	const QMetaType::Type& newType)
 {
 	// call base implementation
-	QUaBaseVariable::setValue(value, sourceTimestamp, serverTimestamp, newType);
+	QUaBaseVariable::setValue(value, statusCode, sourceTimestamp, serverTimestamp, newType);
 	// update child property
 	this->getSourceTimestamp()->setValue(QUaBaseVariable::sourceTimestamp());
 }

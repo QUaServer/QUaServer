@@ -20,6 +20,7 @@ void QUaTwoStateVariable::setCurrentStateName(const QString& currentStateName)
 {
 	this->setValue(
 		currentStateName,
+		QUaStatus::Good,
 		QDateTime(),
 		QDateTime(),
 		METATYPE_LOCALIZEDTEXT

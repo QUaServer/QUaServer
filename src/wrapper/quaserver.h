@@ -685,7 +685,7 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
-		this->registerType(metaObject);
+		this->registerTypeInternal(metaObject);
 		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));

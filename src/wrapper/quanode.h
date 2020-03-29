@@ -109,6 +109,29 @@ namespace QUa
 	};
 	Q_ENUM_NS(Type)
 
+	// Part 8 - 6.3.2 Operation level result codes
+	enum class Status
+	{
+		Good                                    = static_cast<int>(UA_STATUSCODE_GOOD),              
+		GoodLocalOverride                       = static_cast<int>(UA_STATUSCODE_GOODLOCALOVERRIDE), 
+		Uncertain                               = static_cast<int>(0x40000000),                      
+		UncertainNoCommunicationLastUsableValue = static_cast<int>(UA_STATUSCODE_UNCERTAINNOCOMMUNICATIONLASTUSABLEVALUE),
+		UncertainLastUsableValue                = static_cast<int>(UA_STATUSCODE_UNCERTAINLASTUSABLEVALUE),
+		UncertainSubstituteValue                = static_cast<int>(UA_STATUSCODE_UNCERTAINSUBSTITUTEVALUE),
+		UncertainInitialValue                   = static_cast<int>(UA_STATUSCODE_UNCERTAININITIALVALUE),
+		UncertainSensorNotAccurate              = static_cast<int>(UA_STATUSCODE_UNCERTAINSENSORNOTACCURATE),
+		UncertainEngineeringUnitsExceeded       = static_cast<int>(UA_STATUSCODE_UNCERTAINENGINEERINGUNITSEXCEEDED),
+		UncertainSubNormal                      = static_cast<int>(UA_STATUSCODE_UNCERTAINSUBNORMAL),
+		Bad                                     = static_cast<int>(0x80000000),                      
+		BadConfigurationError	                = static_cast<int>(UA_STATUSCODE_BADCONFIGURATIONERROR),
+		BadNotConnected			                = static_cast<int>(UA_STATUSCODE_BADNOTCONNECTED),
+		BadDeviceFailure		                = static_cast<int>(UA_STATUSCODE_BADDEVICEFAILURE),
+		BadSensorFailure		                = static_cast<int>(UA_STATUSCODE_BADSENSORFAILURE),
+		BadOutOfService			                = static_cast<int>(UA_STATUSCODE_BADOUTOFSERVICE),
+		BadDeadbandFilterInvalid                = static_cast<int>(UA_STATUSCODE_BADDEADBANDFILTERINVALID)
+	};
+	Q_ENUM_NS(Status)
+
 	enum class LogLevel {
 		Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
 		Debug   = UA_LogLevel::UA_LOGLEVEL_DEBUG,
@@ -135,6 +158,7 @@ namespace QUa
 }
 typedef QUa::LogLevel    QUaLogLevel;
 typedef QUa::LogCategory QUaLogCategory;
+typedef QUa::Status      QUaStatus;
 
 struct QUaLog
 {

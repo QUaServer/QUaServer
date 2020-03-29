@@ -27,12 +27,12 @@ QUaDataType::QUaDataType(const QByteArray& byteType)
     m_type  = static_cast<QUa::Type>(val);
 }
 
-QUaDataType::operator QMetaType::Type()
+QUaDataType::operator QMetaType::Type() const
 {
 	return static_cast<QMetaType::Type>(m_type);
 }
 
-QUaDataType::operator QString()
+QUaDataType::operator QString() const
 {
 	return QString(m_metaEnum.valueToKey(static_cast<int>(m_type)));
 }
@@ -45,6 +45,92 @@ bool QUaDataType::operator==(const QMetaType::Type& metaType)
 void QUaDataType::operator=(const QString& strType)
 {
 	*this = QUaDataType(strType.toUtf8());
+}
+
+QMetaEnum QUaStatusCode::m_metaEnum = QMetaEnum::fromType<QUa::Status>();
+
+// init static hash
+QHash<QUaStatus, QString> QUaStatusCode::m_descriptions =
+[]() -> QHash<QUaStatus, QString> {
+	QHash<QUaStatus, QString> retHash;
+	retHash[QUaStatus::Good                                   ] = QObject::tr("The operation was successful and the associated results may be used"                                       );
+	retHash[QUaStatus::GoodLocalOverride                      ] = QObject::tr("The value has been overridden"                                                                             );
+	retHash[QUaStatus::Uncertain                              ] = QObject::tr("The operation was partially successful and that associated results might not be suitable for some purposes");
+	retHash[QUaStatus::UncertainNoCommunicationLastUsableValue] = QObject::tr("Communication to the data source has failed. The variable value is the last value that had a good quality" );
+	retHash[QUaStatus::UncertainLastUsableValue               ] = QObject::tr("Whatever was updating this value has stopped doing so"                                                     );
+	retHash[QUaStatus::UncertainSubstituteValue               ] = QObject::tr("The value is an operational value that was manually overwritten"                                           );
+	retHash[QUaStatus::UncertainInitialValue                  ] = QObject::tr("The value is an initial value for a variable that normally receives its value from another variable"       );
+	retHash[QUaStatus::UncertainSensorNotAccurate             ] = QObject::tr("The value is at one of the sensor limits"                                                                  );
+	retHash[QUaStatus::UncertainEngineeringUnitsExceeded      ] = QObject::tr("The value is outside of the range of values defined for this parameter"                                    );
+	retHash[QUaStatus::UncertainSubNormal                     ] = QObject::tr("The value is derived from multiple sources and has less than the required number of Good sources"            );
+	retHash[QUaStatus::Bad                                    ] = QObject::tr("The operation failed and any associated results cannot be used"                                            );
+	retHash[QUaStatus::BadConfigurationError                  ] = QObject::tr("There is a problem with the configuration that affects the usefulness of the value"                        );
+	retHash[QUaStatus::BadNotConnected                        ] = QObject::tr("The variable should receive its value from another variable, but has never been configured to do so"       );
+	retHash[QUaStatus::BadDeviceFailure                       ] = QObject::tr("There has been a failure in the device/data source that generates the value that has affected the value"   );
+	retHash[QUaStatus::BadSensorFailure                       ] = QObject::tr("There has been a failure in the sensor from which the value is derived by the device/data source"          );
+	retHash[QUaStatus::BadOutOfService                        ] = QObject::tr("The source of the data is not operational"                                                                 );
+	retHash[QUaStatus::BadDeadbandFilterInvalid               ] = QObject::tr("The deadband filter is not valid"                                                                          );
+	return retHash;
+}();
+QString QUaStatusCode::longDescription(const QUaStatusCode& statusCode)
+{
+	return QUaStatusCode::m_descriptions.value(
+		statusCode, 
+		QObject::tr("Unknown description value %1")
+			.arg(static_cast<quint32>(statusCode))
+	);
+}
+
+QUaStatusCode::QUaStatusCode()
+{
+	m_status = QUaStatus::Good;
+}
+
+QUaStatusCode::QUaStatusCode(const QUaStatus& uaStatus)
+{
+	m_status = uaStatus;
+}
+
+QUaStatusCode::QUaStatusCode(const UA_StatusCode& intStatus)
+{
+	m_status = static_cast<QUaStatus>(intStatus);
+}
+
+QUaStatusCode::QUaStatusCode(const QString& strStatus)
+{
+	*this = QUaStatusCode(strStatus.toUtf8());
+}
+
+QUaStatusCode::QUaStatusCode(const QByteArray& byteType)
+{
+	bool ok = false;
+	int val = m_metaEnum.keyToValue(byteType.constData(), &ok);
+	m_status = static_cast<QUaStatus>(val);
+}
+
+QUaStatusCode::operator QUaStatus() const
+{
+	return static_cast<QUaStatus>(m_status);
+}
+
+QUaStatusCode::operator UA_StatusCode() const
+{
+	return static_cast<UA_StatusCode>(m_status);
+}
+
+QUaStatusCode::operator QString() const
+{
+	return QString(m_metaEnum.valueToKey(static_cast<int>(m_status)));
+}
+
+bool QUaStatusCode::operator==(const QUaStatus& uaStatus)
+{
+	return m_status == uaStatus;
+}
+
+void QUaStatusCode::operator=(const QString& strStatus)
+{
+	*this = QUaStatusCode(strStatus.toUtf8());
 }
 
 // [STATIC]
@@ -78,18 +164,28 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 		var->m_bInternalWrite = false;
 		return;
 	}
-	// TODO : check if much performance gain if use *data
 	// emit value changed
 	emit var->valueChanged(var->value());
+	// emit status changed
+	if (data->hasStatus)
+	{
+		emit var->statusCodeChanged(QUaStatusCode(data->status));
+	}
 	// emit source timestamp changed
 	if (data->hasSourceTimestamp)
 	{
-		emit var->sourceTimestampChanged(var->sourceTimestamp());
+		emit var->sourceTimestampChanged(
+			QUaTypesConverter::uaVariantToQVariantScalar
+				<QDateTime, UA_DateTime>(&data->sourceTimestamp)
+		);
 	}
 	// emit server timestamp changed
 	if (data->hasServerTimestamp)
 	{
-		emit var->serverTimestampChanged(var->serverTimestamp());
+		emit var->serverTimestampChanged(
+			QUaTypesConverter::uaVariantToQVariantScalar
+				<QDateTime, UA_DateTime>(&data->serverTimestamp)
+		);
 	}
 }
 
@@ -173,20 +269,26 @@ QVariant QUaBaseVariable::value() const
 	{
 		return QVariant();
 	}
-	// read value
-	UA_Variant outValue;
-	auto st = UA_Server_readValue(m_qUaServer->m_server, m_nodeId, &outValue);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
+	// get value
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_NEITHER
+	);
 	// convert
-	QVariant outVar = QUaTypesConverter::uaVariantToQVariant(outValue);
+	QVariant outVar = QUaTypesConverter::uaVariantToQVariant(value.value);
 	// clenaup
-	UA_Variant_deleteMembers(&outValue);
+	UA_DataValue_clear(&value);
 	return outVar;
 }
 
 void QUaBaseVariable::setValue(
 	const QVariant        &value, 
+	const QUaStatus       &statusCode      /*QUaStatus::Good*/,
 	const QDateTime       &sourceTimestamp /*= QDateTime()*/,
 	const QDateTime       &serverTimestamp /*= QDateTime()*/,
 	const QMetaType::Type &newTypeConst    /*= QMetaType::UnknownType*/
@@ -267,7 +369,12 @@ void QUaBaseVariable::setValue(
 	// convert to UA_Variant and set new value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
 	m_bInternalWrite = true;
-	auto st = this->setValueInternal(tmpVar, UA_STATUSCODE_GOOD, sourceTimestamp, serverTimestamp);
+	auto st = this->setValueInternal(
+		tmpVar, 
+		QUaStatusCode(statusCode),
+		sourceTimestamp, 
+		serverTimestamp
+	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// clean up
@@ -344,8 +451,7 @@ void QUaBaseVariable::setSourceTimestamp(const QDateTime& sourceTimestamp)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// clean up
-	UA_DataValue_clear(&value);
-	UA_WriteValue_clear(&wv);
+	UA_Variant_clear(&value.value);
 }
 
 QDateTime QUaBaseVariable::serverTimestamp() const
@@ -367,7 +473,7 @@ QDateTime QUaBaseVariable::serverTimestamp() const
 
 void QUaBaseVariable::setServerTimestamp(const QDateTime& serverTimestamp)
 {
-		// get value
+	// get value
 	UA_ReadValueId rv;
 	UA_ReadValueId_init(&rv);
 	rv.nodeId      = m_nodeId;
@@ -403,8 +509,60 @@ void QUaBaseVariable::setServerTimestamp(const QDateTime& serverTimestamp)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// clean up
+	UA_Variant_clear(&value.value);
+}
+
+QUaStatus QUaBaseVariable::statusCode() const
+{
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_SERVER
+	);
+	QUaStatusCode statusCode = value.status;
+	// clean up
 	UA_DataValue_clear(&value);
-	UA_WriteValue_clear(&wv);
+	return statusCode;
+}
+
+void QUaBaseVariable::setStatusCode(const QUaStatus& statusCode)
+{
+	// get value
+	UA_ReadValueId rv;
+	UA_ReadValueId_init(&rv);
+	rv.nodeId      = m_nodeId;
+	rv.attributeId = UA_ATTRIBUTEID_VALUE;
+	UA_DataValue value = UA_Server_read(
+		m_qUaServer->m_server,
+		&rv,
+		UA_TIMESTAMPSTORETURN_BOTH
+	);
+	// set value
+	UA_WriteValue wv;
+	UA_WriteValue_init(&wv);
+	wv.nodeId         = m_nodeId;
+	wv.attributeId    = UA_ATTRIBUTEID_VALUE;
+	wv.value.value    = value.value;
+	wv.value.hasValue = value.hasValue;
+	wv.value.sourceTimestamp      = value.sourceTimestamp     ;
+	wv.value.hasSourceTimestamp   = value.hasSourceTimestamp  ;
+	wv.value.serverTimestamp      = value.serverTimestamp     ;
+	wv.value.hasServerTimestamp   = value.hasServerTimestamp  ;
+	wv.value.serverPicoseconds    = value.serverPicoseconds   ;
+	wv.value.sourcePicoseconds    = value.sourcePicoseconds   ;
+	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
+	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
+	wv.value.status               = QUaStatusCode(statusCode);
+	wv.value.hasStatus            = true;
+	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// clean up
+	UA_Variant_clear(&value.value);
 }
 
 QMetaType::Type QUaBaseVariable::dataType() const
@@ -639,17 +797,14 @@ UA_StatusCode QUaBaseVariable::setValueInternal(
 		QUaTypesConverter::uaVariantFromQVariantScalar(serverTimestamp, &wv.value.serverTimestamp);
 		wv.value.hasServerTimestamp = true;
 	}
-	wv.value.serverPicoseconds = 0;
-	wv.value.sourcePicoseconds = 0;
+	wv.value.serverPicoseconds    = 0;
+	wv.value.sourcePicoseconds    = 0;
 	wv.value.hasServerPicoseconds = false;
 	wv.value.hasSourcePicoseconds = false;
-	// TODO : handle status subset, but which subset is relevant for value quality?
-	// open62541.git/deps/ua-nodeset/Schema/StatusCode.csv
-	wv.value.status    = status;
-	wv.value.hasStatus = true;
+	wv.value.status               = status;
+	wv.value.hasStatus            = true;
 	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
-	// NOTE : do not clean up, this is done by calling methods over the UA_Variant
-	//UA_WriteValue_clear(&wv);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	return st;
 }
 

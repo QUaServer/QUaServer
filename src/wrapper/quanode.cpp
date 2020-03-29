@@ -1255,7 +1255,7 @@ void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaL
 			bool ok = listAttrsNotInProps.removeOne(strPropName);
 			Q_ASSERT(ok);
 			// write property
-			// TODO : sometimes file if value is empty
+			// TODO : sometimes false if value is empty
 			/*ok = */
 			metaProperty.write(this, attrs[strPropName]);
 			//Q_ASSERT(ok);
