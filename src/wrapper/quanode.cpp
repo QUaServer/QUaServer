@@ -947,9 +947,18 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 		return nullptr;
 	}
 	UA_QualifiedName_deleteMembers(&fieldName);
+	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// add reference added change to buffer
+	m_qUaServer->addChange({
+		this->nodeId(),
+		this->typeDefinitionNodeId(),
+		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+	});
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// if we reached here, the optional field has been instantiated
 	// if the type of the optional field is registered in QUaServer then
-	// it has been boud to its corresponding Qt type ad there is nothing
+	// it has been boud to its corresponding Qt type and there is nothing
 	// more to do here
 	QUaNode* child = QUaNode::getNodeContext(outOptionalNode, m_qUaServer->m_server);
 	if (child)

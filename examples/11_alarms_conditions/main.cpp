@@ -34,24 +34,6 @@ int main(int argc, char *argv[])
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	auto condVar = objsFolder->addChild<QUaConditionVariable>();
-	condVar->setBrowseName("MyConditionVariable");
-	condVar->setDisplayName("MyConditionVariable");
-	condVar->setDataType(QMetaType::Double);
-	condVar->setWriteAccess(true);
-	objsFolder->addMethod("UpdateMyConditionVariable", 
-	[condVar](double value) {
-		condVar->setValue(value);
-	});
-
-	auto twoStVar = objsFolder->addChild<QUaTwoStateVariable>();
-	twoStVar->setBrowseName("MyTwoStateVariable");
-	twoStVar->setDisplayName("MyTwoStateVariable");
-	objsFolder->addMethod("UpdateMyTwoStateVariable", 
-	[twoStVar](QString currentStateName) {
-		twoStVar->setCurrentStateName(currentStateName);
-	});
-
 	auto condObj = objsFolder->addChild<QUaAcknowledgeableCondition>();
 	condObj->setBrowseName("MyAcknowledgeableCondition");
 	condObj->setDisplayName("MyAcknowledgeableCondition");
@@ -59,6 +41,10 @@ int main(int argc, char *argv[])
 	condObj->addMethod("setConfirmAllowed",
 	[condObj](bool confirmable) {
 		condObj->setConfirmAllowed(confirmable);
+	});
+	condObj->addMethod("resetStates",
+	[condObj]() {
+		condObj->reset();;
 	});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -68,7 +54,7 @@ int main(int argc, char *argv[])
 	return a.exec(); 
 }
 
-
+////
 /////* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
 //// * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. */
 ////

@@ -235,6 +235,17 @@ public:
 	// the ObjectId.The Method cannot be called with an ObjectId of the ConditionType Node.
 	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment); // TODO : audit events, branches
 
+	// helpers
+
+	virtual void reset();
+
+signals:
+	void enabled();
+
+	void disabled();
+
+	void addedComment(const QString& comment);
+
 protected:
 	// NodeId
 	QUaProperty* getConditionClassId();

@@ -11,27 +11,21 @@ QUaCondition::QUaCondition(
 ) : QUaBaseEvent(server)
 {
 	// set default : BaseConditionClassType node id
+	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassId(
 		QUaTypesConverter::nodeIdToQString(
 			UA_NODEID_NUMERIC(0, UA_NS0ID_BASECONDITIONCLASSTYPE)
 		)
 	);
 	// set default : display name of BaseConditionClassType
+	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassName("BaseConditionClass");
 	// set default : ConditionType browse name
 	this->setConditionName(this->typeDefinitionBrowseName());
 	// set default : retain false
 	this->setRetain(false);
-	// set default : disabled state
-	this->setEnabledStateFalseState("Disabled");
-	this->setEnabledStateTrueState("Enabled");
-	this->setEnabledStateCurrentStateName("Disabled");
-	this->setEnabledStateId(false);
-	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
-	// set default : good
-	this->setQuality(QUaStatus::Good);
-	// set default : 0
-	this->setLastSeverity(0);
+	// reuse rest of defaults
+	this->reset();
 }
 
 QString QUaCondition::conditionClassId() const
@@ -246,15 +240,11 @@ void QUaCondition::Enable()
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// trigger event
 	this->setSeverity(0);
-	this->setMessage(
-		tr("Condition %1 enabled")
-		.arg(
-			!this->displayName().isEmpty() ? this->displayName() :
-			!this->browseName().isEmpty() ? this->browseName() :
-			this->nodeId()
-		)
-	);
+	this->setMessage(tr("Condition enabled"));
+	this->setTime(QDateTime::currentDateTime().toUTC());
 	this->trigger();
+	// emit qt signal
+	emit this->enabled();
 }
 
 void QUaCondition::Disable()
@@ -271,19 +261,21 @@ void QUaCondition::Disable()
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// trigger event
 	this->setSeverity(0);
-	this->setMessage(
-		tr("Condition %1 disabled")
-		.arg(
-			!this->displayName().isEmpty() ? this->displayName() :
-			!this->browseName().isEmpty() ? this->browseName() :
-			this->nodeId()
-		)
-	);
+	this->setMessage(tr("Condition disabled"));
+	this->setTime(QDateTime::currentDateTime().toUTC());
 	this->trigger();
+	// emit qt signal
+	emit this->disabled();
 }
 
 void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 {
+	// check if enabled
+	if (!this->enabledStateId())
+	{
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONDISABLED);
+		return;
+	}
 	// check given event id matches last event id
 	if (EventId != this->eventId())
 	{
@@ -294,6 +286,24 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 	this->setComment(Comment);
 	// set message
 	this->setMessage(tr("A comment was added"));
+	// emit qt signal
+	emit this->addedComment(Comment);
+}
+
+void QUaCondition::reset()
+{
+	// set default : disabled state
+	this->setEnabledStateFalseState("Disabled");
+	this->setEnabledStateTrueState("Enabled");
+	this->setEnabledStateCurrentStateName("Disabled");
+	this->setEnabledStateId(false);
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
+	// set default : good
+	this->setQuality(QUaStatus::Good);
+	// set default : 0
+	this->setLastSeverity(0);
+	// set default : empty
+	this->setComment("");
 }
 
 QUaProperty* QUaCondition::getConditionClassId()

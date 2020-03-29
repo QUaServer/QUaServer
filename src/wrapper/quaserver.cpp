@@ -87,10 +87,9 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	void * context;
 	st = UA_Server_getNodeContext(server, *nodeId, &context);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// try to convert to node
+	// try to convert to node (NOTE : nullptr is triggered by ~QUaNode)
 #ifdef QT_DEBUG 
 	auto node = qobject_cast<QUaNode*>(static_cast<QObject*>(context));
-	Q_ASSERT(node);
 #else
 	auto node = static_cast<QUaNode*>(context);
 #endif // QT_DEBUG 
@@ -341,8 +340,9 @@ UA_StatusCode QUaServer::callMetaMethod(
 		metaMethod.typeName(),
 		const_cast<void*>(returnValue.constData())
 	);
+	// reset status code
+	server->m_methodRetStatusCode = UA_STATUSCODE_GOOD;
 	// call metaMethod
-	Q_ASSERT(server->m_methodRetStatusCode == UA_STATUSCODE_GOOD);
 	bool ok = metaMethod.invoke(
 		object,
 		Qt::DirectConnection,
@@ -369,7 +369,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 	}
 	// copy return status code
 	UA_StatusCode retStatusCode = server->m_methodRetStatusCode;
-	// reset
+	// reset status code
 	server->m_methodRetStatusCode = UA_STATUSCODE_GOOD;
 	// return success status
 	return retStatusCode;
@@ -381,7 +381,7 @@ void QUaServer::bindMethod(
 	const int       &metaMethodIndex)
 {
 	// register callback in open62541
-	auto st = setMethodNode_callback(server->m_server, *methodNodeId, &QUaServer::methodCallback);
+	auto st = UA_Server_setMethodNode_callback(server->m_server, *methodNodeId, &QUaServer::methodCallback);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// set QUaServer* instance as method context
 	st = UA_Server_setNodeContext(

@@ -1585,7 +1585,10 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
     );
     // store method with node id hash as key
     Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
-    m_hashMethods[methNodeId] = [methodCallback](const UA_Variant * input, UA_Variant * output) {
+    m_hashMethods[methNodeId] = 
+        [this, methodCallback](const UA_Variant * input, UA_Variant * output) {
+        // reset status code
+        this->setMethodReturnStatusCode(UA_STATUSCODE_GOOD);
         // call method
         if (QOpcUaMethodTraits<M>::isRetUaArgumentVoid())
         {
@@ -1595,8 +1598,12 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
         {
             *output = QOpcUaMethodTraits<M>::execCallback(methodCallback, input);
         }
+        // copy return status code
+        UA_StatusCode retStatusCode = this->methodReturnStatusCode();
+        // reset status code
+        this->setMethodReturnStatusCode(UA_STATUSCODE_GOOD);
         // return success status
-        return UA_STATUSCODE_GOOD;
+        return retStatusCode;
     };
 }
 
