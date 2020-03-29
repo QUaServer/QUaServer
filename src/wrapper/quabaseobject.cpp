@@ -76,6 +76,11 @@ void QUaBaseObject::setEventNotifierNone()
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+void QUaBaseObject::setMethodReturnStatusCode(const UA_StatusCode& statusCode)
+{
+	m_qUaServer->m_methodRetStatusCode = statusCode;
+}
+
 UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const QString &strNodeId, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
 {
     // add method node

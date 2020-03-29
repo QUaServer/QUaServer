@@ -86,6 +86,9 @@ public:
 signals:
 	void eventNotifierChanged(const quint8 &eventNotifier);
 
+protected:
+	void setMethodReturnStatusCode(const UA_StatusCode& statusCode);
+
 private:
 
     UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName,

@@ -8,13 +8,14 @@ QUaBaseEvent::QUaBaseEvent(
 	QUaServer *server
 ) : QUaBaseObject(server)
 {
+	Q_ASSERT(!UA_NodeId_isNull(server->m_newEventOriginatorNodeId));
 	// copy temp originator nodeId, this was user can trigger the event in its derived class constructor
 	m_nodeIdOriginator = *server->m_newEventOriginatorNodeId;
 	this->setTime(QDateTime::currentDateTimeUtc());
-
-	// NOTE : removed because is optional and open62541 now does not add it
+	// ste event type definition
+	this->setEventType(this->typeDefinitionNodeId());
+	// NOTE : optional
 	//this->setLocalTime(QTimeZone::systemTimeZone());
-
 	// set a QObject parent, so event is deleted when originator is deleted
 	auto nodeOriginator = QUaNode::getNodeContext(m_nodeIdOriginator, server);
 	if (nodeOriginator)
@@ -35,6 +36,17 @@ QByteArray QUaBaseEvent::eventId() const
 QString QUaBaseEvent::eventType() const
 {
 	return const_cast<QUaBaseEvent*>(this)->getEventType()->value().toString();
+}
+
+void QUaBaseEvent::setEventType(const QString& eventTypeNodeId)
+{
+	return this->getEventType()->setValue(
+		eventTypeNodeId,
+		QUaStatusCode(),
+		QDateTime(),
+		QDateTime(),
+		METATYPE_NODEID
+	);
 }
 
 QString QUaBaseEvent::sourceNode() const
@@ -128,7 +140,7 @@ void QUaBaseEvent::trigger()
 	// NOTE : event life-time attached to C++ instance life-time
 	auto st = UA_Server_triggerEvent(
 		m_qUaServer->m_server,
-		m_nodeId,           // nodeId if the event
+		m_nodeId,           // nodeId of the event
 		m_nodeIdOriginator, // originating node
 		&m_outEventId,      // the EventId of the new event
 		false               // (do not) delete event node

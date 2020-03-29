@@ -342,6 +342,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 		const_cast<void*>(returnValue.constData())
 	);
 	// call metaMethod
+	Q_ASSERT(server->m_methodRetStatusCode == UA_STATUSCODE_GOOD);
 	bool ok = metaMethod.invoke(
 		object,
 		Qt::DirectConnection,
@@ -363,11 +364,15 @@ UA_StatusCode QUaServer::callMetaMethod(
 	if (retType != QMetaType::Void)
 	{
 		UA_Variant tmpVar = QUaTypesConverter::uaVariantFromQVariant(returnValue);
-		// TODO : cleanup? UA_Variant_deleteMembers(&tmpVar)
+		// TODO : have to cleanup? UA_Variant_deleteMembers(&tmpVar)
 		*output = tmpVar;
 	}
+	// copy return status code
+	UA_StatusCode retStatusCode = server->m_methodRetStatusCode;
+	// reset
+	server->m_methodRetStatusCode = UA_STATUSCODE_GOOD;
 	// return success status
-	return (UA_StatusCode)UA_STATUSCODE_GOOD;
+	return retStatusCode;
 }
 
 void QUaServer::bindMethod(
@@ -900,11 +905,15 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_anonymousLoginAllowed = true;
 	m_byteCertificate = QByteArray();
 	m_byteCertificateInternal = QByteArray();
+	m_methodRetStatusCode = UA_STATUSCODE_GOOD;
 #ifdef UA_ENABLE_ENCRYPTION
 	m_bytePrivateKey = QByteArray();
 	m_bytePrivateKeyInternal = QByteArray();
 #endif
 	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_newEventOriginatorNodeId = &UA_NODEID_NULL;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// setup server (other defaults)
@@ -2169,8 +2178,14 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// NOTE : do not check metaObject.inherits(&QUaBaseEvent::staticMetaObject)
-	//        because conditions (which inherit BaseEvent) can be instantiated
+	// check if inherits BaseEventType, in which case this method cannot be used
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject) &&
+	   !metaObject.inherits(&QUaCondition::staticMetaObject))
+	{
+		Q_ASSERT_X(false, "QUaServer::createInstanceInternal", 
+			"Cannot use createInstance to create Non-Condition Events. Use createEvent method instead");
+		return UA_NODEID_NULL;
+	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// try to get typeNodeId, if null, then register it
 	QString   strClassName = QString(metaObject.className());
@@ -2240,6 +2255,14 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	else
 	{
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+		if (metaObject.inherits(&QUaCondition::staticMetaObject))
+		{
+			// set originator node id temporarily
+			Q_ASSERT(UA_NodeId_isNull(m_newEventOriginatorNodeId));
+			m_newEventOriginatorNodeId = &parentNode->m_nodeId;
+		}
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 			metaObject.className() == QUaBaseObject::staticMetaObject.className());
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
@@ -2277,6 +2300,8 @@ UA_NodeId QUaServer::createInstanceInternal(
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	if (metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
+		// reset originator node id to null
+		m_newEventOriginatorNodeId = &UA_NODEID_NULL;
 		// add HasCondition reference
 		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
 		auto condition = qobject_cast<QUaCondition*>(tmp);
@@ -2315,12 +2340,15 @@ UA_NodeId QUaServer::createEventInternal(
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
 	// set originator node id temporarily
+	Q_ASSERT(UA_NodeId_isNull(m_newEventOriginatorNodeId));
 	m_newEventOriginatorNodeId = &nodeIdOriginator;
 	// create event instance
 	UA_NodeId nodeIdNewEvent;
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// reset originator node id to null
+	m_newEventOriginatorNodeId = &UA_NODEID_NULL;
 	// return new instance node id
 	return nodeIdNewEvent;
 }

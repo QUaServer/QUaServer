@@ -173,8 +173,8 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 #else
 	auto srv = static_cast<QUaServer*>(serverContext);
 #endif // QT_DEBUG 
-	// check session
-	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	// check session (triggering events create internal writes with no session)
+	//Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
 		srv->m_hashSessions[*sessionId] : nullptr;
 	// emit value changed

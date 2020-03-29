@@ -234,21 +234,66 @@ void QUaCondition::setClientUserId(const QString& clientUserId)
 
 void QUaCondition::Enable()
 {
-	qDebug() << "Called Enable on" << this->browseName();
+	// check already enabled
+	if (this->enabledStateId())
+	{
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONALREADYENABLED);
+		return;
+	}
+	// change EnabledState to Enabled
+	this->setEnabledStateCurrentStateName("Enabled");
+	this->setEnabledStateId(true);
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
+	// trigger event
+	this->setSeverity(0);
+	this->setMessage(
+		tr("Condition %1 enabled")
+		.arg(
+			!this->displayName().isEmpty() ? this->displayName() :
+			!this->browseName().isEmpty() ? this->browseName() :
+			this->nodeId()
+		)
+	);
+	this->trigger();
 }
 
 void QUaCondition::Disable()
 {
-	qDebug() << "Called Disable on" << this->browseName();
+	// check already disabled
+	if (!this->enabledStateId())
+	{
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONALREADYDISABLED);
+		return;
+	}
+	// change EnabledState to Disabled
+	this->setEnabledStateCurrentStateName("Disabled");
+	this->setEnabledStateId(false);
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
+	// trigger event
+	this->setSeverity(0);
+	this->setMessage(
+		tr("Condition %1 disabled")
+		.arg(
+			!this->displayName().isEmpty() ? this->displayName() :
+			!this->browseName().isEmpty() ? this->browseName() :
+			this->nodeId()
+		)
+	);
+	this->trigger();
 }
 
 void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 {
-	qDebug() << "Called AddComment on" << this->browseName()
-		<< "EventId" << EventId << "Comment" << Comment;
-
+	// check given event id matches last event id
+	if (EventId != this->eventId())
+	{
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
+		return;
+	}
 	// set last comment
 	this->setComment(Comment);
+	// set message
+	this->setMessage(tr("A comment was added"));
 }
 
 QUaProperty* QUaCondition::getConditionClassId()

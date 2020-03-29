@@ -212,12 +212,28 @@ public:
 
 	// methods
 
-	Q_INVOKABLE void Enable();
+	// The Enable Method is used to change a Condition instance to the enabled state. Normally, the
+	// NodeId of the object instance as the ObjectId is passed to the Call Service.However, some
+	// Servers do not expose Condition instances in the AddressSpace.Therefore, all Servers shall
+	// allow Clients to call the Enable Method by specifying ConditionId as the ObjectId.The Method
+	// cannot be called with an ObjectId of the ConditionType Node.If the Condition instance is not
+	// exposed, then it may be difficult for a Client to determine the ConditionId for a disabled
+	// Condition.
+	Q_INVOKABLE void Enable(); // TODO : audit events
 
-	Q_INVOKABLE void Disable();
+	// The Disable Method is used to change a Condition instance to the Disabled state. Normally, the
+	// NodeId of the object instance as the ObjectId is passed to the Call Service.However, some
+	// Servers do not expose Condition instances in the AddressSpace.Therefore, all Servers shall
+	// allow Clients to call the Disable Method by specifying ConditionId as the ObjectId.The Method
+	// cannot be called with an ObjectId of the ConditionType Node.
+	Q_INVOKABLE void Disable(); // TODO : audit events
 
-	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment);
-
+	// The AddComment Method is used to apply a comment to a specific state of a Condition instance.
+	// Normally, the NodeId of the Object instance is passed as the ObjectId to the Call Service.
+	// However, some Servers do not expose Condition instances in the AddressSpace.Therefore, all
+	// Servers shall also allow Clients to call the AddComment Method by specifying ConditionId as
+	// the ObjectId.The Method cannot be called with an ObjectId of the ConditionType Node.
+	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment); // TODO : audit events, branches
 
 protected:
 	// NodeId

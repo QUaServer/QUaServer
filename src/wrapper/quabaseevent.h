@@ -51,6 +51,7 @@ public:
 	QByteArray eventId() const;
 	// Specific type of the event.
 	QString eventType() const;
+	void    setEventType(const QString& eventTypeNodeId);
 	// Node that the Event originated from. If is not specific to a Node, then is set to null. 
 	QString sourceNode() const;
 	void    setSourceNode(const QString& sourceNodeId);

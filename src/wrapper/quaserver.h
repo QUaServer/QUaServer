@@ -475,6 +475,8 @@ private:
         UA_StatusCode(void *, const UA_Variant*, UA_Variant*)>
     > m_hashMethods;
 
+    UA_StatusCode m_methodRetStatusCode;
+
 	static UA_NodeId getReferenceTypeId(
         const QMetaObject &parentMetaObject, 
         const QMetaObject &childMetaObject
