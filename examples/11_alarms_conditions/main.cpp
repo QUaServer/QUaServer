@@ -9,6 +9,7 @@
 #include <QUaTwoStateVariable>
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
+#include <QUaAlarmCondition>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 int main(int argc, char *argv[])
@@ -44,7 +45,16 @@ int main(int argc, char *argv[])
 	});
 	condObj->addMethod("resetStates",
 	[condObj]() {
-		condObj->reset();;
+		condObj->resetInternals();;
+	});
+
+	auto almObj = objsFolder->addChild<QUaAlarmCondition>();
+	almObj->setBrowseName("MyAlarmCondition");
+	almObj->setDisplayName("MyAlarmCondition");
+	almObj->setConfirmAllowed(true);
+	almObj->addMethod("setActive",
+	[almObj](bool active) {
+		almObj->setActive(active);
 	});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -847,30 +847,49 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 	return this->userExecutable(strUserName);
 }
 
-// NOTE : code borrowed from UA_Server_addConditionOptionalField
+// NOTE : some code borrowed from UA_Server_addConditionOptionalField
 QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 {
 	// look if optional child really in model
 	UA_NodeId optionalFieldNodeId = UA_NODEID_NULL;
-	UA_NodeId typeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
-	QList<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeId, m_qUaServer->m_server);
-	for (auto childNodeId : childrenNodeIds)
+	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
+	// look for optional child starting from this type of to base object type
+	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
+		   !UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
-		// ignore if not optional
-		if (!QUaNode::hasOptionalModellingRule(childNodeId, m_qUaServer->m_server))
+		QList<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
+		for (auto childNodeId : childrenNodeIds)
+		{
+			// ignore if not optional
+			if (!QUaNode::hasOptionalModellingRule(childNodeId, m_qUaServer->m_server))
+			{
+				UA_NodeId_clear(&childNodeId);
+				continue;
+			}
+			// ignore if browse name does not match
+			QString childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
+			if (childBrowseName.compare(strBrowseName, Qt::CaseSensitive) != 0)
+			{
+				UA_NodeId_clear(&childNodeId);
+				continue;
+			}
+			// copy, do not clear because will be used later
+			optionalFieldNodeId = childNodeId;
+		}
+		// cleanup
+		for (auto childNodeId : childrenNodeIds)
 		{
 			UA_NodeId_clear(&childNodeId);
-			continue;
 		}
-		// ignore if browse name does not match
-		QString childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
-		if (childBrowseName.compare(strBrowseName, Qt::CaseSensitive) != 0)
+		// check if found
+		if (!UA_NodeId_isNull(&optionalFieldNodeId))
 		{
-			UA_NodeId_clear(&childNodeId);
-			continue;
+			break;
 		}
-		// copy, do not clear because will be used later
-		optionalFieldNodeId = childNodeId;
+		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeNodeId, m_qUaServer->m_server);
+		UA_NodeId_clear(&typeNodeId);
+		UA_NodeId_copy(&typeNodeIdNew, &typeNodeId);
+		UA_NodeId_clear(&typeNodeIdNew);
 	}
 	if (UA_NodeId_isNull(&optionalFieldNodeId))
 	{
@@ -1058,35 +1077,48 @@ bool QUaNode::addOptionalMethod(const QString& strMethodName)
 		return true;
 	}
 	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
-	// get all ua methods of TYPE
-	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
 	UA_NodeId methodNodeId = UA_NODEID_NULL;
-	for (auto methNodeId : methodsNodeIds)
-	{
-		// ignore if not optional
-		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
+	// look for optional method starting from this type of to base object type
+	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)))
 		{
-			continue;
-		}
-		// ignore if browse name does not match
-		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
-		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+		// get all ua methods of TYPE
+		auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
+		for (auto methNodeId : methodsNodeIds)
 		{
-			continue;
+			// ignore if not optional
+			if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
+			{
+				continue;
+			}
+			// ignore if browse name does not match
+			QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+			if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+			{
+				continue;
+			}
+			methodNodeId = methNodeId;
+			break;
 		}
-		methodNodeId = methNodeId;
-		break;
+		// cleanup
+		for (auto methNodeId : methodsNodeIds)
+		{
+			UA_NodeId_clear(&methNodeId);
+		}
+		// check if found
+		if (!UA_NodeId_isNull(&methodNodeId))
+		{
+			break;
+		}
+		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeNodeId, m_qUaServer->m_server);
+		UA_NodeId_clear(&typeNodeId);
+		UA_NodeId_copy(&typeNodeIdNew, &typeNodeId);
+		UA_NodeId_clear(&typeNodeIdNew);
 	}
+	UA_NodeId_clear(&typeNodeId);
 	Q_ASSERT_X(!UA_NodeId_isNull(&methodNodeId),
 		"QUaNode::addOptionalMethod", "Could not find optional method.");
 	if (UA_NodeId_isNull(&methodNodeId))
 	{
-		// cleanup
-		for (int i = 0; i < methodsNodeIds.count(); i++)
-		{
-			UA_NodeId_clear(&methodsNodeIds[i]);
-		}
-		UA_NodeId_clear(&typeNodeId);
 		return false;
 	}
 	// add reference from instance to method
@@ -1097,12 +1129,6 @@ bool QUaNode::addOptionalMethod(const QString& strMethodName)
 		{ methodNodeId, UA_STRING_NULL, 0 },
 		true
 	);
-	// cleanup
-	for (int i = 0; i < methodsNodeIds.count(); i++)
-	{
-		UA_NodeId_clear(&methodsNodeIds[i]);
-	}
-	UA_NodeId_clear(&typeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	if (st != UA_STATUSCODE_GOOD)
 	{

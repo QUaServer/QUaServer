@@ -6,6 +6,7 @@
 #include <QUaTwoStateVariable>
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
+#include <QUaAlarmCondition>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #include <QMetaProperty>
@@ -1166,8 +1167,9 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
 	this->registerSpecificationType<QUaStateVariable    >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE    ));
 	this->registerSpecificationType<QUaTwoStateVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE ));
-	this->registerSpecificationType<QUaCondition               >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
+	this->registerSpecificationType<QUaCondition        >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
 	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
+	this->registerSpecificationType<QUaAlarmCondition   >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);

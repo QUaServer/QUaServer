@@ -3,7 +3,7 @@
 
 #include <QUaCondition>
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 /*
 Part 9 - 5.7.2 AcknowledgeableConditionType
@@ -89,7 +89,7 @@ public:
 
 	// helpers
 
-	virtual void reset() override;
+	virtual void resetInternals() override;
 
 	bool confirmAllowed() const;
 	void setConfirmAllowed(const bool & confirmAllowed);
@@ -108,6 +108,6 @@ protected:
 
 };
 
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #endif // QUAACKNOWLEDGEABLECONDITION_H

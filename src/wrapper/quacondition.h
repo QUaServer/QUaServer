@@ -3,7 +3,7 @@
 
 #include <QUaBaseEvent>
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 /*
 Part 9 - 5.5 ConditionType (abstract = true)
@@ -237,7 +237,7 @@ public:
 
 	// helpers
 
-	virtual void reset();
+	virtual void resetInternals();
 
 signals:
 	void enabled();
@@ -273,6 +273,6 @@ protected:
 	QUaProperty* getClientUserId();
 };
 
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #endif // QUACONDITION_H

@@ -1,6 +1,6 @@
 #include "quaacknowledgeablecondition.h"
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #include <QUaServer>
 #include <QUaTwoStateVariable>
@@ -13,7 +13,7 @@ QUaAcknowledgeableCondition::QUaAcknowledgeableCondition(
 	// ConfirmedState default set when instantiating because is optional
 	m_confirmAllowed = false;
 	// resue rest of defaults 
-	this->reset();
+	this->resetInternals();
 }
 
 QString QUaAcknowledgeableCondition::ackedStateCurrentStateName() const
@@ -65,7 +65,6 @@ void QUaAcknowledgeableCondition::setAckedStateFalseState(const QString& falseSt
 {
 	this->getAckedState()->setFalseState(falseState);
 }
-
 
 QString QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
 {
@@ -198,6 +197,12 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 
 void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 {
+	// check if need to block progammatic called
+	if (!m_confirmAllowed)
+	{
+		// TODO : log error message
+		return;
+	}
 	// check if enabled
 	if (!this->enabledStateId())
 	{
@@ -232,9 +237,9 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 	emit this->confirmed();
 }
 
-void QUaAcknowledgeableCondition::reset()
+void QUaAcknowledgeableCondition::resetInternals()
 {
-	QUaCondition::reset();
+	QUaCondition::resetInternals();
 	// set default : Unacknowledged state
 	this->setAckedStateFalseState("Unacknowledged");
 	this->setAckedStateTrueState("Acknowledged");
@@ -306,4 +311,4 @@ QUaTwoStateVariable* QUaAcknowledgeableCondition::getConfirmedState()
 	return this->browseChild<QUaTwoStateVariable>("ConfirmedState", true);
 }
 
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

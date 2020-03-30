@@ -1,6 +1,6 @@
 #include "quacondition.h"
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #include <QUaServer>
 #include <QUaTwoStateVariable>
@@ -24,8 +24,14 @@ QUaCondition::QUaCondition(
 	this->setConditionName(this->typeDefinitionBrowseName());
 	// set default : retain false
 	this->setRetain(false);
+	// set default : disabled state
+	this->setEnabledStateFalseState("Disabled");
+	this->setEnabledStateTrueState("Enabled");
+	this->setEnabledStateCurrentStateName("Disabled");
+	this->setEnabledStateId(false);
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// reuse rest of defaults
-	this->reset();
+	this->resetInternals();
 }
 
 QString QUaCondition::conditionClassId() const
@@ -290,20 +296,14 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 	emit this->addedComment(Comment);
 }
 
-void QUaCondition::reset()
+void QUaCondition::resetInternals()
 {
-	// set default : disabled state
-	this->setEnabledStateFalseState("Disabled");
-	this->setEnabledStateTrueState("Enabled");
-	this->setEnabledStateCurrentStateName("Disabled");
-	this->setEnabledStateId(false);
-	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// set default : good
 	this->setQuality(QUaStatus::Good);
 	// set default : 0
 	this->setLastSeverity(0);
 	// set default : empty
-	this->setComment("");
+	this->setComment("Condition has been reset");
 }
 
 QUaProperty* QUaCondition::getConditionClassId()
@@ -369,4 +369,4 @@ QUaProperty* QUaCondition::getClientUserId()
 
 
 
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
