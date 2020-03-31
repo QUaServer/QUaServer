@@ -47,6 +47,10 @@ int main(int argc, char *argv[])
 	[condObj]() {
 		condObj->resetInternals();;
 	});
+	condObj->addMethod("setRetain",
+	[condObj](bool retain) {
+		condObj->setRetain(retain);
+	});
 
 	auto almObj = objsFolder->addChild<QUaAlarmCondition>();
 	almObj->setBrowseName("MyAlarmCondition");
@@ -55,6 +59,10 @@ int main(int argc, char *argv[])
 	almObj->addMethod("setActive",
 	[almObj](bool active) {
 		almObj->setActive(active);
+	});
+	almObj->addMethod("setRetain",
+	[almObj](bool retain) {
+		almObj->setRetain(retain);
 	});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

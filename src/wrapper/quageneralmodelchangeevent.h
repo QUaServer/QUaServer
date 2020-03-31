@@ -1,24 +1,22 @@
 #ifndef QUAGENERALMODELCHANGEEVENT_H
 #define QUAGENERALMODELCHANGEEVENT_H
 
-#include <QUaBaseEvent>
+#include <QUaBaseModelChangeEvent>
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 /*
 Part 3 - 8.20.6 GeneralModelChangeEventType (pag 55 or 67 in pdf)
-The GeneralModelChangeEventType is a subtype of the BaseModelChangeEventType. 
-It contains information about the Node that was changed and the action that occurred 
-the ModelChangeEvent (e.g. add a Node, delete a Node, etc.). 
+The GeneralModelChangeEventType is a subtype of the BaseModelChangeEventType.
+It contains information about the Node that was changed and the action that occurred
+the ModelChangeEvent (e.g. add a Node, delete a Node, etc.).
 If the affected Node is a Variable or Object, the TypeDefinitionNode is also present.
 To allow Event compression, a GeneralModelChangeEvent contains an array of this structure.
 
 
 */
 
-typedef QVector<QUaChangeStructureDataType> QUaChangesList;
-
-class QUaGeneralModelChangeEvent : public QUaBaseEvent
+class QUaGeneralModelChangeEvent : public QUaBaseModelChangeEvent
 {
     Q_OBJECT
 

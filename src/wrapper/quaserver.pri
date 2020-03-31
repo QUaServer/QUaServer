@@ -23,7 +23,9 @@ SOURCES += \
 ua_events || ua_alarms_conditions {
     SOURCES += \
     $$PWD/quabaseevent.cpp \
-    $$PWD/quageneralmodelchangeevent.cpp
+    $$PWD/quabasemodelchangeevent.cpp \
+    $$PWD/quageneralmodelchangeevent.cpp \
+    $$PWD/quasystemevent.cpp
 }
 
 ua_alarms_conditions {
@@ -33,7 +35,9 @@ ua_alarms_conditions {
     $$PWD/quatwostatevariable.cpp \
     $$PWD/quacondition.cpp \
     $$PWD/quaacknowledgeablecondition.cpp \
-    $$PWD/quaalarmcondition.cpp
+    $$PWD/quaalarmcondition.cpp \
+    $$PWD/quarefreshstartevent.cpp \
+    $$PWD/quarefreshendevent.cpp
 }
 
 ua_historizing {
@@ -57,7 +61,9 @@ HEADERS += \
 ua_events || ua_alarms_conditions {
     HEADERS += \
     $$PWD/quabaseevent.h \
-    $$PWD/quageneralmodelchangeevent.h
+    $$PWD/quabasemodelchangeevent.h \
+    $$PWD/quageneralmodelchangeevent.h \
+    $$PWD/quasystemevent.h
 }
 
 ua_alarms_conditions {
@@ -67,7 +73,9 @@ ua_alarms_conditions {
     $$PWD/quatwostatevariable.h \
     $$PWD/quacondition.h \
     $$PWD/quaacknowledgeablecondition.h \
-    $$PWD/quaalarmcondition.h
+    $$PWD/quaalarmcondition.h \
+    $$PWD/quarefreshstartevent.h \
+    $$PWD/quarefreshendevent.h
 }
 
 ua_historizing {
@@ -91,7 +99,9 @@ DISTFILES += \
 ua_events || ua_alarms_conditions {
     DISTFILES += \
     $$PWD/QUaBaseEvent \
-    $$PWD/QUaGeneralModelChangeEvent
+    $$PWD/QUaBaseModelChangeEvent \
+    $$PWD/QUaGeneralModelChangeEvent \
+    $$PWD/QUaSystemEvent
 }
 
 ua_alarms_conditions {
@@ -101,7 +111,9 @@ ua_alarms_conditions {
     $$PWD/QUaTwoStateVariable \
     $$PWD/QUaCondition \
     $$PWD/QUaAcknowledgeableCondition \
-    $$PWD/QUaAlarmCondition
+    $$PWD/QUaAlarmCondition \
+    $$PWD/QUaRefreshStartEvent \
+    $$PWD/QUaRefreshEndEvent
 }
 
 ua_historizing {

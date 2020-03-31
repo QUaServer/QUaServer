@@ -45,6 +45,18 @@ The NodeId of the Condition instance is used as ConditionId. It is not explicitl
 component of the ConditionType. However, it can be requested with a
 SimpleAttributeOperand (see Table 10) in the SelectClause of the EventFilter
 
+The ConditionSource is element which a specific Condition is based upon or related to
+Typically, it will be a Variable representing a process tag (e.g. FIC101) or an Object representing
+a device or subsystem. In Events generated for Conditions, the SourceNode Property (inherited 
+from the BaseEventType) will contain the NodeId of the ConditionSource.
+
+In systems where Conditions are not available as instances, the ConditionSource can reference
+the ConditionTypes instead.
+
+Clients can locate Conditions by first browsing for ConditionSources following HasEventSource
+References (including sub-types like the HasNotifier Reference) and then browsing for
+HasCondition References from all target Nodes of the discovered References.
+
 */
 
 class QUaTwoStateVariable;
@@ -65,7 +77,7 @@ public:
 
 	// SourceNode Property identifies the ConditionSource. 
 	// If the ConditionSource is not a Node in the AddressSpace, the NodeId is set to NULL. 
-	// void setSourceNode(const QString &sourceNodeId);
+	virtual void setSourceNode(const QString& sourceNodeId) override;
 
 	// children
 
@@ -109,15 +121,15 @@ public:
 	// BranchId is NULL for all Event Notifications that relate to the current state of the Condition
 	// instance.If BranchId is not NULL, it identifies a previous state of this Condition instance that
 	// still needs attention by an Operator.If the current ConditionBranch is transformed into a
-	// previous ConditionBranch then the Server needs to assign a non - NULL BranchId.An initial
-	// Event for the branch will generated with the values of the ConditionBranchand the new
-	// BranchId.The ConditionBranch can be updated many times before it is no longer needed.When
+	// previous ConditionBranch then the Server needs to assign a non - NULL BranchId. An initial
+	// Event for the branch will generated with the values of the ConditionBranch and the new
+	// BranchId. The ConditionBranch can be updated many times before it is no longer needed. When
 	// the ConditionBranch no longer requires Operator input the final Event will have Retain set to
-	// False.The retain bit on the current Event is True, as long as any ConditionBranches require
-	// Operator input.See 4.4 for more information about the need for creatingand maintaining
-	// previous ConditionBranchesand Clause B.1 for an example using branches.The BranchId
+	// False. The retain bit on the current Event is True, as long as any ConditionBranches require
+	// Operator input. See 4.4 for more information about the need for creating and maintaining
+	// previous ConditionBranches and Clause B.1 for an example using branches. The BranchId
 	// DataType is NodeId although the Server is not required to have ConditionBranches in the
-	// Address Space.The use of a NodeId allows the Server to use simple numeric identifiers, strings
+	// Address Space. The use of a NodeId allows the Server to use simple numeric identifiers, strings
 	// or arrays of bytes.
 	QString branchId() const;
 	void    setBranchId(const QString& branchId);
@@ -271,6 +283,37 @@ protected:
 	QUaConditionVariable* getComment();
 	// String
 	QUaProperty* getClientUserId();
+
+private:
+	QUaNode * m_sourceNode;
+
+	static UA_StatusCode ConditionRefresh(
+		UA_Server*        server,
+		const UA_NodeId*  sessionId,
+		void*             sessionContext,
+		const UA_NodeId*  methodId,
+		void*             methodContext,
+		const UA_NodeId*  objectId,
+		void*             objectContext,
+		size_t            inputSize,
+		const UA_Variant* input,
+		size_t            outputSize,
+		UA_Variant*       output
+	);
+	static UA_StatusCode ConditionRefresh2(
+		UA_Server*        server,
+		const UA_NodeId*  sessionId,
+		void*             sessionContext,
+		const UA_NodeId*  methodId,
+		void*             methodContext,
+		const UA_NodeId*  objectId,
+		void*             objectContext,
+		size_t            inputSize,
+		const UA_Variant* input,
+		size_t            outputSize,
+		UA_Variant*       output
+	);
+
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -147,14 +147,10 @@ QUaNode::~QUaNode()
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
-	if (!parent)
-	{
-		return;
-	}
 	// add reference deleted change to buffer
 	m_qUaServer->addChange({
-		parent->nodeId(),
-		parent->typeDefinitionNodeId(),
+		parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
+		parent ? parent->typeDefinitionNodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
 		QUaChangeVerb::ReferenceDeleted // UaExpert does not recognize QUaChangeVerb::NodeAdded
 	});	
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

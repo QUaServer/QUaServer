@@ -5,11 +5,16 @@
 #include <QUaServer>
 #include <QUaTwoStateVariable>
 #include <QUaConditionVariable>
+#include <QUaRefreshStartEvent>
+#include <QUaRefreshEndEvent>
+
+#include "quaserver_anex.h"
 
 QUaCondition::QUaCondition(
 	QUaServer *server
 ) : QUaBaseEvent(server)
 {
+	m_sourceNode = nullptr;
 	// set default : BaseConditionClassType node id
 	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassId(
@@ -32,6 +37,27 @@ QUaCondition::QUaCondition(
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// reuse rest of defaults
 	this->resetInternals();
+}
+
+void QUaCondition::setSourceNode(const QString& sourceNodeId)
+{
+	// call base implementation (updates cache)
+	QUaBaseEvent::setSourceNode(sourceNodeId);
+	// update retained conditions for old source node
+	bool isRetained = this->retain();
+	if (m_sourceNode && isRetained)
+	{
+		Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+	}
+	// update source
+	m_sourceNode = QUaNode::getNodeContext(m_nodeIdOriginator, m_qUaServer);
+	if (m_sourceNode && isRetained)
+	{
+		// update retained conditions for new source node
+		Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+	}
 }
 
 QString QUaCondition::conditionClassId() const
@@ -120,6 +146,22 @@ bool QUaCondition::retain() const
 void QUaCondition::setRetain(const bool& retain)
 {
 	this->getRetain()->setValue(retain);
+	// update source
+	if (!m_sourceNode)
+	{
+		return;
+	}
+	// update retained conditions for source node
+	if (retain)
+	{
+		Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+	}
+	else
+	{
+		Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+	}
 }
 
 QString QUaCondition::enabledStateCurrentStateName() const
@@ -245,9 +287,11 @@ void QUaCondition::Enable()
 	this->setEnabledStateId(true);
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(0);
 	this->setMessage(tr("Condition enabled"));
-	this->setTime(QDateTime::currentDateTime().toUTC());
+	this->setTime(time);
+	this->setReceiveTime(time);
 	this->trigger();
 	// emit qt signal
 	emit this->enabled();
@@ -266,9 +310,11 @@ void QUaCondition::Disable()
 	this->setEnabledStateId(false);
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(0);
 	this->setMessage(tr("Condition disabled"));
-	this->setTime(QDateTime::currentDateTime().toUTC());
+	this->setTime(time);
+	this->setReceiveTime(time);
 	this->trigger();
 	// emit qt signal
 	emit this->disabled();
@@ -364,6 +410,109 @@ QUaConditionVariable* QUaCondition::getComment()
 QUaProperty* QUaCondition::getClientUserId()
 {
 	return this->browseChild<QUaProperty>("ClientUserId");
+}
+
+UA_StatusCode QUaCondition::ConditionRefresh(
+	UA_Server*        server,
+	const UA_NodeId*  sessionId,
+	void*             sessionContext,
+	const UA_NodeId*  methodId,
+	void*             methodContext,
+	const UA_NodeId*  objectId,
+	void*             objectContext,
+	size_t            inputSize,
+	const UA_Variant* input,
+	size_t            outputSize,
+	UA_Variant*       output
+)
+{
+	QUaServer* srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv);
+	auto time = QDateTime::currentDateTimeUtc();
+	srv->m_refreshStartEvent->setEventId(QUaBaseEvent::generateEventId());
+	srv->m_refreshStartEvent->setTime(time);
+	srv->m_refreshStartEvent->setReceiveTime(time);
+	srv->m_refreshEndEvent->setEventId(QUaBaseEvent::generateEventId());
+	srv->m_refreshEndEvent->setTime(time);
+	srv->m_refreshEndEvent->setReceiveTime(time);
+
+	UA_Session* session = UA_Server_getSessionById(server, sessionId);
+	UA_Subscription* subscription =
+		UA_Session_getSubscriptionById(session, *((UA_UInt32*)input[0].data));
+	if (!subscription)
+		return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
+	/* process each monitoredItem in the subscription */
+	UA_StatusCode retval;
+	UA_MonitoredItem* monitoredItem = NULL;
+	LIST_FOREACH(monitoredItem, &subscription->monitoredItems, listEntry) 
+	{
+		QUaNode * node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, server);
+		Q_ASSERT(node || UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+		if (node && srv->m_retainedConditions[node].count() == 0)
+		{
+			continue;
+		}
+		QSet<QUaCondition*> conditions;
+		if (node)
+		{
+			conditions = srv->m_retainedConditions[node];
+		}
+		else
+		{
+			std::for_each(srv->m_retainedConditions.begin(), srv->m_retainedConditions.end(),
+			[&conditions](const QSet<QUaCondition*> &conds) {
+				conditions.unite(conds);
+			});
+		}
+		QString sourceNodeId      = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
+		QString sourceDisplayName = node ? node->displayName() : tr("Server");
+		/* 1. trigger RefreshStartEvent */
+		srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
+		srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
+		srv->m_refreshStartEvent->triggerRaw();
+		/* 2. refresh (see 5.5.7)*/
+		for (auto condition : conditions)
+		{
+			Q_ASSERT(condition->retain());
+			retval = UA_Event_addEventToMonitoredItem(server, &condition->m_nodeId, monitoredItem);
+			Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+		}
+		/* 3. trigger RefreshEndEvent*/
+		srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
+		srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
+		srv->m_refreshEndEvent->triggerRaw();
+	}
+	return UA_STATUSCODE_GOOD;
+}
+
+UA_StatusCode QUaCondition::ConditionRefresh2(
+	UA_Server*        server,
+	const UA_NodeId*  sessionId,
+	void*             sessionContext,
+	const UA_NodeId*  methodId,
+	void*             methodContext,
+	const UA_NodeId*  objectId,
+	void*             objectContext,
+	size_t            inputSize,
+	const UA_Variant* input,
+	size_t            outputSize,
+	UA_Variant*       output
+)
+{
+	//return refresh2MethodCallback(
+	//	server,
+	//	sessionId,
+	//	sessionContext,
+	//	methodId,
+	//	methodContext,
+	//	objectId,
+	//	objectContext,
+	//	inputSize,
+	//	input,
+	//	outputSize,
+	//	output
+	//);
+	return UA_STATUSCODE_BADNOTIMPLEMENTED;
 }
 
 

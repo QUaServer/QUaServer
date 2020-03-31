@@ -10,13 +10,20 @@
 #include <QUaBaseDataVariable>
 #include <QUaProperty>
 #include <QUaBaseObject>
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+class QUaBaseEvent;
+class QUaGeneralModelChangeEvent;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+class QUaRefreshStartEvent;
+class QUaRefreshEndEvent;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #ifdef UA_ENABLE_HISTORIZING
 #include <QUaHistoryBackend>
 #endif // UA_ENABLE_HISTORIZING
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-#include <QUaBaseEvent>
-#include <QUaGeneralModelChangeEvent>
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 // Enum Stuff
 typedef qint64 QUaEnumKey;
@@ -135,14 +142,15 @@ class QUaServer : public QObject
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	friend class QUaBaseEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	template <typename ClassType, typename R, bool IsMutable, typename... Args> friend struct QUaMethodTraitsBase;
-#ifdef UA_ENABLE_HISTORIZING
-    friend class QUaHistoryBackend;
-#endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     friend class QUaStateVariable;
     friend class QUaTwoStateVariable;
+    friend class QUaCondition;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#ifdef UA_ENABLE_HISTORIZING
+    friend class QUaHistoryBackend;
+#endif // UA_ENABLE_HISTORIZING
+	template <typename ClassType, typename R, bool IsMutable, typename... Args> friend struct QUaMethodTraitsBase;
 
 	Q_OBJECT
 
@@ -402,6 +410,12 @@ private:
 	void addChange(const QUaChangeStructureDataType& change);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    QUaRefreshStartEvent* m_refreshStartEvent;
+    QUaRefreshEndEvent  * m_refreshEndEvent;
+    QHash<QUaNode*, QSet<QUaCondition*>> m_retainedConditions;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #ifdef UA_ENABLE_HISTORIZING
     UA_HistoryDatabase m_historDatabase;
     QUaHistoryBackend  m_historBackend;
@@ -450,8 +464,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create instance of a given event type
 	UA_NodeId createEventInternal(
-        const QMetaObject &metaObject, 
-        const UA_NodeId &nodeIdOriginator
+        const QMetaObject &metaObject
     );
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -607,9 +620,6 @@ private:
 	//        passed-in in QUaServer::uaConstructor and used in QUaNode::QUaNode
 	const UA_NodeId   * m_newNodeNodeId;
 	const QMetaObject * m_newNodeMetaObject;
-	//        passed-in in QUaServer::createEvent, QUaBaseObject::createEvent 
-    //        and used in QUaBaseEvent::QUaBaseEvent
-	const UA_NodeId   * m_newEventOriginatorNodeId;
 };
 
 template<typename T>
@@ -751,8 +761,7 @@ inline T * QUaServer::createEvent()
 {
 	// instantiate first in OPC UA
 	UA_NodeId newEventNodeId = this->createEventInternal(
-        T::staticMetaObject, 
-        UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)
+        T::staticMetaObject
     );
 	if (UA_NodeId_isNull(&newEventNodeId))
 	{
@@ -762,6 +771,23 @@ inline T * QUaServer::createEvent()
 	auto tmp = QUaNode::getNodeContext(newEventNodeId, this);
 	T * newEvent = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newEvent);
+    // set originator 
+    newEvent->setSourceNode(
+        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER))
+    );
+    newEvent->setSourceName(
+        tr("Server")
+    );
+	// reparent qt
+    newEvent->setParent(this);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    // add reference added change to buffer
+    this->addChange({
+        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
+        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
+        QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+    });
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// return c++ event instance
 	return newEvent;
 }
@@ -1267,8 +1293,7 @@ inline T * QUaBaseObject::createEvent()
 {
     // instantiate first in OPC UA
     UA_NodeId newEventNodeId = m_qUaServer->createEventInternal(
-        T::staticMetaObject, 
-        m_nodeId
+        T::staticMetaObject
     );
     if (UA_NodeId_isNull(&newEventNodeId))
     {
@@ -1278,6 +1303,15 @@ inline T * QUaBaseObject::createEvent()
     auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer);
     T * newEvent = qobject_cast<T*>(tmp);
     Q_CHECK_PTR(newEvent);
+    // set originator 
+    newEvent->setSourceNode(
+        QUaTypesConverter::nodeIdToQString(m_nodeId)
+    );
+    newEvent->setSourceName(
+        this->displayName()
+    );
+    // reparent qt
+    newEvent->setParent(this);
     // return c++ event instance
     return newEvent;
 }

@@ -522,3 +522,206 @@ UA_StatusCode
 setMethodNode_callback(UA_Server * server,
     const UA_NodeId methodNodeId,
     UA_MethodCallback methodCallback);
+
+
+
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+typedef struct UA_EventNotification {
+    UA_EventFieldList fields;
+    /* EventFilterResult currently isn't being used
+    UA_EventFilterResult result; */
+} UA_EventNotification;
+
+typedef TAILQ_HEAD(NotificationQueue, UA_Notification) NotificationQueue;
+
+struct UA_MonitoredItem {
+    UA_DelayedCallback delayedFreePointers;
+    LIST_ENTRY(UA_MonitoredItem) listEntry;
+    UA_Subscription* subscription; /* Local MonitoredItem if the subscription is NULL */
+    UA_UInt32 monitoredItemId;
+    UA_UInt32 clientHandle;
+    UA_Boolean registered; /* Was the MonitoredItem registered in Userland with
+                              the callback? */
+
+                              /* Settings */
+    UA_TimestampsToReturn timestampsToReturn;
+    UA_MonitoringMode monitoringMode;
+    UA_NodeId monitoredNodeId;
+    UA_UInt32 attributeId;
+    UA_String indexRange;
+    UA_Double samplingInterval; // [ms]
+    UA_Boolean discardOldest;
+    union {
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+        /* If attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER */
+        UA_EventFilter eventFilter;
+#endif
+        /* The DataChangeFilter always contains an absolute deadband definition.
+         * Part 8, §6.2 gives the following formula to test for percentage
+         * deadbands:
+         *
+         * DataChange if (absolute value of (last cached value - current value)
+         *                > (deadbandValue/100.0) * ((high–low) of EURange)))
+         *
+         * So we can convert from a percentage to an absolute deadband and keep
+         * the hot code path simple.
+         *
+         * TODO: Store the percentage deadband to recompute when the UARange is
+         * changed at runtime of the MonitoredItem */
+        UA_DataChangeFilter dataChangeFilter;
+    } filter;
+    UA_Variant lastValue; // TODO: dataEncoding is hardcoded to UA binary
+
+    /* Sample Callback */
+    UA_UInt64 sampleCallbackId;
+    UA_ByteString lastSampledValue;
+    UA_Boolean sampleCallbackIsRegistered;
+
+    /* Notification Queue */
+    NotificationQueue queue;
+    UA_UInt32 maxQueueSize; /* The max number of enqueued notifications (not
+                             * counting overflow events) */
+    UA_UInt32 queueSize;
+    UA_UInt32 eventOverflows; /* Separate counter for the queue. Can at most
+                               * double the queue size */
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    UA_MonitoredItem* next;
+#endif
+
+#ifdef UA_ENABLE_DA
+    UA_StatusCode lastStatus;
+#endif
+};
+
+extern "C"
+UA_StatusCode
+UA_Event_generateEventId(UA_ByteString * generatedId);
+
+extern "C"
+UA_StatusCode
+referenceSubtypes(UA_Server* server, const UA_NodeId* refType,
+    size_t* refTypesSize, UA_NodeId** refTypes);
+
+extern "C"
+UA_StatusCode
+browseRecursive(UA_Server* server,
+    size_t startNodesSize, const UA_NodeId* startNodes,
+    size_t refTypesSize, const UA_NodeId* refTypes,
+    UA_BrowseDirection browseDirection, UA_Boolean includeStartNodes,
+    size_t* resultsSize, UA_ExpandedNodeId** results);
+
+extern "C"
+UA_StatusCode
+UA_Event_addEventToMonitoredItem(UA_Server * server, const UA_NodeId * event, UA_MonitoredItem * mon);
+
+extern "C"
+UA_StatusCode
+readObjectProperty(UA_Server * server, const UA_NodeId objectId,
+    const UA_QualifiedName propertyName,
+    UA_Variant * value);
+
+extern "C"
+UA_StatusCode
+UA_getConditionId(UA_Server * server, const UA_NodeId * conditionNodeId,
+    UA_NodeId * outConditionId);
+
+extern "C"
+UA_DataValue
+UA_Server_readWithSession(UA_Server * server, UA_Session * session,
+    const UA_ReadValueId * item,
+    UA_TimestampsToReturn timestampsToReturn);;
+
+extern "C"
+UA_BrowsePathResult
+browseSimplifiedBrowsePath(UA_Server * server, const UA_NodeId origin,
+    size_t browsePathSize, const UA_QualifiedName * browsePath);
+
+extern "C"
+UA_StatusCode
+readWithReadValue(UA_Server * server, const UA_NodeId * nodeId,
+    const UA_AttributeId attributeId, void* v);
+
+extern "C"
+UA_Boolean
+isNodeInTree(UA_Server * server, const UA_NodeId * leafNode, const UA_NodeId * nodeToFind,
+    const UA_NodeId * referenceTypeIds, size_t referenceTypeIdsSize);
+
+extern "C"
+UA_Subscription *
+UA_Session_getSubscriptionById(UA_Session * session, UA_UInt32 subscriptionId);
+
+/* We use only a subset of the states defined in the standard */
+typedef enum {
+    /* UA_SUBSCRIPTIONSTATE_CLOSED */
+    /* UA_SUBSCRIPTIONSTATE_CREATING */
+    UA_SUBSCRIPTIONSTATE_NORMAL,
+    UA_SUBSCRIPTIONSTATE_LATE,
+    UA_SUBSCRIPTIONSTATE_KEEPALIVE
+} UA_SubscriptionState;
+
+typedef TAILQ_HEAD(ListOfNotificationMessages, UA_NotificationMessageEntry) ListOfNotificationMessages;
+
+struct UA_Subscription {
+    UA_DelayedCallback delayedFreePointers;
+    LIST_ENTRY(UA_Subscription) listEntry;
+    UA_Session* session;
+    UA_UInt32 subscriptionId;
+
+    /* Settings */
+    UA_UInt32 lifeTimeCount;
+    UA_UInt32 maxKeepAliveCount;
+    UA_Double publishingInterval; /* in ms */
+    UA_UInt32 notificationsPerPublish;
+    UA_Boolean publishingEnabled;
+    UA_UInt32 priority;
+
+    /* Runtime information */
+    UA_SubscriptionState state;
+    UA_UInt32 nextSequenceNumber;
+    UA_UInt32 currentKeepAliveCount;
+    UA_UInt32 currentLifetimeCount;
+
+    /* Publish Callback */
+    UA_UInt64 publishCallbackId;
+    UA_Boolean publishCallbackIsRegistered;
+
+    /* MonitoredItems */
+    UA_UInt32 lastMonitoredItemId; /* increase the identifiers */
+    LIST_HEAD(, UA_MonitoredItem) monitoredItems;
+    UA_UInt32 monitoredItemsSize;
+
+    /* Global list of notifications from the MonitoredItems */
+    NotificationQueue notificationQueue;
+    UA_UInt32 notificationQueueSize; /* Total queue size */
+    UA_UInt32 dataChangeNotifications;
+    UA_UInt32 eventNotifications;
+    UA_UInt32 statusChangeNotifications;
+
+    /* Notifications to be sent out now (already late). In a regular publish
+     * callback, all queued notifications are sent out. In a late publish
+     * response, only the notifications left from the last regular publish
+     * callback are sent. */
+    UA_UInt32 readyNotifications;
+
+    /* Retransmission Queue */
+    ListOfNotificationMessages retransmissionQueue;
+    size_t retransmissionQueueSize;
+};
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+
+
+
+
+
+
+
+
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

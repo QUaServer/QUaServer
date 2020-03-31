@@ -1,5 +1,11 @@
 #include "quaserver_anex.h"
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#include <QUaBaseEvent>
+#include <QUaGeneralModelChangeEvent>
+#include <QUaSystemEvent>
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #include <QUaConditionVariable>
 #include <QUaStateVariable>
@@ -7,6 +13,8 @@
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
+#include <QUaRefreshStartEvent>
+#include <QUaRefreshEndEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #include <QMetaProperty>
@@ -912,9 +920,6 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_bytePrivateKeyInternal = QByteArray();
 #endif
 	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_newEventOriginatorNodeId = &UA_NODEID_NULL;
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// setup server (other defaults)
@@ -924,6 +929,8 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 void QUaServer::addChange(const QUaChangeStructureDataType& change)
 {
+	// NOTE : do not check if server is running because we might wanna
+	//        historize offline events
 	if (m_listChanges.contains(change))
 	{
 		return;
@@ -937,8 +944,10 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 	// exec trigger on next event loop iteration
 	m_changeEventSignaler.execLater([this]() {
 		// trigger
+		auto time = QDateTime::currentDateTimeUtc();
 		m_changeEvent->setChanges(m_listChanges);
-		m_changeEvent->setTime(QDateTime::currentDateTimeUtc());
+		m_changeEvent->setTime(time);
+		m_changeEvent->setReceiveTime(time);
 		m_changeEvent->trigger();
 		// clean list of changes buffer
 		m_listChanges.clear();
@@ -1161,7 +1170,9 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaFolderObject>    (UA_NODEID_NUMERIC(0, UA_NS0ID_FOLDERTYPE          ));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	this->registerSpecificationType<QUaBaseEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE), true);
+	this->registerSpecificationType<QUaBaseModelChangeEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEMODELCHANGEEVENTTYPE));
 	this->registerSpecificationType<QUaGeneralModelChangeEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_GENERALMODELCHANGEEVENTTYPE));
+	this->registerSpecificationType<QUaSystemEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_SYSTEMEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
@@ -1170,6 +1181,22 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaCondition        >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
 	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
 	this->registerSpecificationType<QUaAlarmCondition   >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE));
+	this->registerSpecificationType<QUaRefreshStartEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE));
+	this->registerSpecificationType<QUaRefreshEndEvent  >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE));
+	// register static condition refresh methods
+	// Part 9 - 5.57 and 5.5.8
+	st = UA_Server_setMethodNode_callback(
+		m_server, 
+		UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE_CONDITIONREFRESH), 
+		&QUaCondition::ConditionRefresh
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	st = UA_Server_setMethodNode_callback(
+		m_server,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE_CONDITIONREFRESH2),
+		&QUaCondition::ConditionRefresh2
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -1237,10 +1264,26 @@ void QUaServer::setupServer()
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	m_changeEvent = this->createEvent<QUaGeneralModelChangeEvent>();
 	Q_CHECK_PTR(m_changeEvent);
-	m_changeEvent->setSourceName(this->applicationName());
-	m_changeEvent->setMessage("Node added or removed.");
+	m_changeEvent->setSourceNode(QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+	m_changeEvent->setSourceName(tr("Server"));
+	m_changeEvent->setMessage(tr("Node added or removed"));
 	m_changeEvent->setSeverity(1);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	m_refreshStartEvent = this->createEvent<QUaRefreshStartEvent>();
+	Q_CHECK_PTR(m_refreshStartEvent);
+	m_refreshStartEvent->setSourceNode(QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+	m_refreshStartEvent->setSourceName(tr("Server"));
+	m_refreshStartEvent->setMessage("");
+	m_refreshStartEvent->setSeverity(100);
+	m_refreshEndEvent = this->createEvent<QUaRefreshEndEvent>();
+	Q_CHECK_PTR(m_refreshEndEvent);
+	m_refreshEndEvent->setSourceNode(QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+	m_refreshEndEvent->setSourceName(tr("Server"));
+	m_refreshEndEvent->setMessage("");
+	m_refreshEndEvent->setSeverity(100);
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #ifdef UA_ENABLE_HISTORIZING
 	UA_HistoryDataGathering gathering = UA_HistoryDataGathering_Default(1000);
@@ -1340,11 +1383,6 @@ void QUaServer::setApplicationName(const QString& strApplicationName)
 {
 	// update config
 	m_byteApplicationName = strApplicationName.toUtf8();
-	// update application name on change event
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	Q_CHECK_PTR(m_changeEvent);
-	m_changeEvent->setSourceName(strApplicationName);
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// emit event
 	emit this->applicationNameChanged(strApplicationName);
 }
@@ -1448,9 +1486,8 @@ void QUaServer::start()
 		if (!m_running) { return; }
 		// iterate and restart
 		m_iterWaitTimer.stop();
-		auto msToWait = UA_Server_run_iterate(m_server, false);
-		msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.5 * msToWait));
-		msToWait = (std::max)(msToWait, static_cast<UA_UInt16>(1));
+		UA_UInt16 msToWait = UA_Server_run_iterate(m_server, true);
+		msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.25 * msToWait));
 		m_iterWaitTimer.start(msToWait);
 	}, Qt::QueuedConnection);
 	// start iterations
@@ -2257,14 +2294,6 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	else
 	{
-#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-		if (metaObject.inherits(&QUaCondition::staticMetaObject))
-		{
-			// set originator node id temporarily
-			Q_ASSERT(UA_NodeId_isNull(m_newEventOriginatorNodeId));
-			m_newEventOriginatorNodeId = &parentNode->m_nodeId;
-		}
-#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 			metaObject.className() == QUaBaseObject::staticMetaObject.className());
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
@@ -2302,16 +2331,14 @@ UA_NodeId QUaServer::createInstanceInternal(
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	if (metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
-		// reset originator node id to null
-		m_newEventOriginatorNodeId = &UA_NODEID_NULL;
 		// add HasCondition reference
 		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
 		auto condition = qobject_cast<QUaCondition*>(tmp);
 		Q_CHECK_PTR(condition);
 		parentNode->addReference({ "HasCondition" , "IsConditionOf" }, condition, true);
-		// set SourceNode
+		// set default originator
 		condition->setSourceNode(parentNode->nodeId());
-		condition->setSourceName(parentNode->browseName());
+		condition->setSourceName(parentNode->displayName());
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
@@ -2322,8 +2349,8 @@ UA_NodeId QUaServer::createInstanceInternal(
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 UA_NodeId QUaServer::createEventInternal(
-	const QMetaObject& metaObject, 
-	const UA_NodeId& nodeIdOriginator)
+	const QMetaObject& metaObject
+)
 {
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
@@ -2341,16 +2368,11 @@ UA_NodeId QUaServer::createEventInternal(
 		typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
-	// set originator node id temporarily
-	Q_ASSERT(UA_NodeId_isNull(m_newEventOriginatorNodeId));
-	m_newEventOriginatorNodeId = &nodeIdOriginator;
 	// create event instance
 	UA_NodeId nodeIdNewEvent;
 	auto st = UA_Server_createEvent(m_server, typeEvtId, &nodeIdNewEvent);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// reset originator node id to null
-	m_newEventOriginatorNodeId = &UA_NODEID_NULL;
 	// return new instance node id
 	return nodeIdNewEvent;
 }

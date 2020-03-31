@@ -42,11 +42,15 @@ int main(int argc, char *argv[])
 		}
 		// Set server_event information
 		auto time = QDateTime::currentDateTime();
-		server_event->setLocalTime(time.timeZone());
 		server_event->setSourceName("Server");
 		server_event->setMessage("An event occured in the server");
 		server_event->setTime(time.toUTC());
+		server_event->setReceiveTime(time.toUTC());
 		server_event->setSeverity(100);
+		// NOTE : since LocalTime is optional, it will be created on the fly
+		// if it did not exist. Therefore the first time it will trigger
+		// a model change event
+		server_event->setLocalTime(time.timeZone());
 		// Trigger server_event
 		server_event->trigger();	
 	});
@@ -72,9 +76,11 @@ int main(int argc, char *argv[])
 			return;
 		}
 		// Set server_event information
+		auto time = QDateTime::currentDateTime();
 		obj_event->setSourceName("Object");
 		obj_event->setMessage("An event occured in the object");
-		obj_event->setTime(QDateTime::currentDateTimeUtc());
+		obj_event->setTime(time.toUTC());
+		obj_event->setReceiveTime(time.toUTC());
 		obj_event->setSeverity(300);
 		// Trigger server_event
 		obj_event->trigger();

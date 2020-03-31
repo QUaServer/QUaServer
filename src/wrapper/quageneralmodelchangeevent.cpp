@@ -6,7 +6,7 @@
 
 QUaGeneralModelChangeEvent::QUaGeneralModelChangeEvent(
 	QUaServer *server
-) : QUaBaseEvent(server)
+) : QUaBaseModelChangeEvent(server)
 {
 	
 }

@@ -18,6 +18,10 @@ class QUaBaseObject;
 class QUaFolderObject;
 class QUaSession;
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+class QUaCondition;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #include <QUaTypesConverter>
 
 // traits used to static assert that a method cannot be used
@@ -330,7 +334,9 @@ class QUaNode : public QObject
 	friend class QUaBaseObject;
 	friend class QUaBaseVariable;
 	friend class QUaBaseEvent;
-
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	friend class QUaCondition;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	Q_OBJECT
 
 		// Node Attributes
@@ -504,8 +510,6 @@ public:
 	template<typename T>
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
-
-
 signals:
 
 	void displayNameChanged(const QString& displayName);
@@ -522,12 +526,16 @@ protected:
 	QUaServer* m_qUaServer;
 	// to check which session is calling a service (read, write, method call, etc)
 	const QUaSession* currentSession() const;
+	// instatiate child with optional modelling rule
+	QUaNode* instantiateOptionalChild(const QString& strBrowseName);
 	// check if instance has an optional method with given browse name
 	bool hasOptionalMethod(const QString& strMethodName) const;
 	// gets optional method from type and adds a reference from this instance to the method
 	bool addOptionalMethod(const QString& strMethodName);
 	// removes the reference by the method above
 	bool removeOptionalMethod(const QString& strMethodName);
+
+
 
 private:
 	// INSTANCE NodeId
@@ -582,8 +590,6 @@ private:
 	QUaWriteMask   userWriteMaskInternal(const QString& strUserName);
 	QUaAccessLevel userAccessLevelInternal(const QString& strUserName);
 	bool           userExecutableInternal(const QString& strUserName);
-
-	QUaNode* instantiateOptionalChild(const QString& strBrowseName);
 
 	// Serialization API
 	const QMap<QString, QVariant>    serializeAttrs() const;

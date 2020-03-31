@@ -42,13 +42,18 @@ struct QUaChangeStructureDataType
 		DataTypeChanged  = 16
 	};
 	QUaChangeStructureDataType();
-	QUaChangeStructureDataType(const QString &strNodeIdAffected, const QString &strNodeIdAffectedType, const Verb &uiVerb);
+	QUaChangeStructureDataType(
+		const QString &strNodeIdAffected, 
+		const QString &strNodeIdAffectedType, 
+		const Verb    &uiVerb
+	);
 
 	QString m_strNodeIdAffected;
 	QString m_strNodeIdAffectedType;
 	uchar   m_uiVerb;
 };
 typedef QUaChangeStructureDataType::Verb QUaChangeVerb;
+typedef QVector<QUaChangeStructureDataType> QUaChangesList;
 
 inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStructureDataType& rhs) 
 {

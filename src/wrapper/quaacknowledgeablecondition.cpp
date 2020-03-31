@@ -187,9 +187,11 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 	// set comment
 	this->setComment(Comment);
 	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(100);
 	this->setMessage(tr("Condition acknowledged"));
-	this->setTime(QDateTime::currentDateTime().toUTC());
+	this->setTime(time);
+	this->setReceiveTime(time);
 	this->trigger();
 	// emit qt signal
 	emit this->acknowledged();
@@ -221,17 +223,18 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADSTATENOTACTIVE);
 		return;
 	}
-
-	// change ConfirmedState to Acknowledged
+	// change ConfirmedState to Confirmed
 	this->setConfirmedStateCurrentStateName("Confirmed");
 	this->setConfirmedStateId(true);
 	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 	// set comment
 	this->setComment(Comment);
 	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(100);
 	this->setMessage(tr("Condition confirmed"));
-	this->setTime(QDateTime::currentDateTime().toUTC());
+	this->setTime(time);
+	this->setReceiveTime(time);
 	this->trigger();
 	// emit qt signal
 	emit this->confirmed();

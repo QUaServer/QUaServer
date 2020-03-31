@@ -161,9 +161,11 @@ void QUaAlarmCondition::setActive(const bool& active)
 	}
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
 	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(0);
 	this->setMessage(active ? tr("Alarm active") : tr("Alarm inactive"));
-	this->setTime(QDateTime::currentDateTime().toUTC());
+	this->setTime(time);
+	this->setReceiveTime(time);
 	this->trigger();
 	// emit qt signal
 	active ?
