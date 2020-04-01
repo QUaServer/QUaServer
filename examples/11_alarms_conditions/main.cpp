@@ -51,6 +51,10 @@ int main(int argc, char *argv[])
 	[condObj](bool retain) {
 		condObj->setRetain(retain);
 	});
+	condObj->addMethod("createBranch",
+	[condObj]() {
+		condObj->createBranch();
+	});
 
 	auto almObj = objsFolder->addChild<QUaAlarmCondition>();
 	almObj->setBrowseName("MyAlarmCondition");
@@ -64,6 +68,14 @@ int main(int argc, char *argv[])
 	[almObj](bool retain) {
 		almObj->setRetain(retain);
 	});
+
+	//objsFolder->addMethod("addHiddenInstance",
+	//[&server, objsFolder](QString strName) {
+	//	auto hiddenObj = server.createInstance<QUaBaseObject>(nullptr);
+	//	hiddenObj->setDisplayName(strName);
+	//	hiddenObj->setBrowseName(strName);
+	//	objsFolder->addReference({ "HasHiddenChild", "IsHiddenChildOf" }, hiddenObj);
+	//});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

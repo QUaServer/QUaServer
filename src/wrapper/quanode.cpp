@@ -7,6 +7,72 @@
 
 #include "quaserver_anex.h"
 
+struct QUaInMemorySerializer
+{
+	bool QUaInMemorySerializer::writeInstance(
+		const QString& nodeId,
+		const QString& typeName,
+		const QMap<QString, QVariant>& attrs,
+		const QList<QUaForwardReference>& forwardRefs,
+		QQueue<QUaLog>& logOut)
+	{
+		Q_ASSERT(!m_hashNodeTreeData.contains(nodeId));
+		if (m_hashNodeTreeData.contains(nodeId))
+		{
+			logOut << QUaLog({
+				QObject::tr("Error serializing node. Repeated NodeId %1").arg(nodeId),
+				QUaLogLevel::Error,
+				QUaLogCategory::Application
+			});
+			// the show must go on
+			return true;
+		}
+		//qDebug() << QString("%1 - %2 (%3)").arg(nodeId).arg(typeName).arg(attrs["browseName"].toString());
+		//QString strAttrs;
+		//std::for_each(attrs.keyBegin(), attrs.keyEnd(), 
+		//[&strAttrs, &attrs](const QString &attr) {
+		//		strAttrs += QString("[%1, %2]").arg(attr).arg(attrs[attr].toString());
+		//});
+		//qDebug() << strAttrs;
+		//qDebug() << "-----------------------------------------------------";
+		m_hashNodeTreeData[nodeId] = {
+			typeName, attrs, forwardRefs
+		};
+		return true;
+	};
+	bool QUaInMemorySerializer::readInstance(
+		const QString& nodeId,
+		QString& typeName,
+		QMap<QString, QVariant>& attrs,
+		QList<QUaForwardReference>& forwardRefs,
+		QQueue<QUaLog>& logOut)
+	{
+		Q_ASSERT(m_hashNodeTreeData.contains(nodeId));
+		if (!m_hashNodeTreeData.contains(nodeId))
+		{
+			logOut << QUaLog({
+				QObject::tr("Error deserializing node. Could not find NodeId %1").arg(nodeId),
+				QUaLogLevel::Error,
+				QUaLogCategory::Application
+			});
+			// the show must go on
+			return true;
+		}
+		auto& data  = m_hashNodeTreeData[nodeId];
+		typeName    = data.typeName;
+		attrs       = data.attrs;
+		forwardRefs = data.forwardRefs;
+		return true;
+	};
+	struct QUaNodeData
+	{
+		QString typeName;
+		QMap<QString, QVariant> attrs;
+		QList<QUaForwardReference> forwardRefs;
+	};
+	QHash<QString, QUaNodeData> m_hashNodeTreeData;
+};
+
 QUaNode::QUaNode(
 	QUaServer* server
 )
@@ -1029,6 +1095,42 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	return newInstance;
 }
 
+QUaNode* QUaNode::cloneNode(QUaNode* parentNode, const QString& strNodeId)
+{
+	// create new clean instance of the same type
+	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal(
+		*this->metaObject(), 
+		parentNode, 
+		strNodeId
+	);
+	if (UA_NodeId_isNull(&newInstanceNodeId))
+	{
+		UA_NodeId_clear(&newInstanceNodeId);
+		return nullptr;
+	}
+	// get new c++ instance
+	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, m_qUaServer);
+	QUaNode* newInstance = qobject_cast<QUaNode*>(tmp);
+	Q_CHECK_PTR(newInstance);
+	UA_NodeId_clear(&newInstanceNodeId);
+	if (!newInstance)
+	{
+		return newInstance;
+	}
+	// serialize this instance to memory
+	QQueue<QUaLog> logOut;
+	QUaInMemorySerializer serializer;
+	this->serialize(serializer, logOut);
+	// replace node id
+	Q_ASSERT(serializer.m_hashNodeTreeData.contains(this->nodeId()));
+	serializer.m_hashNodeTreeData[newInstance->nodeId()] =
+		serializer.m_hashNodeTreeData.take(this->nodeId());
+	// deserialize to new instance
+	newInstance->deserialize(serializer, logOut);
+	// return new instance
+	return newInstance;
+}
+
 const QUaSession* QUaNode::currentSession() const
 {
 	return m_qUaServer->m_currentSession;
@@ -1290,10 +1392,12 @@ void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaL
 			bool ok = listAttrsNotInProps.removeOne(strPropName);
 			Q_ASSERT(ok);
 			// write property
-			// TODO : sometimes false if value is empty
-			/*ok = */
-			metaProperty.write(this, attrs[strPropName]);
-			//Q_ASSERT(ok);
+			auto val = attrs[strPropName];
+			if (val.isValid())
+			{
+				ok = metaProperty.write(this, val);
+				Q_ASSERT(ok);
+			}
 			continue;
 		}
 		// else add to shame list

@@ -151,16 +151,11 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 {
 	// get parent node id
 	UA_NodeId topBoundParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
-	// handle events
-#ifndef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId));
-#else
-	Q_ASSERT(!UA_NodeId_isNull(&topBoundParentNodeId) || metaObject.inherits(&QUaBaseEvent::staticMetaObject));
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// find top level node which is bound (bound := NodeId context == QUaNode instance)
 	UA_NodeClass outNodeClass;
 	QUaNode * parentContext = nullptr;
-	while (true)
+	// NOTE : not only events can be parent-less (e.g. conditions)
+	while (!UA_NodeId_isNull(&topBoundParentNodeId))
 	{
 		// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -189,10 +184,6 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		auto tmpParentNodeId = QUaNode::getParentNodeId(topBoundParentNodeId, server->m_server);
 		UA_NodeId_clear(&topBoundParentNodeId); // clear old
 		topBoundParentNodeId = tmpParentNodeId; // shallow copy
-		if (UA_NodeId_isNull(&topBoundParentNodeId))
-		{
-			break;
-		}
 	}
 	// create new instance (and bind it to UA, in base types happens in constructor, 
 	// in derived class is done by QOpcUaServerNodeFactory)
@@ -223,7 +214,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	newInstance->m_nodeId = *nodeId;
 	// need to set parent if direct parent is already bound bacause its constructor has already been called
 	UA_NodeId directParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
-	if (UA_NodeId_equal(&topBoundParentNodeId, &directParentNodeId) && parentContext)
+	if (parentContext && UA_NodeId_equal(&topBoundParentNodeId, &directParentNodeId))
 	{
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
@@ -2215,7 +2206,6 @@ UA_NodeId QUaServer::createInstanceInternal(
 			"Unsupported base class. It must derive from QUaNode");
 		return UA_NODEID_NULL;
 	}
-	Q_ASSERT(!UA_NodeId_isNull(&parentNode->m_nodeId));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check if inherits BaseEventType, in which case this method cannot be used
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject) &&
@@ -2236,7 +2226,10 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// adapt parent relation with child according to parent type
-	UA_NodeId referenceTypeId = QUaServer::getReferenceTypeId(*parentNode->metaObject(), metaObject);
+	// NOTE : parent can be null (no address space representation, e.g. events, conditions)
+	UA_NodeId referenceTypeId = parentNode ?
+		QUaServer::getReferenceTypeId(*parentNode->metaObject(), metaObject) :
+		UA_NODEID_NULL;
 	// set qualified name, default is class name
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
@@ -2262,6 +2255,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 	// check if variable or object 
 	// NOTE : a type is considered to inherit itself 
 	// (http://doc.qt.io/qt-5/qmetaobject.html#inherits)
+	Q_ASSERT(parentNode ? !UA_NodeId_isNull(&parentNode->m_nodeId) : true);
 	if (metaObject.inherits(&QUaBaseVariable::staticMetaObject))
 	{
 		// some types require the attrs to match because open62541 checks them
@@ -2281,7 +2275,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		// add variable
 		UA_Server_addVariableNode(m_server,
 			reqNodeId,            // requested nodeId
-			parentNode->m_nodeId, // parent
+			parentNode ? parentNode->m_nodeId : UA_NODEID_NULL, // parent (can be null)
 			referenceTypeId,      // parent relation with child
 			browseName,
 			typeNodeId,
@@ -2300,7 +2294,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
 			reqNodeId,            // requested nodeId
-			parentNode->m_nodeId, // parent
+			parentNode ? parentNode->m_nodeId : UA_NODEID_NULL, // parent
 			referenceTypeId,      // parent relation with child
 			browseName,
 			typeNodeId,
@@ -2316,20 +2310,9 @@ UA_NodeId QUaServer::createInstanceInternal(
 	UA_NodeId_clear(&referenceTypeId);
 	UA_QualifiedName_clear(&browseName);
 
-	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	Q_CHECK_PTR(m_changeEvent);
-	// add reference added change to buffer
-	this->addChange({
-		parentNode->nodeId(),
-		parentNode->typeDefinitionNodeId(),
-		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-	});
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 	// if child is condition, add non-hierarchical reference and default props
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-	if (metaObject.inherits(&QUaCondition::staticMetaObject))
+	if (parentNode && metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
 		// add HasCondition reference
 		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
@@ -2341,6 +2324,20 @@ UA_NodeId QUaServer::createInstanceInternal(
 		condition->setSourceName(parentNode->displayName());
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	if (parentNode)
+	{
+		Q_CHECK_PTR(m_changeEvent);
+		// add reference added change to buffer
+		this->addChange({
+			parentNode->nodeId(),
+			parentNode->typeDefinitionNodeId(),
+			QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+		});
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// return new instance node id
 	return nodeIdNewInstance;

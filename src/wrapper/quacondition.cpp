@@ -145,6 +145,11 @@ bool QUaCondition::retain() const
 
 void QUaCondition::setRetain(const bool& retain)
 {
+	if (retain == this->retain())
+	{
+		return;
+	}
+	// update internal value
 	this->getRetain()->setValue(retain);
 	// update source
 	if (!m_sourceNode)
@@ -342,6 +347,14 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 	emit this->addedComment(Comment);
 }
 
+QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
+{
+	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, strNodeId));
+	Q_ASSERT(branch);
+	this->addReference({ "HasBranch", "IsBranchOf" }, branch);
+	return branch;
+}
+
 void QUaCondition::resetInternals()
 {
 	// set default : good
@@ -435,7 +448,7 @@ UA_StatusCode QUaCondition::ConditionRefresh(
 	srv->m_refreshEndEvent->setEventId(QUaBaseEvent::generateEventId());
 	srv->m_refreshEndEvent->setTime(time);
 	srv->m_refreshEndEvent->setReceiveTime(time);
-
+	/* Check if valid subscriptionId */
 	UA_Session* session = UA_Server_getSessionById(server, sessionId);
 	UA_Subscription* subscription =
 		UA_Session_getSubscriptionById(session, *((UA_UInt32*)input[0].data));
@@ -446,41 +459,7 @@ UA_StatusCode QUaCondition::ConditionRefresh(
 	UA_MonitoredItem* monitoredItem = NULL;
 	LIST_FOREACH(monitoredItem, &subscription->monitoredItems, listEntry) 
 	{
-		QUaNode * node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, server);
-		Q_ASSERT(node || UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
-		if (node && srv->m_retainedConditions[node].count() == 0)
-		{
-			continue;
-		}
-		QSet<QUaCondition*> conditions;
-		if (node)
-		{
-			conditions = srv->m_retainedConditions[node];
-		}
-		else
-		{
-			std::for_each(srv->m_retainedConditions.begin(), srv->m_retainedConditions.end(),
-			[&conditions](const QSet<QUaCondition*> &conds) {
-				conditions.unite(conds);
-			});
-		}
-		QString sourceNodeId      = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
-		QString sourceDisplayName = node ? node->displayName() : tr("Server");
-		/* 1. trigger RefreshStartEvent */
-		srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
-		srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
-		srv->m_refreshStartEvent->triggerRaw();
-		/* 2. refresh (see 5.5.7)*/
-		for (auto condition : conditions)
-		{
-			Q_ASSERT(condition->retain());
-			retval = UA_Event_addEventToMonitoredItem(server, &condition->m_nodeId, monitoredItem);
-			Q_ASSERT(retval == UA_STATUSCODE_GOOD);
-		}
-		/* 3. trigger RefreshEndEvent*/
-		srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
-		srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
-		srv->m_refreshEndEvent->triggerRaw();
+		QUaCondition::processMonitoredItem(monitoredItem, srv);
 	}
 	return UA_STATUSCODE_GOOD;
 }
@@ -499,20 +478,68 @@ UA_StatusCode QUaCondition::ConditionRefresh2(
 	UA_Variant*       output
 )
 {
-	//return refresh2MethodCallback(
-	//	server,
-	//	sessionId,
-	//	sessionContext,
-	//	methodId,
-	//	methodContext,
-	//	objectId,
-	//	objectContext,
-	//	inputSize,
-	//	input,
-	//	outputSize,
-	//	output
-	//);
-	return UA_STATUSCODE_BADNOTIMPLEMENTED;
+	QUaServer* srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv);
+	auto time = QDateTime::currentDateTimeUtc();
+	srv->m_refreshStartEvent->setEventId(QUaBaseEvent::generateEventId());
+	srv->m_refreshStartEvent->setTime(time);
+	srv->m_refreshStartEvent->setReceiveTime(time);
+	srv->m_refreshEndEvent->setEventId(QUaBaseEvent::generateEventId());
+	srv->m_refreshEndEvent->setTime(time);
+	srv->m_refreshEndEvent->setReceiveTime(time);
+	/* Check if valid subscriptionId */
+	UA_Session* session = UA_Server_getSessionById(server, sessionId);
+	UA_Subscription* subscription =
+		UA_Session_getSubscriptionById(session, *((UA_UInt32*)input[0].data));
+	if (!subscription)
+		return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
+	/* Process monitored item */
+	UA_MonitoredItem* monitoredItem =
+		UA_Subscription_getMonitoredItem(subscription, *((UA_UInt32*)input[1].data));
+	if (!monitoredItem)
+		return UA_STATUSCODE_BADMONITOREDITEMIDINVALID;
+
+	QUaCondition::processMonitoredItem(monitoredItem, srv);
+	return UA_STATUSCODE_GOOD;
+}
+
+void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServer* srv)
+{
+	QUaNode* node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, srv->m_server);
+	Q_ASSERT(node || UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+	if (node && srv->m_retainedConditions[node].count() == 0)
+	{
+		return;
+	}
+	QSet<QUaCondition*> conditions;
+	if (node)
+	{
+		conditions = srv->m_retainedConditions[node];
+	}
+	else
+	{
+		std::for_each(srv->m_retainedConditions.begin(), srv->m_retainedConditions.end(),
+		[&conditions](const QSet<QUaCondition*>& conds) {
+			conditions.unite(conds);
+		});
+	}
+	QString sourceNodeId = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
+	QString sourceDisplayName = node ? node->displayName() : tr("Server");
+	/* 1. trigger RefreshStartEvent */
+	srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
+	srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
+	srv->m_refreshStartEvent->triggerRaw();
+	/* 2. refresh (see 5.5.7)*/
+	for (auto condition : conditions)
+	{
+		Q_ASSERT(condition->retain());
+		auto retval = UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
+		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+	}
+	/* 3. trigger RefreshEndEvent*/
+	srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
+	srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
+	srv->m_refreshEndEvent->triggerRaw();
 }
 
 

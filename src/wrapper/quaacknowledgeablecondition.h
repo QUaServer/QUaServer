@@ -36,6 +36,8 @@ class QUaAcknowledgeableCondition : public QUaCondition
 {
     Q_OBJECT
 
+	Q_PROPERTY(bool confirmAllowed READ confirmAllowed WRITE setConfirmAllowed)
+
 friend class QUaServer;
 
 public:

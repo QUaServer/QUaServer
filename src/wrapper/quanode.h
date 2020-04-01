@@ -111,6 +111,12 @@ namespace QUa
 		QUuid       = QMetaType::QUuid,
 		QByteArray  = QMetaType::QByteArray,
 		UnknownType = QMetaType::UnknownType,
+		LocalizedText           = METATYPE_LOCALIZEDTEXT,
+		TimeZoneDataType        = METATYPE_TIMEZONEDATATYPE,
+		NodeId                  = METATYPE_NODEID,
+		ChangeStructureDatatype = METATYPE_CHANGESTRUCTUREDATATYPE,
+		Image                   = METATYPE_IMAGE,
+		StatusCode              = METATYPE_STATUSCODE
 	};
 	Q_ENUM_NS(Type)
 
@@ -509,6 +515,9 @@ public:
 	// bool T::deserializeEnd(QQueue<QUaLog>& logOut);
 	template<typename T>
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
+
+	// Clone API
+	QUaNode* cloneNode(QUaNode* parentNode, const QString& strNodeId = "");
 
 signals:
 

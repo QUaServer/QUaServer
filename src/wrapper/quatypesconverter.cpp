@@ -8,6 +8,10 @@ namespace QUaTypesConverter {
 
 	UA_NodeId nodeIdFromQString(const QString & name)
 	{
+		if (name.isEmpty())
+		{
+			return UA_NODEID_NULL;
+		}
 		quint16 namespaceIndex;
 		QString identifierString;
 		char    identifierType;

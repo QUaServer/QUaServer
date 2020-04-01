@@ -377,13 +377,18 @@ void QUaBaseVariable::setValue(
 			newType = oldType;
 		}
 	}
-	else if (newType != oldType && newValue.canConvert(oldType)) // scalar
+	else if (oldType < QMetaType::User && 
+		     newType != oldType && 
+		     newValue.canConvert(oldType)
+		) // scalar
 	{
 		// preserve dataType if possible
 		newValue.convert(oldType);
 		newType = oldType;
 	}	
-	else if (newType != oldType && !newValue.canConvert(oldType))
+	else if (newType != oldType && 
+		    !newValue.canConvert(oldType) && 
+		     newTypeConst != QMetaType::UnknownType)
 	{
 		// if new value dataType does not match the old value dataType
 		// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"
@@ -392,6 +397,11 @@ void QUaBaseVariable::setValue(
 			UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
+	}
+	else
+	{
+		// we tried everything we could
+		newType = oldType;
 	}
 	// convert to UA_Variant and set new value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);

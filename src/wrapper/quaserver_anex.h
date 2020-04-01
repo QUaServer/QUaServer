@@ -711,14 +711,12 @@ struct UA_Subscription {
     size_t retransmissionQueueSize;
 };
 
+extern "C"
+
+UA_MonitoredItem *
+UA_Subscription_getMonitoredItem(UA_Subscription * sub, UA_UInt32 monitoredItemId);
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
-
-
-
-
-
-
 
 
 

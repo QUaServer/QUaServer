@@ -66,6 +66,11 @@ class QUaCondition : public QUaBaseEvent
 {
     Q_OBJECT
 
+	// NOTE : any property that has special logic should be made a writable metaproperty to deserialize properly
+	Q_PROPERTY(QString sourceNode READ sourceNode WRITE setSourceNode)
+	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain    )
+	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity  )
+
 friend class QUaServer;
 
 public:
@@ -247,6 +252,15 @@ public:
 	// the ObjectId.The Method cannot be called with an ObjectId of the ConditionType Node.
 	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment); // TODO : audit events, branches
 
+	// branches API
+
+	QUaCondition* createBranch(const QString& strNodeId = "");
+
+	template<typename T>
+	T* createBranch(const QString& strNodeId = "");
+
+	// TODO get all branches
+
 	// helpers
 
 	virtual void resetInternals();
@@ -287,6 +301,7 @@ protected:
 private:
 	QUaNode * m_sourceNode;
 
+	//
 	static UA_StatusCode ConditionRefresh(
 		UA_Server*        server,
 		const UA_NodeId*  sessionId,
@@ -300,6 +315,7 @@ private:
 		size_t            outputSize,
 		UA_Variant*       output
 	);
+	//
 	static UA_StatusCode ConditionRefresh2(
 		UA_Server*        server,
 		const UA_NodeId*  sessionId,
@@ -314,7 +330,19 @@ private:
 		UA_Variant*       output
 	);
 
+	// helpers
+	static void processMonitoredItem(
+		UA_MonitoredItem* monitoredItem,
+		QUaServer* svr
+	);
+
 };
+
+template<typename T>
+inline T* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
+{
+	return qobject_cast<T*>(this->createBranch(strNodeId));
+}
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
