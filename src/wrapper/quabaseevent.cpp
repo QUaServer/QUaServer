@@ -13,11 +13,12 @@ QUaBaseEvent::QUaBaseEvent(
 	m_nodeIdOriginator = UA_NODEID_NULL;
 	// set event type definition
 	this->setEventType(this->typeDefinitionNodeId());
-	// set a QObject parent, so event is deleted when originator is deleted
-	if (!this->parent())
-	{
-		this->setParent(server);
-	}
+// TODO : affects branches?
+	//// set a QObject parent, so event is deleted when originator is deleted
+	//if (!this->parent())
+	//{
+	//	this->setParent(server);
+	//}
 }
 
 QUaBaseEvent::~QUaBaseEvent()

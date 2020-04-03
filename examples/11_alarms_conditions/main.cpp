@@ -39,14 +39,10 @@ int main(int argc, char *argv[])
 	condObj->setBrowseName("MyAcknowledgeableCondition");
 	condObj->setDisplayName("MyAcknowledgeableCondition");
 	condObj->setConfirmAllowed(true);
-	condObj->addMethod("setConfirmAllowed",
-	[condObj](bool confirmable) {
-		condObj->setConfirmAllowed(confirmable);
-	});
-	condObj->addMethod("resetStates",
-	[condObj]() {
-		condObj->resetInternals();;
-	});
+	//condObj->addMethod("resetStates",
+	//[condObj]() {
+	//	condObj->resetInternals();
+	//});
 	condObj->addMethod("setRetain",
 	[condObj](bool retain) {
 		condObj->setRetain(retain);
@@ -56,25 +52,19 @@ int main(int argc, char *argv[])
 		condObj->createBranch();
 	});
 
-	auto almObj = objsFolder->addChild<QUaAlarmCondition>();
-	almObj->setBrowseName("MyAlarmCondition");
-	almObj->setDisplayName("MyAlarmCondition");
-	almObj->setConfirmAllowed(true);
-	almObj->addMethod("setActive",
-	[almObj](bool active) {
-		almObj->setActive(active);
-	});
-	almObj->addMethod("setRetain",
-	[almObj](bool retain) {
-		almObj->setRetain(retain);
-	});
+	qDebug() << condObj->nodeBrowsePath();
 
-	//objsFolder->addMethod("addHiddenInstance",
-	//[&server, objsFolder](QString strName) {
-	//	auto hiddenObj = server.createInstance<QUaBaseObject>(nullptr);
-	//	hiddenObj->setDisplayName(strName);
-	//	hiddenObj->setBrowseName(strName);
-	//	objsFolder->addReference({ "HasHiddenChild", "IsHiddenChildOf" }, hiddenObj);
+	//auto almObj = objsFolder->addChild<QUaAlarmCondition>();
+	//almObj->setBrowseName("MyAlarmCondition");
+	//almObj->setDisplayName("MyAlarmCondition");
+	//almObj->setConfirmAllowed(true);
+	//almObj->addMethod("setActive",
+	//[almObj](bool active) {
+	//	almObj->setActive(active);
+	//});
+	//almObj->addMethod("setRetain",
+	//[almObj](bool retain) {
+	//	almObj->setRetain(retain);
 	//});
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -27,14 +27,6 @@ struct QUaInMemorySerializer
 			// the show must go on
 			return true;
 		}
-		//qDebug() << QString("%1 - %2 (%3)").arg(nodeId).arg(typeName).arg(attrs["browseName"].toString());
-		//QString strAttrs;
-		//std::for_each(attrs.keyBegin(), attrs.keyEnd(), 
-		//[&strAttrs, &attrs](const QString &attr) {
-		//		strAttrs += QString("[%1, %2]").arg(attr).arg(attrs[attr].toString());
-		//});
-		//qDebug() << strAttrs;
-		//qDebug() << "-----------------------------------------------------";
 		m_hashNodeTreeData[nodeId] = {
 			typeName, attrs, forwardRefs
 		};
@@ -64,6 +56,36 @@ struct QUaInMemorySerializer
 		forwardRefs = data.forwardRefs;
 		return true;
 	};
+	void QUaInMemorySerializer::clear()
+	{
+		m_hashNodeTreeData.clear();
+	};
+	void QUaInMemorySerializer::qtDebug(QUaServer * server, const QString &header)
+	{
+		qDebug() << header;
+		auto listNodeIds = m_hashNodeTreeData.keys();
+		std::sort(listNodeIds.begin(), listNodeIds.end(),
+		[this, server](const QString& strNodeId1, const QString& strNodeId2) -> bool {
+			QString browse1 = server->nodeById(strNodeId1)->nodeBrowsePath().join("/");
+			QString browse2 = server->nodeById(strNodeId2)->nodeBrowsePath().join("/");
+			return browse1 < browse2;
+		});
+		for (auto nodeId : listNodeIds)
+		{
+			QUaNode* node = server->nodeById(nodeId);
+			QString browse = node->nodeBrowsePath().join("/");
+			qDebug() << QString("%1 [%2] (%3)")
+				.arg(browse)
+				.arg(nodeId)
+				.arg(m_hashNodeTreeData[nodeId].typeName);
+			if (m_hashNodeTreeData[nodeId].attrs.contains("value"))
+			{
+				qDebug()
+					<< m_hashNodeTreeData[nodeId].attrs["dataType"]
+					<< m_hashNodeTreeData[nodeId].attrs["value"];
+			}
+		}
+	}
 	struct QUaNodeData
 	{
 		QString typeName;
@@ -383,7 +405,7 @@ void QUaNode::setBrowseName(const QString & browseName)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// convert to UA_QualifiedName
 	UA_QualifiedName bName;
-	bName.namespaceIndex = 1; // NOTE : force default namespace index 1
+	bName.namespaceIndex = 0; // NOTE : force default namespace index 0
 	bName.name           = QUaTypesConverter::uaStringFromQString(browseName);
 	// set value
 	auto st = UA_Server_writeBrowseName(m_qUaServer->m_server, m_nodeId, bName);
@@ -595,7 +617,12 @@ QStringList QUaNode::nodeBrowsePath() const
 	}
 #ifdef QT_DEBUG 
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
+	// TODO : handle hidden nodes (i.e. branches)
 	Q_CHECK_PTR(parent);
+	if (!parent)
+	{
+		return QStringList() << m_qUaServer->objectsFolder()->browseName() << this->browseName();
+	}
 #else
 	QUaNode* parent = static_cast<QUaNode*>(this->parent());
 #endif // QT_DEBUG 
@@ -1121,12 +1148,24 @@ QUaNode* QUaNode::cloneNode(QUaNode* parentNode, const QString& strNodeId)
 	QQueue<QUaLog> logOut;
 	QUaInMemorySerializer serializer;
 	this->serialize(serializer, logOut);
+	//// [DEBUG]
+	//serializer.qtDebug(
+	//	m_qUaServer, 
+	//	tr("*************** %1 ***************").arg(this->nodeId())
+	//);
 	// replace node id
 	Q_ASSERT(serializer.m_hashNodeTreeData.contains(this->nodeId()));
 	serializer.m_hashNodeTreeData[newInstance->nodeId()] =
 		serializer.m_hashNodeTreeData.take(this->nodeId());
 	// deserialize to new instance
 	newInstance->deserialize(serializer, logOut);
+	//// [DEBUG]
+	////serializer.clear();
+	//newInstance->serialize(serializer, logOut);
+	//serializer.qtDebug(
+	//	m_qUaServer, 
+	//	tr("*************** %1 ***************").arg(this->nodeId())
+	//);
 	// return new instance
 	return newInstance;
 }

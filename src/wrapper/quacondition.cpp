@@ -15,6 +15,12 @@ QUaCondition::QUaCondition(
 ) : QUaBaseEvent(server)
 {
 	m_sourceNode = nullptr;
+	m_isBranch   = false;
+	// force some non-qt datatypes
+	this->getConditionClassId()->setDataType(METATYPE_NODEID);	// NodeId
+	this->getBranchId()->setDataType(METATYPE_NODEID);	        // NodeId
+	this->getQuality()->setDataType(METATYPE_STATUSCODE);	    // StatusCode
+
 	// set default : BaseConditionClassType node id
 	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassId(
@@ -37,6 +43,16 @@ QUaCondition::QUaCondition(
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// reuse rest of defaults
 	this->resetInternals();
+}
+
+bool QUaCondition::isBranch() const
+{
+	return m_isBranch;
+}
+
+void QUaCondition::setIsBranch(const bool& isBranch)
+{
+	m_isBranch = isBranch;
 }
 
 void QUaCondition::setSourceNode(const QString& sourceNodeId)
@@ -157,15 +173,25 @@ void QUaCondition::setRetain(const bool& retain)
 		return;
 	}
 	// update retained conditions for source node
+	QUaServer   * srv  = m_qUaServer;
+	QUaCondition* cond = this;
+	QUaNode     * node = m_sourceNode;
 	if (retain)
 	{
-		Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
-		m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+		Q_ASSERT(!srv->m_retainedConditions[node].contains(cond));
+		srv->m_retainedConditions[node].insert(cond);
+
+		// TODO : handle objects destructions to avoid crashes for using invalid objects
+
+		//QObject::connect(srv, &QObject::destroyed, node,
+		//[srv, cond, node]() {
+		//	srv->m_retainedConditions[node].remove(cond);
+		//});
 	}
 	else
 	{
-		Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
-		m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+		Q_ASSERT(m_qUaServer->m_retainedConditions[node].contains(cond));
+		srv->m_retainedConditions[node].remove(cond);
 	}
 }
 
@@ -349,10 +375,45 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 
 QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 {
+	// Are branches of branches supported?
+	if (this->isBranch())
+	{
+		return nullptr;
+	}
+	// NOTE : must pass nullptr as parent because cloneNode uses the
+	//        serialization API which recurses all children and if this
+	//        has new branch as children, when deserializing it will deserialize
+	//        the branch with a branch which will have a branch and so on...
 	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, strNodeId));
-	Q_ASSERT(branch);
+	branch->setParent(this); // set qt parent for memory management
+	branch->setIsBranch(true);
+	branch->setBranchId(branch->nodeId());
+	QString strName = QString("%1_branch%2")
+		.arg(this->browseName())
+		.arg(m_branches.count());
+	branch->setBrowseName(strName);
+	branch->setDisplayName(strName);
+	// NOTE : specification
+	// A ConditionBranch is a copy of the Condition instance state that can change independently of
+	// the current Condition instance state.Each Branch has an identifier called a BranchId which is
+	// unique among all active Branches for a Condition instance. Branches are typically not visible in
+	// the Address Spaceand this standard does not define a standard way to make them visible.
+	// NOTE : in this implementation I decided to expose to the address space through a non-hierarchical
+	// reference because it is easier for debugging/development puposes. Maybe will change in the future.
 	this->addReference({ "HasBranch", "IsBranchOf" }, branch);
+	Q_ASSERT(m_branches.contains(branch));
+	m_branches << branch;
+	// remove from internal list if deleted
+	QObject::connect(branch, &QObject::destroyed, this,
+	[this, branch]() {
+		m_branches.remove(branch);
+	});
 	return branch;
+}
+
+QList<QUaCondition*> QUaCondition::branches() const
+{
+	return m_branches.toList();
 }
 
 void QUaCondition::resetInternals()
@@ -439,6 +500,14 @@ UA_StatusCode QUaCondition::ConditionRefresh(
 	UA_Variant*       output
 )
 {
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(methodId);
+	Q_UNUSED(methodContext);
+	Q_UNUSED(objectId);
+	Q_UNUSED(objectContext);
+	Q_UNUSED(inputSize);
+	Q_UNUSED(outputSize);
+	Q_UNUSED(output);
 	QUaServer* srv = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(srv);
 	auto time = QDateTime::currentDateTimeUtc();
@@ -478,6 +547,14 @@ UA_StatusCode QUaCondition::ConditionRefresh2(
 	UA_Variant*       output
 )
 {
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(methodId);
+	Q_UNUSED(methodContext);
+	Q_UNUSED(objectId);
+	Q_UNUSED(objectContext);
+	Q_UNUSED(inputSize);
+	Q_UNUSED(outputSize);
+	Q_UNUSED(output);
 	QUaServer* srv = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(srv);
 	auto time = QDateTime::currentDateTimeUtc();
@@ -514,35 +591,39 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	QSet<QUaCondition*> conditions;
 	if (node)
 	{
+		// only retained conditions for given monitored item's node
 		conditions = srv->m_retainedConditions[node];
 	}
 	else
 	{
+		// all retained conditions if monitored item is server object
 		std::for_each(srv->m_retainedConditions.begin(), srv->m_retainedConditions.end(),
 		[&conditions](const QSet<QUaCondition*>& conds) {
 			conditions.unite(conds);
 		});
 	}
+	UA_StatusCode retval;
 	QString sourceNodeId = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
 	QString sourceDisplayName = node ? node->displayName() : tr("Server");
 	/* 1. trigger RefreshStartEvent */
 	srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
-	srv->m_refreshStartEvent->triggerRaw();
+	srv->m_refreshStartEvent->setMessage(tr("Start refresh for source %1 [%2]").arg(sourceDisplayName).arg(sourceNodeId));
+	retval = UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshStartEvent->m_nodeId, monitoredItem);
+	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	/* 2. refresh (see 5.5.7)*/
 	for (auto condition : conditions)
 	{
 		Q_ASSERT(condition->retain());
-		auto retval = UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
+		retval = UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
 		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	}
 	/* 3. trigger RefreshEndEvent*/
 	srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
-	srv->m_refreshEndEvent->triggerRaw();
+	srv->m_refreshEndEvent->setMessage(tr("Start refresh for source %1 [%2]").arg(sourceDisplayName).arg(sourceNodeId));
+	retval = UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshEndEvent->m_nodeId, monitoredItem);
+	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 }
-
-
-
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

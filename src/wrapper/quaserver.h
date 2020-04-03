@@ -750,6 +750,7 @@ inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNod
 	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this);
 	T * newInstance = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
+    Q_ASSERT(newInstance->parent() == parentNode);
 	// return c++ instance
 	UA_NodeId_clear(&newInstanceNodeId);
 	return newInstance;
@@ -780,14 +781,15 @@ inline T * QUaServer::createEvent()
     );
 	// reparent qt
     newEvent->setParent(this);
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    // add reference added change to buffer
-    this->addChange({
-        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
-        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
-        QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-    });
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    // TODO : this API is only for nodes not reachible in the address space
+//#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+//    // add reference added change to buffer
+//    this->addChange({
+//        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
+//        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
+//        QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+//    });
+//#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// return c++ event instance
 	return newEvent;
 }

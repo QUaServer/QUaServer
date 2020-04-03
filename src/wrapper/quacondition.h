@@ -71,12 +71,17 @@ class QUaCondition : public QUaBaseEvent
 	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain    )
 	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity  )
 
+	Q_PROPERTY(bool    isBranch   READ isBranch   WRITE setIsBranch  )
+
 friend class QUaServer;
 
 public:
 	Q_INVOKABLE explicit QUaCondition(
 		QUaServer *server
 	);
+
+	bool isBranch() const;
+	void setIsBranch(const bool& isBranch);
 
 	// inherited
 
@@ -259,7 +264,8 @@ public:
 	template<typename T>
 	T* createBranch(const QString& strNodeId = "");
 
-	// TODO get all branches
+	// get all branches
+	QList<QUaCondition*> branches() const;
 
 	// helpers
 
@@ -300,6 +306,8 @@ protected:
 
 private:
 	QUaNode * m_sourceNode;
+	bool m_isBranch;
+	QSet<QUaCondition*> m_branches;
 
 	//
 	static UA_StatusCode ConditionRefresh(

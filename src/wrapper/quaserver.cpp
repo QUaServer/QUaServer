@@ -160,7 +160,8 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// check if event
-		if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+		if (metaObject.inherits(&QUaBaseEvent::staticMetaObject) &&
+		   !metaObject.inherits(&QUaCondition::staticMetaObject))
 		{
 			break;
 		}
