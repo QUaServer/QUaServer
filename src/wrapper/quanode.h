@@ -389,8 +389,8 @@ public:
 
 	// Attributes API
 
-	QString displayName() const;
-	void    setDisplayName(const QString& displayName);
+	virtual QString displayName() const;
+	virtual void    setDisplayName(const QString& displayName);
 	QString description() const;
 	void    setDescription(const QString& description);
 	quint32 writeMask() const;

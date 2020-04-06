@@ -20,7 +20,6 @@ QUaCondition::QUaCondition(
 	this->getConditionClassId()->setDataType(METATYPE_NODEID);	// NodeId
 	this->getBranchId()->setDataType(METATYPE_NODEID);	        // NodeId
 	this->getQuality()->setDataType(METATYPE_STATUSCODE);	    // StatusCode
-
 	// set default : BaseConditionClassType node id
 	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassId(
@@ -36,13 +35,20 @@ QUaCondition::QUaCondition(
 	// set default : retain false
 	this->setRetain(false);
 	// set default : disabled state
-	this->setEnabledStateFalseState("Disabled");
-	this->setEnabledStateTrueState("Enabled");
-	this->setEnabledStateCurrentStateName("Disabled");
-	this->setEnabledStateId(false);
+	this->setEnabledStateFalseState(tr("Disabled"));
+	this->setEnabledStateTrueState(tr("Enabled"));
+	this->setEnabledStateCurrentStateName(tr("Disabled"));
+	this->getEnabledState()->setId(false);  // (do not trigger event for this enabled state change)
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// reuse rest of defaults
 	this->resetInternals();
+}
+
+QUaCondition::~QUaCondition()
+{
+	// remove destroy connections
+	QObject::disconnect(m_sourceDestroyed);
+	// NOTE : do not disconnect m_retainedDestroyed, else it will not be called
 }
 
 bool QUaCondition::isBranch() const
@@ -55,24 +61,79 @@ void QUaCondition::setIsBranch(const bool& isBranch)
 	m_isBranch = isBranch;
 }
 
+void QUaCondition::setDisplayName(const QString& displayName)
+{
+	QUaNode::setDisplayName(displayName);
+	// also update condition name to be able to diff wrt other conditions
+	this->setConditionName(displayName);
+}
+
 void QUaCondition::setSourceNode(const QString& sourceNodeId)
 {
 	// call base implementation (updates cache)
 	QUaBaseEvent::setSourceNode(sourceNodeId);
 	// update retained conditions for old source node
 	bool isRetained = this->retain();
-	if (m_sourceNode && isRetained)
+	if (m_sourceNode)
 	{
-		Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
-		m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+		// remove reference
+		m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		// remove destroy connections
+		QObject::disconnect(m_sourceDestroyed);
+		QObject::disconnect(m_retainedDestroyed);
+		// remove from hash
+		if (isRetained)
+		{	
+			Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+			m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+		}
 	}
 	// update source
-	m_sourceNode = QUaNode::getNodeContext(m_nodeIdOriginator, m_qUaServer);
-	if (m_sourceNode && isRetained)
+	if (UA_NodeId_isNull(&m_sourceNodeId))
 	{
-		// update retained conditions for new source node
-		Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
-		m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+		return;
+	}
+	m_sourceNode = QUaNode::getNodeContext(m_sourceNodeId, m_qUaServer);
+	if (m_sourceNode)
+	{
+		// add reference
+		m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		// add destroy connection
+		m_sourceDestroyed = QObject::connect(m_sourceNode, &QObject::destroyed, this,
+		[this]() {
+			if (m_qUaServer->m_retainedConditions.contains(m_sourceNode))
+			{
+				m_qUaServer->m_retainedConditions.remove(m_sourceNode);
+			}
+			m_sourceNode = nullptr;
+			// if this node has been removed from library we cannot write to it
+			// but C++ instance still exists for a little longer
+			QString strNodeId = this->nodeId();
+			if (!m_qUaServer->isNodeIdUsed(strNodeId))
+			{
+				return;
+			}
+			this->setSourceNode("");
+			this->setSourceName("");
+		});
+		// add to hash
+		if (isRetained)
+		{
+			// update retained conditions hash for new source node
+			Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+			m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+			// add destroy connection
+			auto svr = m_qUaServer;
+			auto src = m_sourceNode;
+			m_retainedDestroyed = QObject::connect(this, &QObject::destroyed,
+			[this, svr, src]() {
+				if (!svr->m_retainedConditions.contains(src))
+				{
+					return;
+				}
+				svr->m_retainedConditions[src].remove(this);
+			});
+		}
 	}
 }
 
@@ -167,31 +228,39 @@ void QUaCondition::setRetain(const bool& retain)
 	}
 	// update internal value
 	this->getRetain()->setValue(retain);
+	// update all branches if any
+	for (auto branch : this->branches())
+	{
+		branch->setRetain(retain);
+	}
 	// update source
 	if (!m_sourceNode)
 	{
 		return;
 	}
 	// update retained conditions for source node
-	QUaServer   * srv  = m_qUaServer;
-	QUaCondition* cond = this;
-	QUaNode     * node = m_sourceNode;
 	if (retain)
 	{
-		Q_ASSERT(!srv->m_retainedConditions[node].contains(cond));
-		srv->m_retainedConditions[node].insert(cond);
-
-		// TODO : handle objects destructions to avoid crashes for using invalid objects
-
-		//QObject::connect(srv, &QObject::destroyed, node,
-		//[srv, cond, node]() {
-		//	srv->m_retainedConditions[node].remove(cond);
-		//});
+		Q_ASSERT(!m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].insert(this);
+		// add destroy connection
+		auto svr = m_qUaServer;
+		auto src = m_sourceNode;
+		m_retainedDestroyed = QObject::connect(this, &QObject::destroyed,
+		[this, svr, src]() {
+			if (!svr->m_retainedConditions.contains(src))
+			{
+				return;
+			}
+			svr->m_retainedConditions[src].remove(this);
+		});
 	}
 	else
 	{
-		Q_ASSERT(m_qUaServer->m_retainedConditions[node].contains(cond));
-		srv->m_retainedConditions[node].remove(cond);
+		Q_ASSERT(m_qUaServer->m_retainedConditions[m_sourceNode].contains(this));
+		m_qUaServer->m_retainedConditions[m_sourceNode].remove(this);
+		// remove destroy connection
+		QObject::disconnect(m_retainedDestroyed);
 	}
 }
 
@@ -212,7 +281,28 @@ bool QUaCondition::enabledStateId() const
 
 void QUaCondition::setEnabledStateId(const bool& enabledStateId)
 {
+	// set enable id
 	this->getEnabledState()->setId(enabledStateId);
+	// update current state name
+	QString strCurrStateName = enabledStateId ?
+		this->enabledStateTrueState() :
+		this->enabledStateFalseState();
+	this->setEnabledStateCurrentStateName(
+		strCurrStateName
+	);
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
+	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
+	QUaBaseEvent::setSeverity(0); // NOTE : do not call reimpl method to void double event
+	this->setMessage(tr("Condition %1").arg(strCurrStateName));
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
 }
 
 QDateTime QUaCondition::enabledStateTransitionTime() const
@@ -259,6 +349,20 @@ void QUaCondition::setQuality(const QUaStatus& quality)
 		QDateTime(),
 		METATYPE_STATUSCODE
 	);
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
+	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
+	// will cause Event Notifications.
+	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
+	QUaBaseEvent::setSeverity(100); // NOTE : do not call reimpl method to void double event
+	this->setMessage(tr("Quality changed to %1").arg(QString(QUaStatusCode(quality))));
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
 }
 
 quint16 QUaCondition::lastSeverity() const
@@ -277,6 +381,19 @@ void QUaCondition::setSeverity(const quint16& intSeverity)
 	this->setLastSeverity(this->severity());
 	// set new severity
 	QUaBaseEvent::setSeverity(intSeverity);
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
+	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
+	// will cause Event Notifications.
+	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
+	this->setMessage(tr("Severity changed to %1").arg(intSeverity));
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
 }
 
 QString QUaCondition::comment() const
@@ -287,12 +404,25 @@ QString QUaCondition::comment() const
 void QUaCondition::setComment(const QString& comment)
 {
 	this->getComment()->setValue(comment);
+	// update user id if applicable
 	auto session = this->currentSession();
-	if (!session)
+	if (session)
+	{
+		this->setClientUserId(session->userName());	
+	}
+	// check if trigger
+	if (!this->shouldTrigger())
 	{
 		return;
 	}
-	this->setClientUserId(session->userName());
+	// trigger event
+	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
+	// will cause Event Notifications.
+	auto time = QDateTime::currentDateTimeUtc();
+	QUaBaseEvent::setSeverity(0); // NOTE : do not call reimpl method to void double event
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
 }
 
 QString QUaCondition::clientUserId() const
@@ -314,16 +444,7 @@ void QUaCondition::Enable()
 		return;
 	}
 	// change EnabledState to Enabled
-	this->setEnabledStateCurrentStateName("Enabled");
 	this->setEnabledStateId(true);
-	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
-	// trigger event
-	auto time = QDateTime::currentDateTimeUtc();
-	this->setSeverity(0);
-	this->setMessage(tr("Condition enabled"));
-	this->setTime(time);
-	this->setReceiveTime(time);
-	this->trigger();
 	// emit qt signal
 	emit this->enabled();
 }
@@ -337,16 +458,7 @@ void QUaCondition::Disable()
 		return;
 	}
 	// change EnabledState to Disabled
-	this->setEnabledStateCurrentStateName("Disabled");
 	this->setEnabledStateId(false);
-	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
-	// trigger event
-	auto time = QDateTime::currentDateTimeUtc();
-	this->setSeverity(0);
-	this->setMessage(tr("Condition disabled"));
-	this->setTime(time);
-	this->setReceiveTime(time);
-	this->trigger();
 	// emit qt signal
 	emit this->disabled();
 }
@@ -365,10 +477,10 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
 		return;
 	}
-	// set last comment
-	this->setComment(Comment);
 	// set message
 	this->setMessage(tr("A comment was added"));
+	// set comment
+	this->setComment(Comment);
 	// emit qt signal
 	emit this->addedComment(Comment);
 }
@@ -376,6 +488,7 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 {
 	// Are branches of branches supported?
+	Q_ASSERT(!this->isBranch());
 	if (this->isBranch())
 	{
 		return nullptr;
@@ -388,11 +501,13 @@ QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 	branch->setParent(this); // set qt parent for memory management
 	branch->setIsBranch(true);
 	branch->setBranchId(branch->nodeId());
+	QString strOrigConditionName = this->browseName();
 	QString strName = QString("%1_branch%2")
-		.arg(this->browseName())
+		.arg(strOrigConditionName)
 		.arg(m_branches.count());
 	branch->setBrowseName(strName);
-	branch->setDisplayName(strName);
+	branch->QUaNode::setDisplayName(strName);
+	branch->setConditionName(strOrigConditionName);
 	// NOTE : specification
 	// A ConditionBranch is a copy of the Condition instance state that can change independently of
 	// the current Condition instance state.Each Branch has an identifier called a BranchId which is
@@ -401,7 +516,7 @@ QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 	// NOTE : in this implementation I decided to expose to the address space through a non-hierarchical
 	// reference because it is easier for debugging/development puposes. Maybe will change in the future.
 	this->addReference({ "HasBranch", "IsBranchOf" }, branch);
-	Q_ASSERT(m_branches.contains(branch));
+	Q_ASSERT(!m_branches.contains(branch));
 	m_branches << branch;
 	// remove from internal list if deleted
 	QObject::connect(branch, &QObject::destroyed, this,
@@ -416,14 +531,35 @@ QList<QUaCondition*> QUaCondition::branches() const
 	return m_branches.toList();
 }
 
+bool QUaCondition::shouldTrigger() const // TODO : move to base event SHOULD TRIGGER !
+{
+	bool baseTrigger = QUaBaseEvent::shouldTrigger();
+	bool isEnabled   = this->enabledStateId();
+	// overwrite if branch
+	if (this->isBranch())
+	{
+		auto parentCond = qobject_cast<QUaCondition*>(this->parent());
+		Q_ASSERT(parentCond);
+		isEnabled = parentCond->enabledStateId();;
+	}
+	// TODO : more stuff?
+	return baseTrigger && isEnabled;
+}
+
 void QUaCondition::resetInternals()
 {
-	// set default : good
-	this->setQuality(QUaStatus::Good);
+	// set default : good (do not trigger event for this quality change)
+	this->getQuality()->setValue(
+		static_cast<quint32>(QUaStatus::Good),
+		QUaStatus::Good,
+		QDateTime(),
+		QDateTime(),
+		METATYPE_STATUSCODE
+	);
 	// set default : 0
 	this->setLastSeverity(0);
-	// set default : empty
-	this->setComment("Condition has been reset");
+	// set default : empty (do not trigger event for this comment change)
+	this->getComment()->setValue(tr("Condition has been reset"));
 }
 
 QUaProperty* QUaCondition::getConditionClassId()
@@ -524,7 +660,6 @@ UA_StatusCode QUaCondition::ConditionRefresh(
 	if (!subscription)
 		return UA_STATUSCODE_BADSUBSCRIPTIONIDINVALID;
 	/* process each monitoredItem in the subscription */
-	UA_StatusCode retval;
 	UA_MonitoredItem* monitoredItem = NULL;
 	LIST_FOREACH(monitoredItem, &subscription->monitoredItems, listEntry) 
 	{
@@ -583,9 +718,10 @@ UA_StatusCode QUaCondition::ConditionRefresh2(
 void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServer* srv)
 {
 	QUaNode* node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, srv->m_server);
-	Q_ASSERT(node || UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
-	if (node && srv->m_retainedConditions[node].count() == 0)
+	// NOTE : clients can still have in their subscriptions node ids that have been deleted
+	if (!node && !UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)))
 	{
+		// TODO : log error message
 		return;
 	}
 	QSet<QUaCondition*> conditions;
@@ -602,6 +738,7 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 			conditions.unite(conds);
 		});
 	}
+	// NOTE : need to send RefreshStartEvent and RefreshEndEvent for each monitored item even if no retained conditions
 	UA_StatusCode retval;
 	QString sourceNodeId = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
 	QString sourceDisplayName = node ? node->displayName() : tr("Server");
@@ -615,6 +752,10 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	for (auto condition : conditions)
 	{
 		Q_ASSERT(condition->retain());
+		if (!condition->shouldTrigger())
+		{
+			continue;
+		}
 		retval = UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
 		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	}

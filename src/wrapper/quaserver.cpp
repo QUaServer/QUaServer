@@ -2319,10 +2319,8 @@ UA_NodeId QUaServer::createInstanceInternal(
 		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
 		auto condition = qobject_cast<QUaCondition*>(tmp);
 		Q_CHECK_PTR(condition);
-		parentNode->addReference({ "HasCondition" , "IsConditionOf" }, condition, true);
 		// set default originator
-		condition->setSourceNode(parentNode->nodeId());
-		condition->setSourceName(parentNode->displayName());
+		condition->setSourceNodeByRef(parentNode);
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

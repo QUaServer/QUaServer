@@ -10,20 +10,19 @@ QUaBaseEvent::QUaBaseEvent(
 	QUaServer *server
 ) : QUaBaseObject(server)
 {
-	m_nodeIdOriginator = UA_NODEID_NULL;
+	m_sourceNodeId = UA_NODEID_NULL;
 	// set event type definition
 	this->setEventType(this->typeDefinitionNodeId());
-// TODO : affects branches?
-	//// set a QObject parent, so event is deleted when originator is deleted
-	//if (!this->parent())
-	//{
-	//	this->setParent(server);
-	//}
+	// set a default parent to this is not dangling
+	if (!this->parent())
+	{
+		this->setParent(server);
+	}
 }
 
 QUaBaseEvent::~QUaBaseEvent()
 {
-	UA_NodeId_clear(&m_nodeIdOriginator);
+	UA_NodeId_clear(&m_sourceNodeId);
 }
 
 QByteArray QUaBaseEvent::eventId() const
@@ -61,8 +60,8 @@ void QUaBaseEvent::setSourceNode(const QString& sourceNodeId)
 {
 	UA_NodeId srcNodeId = QUaTypesConverter::nodeIdFromQString(sourceNodeId);
 	// set cache
-	UA_NodeId_clear(&m_nodeIdOriginator);
-	m_nodeIdOriginator = srcNodeId;
+	UA_NodeId_clear(&m_sourceNodeId);
+	m_sourceNodeId = srcNodeId;
 	// set internally
 	return this->getSourceNode()->setValue(
 		sourceNodeId,
@@ -71,6 +70,12 @@ void QUaBaseEvent::setSourceNode(const QString& sourceNodeId)
 		QDateTime(),
 		METATYPE_NODEID
 	);
+}
+
+void QUaBaseEvent::setSourceNodeByRef(const QUaNode* sourceNode)
+{
+    this->setSourceNode(sourceNode ? sourceNode->nodeId()      : "");
+    this->setSourceName(sourceNode ? sourceNode->displayName() : "");
 }
 
 QString QUaBaseEvent::sourceName() const
@@ -393,6 +398,10 @@ UA_Server_filterEvent(UA_Server* server, UA_Session* session,
 
 void QUaBaseEvent::triggerRaw()
 {
+    if (!this->shouldTrigger())
+    {
+        return;
+    }
     UA_LOCK(m_qUaServer->m_server->serviceMutex);
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
@@ -406,7 +415,7 @@ void QUaBaseEvent::triggerRaw()
     // NOTE : do NOT check if condition or branch
 
     /* Check that the origin node exists */
-    const UA_Node* originNode = UA_NODESTORE_GET(m_qUaServer->m_server, &m_nodeIdOriginator);
+    const UA_Node* originNode = UA_NODESTORE_GET(m_qUaServer->m_server, &m_sourceNodeId);
     if (!originNode) {
         UA_LOG_ERROR(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
             "Origin node for event does not exist.");
@@ -417,7 +426,7 @@ void QUaBaseEvent::triggerRaw()
     UA_NODESTORE_RELEASE(m_qUaServer->m_server, originNode);
 
     /* Make sure the origin is in the ObjectsFolder (TODO: or in the ViewsFolder) */
-    if (!isNodeInTree(m_qUaServer->m_server, &m_nodeIdOriginator, &objectsFolderId,
+    if (!isNodeInTree(m_qUaServer->m_server, &m_sourceNodeId, &objectsFolderId,
         emitReferencesRoots, 2)) { /* Only use Organizes and
                                     * HasComponent to check if we
                                     * are below the ObjectsFolder */
@@ -443,7 +452,7 @@ void QUaBaseEvent::triggerRaw()
      * a Server and as such has implied HasEventSource References to every event
      * source in a Server. */
     UA_NodeId emitStartNodes[2];
-    emitStartNodes[0] = m_nodeIdOriginator;
+    emitStartNodes[0] = m_sourceNodeId;
     emitStartNodes[1] = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
 
     /* Get all ReferenceTypes over which the events propagate */
@@ -549,7 +558,7 @@ void QUaBaseEvent::triggerRaw()
              UA_EventFilterResult_clear(&notification->result); */
         }
         m_qUaServer->m_server->config.historyDatabase.setEvent(m_qUaServer->m_server, m_qUaServer->m_server->config.historyDatabase.context,
-            &m_nodeIdOriginator, &emitNodes[i].nodeId,
+            &m_sourceNodeId, &emitNodes[i].nodeId,
             &m_nodeId, false,
             filter,
             fieldList);
@@ -565,6 +574,12 @@ cleanup:
     UA_Array_delete(emitNodes, emitNodesSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
     UA_UNLOCK(m_qUaServer->m_server->serviceMutex);
     Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+}
+
+bool QUaBaseEvent::shouldTrigger() const
+{
+    // might be setting props during deserialization that trigger
+    return this->parent(); 
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

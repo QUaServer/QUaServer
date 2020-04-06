@@ -120,7 +120,12 @@ QUaStatusCode::operator UA_StatusCode() const
 
 QUaStatusCode::operator QString() const
 {
-	return QString(m_metaEnum.valueToKey(static_cast<int>(m_status)));
+	const char* code = m_metaEnum.valueToKey(static_cast<int>(m_status));
+	if (!code)
+	{
+		code = UA_StatusCode_name(static_cast<UA_StatusCode>(m_status));
+	}
+	return QString(code);
 }
 
 bool QUaStatusCode::operator==(const QUaStatus& uaStatus)

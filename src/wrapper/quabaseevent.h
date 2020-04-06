@@ -60,6 +60,8 @@ public:
 	// Description of the source of the Event.
 	QString sourceName() const;
 	void    setSourceName(const QString &strSourceName);
+	// Helper that sets sourceNode and sourceName at once
+	virtual void setSourceNodeByRef(const QUaNode* sourceNode);
 	// Time (in UTC) the Event occurred. It comes from the underlying system or device.
 	QDateTime time() const;
 	void      setTime(const QDateTime &dateTime);
@@ -87,6 +89,7 @@ public:
 	// Triggers the events (with last set EventId)
 	void triggerRaw();
 
+
 protected:
 	// ByteString : 
 	QUaProperty  * getEventId();
@@ -112,10 +115,13 @@ protected:
 	QUaProperty  * getSeverity();
 
 	// Used to trigger the event
-	UA_NodeId m_nodeIdOriginator;
+	UA_NodeId m_sourceNodeId;
 	
 
 	// helpers
+
+	virtual bool shouldTrigger() const;
+
 	static QByteArray    generateEventId();
 	static UA_ByteString generateEventIdInternal();
 	

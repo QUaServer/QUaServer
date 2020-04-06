@@ -87,7 +87,6 @@ signals:
 	void eventNotifierChanged(const quint8 &eventNotifier);
 
 protected:
-	UA_StatusCode methodReturnStatusCode();
 	void setMethodReturnStatusCode(const UA_StatusCode& statusCode);
 
 private:

@@ -76,11 +76,6 @@ void QUaBaseObject::setEventNotifierNone()
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-UA_StatusCode QUaBaseObject::methodReturnStatusCode()
-{
-	return m_qUaServer->m_methodRetStatusCode;
-}
-
 void QUaBaseObject::setMethodReturnStatusCode(const UA_StatusCode& statusCode)
 {
 	m_qUaServer->m_methodRetStatusCode = statusCode;

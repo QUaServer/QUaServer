@@ -17,6 +17,8 @@ int main(int argc, char *argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
+	server.registerEnum<QUaStatus>();
+
 	QObject::connect(&server, &QUaServer::logMessage,
     [](const QUaLog &log) {
         qDebug() 
@@ -35,7 +37,16 @@ int main(int argc, char *argv[])
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	auto condObj = objsFolder->addChild<QUaAcknowledgeableCondition>();
+	auto srcObj = objsFolder->addChild<QUaBaseObject>("ns=0;s=source_object");
+	srcObj->setBrowseName("SourceObject");
+	srcObj->setDisplayName("SourceObject");
+	srcObj->setEventNotifierSubscribeToEvents();
+	srcObj->addMethod("delete",
+	[srcObj]() {
+		delete srcObj;
+	});
+
+	auto condObj = srcObj->addChild<QUaAcknowledgeableCondition>();
 	condObj->setBrowseName("MyAcknowledgeableCondition");
 	condObj->setDisplayName("MyAcknowledgeableCondition");
 	condObj->setConfirmAllowed(true);
@@ -47,12 +58,22 @@ int main(int argc, char *argv[])
 	[condObj](bool retain) {
 		condObj->setRetain(retain);
 	});
+	condObj->addMethod("setQuality",
+	[condObj](QUaStatus quality) {
+		condObj->setQuality(quality);
+	});
+	condObj->addMethod("setSeverity",
+	[condObj](quint16 severity) {
+		condObj->setSeverity(severity);
+	});
 	condObj->addMethod("createBranch",
 	[condObj]() {
 		condObj->createBranch();
 	});
-
-	qDebug() << condObj->nodeBrowsePath();
+	condObj->addMethod("delete",
+	[condObj]() {
+		delete condObj;
+	});
 
 	//auto almObj = objsFolder->addChild<QUaAlarmCondition>();
 	//almObj->setBrowseName("MyAlarmCondition");

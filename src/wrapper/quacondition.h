@@ -79,11 +79,15 @@ public:
 	Q_INVOKABLE explicit QUaCondition(
 		QUaServer *server
 	);
+	~QUaCondition();
 
 	bool isBranch() const;
 	void setIsBranch(const bool& isBranch);
 
 	// inherited
+
+	// Overwrite QUaNode displayName to update conditionName
+	virtual void setDisplayName(const QString& displayName) override;
 
 	// SourceNode Property identifies the ConditionSource. 
 	// If the ConditionSource is not a Node in the AddressSpace, the NodeId is set to NULL. 
@@ -259,6 +263,19 @@ public:
 
 	// branches API
 
+	// In certain environments , it is required to acknowledge both the transition into Active state
+	// and the transition into an inactive state. Systems with strict safety rules sometimes require 
+	// that every transition into Active state has to be acknowledged. In situations where state changes 
+	// occur in short succession there can be multiple unacknowledged states and the Server has to maintain 
+	// ConditionBranches for all previous unacknowledged states.
+	// These branches will be deleted after they have been acknowledged or if they reached their final state.
+
+	// Multiple ConditionBranches can also be used for other use cases where snapshots of previous
+	// states of a Condition require additional actions.
+
+	// When the state represented by a ConditionBranch does not need further attention, a final 
+	// Event Notification for this branch will have the Retain Property set to False.
+
 	QUaCondition* createBranch(const QString& strNodeId = "");
 
 	template<typename T>
@@ -266,10 +283,6 @@ public:
 
 	// get all branches
 	QList<QUaCondition*> branches() const;
-
-	// helpers
-
-	virtual void resetInternals();
 
 signals:
 	void enabled();
@@ -304,8 +317,17 @@ protected:
 	// String
 	QUaProperty* getClientUserId();
 
+	// helpers
+
+	virtual bool shouldTrigger() const override;
+
+	virtual void resetInternals();
+
 private:
 	QUaNode * m_sourceNode;
+	QMetaObject::Connection m_sourceDestroyed;
+	QMetaObject::Connection m_retainedDestroyed;
+
 	bool m_isBranch;
 	QSet<QUaCondition*> m_branches;
 

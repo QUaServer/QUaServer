@@ -1623,8 +1623,11 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
     Q_ASSERT_X(!m_hashMethods.contains(methNodeId), "QUaBaseObject::addMethodInternal", "Method already exists, callback will be overwritten.");
     m_hashMethods[methNodeId] = 
         [this, methodCallback](const UA_Variant * input, UA_Variant * output) {
+        // NOTE : save server ref because method might delete this instance
+        // setMethodReturnStatusCode is just syntax sugar tu use within QUaBaseObject::
+        QUaServer* srv = m_qUaServer;
         // reset status code
-        this->setMethodReturnStatusCode(UA_STATUSCODE_GOOD);
+        srv->m_methodRetStatusCode = UA_STATUSCODE_GOOD;
         // call method
         if (QOpcUaMethodTraits<M>::isRetUaArgumentVoid())
         {
@@ -1635,9 +1638,9 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
             *output = QOpcUaMethodTraits<M>::execCallback(methodCallback, input);
         }
         // copy return status code
-        UA_StatusCode retStatusCode = this->methodReturnStatusCode();
+        UA_StatusCode retStatusCode = srv->m_methodRetStatusCode;
         // reset status code
-        this->setMethodReturnStatusCode(UA_STATUSCODE_GOOD);
+        srv->m_methodRetStatusCode = UA_STATUSCODE_GOOD;
         // return success status
         return retStatusCode;
     };
