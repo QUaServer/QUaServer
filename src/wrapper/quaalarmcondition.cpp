@@ -124,9 +124,9 @@ void QUaAlarmCondition::resetInternals()
 {
 	QUaAcknowledgeableCondition::resetInternals();
 	// set default : Inactive state
-	this->setActiveStateFalseState("Inactive");
-	this->setActiveStateTrueState("Active");
-	this->setActiveStateCurrentStateName("Inactive");
+	this->setActiveStateFalseState(tr("Inactive"));
+	this->setActiveStateTrueState(tr("Active"));
+	this->setActiveStateCurrentStateName(tr("Inactive"));
 	this->setActiveStateId(false);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
 }

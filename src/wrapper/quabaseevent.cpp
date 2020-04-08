@@ -578,7 +578,8 @@ cleanup:
 
 bool QUaBaseEvent::shouldTrigger() const
 {
-    // might be setting props during deserialization that trigger
+    // can trigger only if Qt parent is set
+    // i.e. avoid trigger while setting props during deserialization
     return this->parent(); 
 }
 

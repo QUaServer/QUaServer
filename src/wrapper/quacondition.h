@@ -186,8 +186,8 @@ public:
 	//- Quality
 	//	- Severity(inherited from BaseEventType)
 	//	- Comment
-	// This may not be the complete list.Sub - Types may define additional Variables that trigger Event
-	// Notifications.In general, changes to Variables of the types TwoStateVariableType or
+	// This may not be the complete list. Sub-Types may define additional Variables that trigger 
+	// Event Notifications. In general, changes to Variables of the types TwoStateVariableType or
 	// ConditionVariableType trigger Event Notifications.
 	QString   enabledStateCurrentStateName() const;
 	void      setEnabledStateCurrentStateName(const QString& enabledState);
@@ -199,6 +199,12 @@ public:
 	void      setEnabledStateTrueState(const QString& trueState);
 	QString   enabledStateFalseState() const;
 	void      setEnabledStateFalseState(const QString& falseState);
+	// helper sets EnabledStateId, EnabledStateCurrentStateName, EnabledStateTransitionTime 
+	// and triggers event according to specification
+	// NOTE : change of the Enabled state must be normally make by the client through
+	//        the use of the Enable() and Disable() methods
+	bool      enabled() const;
+	void      setEnabled(const bool& enabled);
 
 	// Quality reveals the status of process values or other resources that this Condition instance is
 	// based upon. Values for the Quality can be any of the OPC StatusCodes defined in OPC Part 8 as well 
@@ -284,6 +290,15 @@ public:
 	// get all branches
 	QList<QUaCondition*> branches() const;
 
+	template<typename T>
+	QList<T*> branches() const;
+
+	// get branch by EventId (OPC UA Methods can be called by EventId)
+	QUaCondition* branchByEventId(const QByteArray& EventId) const;
+
+	template<typename T>
+	T* branchByEventId(const QByteArray& EventId) const;
+
 signals:
 	void enabled();
 
@@ -319,8 +334,11 @@ protected:
 
 	// helpers
 
+	// reimplement to define minimu trigger conditions
 	virtual bool shouldTrigger() const override;
-
+	// reimplement to define branch delete conditions
+	virtual bool canDeleteBranch() const;
+	// reimplement to reset type internals (QUaAlarmCondition::Reset)
 	virtual void resetInternals();
 
 private:
@@ -372,6 +390,28 @@ template<typename T>
 inline T* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 {
 	return qobject_cast<T*>(this->createBranch(strNodeId));
+}
+
+template<typename T>
+inline QList<T*> QUaCondition::branches() const
+{
+	QList<T*> retBranches;
+	for (auto branch : this->branches())
+	{
+		auto specialized = qobject_cast<T*>(branch);
+		if (!specialized)
+		{
+			continue;
+		}
+		retBranches << specialized;
+	}
+	return retBranches;
+}
+
+template<typename T>
+inline T* QUaCondition::branchByEventId(const QByteArray& EventId) const
+{
+	return qobject_cast<T*>(this->branchByEventId(EventId));
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

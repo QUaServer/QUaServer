@@ -11,8 +11,13 @@ Part 9 - 5.8.2 AlarmConditionType (abstract = false)
 Extends the AcknowledgeableConditionType by introducing an ActiveState, SuppressedState and ShelvingState. 
 It also adds the ability to set a delay time, re-alarm time, Alarm groups and audible Alarm settings.
 
-Subtypes of the AlarmConditionType specified later, will have sub-state models that further define 
-the Active state.
+An Alarm in the Active state indicates that the situation the Condition is representing currently
+exists. When an Alarm is an inactive state it is representing a situation that has returned to a
+normal state
+
+Subtypes of the AlarmConditionType, will have sub-state models that further define the Active state.
+For example, a multi-state level Alarm when in the Active state may be in one of the following 
+sub-states: LowLow, Low, High or HighHigh.
 
 HasComponent             | Variable | ActiveState        | LocalizedText    | TwoStateVariableType    | Mandatory
 HasProperty              | Variable | InputNode          | NodeId           | PropertyType            | Mandatory
@@ -44,6 +49,17 @@ HasComponent             | Method   | RemoveFromService  | Defined in 5.8.8     
 HasComponent             | Method   | PlaceInService     | Defined in 5.8.9                           | Optional
 HasComponent             | Method   | Reset              | Defined in 5.8.4                           | Optional
 
+
+The shelving state can be set by an Operator via OPC UA Methods. The suppressed state is
+set internally by the Server due to system specific reasons. Alarm systems typically implement
+the suppress, out of service and shelve features to help keep Operators from being
+overwhelmed during Alarm “storms” by limiting the number of Alarms an Operator sees on a
+current Alarm display. This is accomplished by setting the SuppressedOrShelved flag on second
+order dependent Alarms and/or Alarms of less severity, leading the Operator to concentrate on
+the most critical issues.
+
+The shelved, out of service and suppressed states differ from the Disabled state in that Alarms
+are still fully functional and can be included in Subscription Notifications to a Client
 
 */
 
@@ -158,24 +174,31 @@ protected:
 	// NodeId
 	QUaProperty* getInputNode();
 
-	// TODO : SuppressedState
-	// TODO : OutOfServiceState
-	// TODO : ShelvingState
+	// TODO : LocalizedText, getSuppressedState
+	// TODO : LocalizedText, getOutOfServiceState
+	// TODO : ShelvedStateMachineType, getShelvingState
 
+	// Boolean
 	QUaProperty* getSuppressedOrShelve();
 
-	// TODO : MaxTimeShelved
-	// TODO : AudibleEnabled
-	// TODO : AudibleSound
-	// TODO : SilenceState
-	// TODO : OnDelay
-	// TODO : OffDelay
-	// TODO : FirstInGroupFlag
-	// TODO : FirstInGroup
-	// TODO : LatchedState
-	// TODO : <AlarmGroup>
-	// TODO : ReAlarmTime
-	// TODO : ReAlarmRepeatCount
+	// TODO : Duration, getMaxTimeShelved
+
+	// TODO : Boolean, getAudibleEnabled
+	// TODO : AudioDataType, AudibleSound
+
+	// TODO : LocalizedText, getSilenceState
+
+	// TODO : Duration, getOnDelay
+	// TODO : Duration, getOffDelay
+
+	// TODO : Boolean, getFirstInGroupFlag
+	// TODO : AlarmGroupType, getFirstInGroup
+	// TODO : LocalizedText, getLatchedState
+
+	// TODO : AlarmGroupType, get<AlarmGroup>
+
+	// TODO : Duration, getReAlarmTime
+	// TODO : Int16, getReAlarmRepeatCount
 
 };
 

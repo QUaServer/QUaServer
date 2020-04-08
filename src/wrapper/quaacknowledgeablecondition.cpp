@@ -66,6 +66,36 @@ void QUaAcknowledgeableCondition::setAckedStateFalseState(const QString& falseSt
 	this->getAckedState()->setFalseState(falseState);
 }
 
+bool QUaAcknowledgeableCondition::acked() const
+{
+	return this->ackedStateId();
+}
+
+void QUaAcknowledgeableCondition::setAcked(const bool& acked)
+{
+	// change AckedState to Acknowledged
+	QString strAckedStateName = acked ?
+		this->ackedStateTrueState() :
+		this->ackedStateFalseState();
+	this->setAckedStateCurrentStateName(strAckedStateName);
+	this->setAckedStateId(acked);
+	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
+	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
+	QUaBaseEvent::setSeverity(100); // NOTE : base method -> do not trigger
+	this->setMessage(tr("Condition %1").arg(strAckedStateName));
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
+	// emit qt signal
+	emit this->acknowledged();
+}
+
 QString QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
 {
 	if (!m_confirmAllowed)
@@ -166,6 +196,36 @@ void QUaAcknowledgeableCondition::setConfirmedStateFalseState(const QString& fal
 	this->getConfirmedState()->setFalseState(falseState);
 }
 
+bool QUaAcknowledgeableCondition::confirmed() const
+{
+	return this->confirmedStateId();
+}
+
+void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
+{
+	// change ConfirmedState to Confirmed
+	QString strConfirmedStateName = confirmed ?
+		this->confirmedStateTrueState() :
+		this->confirmedStateFalseState();
+	this->setConfirmedStateCurrentStateName(strConfirmedStateName);
+	this->setConfirmedStateId(confirmed);
+	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
+	// trigger event
+	auto time = QDateTime::currentDateTimeUtc();
+	QUaBaseEvent::setSeverity(100); // NOTE : base method -> do not trigger
+	this->setMessage(tr("Condition %1").arg(strConfirmedStateName));
+	this->setTime(time);
+	this->setReceiveTime(time);
+	this->trigger();
+	// emit qt signal
+	emit this->confirmed();
+}
+
 void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Comment)
 {
 	// check if enabled
@@ -174,27 +234,34 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONDISABLED);
 		return;
 	}
+	// check given EventId matches, if ampty assume method call on this instance
+	if (!EventId.isEmpty() && EventId != this->eventId())
+	{
+		auto branch = this->branchByEventId<QUaAcknowledgeableCondition>(EventId);
+		if (branch)
+		{
+			branch->Acknowledge(EventId, Comment);
+			return;
+		}
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
+		return;
+	}
 	// check already acked
 	if (this->ackedStateId())
 	{
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONBRANCHALREADYACKED);
 		return;
 	}
-	// change AckedState to Acknowledged
-	this->setAckedStateCurrentStateName("Acknowledged");
-	this->setAckedStateId(true);
-	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
-	// set comment
-	this->setComment(Comment);
-	// trigger event
-	auto time = QDateTime::currentDateTimeUtc();
-	this->setSeverity(100);
-	this->setMessage(tr("Condition acknowledged"));
-	this->setTime(time);
-	this->setReceiveTime(time);
-	this->trigger();
-	// emit qt signal
-	emit this->acknowledged();
+	// set comment (no trigger)
+	this->getComment()->setValue(Comment);
+	// update user id if applicable
+	auto session = this->currentSession();
+	if (session)
+	{
+		this->setClientUserId(session->userName());
+	}
+	// change AckedState to Acked and trigger
+	this->setAcked(true);
 }
 
 void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
@@ -211,6 +278,18 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONDISABLED);
 		return;
 	}
+	// check given EventId matches, if ampty assume method call on this instance
+	if (!EventId.isEmpty() && EventId != this->eventId())
+	{
+		auto branch = this->branchByEventId<QUaAcknowledgeableCondition>(EventId);
+		if (branch)
+		{
+			branch->Confirm(EventId, Comment);
+			return;
+		}
+		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
+		return;
+	}
 	// check already confirmed
 	if (this->confirmedStateId())
 	{
@@ -223,30 +302,25 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADSTATENOTACTIVE);
 		return;
 	}
-	// change ConfirmedState to Confirmed
-	this->setConfirmedStateCurrentStateName("Confirmed");
-	this->setConfirmedStateId(true);
-	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
-	// set comment
-	this->setComment(Comment);
-	// trigger event
-	auto time = QDateTime::currentDateTimeUtc();
-	this->setSeverity(100);
-	this->setMessage(tr("Condition confirmed"));
-	this->setTime(time);
-	this->setReceiveTime(time);
-	this->trigger();
-	// emit qt signal
-	emit this->confirmed();
+	// set comment (no trigger)
+	this->getComment()->setValue(Comment);
+	// update user id if applicable
+	auto session = this->currentSession();
+	if (session)
+	{
+		this->setClientUserId(session->userName());
+	}
+	// change ConfirmedState to Confirmed and trigger
+	this->setConfirmed(true);
 }
 
 void QUaAcknowledgeableCondition::resetInternals()
 {
 	QUaCondition::resetInternals();
 	// set default : Unacknowledged state
-	this->setAckedStateFalseState("Unacknowledged");
-	this->setAckedStateTrueState("Acknowledged");
-	this->setAckedStateCurrentStateName("Unacknowledged");
+	this->setAckedStateFalseState(tr("Unacknowledged"));
+	this->setAckedStateTrueState(tr("Acknowledged"));
+	this->setAckedStateCurrentStateName(tr("Unacknowledged"));
 	this->setAckedStateId(false);
 	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
 	// check if confirm allowed
@@ -255,11 +329,11 @@ void QUaAcknowledgeableCondition::resetInternals()
 		return;
 	}
 	// initialize and set defaults
-	this->setConfirmedStateFalseState("Unconfirmed");
-	this->setConfirmedStateTrueState("Confirmed");
-	this->setConfirmedStateCurrentStateName("Unconfirmed");
+	this->setConfirmedStateFalseState(tr("Unconfirmed"));
+	this->setConfirmedStateTrueState(tr("Confirmed"));
+	this->setConfirmedStateCurrentStateName(tr("Unconfirmed"));
 	this->setConfirmedStateId(false);
-	this->setConfirmedStateTransitionTime(this->getAckedState()->serverTimestamp());
+	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 }
 
 bool QUaAcknowledgeableCondition::confirmAllowed() const

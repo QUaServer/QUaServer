@@ -34,12 +34,6 @@ QUaCondition::QUaCondition(
 	this->setConditionName(this->typeDefinitionBrowseName());
 	// set default : retain false
 	this->setRetain(false);
-	// set default : disabled state
-	this->setEnabledStateFalseState(tr("Disabled"));
-	this->setEnabledStateTrueState(tr("Enabled"));
-	this->setEnabledStateCurrentStateName(tr("Disabled"));
-	this->getEnabledState()->setId(false);  // (do not trigger event for this enabled state change)
-	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// reuse rest of defaults
 	this->resetInternals();
 }
@@ -283,8 +277,19 @@ void QUaCondition::setEnabledStateId(const bool& enabledStateId)
 {
 	// set enable id
 	this->getEnabledState()->setId(enabledStateId);
+}
+
+bool QUaCondition::enabled() const
+{
+	return this->enabledStateId();
+}
+
+void QUaCondition::setEnabled(const bool& enabled)
+{
+	// set enable id
+	this->setEnabledStateId(enabled);
 	// update current state name
-	QString strCurrStateName = enabledStateId ?
+	QString strCurrStateName = enabled ?
 		this->enabledStateTrueState() :
 		this->enabledStateFalseState();
 	this->setEnabledStateCurrentStateName(
@@ -419,7 +424,7 @@ void QUaCondition::setComment(const QString& comment)
 	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
 	// will cause Event Notifications.
 	auto time = QDateTime::currentDateTimeUtc();
-	QUaBaseEvent::setSeverity(0); // NOTE : do not call reimpl method to void double event
+	QUaBaseEvent::setSeverity(0); // NOTE : base method -> do not trigger
 	this->setTime(time);
 	this->setReceiveTime(time);
 	this->trigger();
@@ -443,8 +448,8 @@ void QUaCondition::Enable()
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONALREADYENABLED);
 		return;
 	}
-	// change EnabledState to Enabled
-	this->setEnabledStateId(true);
+	// change EnabledState to Enabled and trigger event
+	this->setEnabled(true);
 	// emit qt signal
 	emit this->enabled();
 }
@@ -457,8 +462,8 @@ void QUaCondition::Disable()
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONALREADYDISABLED);
 		return;
 	}
-	// change EnabledState to Disabled
-	this->setEnabledStateId(false);
+	// change EnabledState to Disabled and trigger event
+	this->setEnabled(false);
 	// emit qt signal
 	emit this->disabled();
 }
@@ -471,9 +476,15 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADCONDITIONDISABLED);
 		return;
 	}
-	// check given event id matches last event id
-	if (EventId != this->eventId())
+	// check given EventId matches, if ampty assume method call on this instance
+	if (!EventId.isEmpty() && EventId != this->eventId())
 	{
+		auto branch = this->branchByEventId(EventId);
+		if (branch)
+		{
+			branch->AddComment(EventId, Comment);
+			return;
+		}
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
 		return;
 	}
@@ -531,23 +542,42 @@ QList<QUaCondition*> QUaCondition::branches() const
 	return m_branches.toList();
 }
 
-bool QUaCondition::shouldTrigger() const // TODO : move to base event SHOULD TRIGGER !
+QUaCondition* QUaCondition::branchByEventId(const QByteArray& EventId) const
+{
+	auto res = std::find_if(m_branches.begin(), m_branches.end(),
+	[&EventId](QUaCondition* branch) {
+		return branch->eventId() == EventId;
+	});
+	return res == m_branches.end() ? nullptr : *res;
+}
+
+bool QUaCondition::shouldTrigger() const
 {
 	bool baseTrigger = QUaBaseEvent::shouldTrigger();
 	bool isEnabled   = this->enabledStateId();
-	// overwrite if branch
+	// branch can only trigger if main condition is enabled
 	if (this->isBranch())
 	{
 		auto parentCond = qobject_cast<QUaCondition*>(this->parent());
 		Q_ASSERT(parentCond);
 		isEnabled = parentCond->enabledStateId();;
 	}
-	// TODO : more stuff?
 	return baseTrigger && isEnabled;
+}
+
+bool QUaCondition::canDeleteBranch() const
+{
+	return true;
 }
 
 void QUaCondition::resetInternals()
 {
+	// set default : disabled state
+	this->setEnabledStateFalseState(tr("Disabled"));
+	this->setEnabledStateTrueState(tr("Enabled"));
+	this->setEnabledStateCurrentStateName(tr("Disabled"));
+	this->getEnabledState()->setId(false);  // (do not trigger event for this enabled state change)
+	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// set default : good (do not trigger event for this quality change)
 	this->getQuality()->setValue(
 		static_cast<quint32>(QUaStatus::Good),
@@ -559,7 +589,7 @@ void QUaCondition::resetInternals()
 	// set default : 0
 	this->setLastSeverity(0);
 	// set default : empty (do not trigger event for this comment change)
-	this->getComment()->setValue(tr("Condition has been reset"));
+	this->getComment()->setValue(tr(""));
 }
 
 QUaProperty* QUaCondition::getConditionClassId()

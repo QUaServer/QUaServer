@@ -63,6 +63,12 @@ public:
 	void      setAckedStateTrueState(const QString& trueState);
 	QString   ackedStateFalseState() const;
 	void      setAckedStateFalseState(const QString& falseState);
+	// helper sets setAckedStateId, setAckedStateCurrentStateName, setAckedStateTransitionTime 
+	// and triggers event according to specification
+	// NOTE : change of the Acked state must be normally make by the client through
+	//        the use of the Acknowledge() and QUaAlarmCondition::Reset() methods
+	bool      acked() const;
+	void      setAcked(const bool& acked);
 
 	// ConfirmedState indicates whether it requires confirmation.
 	// The two states are sub-states of the True EnabledState. The EventId used in the
@@ -78,6 +84,12 @@ public:
 	void      setConfirmedStateTrueState(const QString& trueState);
 	QString   confirmedStateFalseState() const;
 	void      setConfirmedStateFalseState(const QString& falseState);
+	// helper sets setConfirmedStateId, setConfirmedStateCurrentStateName, setConfirmedStateTransitionTime 
+	// and triggers event according to specification
+	// NOTE : change of the Confirmed state must be normally make by the client through
+	//        the use of the Confirm() and QUaAlarmCondition::Reset() methods
+	bool      confirmed() const;
+	void      setConfirmed(const bool& confirmed);
 
 	// methods
 
