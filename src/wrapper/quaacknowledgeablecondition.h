@@ -67,8 +67,8 @@ public:
 	// and triggers event according to specification
 	// NOTE : change of the Acked state must be normally make by the client through
 	//        the use of the Acknowledge() and QUaAlarmCondition::Reset() methods
-	bool      acked() const;
-	void      setAcked(const bool& acked);
+	bool      acknowledged() const;
+	void      setAcknowledged(const bool& acknowledged);
 
 	// ConfirmedState indicates whether it requires confirmation.
 	// The two states are sub-states of the True EnabledState. The EventId used in the
@@ -103,8 +103,6 @@ public:
 
 	// helpers
 
-	virtual void resetInternals() override;
-
 	bool confirmAllowed() const;
 	void setConfirmAllowed(const bool & confirmAllowed);
 
@@ -119,6 +117,13 @@ protected:
 	QUaTwoStateVariable* getAckedState();
 	// LocalizedText
 	QUaTwoStateVariable* getConfirmedState();
+
+	// helpers
+
+	// reimplement to define branch delete conditions
+	virtual bool canDeleteBranch() const;
+	// reimplement to reset type internals (QUaAlarmCondition::Reset)
+	virtual void resetInternals();
 
 };
 

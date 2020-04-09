@@ -66,19 +66,19 @@ void QUaAcknowledgeableCondition::setAckedStateFalseState(const QString& falseSt
 	this->getAckedState()->setFalseState(falseState);
 }
 
-bool QUaAcknowledgeableCondition::acked() const
+bool QUaAcknowledgeableCondition::acknowledged() const
 {
 	return this->ackedStateId();
 }
 
-void QUaAcknowledgeableCondition::setAcked(const bool& acked)
+void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 {
 	// change AckedState to Acknowledged
-	QString strAckedStateName = acked ?
+	QString strAckedStateName = acknowledged ?
 		this->ackedStateTrueState() :
 		this->ackedStateFalseState();
 	this->setAckedStateCurrentStateName(strAckedStateName);
-	this->setAckedStateId(acked);
+	this->setAckedStateId(acknowledged);
 	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
 	// check if trigger
 	if (!this->shouldTrigger())
@@ -94,6 +94,11 @@ void QUaAcknowledgeableCondition::setAcked(const bool& acked)
 	this->trigger();
 	// emit qt signal
 	emit this->acknowledged();
+	// delete branch if all conditions met
+	if (acknowledged && this->canDeleteBranch())
+	{
+		this->deleteLater();
+	}
 }
 
 QString QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
@@ -224,6 +229,11 @@ void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
 	this->trigger();
 	// emit qt signal
 	emit this->confirmed();
+	// delete branch if all conditions met
+	if (confirmed && this->canDeleteBranch())
+	{
+		this->deleteLater();
+	}
 }
 
 void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Comment)
@@ -261,7 +271,7 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 		this->setClientUserId(session->userName());
 	}
 	// change AckedState to Acked and trigger
-	this->setAcked(true);
+	this->setAcknowledged(true);
 }
 
 void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
@@ -340,6 +350,20 @@ bool QUaAcknowledgeableCondition::confirmAllowed() const
 {
 	Q_ASSERT(m_confirmAllowed == this->hasOptionalMethod("Confirm"));
 	return m_confirmAllowed;
+}
+bool QUaAcknowledgeableCondition::canDeleteBranch() const
+{
+	// base implementation
+	bool canDelete = QUaCondition::canDeleteBranch();
+	// check acknowledged
+	canDelete = canDelete && this->ackedStateId();
+	// check confirmed
+	if (m_confirmAllowed)
+	{
+		canDelete = canDelete && this->confirmedStateId();
+	}
+	// return result
+	return canDelete;
 }
 
 void QUaAcknowledgeableCondition::setConfirmAllowed(const bool& confirmAllowed)

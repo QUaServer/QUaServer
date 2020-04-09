@@ -7,9 +7,9 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-// Part 5 - 6.4 : BaseEventType
+// Part 5 - 6.4.2 : BaseEventType
 /*
-This EventType is defined in Part 3 (see Part 3 - 4.6 : Event Model). 
+This Event concept is introduced in Part 3 (see Part 3 - 4.6 : Event Model). 
 
 HasProperty | Variable | EventId     | ByteString       | PropertyType | Mandatory
 HasProperty | Variable | EventType   | NodeId           | PropertyType | Mandatory
@@ -23,12 +23,6 @@ HasProperty | Variable | Severity    | UInt16           | PropertyType | Mandato
 */
 
 #include <QUaProperty>
-
-/*
-From open62541 :
-It is not necessary to define the attributes `EventId`, `ReceiveTime`, `SourceNode` or `EventType` 
-since these are set automatically by the server.
-*/
 
 class QUaBaseEvent : public QUaBaseObject
 {

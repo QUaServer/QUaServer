@@ -567,7 +567,8 @@ bool QUaCondition::shouldTrigger() const
 
 bool QUaCondition::canDeleteBranch() const
 {
-	return true;
+	// check is branch
+	return this->isBranch();
 }
 
 void QUaCondition::resetInternals()
@@ -792,7 +793,7 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	/* 3. trigger RefreshEndEvent*/
 	srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
-	srv->m_refreshEndEvent->setMessage(tr("Start refresh for source %1 [%2]").arg(sourceDisplayName).arg(sourceNodeId));
+	srv->m_refreshEndEvent->setMessage(tr("End refresh for source %1 [%2]").arg(sourceDisplayName).arg(sourceNodeId));
 	retval = UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshEndEvent->m_nodeId, monitoredItem);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 }

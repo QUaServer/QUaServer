@@ -90,6 +90,9 @@ public:
 	void      setActiveStateTrueState(const QString& trueState);
 	QString   activeStateFalseState() const;
 	void      setActiveStateFalseState(const QString& falseState);
+	//
+	bool active() const;
+	void setActive(const bool& active);
 
 	// The InputNode Property provides the NodeId of the Variable the Value of which is used as
 	// primary input in the calculation of the Alarm state.If this Variable is not in the AddressSpace,
@@ -153,15 +156,7 @@ public:
 	// The Reset Method is used reset a latched Alarm instance. It is only available on an instance of
 	// an AlarmConditionType that exposes the LatchedState.
 	Q_INVOKABLE void Reset();
-	
 
-
-	// helpers
-
-	virtual void resetInternals() override;
-
-	bool active() const;
-	void setActive(const bool& active);
 
 signals:
 	void activated();
@@ -199,6 +194,13 @@ protected:
 
 	// TODO : Duration, getReAlarmTime
 	// TODO : Int16, getReAlarmRepeatCount
+
+	// helpers
+
+	// reimplement to define branch delete conditions
+	virtual bool canDeleteBranch() const;
+	// reimplement to reset type internals (QUaAlarmCondition::Reset)
+	virtual void resetInternals();
 
 };
 

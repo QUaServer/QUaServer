@@ -120,17 +120,6 @@ void QUaAlarmCondition::Reset()
 	// TODO 
 }
 
-void QUaAlarmCondition::resetInternals()
-{
-	QUaAcknowledgeableCondition::resetInternals();
-	// set default : Inactive state
-	this->setActiveStateFalseState(tr("Inactive"));
-	this->setActiveStateTrueState(tr("Active"));
-	this->setActiveStateCurrentStateName(tr("Inactive"));
-	this->setActiveStateId(false);
-	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
-}
-
 bool QUaAlarmCondition::active() const
 {
 	return this->activeStateId();
@@ -149,21 +138,21 @@ void QUaAlarmCondition::setActive(const bool& active)
 		return;
 	}
 	// activate or deactivate
-	if (!active)
-	{
-		this->setActiveStateCurrentStateName("Inactive");
-		this->setActiveStateId(false);
-	}
-	else
-	{
-		this->setActiveStateCurrentStateName("Active");
-		this->setActiveStateId(true);
-	}
+	this->setActiveStateId(active);
+	QString strActiveStateName = active ?
+		this->activeStateTrueState() :
+		this->activeStateFalseState();
+	this->setActiveStateCurrentStateName(strActiveStateName);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
+	// check if trigger
+	if (!this->shouldTrigger())
+	{
+		return;
+	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setSeverity(0);
-	this->setMessage(active ? tr("Alarm active") : tr("Alarm inactive"));
+	this->setMessage(tr("Alarm %1").arg(strActiveStateName));
 	this->setTime(time);
 	this->setReceiveTime(time);
 	this->trigger();
@@ -188,5 +177,26 @@ QUaProperty* QUaAlarmCondition::getSuppressedOrShelve()
 	return this->browseChild<QUaProperty>("SuppressedOrShelve");
 }
 
+bool QUaAlarmCondition::canDeleteBranch() const
+{
+	// base implementation
+	bool canDelete = QUaAcknowledgeableCondition::canDeleteBranch();
+
+	// TODO : what other conditions
+
+	// return result
+	return canDelete;
+}
+
+void QUaAlarmCondition::resetInternals()
+{
+	QUaAcknowledgeableCondition::resetInternals();
+	// set default : Inactive state
+	this->setActiveStateFalseState(tr("Inactive"));
+	this->setActiveStateTrueState(tr("Active"));
+	this->setActiveStateCurrentStateName(tr("Inactive"));
+	this->setActiveStateId(false);
+	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
+}
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
