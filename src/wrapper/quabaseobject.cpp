@@ -81,8 +81,15 @@ void QUaBaseObject::setMethodReturnStatusCode(const UA_StatusCode& statusCode)
 	m_qUaServer->m_methodRetStatusCode = statusCode;
 }
 
-UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const QString &strNodeId, const size_t &nArgs, UA_Argument * inputArguments, UA_Argument * outputArgument)
+UA_NodeId QUaBaseObject::addMethodNodeInternal(
+	const QUaQualifiedName& methodName,
+	const QString& strNodeId,
+	const size_t& nArgs,
+	UA_Argument* inputArguments,
+	UA_Argument* outputArgument
+)
 {
+	QByteArray byteMethodName = methodName.name().toUtf8();
     // add method node
     UA_MethodAttributes methAttr = UA_MethodAttributes_default;
     methAttr.executable     = true;
@@ -94,21 +101,24 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(QByteArray &byteMethodName, const
     UA_NodeId   user_nodeId = strNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strNodeId);
     // create callback
     UA_NodeId methNodeId;
-    auto st = UA_Server_addMethodNode(m_qUaServer->m_server,
-                                      user_nodeId,
-                                      m_nodeId,
-                                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
-                                      UA_QUALIFIEDNAME (1, byteMethodName.data()),
-                                      methAttr,
-                                      &QUaBaseObject::methodCallback,
-                                      nArgs,
-                                      inputArguments,
-		                              outputArgument ? 1 : 0,
-                                      outputArgument,
-                                      this,
-                                      &methNodeId);
+	UA_QualifiedName browseName = methodName;
+    auto st = UA_Server_addMethodNode(
+		m_qUaServer->m_server,
+        user_nodeId,
+        m_nodeId,
+        UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT),
+		browseName,
+        methAttr,
+        &QUaBaseObject::methodCallback,
+        nArgs,
+        inputArguments,
+		outputArgument ? 1 : 0,
+        outputArgument,
+        this,
+        &methNodeId);
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
     Q_UNUSED(st);
-    // return new methos node id
+	UA_QualifiedName_clear(&browseName);
+    // return new method node id
     return methNodeId;
 }

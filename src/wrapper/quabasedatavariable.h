@@ -22,7 +22,7 @@ public:
 	// Instance Creation API
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
-	T* addChild(const QString &strNodeId = "");
+	T* addChild(const QUaQualifiedName &browseName, const QString &strNodeId = "");
 
 };
 

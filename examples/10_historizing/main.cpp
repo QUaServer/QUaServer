@@ -54,9 +54,7 @@ int main(int argc, char* argv[])
 	for (int i = 0; i < 10; i++)
 	{
 		// create int variable
-		auto varInt = objsFolder->addBaseDataVariable(QString("ns=1;s=Int%1").arg(i));
-		varInt->setDisplayName(QString("Int%1").arg(i));
-		varInt->setBrowseName(QString("Int%1").arg(i));
+		auto varInt = objsFolder->addBaseDataVariable(QString("Int%1").arg(i), QString("ns=1;s=Int%1").arg(i));
 		// NOTE : must enable historizing for each variable
 		varInt->setHistorizing(true);
 		varInt->setReadHistoryAccess(true);

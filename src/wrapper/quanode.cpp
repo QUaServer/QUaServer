@@ -5,6 +5,10 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#include <QUaCondition>
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
 #include "quaserver_anex.h"
 
 struct QUaInMemorySerializer
@@ -66,14 +70,14 @@ struct QUaInMemorySerializer
 		auto listNodeIds = m_hashNodeTreeData.keys();
 		std::sort(listNodeIds.begin(), listNodeIds.end(),
 		[this, server](const QString& strNodeId1, const QString& strNodeId2) -> bool {
-			QString browse1 = server->nodeById(strNodeId1)->nodeBrowsePath().join("/");
-			QString browse2 = server->nodeById(strNodeId2)->nodeBrowsePath().join("/");
+			QString browse1 = QUaQualifiedName::reduce(server->nodeById(strNodeId1)->nodeBrowsePath());
+			QString browse2 = QUaQualifiedName::reduce(server->nodeById(strNodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
 		});
 		for (auto nodeId : listNodeIds)
 		{
 			QUaNode* node = server->nodeById(nodeId);
-			QString browse = node->nodeBrowsePath().join("/");
+			QString browse = QUaQualifiedName::reduce(node->nodeBrowsePath());
 			qDebug() << QString("%1 [%2] (%3)")
 				.arg(browse)
 				.arg(nodeId)
@@ -135,14 +139,14 @@ QUaNode::QUaNode(
 		return; 
 	}
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
-	QHash<QString, UA_NodeId> mapChildren;
+	QHash<QUaQualifiedName, UA_NodeId> mapChildren;
 	for (int i = 0; i < chidrenNodeIds.count(); i++)
 	{
 		auto childNodeId = chidrenNodeIds[i];
 		// read browse name
-		QString strBrowseName = QUaNode::getBrowseName(childNodeId, server);
-		Q_ASSERT(!mapChildren.contains(strBrowseName));
-		mapChildren[strBrowseName] = childNodeId;
+		QUaQualifiedName browseName = QUaNode::getBrowseName(childNodeId, server);
+		Q_ASSERT(!mapChildren.contains( browseName));
+		mapChildren[browseName] = childNodeId;
 	}
 	// list meta props
 	int propCount  = metaObject.propertyCount();
@@ -170,16 +174,16 @@ QUaNode::QUaNode(
 		// inc number of valid props
 		numProps++;
 		// the Qt meta property name must match the UA browse name
-		QString strBrowseName = QString(metaProperty.name());
-		Q_ASSERT(mapChildren.contains(strBrowseName));
+		QUaQualifiedName browseName = QString(metaProperty.name());
+		Q_ASSERT(mapChildren.contains(browseName));
 		// get child nodeId for child
-		auto childNodeId = mapChildren.take(strBrowseName);
+		auto childNodeId = mapChildren.take(browseName);
 		// get node context (C++ instance)
 		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
 		Q_CHECK_PTR(nodeInstance);
 		// assign C++ parent
 		nodeInstance->setParent(this);
-		nodeInstance->setObjectName(strBrowseName);
+		nodeInstance->setObjectName(browseName);
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to query children by object name
@@ -187,18 +191,17 @@ QUaNode::QUaNode(
 	// handle mandatory children of instance declarations
 	Q_ASSERT(m_qUaServer->m_hashMandatoryChildren.contains(strClassName));
 	const auto &mandatoryList = m_qUaServer->m_hashMandatoryChildren[strClassName];
-	for (int i = 0; i < mandatoryList.count(); i++)
+	for (const auto browseName : mandatoryList)
 	{
-		QString strBrowseName = mandatoryList.at(i);
-		Q_ASSERT(mapChildren.contains(strBrowseName));
+		Q_ASSERT(mapChildren.contains(browseName));
 		// get child nodeId for child
-		auto childNodeId = mapChildren.take(strBrowseName);
+		auto childNodeId = mapChildren.take(browseName);
 		// get node context (C++ instance)
 		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
 		Q_CHECK_PTR(nodeInstance);
 		// assign C++ parent
 		nodeInstance->setParent(this);
-		nodeInstance->setObjectName(strBrowseName);
+		nodeInstance->setObjectName(browseName);
 	}
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
@@ -378,7 +381,7 @@ QString QUaNode::nodeClass() const
 	return QUaTypesConverter::nodeClassToQString(outNodeClass);
 }
 
-QString QUaNode::browseName() const
+QUaQualifiedName QUaNode::browseName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -392,50 +395,42 @@ QString QUaNode::browseName() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// populate return value
-	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	QUaQualifiedName browseName = outBrowseName;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
-	return strBrowseName;
+	return browseName;
 }
 
-void QUaNode::setBrowseName(const QString & browseName)
+QUaProperty * QUaNode::addProperty(
+	const QUaQualifiedName& browseName,
+	const QString &strNodeId/* = ""*/
+)
 {
-	Q_CHECK_PTR(m_qUaServer);
-	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert to UA_QualifiedName
-	UA_QualifiedName bName;
-	bName.namespaceIndex = 0; // NOTE : force default namespace index 0
-	bName.name           = QUaTypesConverter::uaStringFromQString(browseName);
-	// set value
-	auto st = UA_Server_writeBrowseName(m_qUaServer->m_server, m_nodeId, bName);
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	Q_UNUSED(st);
-	UA_QualifiedName_clear(&bName);
-	// also update QObject name
-	this->setObjectName(browseName);
-	// emit browseName changed
-	emit this->browseNameChanged(browseName);
+	return m_qUaServer->createInstance<QUaProperty>(this, browseName, strNodeId);
 }
 
-QUaProperty * QUaNode::addProperty(const QString &strNodeId/* = ""*/)
+QUaBaseDataVariable * QUaNode::addBaseDataVariable(
+	const QUaQualifiedName& browseName,
+	const QString &strNodeId/* = ""*/
+)
 {
-	return m_qUaServer->createInstance<QUaProperty>(this, strNodeId);
+	return m_qUaServer->createInstance<QUaBaseDataVariable>(this, browseName, strNodeId);
 }
 
-QUaBaseDataVariable * QUaNode::addBaseDataVariable(const QString &strNodeId/* = ""*/)
+QUaBaseObject * QUaNode::addBaseObject(
+	const QUaQualifiedName& browseName,
+	const QString &strNodeId/* = ""*/
+)
 {
-	return m_qUaServer->createInstance<QUaBaseDataVariable>(this, strNodeId);
+	return m_qUaServer->createInstance<QUaBaseObject>(this, browseName, strNodeId);
 }
 
-QUaBaseObject * QUaNode::addBaseObject(const QString &strNodeId/* = ""*/)
+QUaFolderObject * QUaNode::addFolderObject(
+	const QUaQualifiedName& browseName,
+	const QString &strNodeId/* = ""*/
+)
 {
-	return m_qUaServer->createInstance<QUaBaseObject>(this, strNodeId);
-}
-
-QUaFolderObject * QUaNode::addFolderObject(const QString &strNodeId/* = ""*/)
-{
-	return m_qUaServer->createInstance<QUaFolderObject>(this, strNodeId);
+	return m_qUaServer->createInstance<QUaFolderObject>(this, browseName, strNodeId);
 }
 
 QString QUaNode::typeDefinitionNodeId() const
@@ -544,7 +539,7 @@ QString QUaNode::typeDefinitionDisplayName() const
 	return strDisplayName;
 }
 
-QString QUaNode::typeDefinitionBrowseName() const
+QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -564,41 +559,41 @@ QString QUaNode::typeDefinitionBrowseName() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// populate return value
-	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	QUaQualifiedName  browseName = outBrowseName;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
-	return strBrowseName;
+	return  browseName;
 }
 
-QList<QUaNode*> QUaNode::browseChildren(const QString &strBrowseName/* = QString()*/) const
+QList<QUaNode*> QUaNode::browseChildren() const
 {
-	return this->findChildren<QUaNode*>(strBrowseName, Qt::FindDirectChildrenOnly);
+	return this->findChildren<QUaNode*>(QString(), Qt::FindDirectChildrenOnly);
 }
 
 QUaNode* QUaNode::browseChild(
-	const QString & strBrowseName,
+	const QUaQualifiedName&  browseName,
 	const bool& instantiateOptional/* = false*/)
 {
-	auto child = this->findChild<QUaNode*>(strBrowseName, Qt::FindDirectChildrenOnly);
+	// TODO : check if new open62541 tree-based lookup implementation is faster
+	auto child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
 	if (child || !instantiateOptional)
 	{
 		return child;
 	}
-	return this->instantiateOptionalChild(strBrowseName);
+	return this->instantiateOptionalChild(browseName);
 }
 
-bool QUaNode::hasChild(const QString & strBrowseName)
+bool QUaNode::hasChild(const QUaQualifiedName &browseName)
 {
-	return this->browseChild(strBrowseName);
+	return this->browseChild(browseName);
 }
 
-QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath) const
+QUaNode * QUaNode::browsePath(const QUaQualifiedNameList& browsePath) const
 {
 	QUaNode * currNode = const_cast<QUaNode *>(this);
-	for (int i = 0; i < strBrowsePath.count(); i++)
+	for (auto browseName : browsePath)
 	{
-		currNode = currNode->browseChild(strBrowsePath.at(i));
+		currNode = currNode->browseChild(browseName);
 		if (!currNode)
 		{
 			return nullptr;
@@ -607,21 +602,25 @@ QUaNode * QUaNode::browsePath(const QStringList & strBrowsePath) const
 	return currNode;
 }
 
-QStringList QUaNode::nodeBrowsePath() const
+QUaQualifiedNameList QUaNode::nodeBrowsePath() const
 {
 	// get parents browse path and then attach current browse name
 	// stop recursion if current node is ObjectsFolder
 	if (this == m_qUaServer->objectsFolder())
 	{
-		return QStringList() << this->browseName();
+		return QUaQualifiedNameList() << this->browseName();
 	}
 #ifdef QT_DEBUG 
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
-	// TODO : handle hidden nodes (i.e. branches)
-	Q_CHECK_PTR(parent);
+	// handle hidden nodes (i.e. branches)
+#ifndef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	Q_ASSERT(parent);
+#else
+	Q_ASSERT(parent || qobject_cast<const QUaCondition*>(this));
+#endif // !UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	if (!parent)
 	{
-		return QStringList() << m_qUaServer->objectsFolder()->browseName() << this->browseName();
+		return QUaQualifiedNameList() << m_qUaServer->objectsFolder()->browseName() << this->browseName();
 	}
 #else
 	QUaNode* parent = static_cast<QUaNode*>(this->parent());
@@ -937,7 +936,7 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 }
 
 // NOTE : some code borrowed from UA_Server_addConditionOptionalField
-QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
+QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 {
 	// look if optional child really in model
 	UA_NodeId optionalFieldNodeId = UA_NODEID_NULL;
@@ -956,8 +955,8 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 				continue;
 			}
 			// ignore if browse name does not match
-			QString childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
-			if (childBrowseName.compare(strBrowseName, Qt::CaseSensitive) != 0)
+			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
+			if (childBrowseName != browseName)
 			{
 				UA_NodeId_clear(&childNodeId);
 				continue;
@@ -1000,7 +999,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	// convert browse name to qualified name
 	UA_QualifiedName fieldName;
 	fieldName.namespaceIndex = 0;
-	fieldName.name = QUaTypesConverter::uaStringFromQString(strBrowseName);
+	fieldName.name = QUaTypesConverter::uaStringFromQString( browseName);
 	// instantiate according to type
 	UA_NodeId outOptionalNode;
 	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
@@ -1057,12 +1056,19 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	UA_QualifiedName_deleteMembers(&fieldName);
 	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// add reference added change to buffer
-	m_qUaServer->addChange({
-		this->nodeId(),
-		this->typeDefinitionNodeId(),
-		QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-	});
+	if (!this->metaObject()->inherits(&QUaBaseEvent::staticMetaObject)
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+		|| this->metaObject()->inherits(&QUaCondition::staticMetaObject)
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+		)
+	{
+		// add reference added change to buffer
+		m_qUaServer->addChange({
+			this->nodeId(),
+			this->typeDefinitionNodeId(),
+			QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+		});
+	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// if we reached here, the optional field has been instantiated
 	// if the type of the optional field is registered in QUaServer then
@@ -1115,19 +1121,24 @@ QUaNode* QUaNode::instantiateOptionalChild(const QString& strBrowseName)
 	newInstance->m_nodeId = outOptionalNode;
 	// need to set parent and browse name
 	newInstance->setParent(this);
-	newInstance->setObjectName(strBrowseName);
+	newInstance->setObjectName( browseName);
 	// emit child added to parent
 	emit this->childAdded(newInstance);
 	// success
 	return newInstance;
 }
 
-QUaNode* QUaNode::cloneNode(QUaNode* parentNode, const QString& strNodeId)
+QUaNode* QUaNode::cloneNode(
+	QUaNode* parentNode/* = nullptr*/,
+	const QString&  browseName/* = ""*/,
+	const QString& strNodeId/* = ""*/
+)
 {
 	// create new clean instance of the same type
 	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal(
-		*this->metaObject(), 
-		parentNode, 
+		*this->metaObject(),
+		parentNode,
+		 browseName.isEmpty() ? this->browseName() :  browseName,
 		strNodeId
 	);
 	if (UA_NodeId_isNull(&newInstanceNodeId))
@@ -1175,7 +1186,7 @@ const QUaSession* QUaNode::currentSession() const
 	return m_qUaServer->m_currentSession;
 }
 
-bool QUaNode::hasOptionalMethod(const QString& strMethodName) const
+bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 {
 	// get all ua methods of INSTANCE
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(m_nodeId, m_qUaServer->m_server);
@@ -1187,8 +1198,8 @@ bool QUaNode::hasOptionalMethod(const QString& strMethodName) const
 			continue;
 		}
 		// ignore if browse name does not match
-		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
-		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) == 0)
+		QUaQualifiedName methBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+		if (methodName != methBrowseName)
 		{
 			// cleanup
 			for (int i = 0; i < methodsNodeIds.count(); i++)
@@ -1206,10 +1217,10 @@ bool QUaNode::hasOptionalMethod(const QString& strMethodName) const
 	return false;
 }
 
-bool QUaNode::addOptionalMethod(const QString& strMethodName)
+bool QUaNode::addOptionalMethod(const QUaQualifiedName& methodName)
 {
 	// do not add twice
-	if (this->hasOptionalMethod(strMethodName))
+	if (this->hasOptionalMethod(methodName))
 	{
 		return true;
 	}
@@ -1228,8 +1239,8 @@ bool QUaNode::addOptionalMethod(const QString& strMethodName)
 				continue;
 			}
 			// ignore if browse name does not match
-			QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
-			if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+			QUaQualifiedName methBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+			if (methodName != methBrowseName)
 			{
 				continue;
 			}
@@ -1274,10 +1285,10 @@ bool QUaNode::addOptionalMethod(const QString& strMethodName)
 	return true;
 }
 
-bool QUaNode::removeOptionalMethod(const QString& strMethodName)
+bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 {
 	// do not remove twice
-	if (!this->hasOptionalMethod(strMethodName))
+	if (!this->hasOptionalMethod(methodName))
 	{
 		return true;
 	}
@@ -1293,8 +1304,8 @@ bool QUaNode::removeOptionalMethod(const QString& strMethodName)
 			continue;
 		}
 		// ignore if browse name does not match
-		QString strMethBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
-		if (strMethodName.compare(strMethBrowseName, Qt::CaseSensitive) != 0)
+		QUaQualifiedName methBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
+		if (methodName != methBrowseName)
 		{
 			continue;
 		}
@@ -1667,22 +1678,21 @@ void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
 	return context;
 }
 
-QString QUaNode::getBrowseName(const UA_NodeId & nodeId, QUaServer * server)
+QUaQualifiedName QUaNode::getBrowseName(const UA_NodeId & nodeId, QUaServer * server)
 {
 	return QUaNode::getBrowseName(nodeId, server->m_server);
 }
 
-QString QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
+QUaQualifiedName QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
 {
 	// read browse name
 	UA_QualifiedName outBrowseName;
 	auto st = UA_Server_readBrowseName(server, nodeId, &outBrowseName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// NOTE : ignore Namespace index outBrowseName.namespaceIndex
-	QString strBrowseName = QUaTypesConverter::uaStringToQString(outBrowseName.name);
+	QUaQualifiedName  browseName = outBrowseName;
 	UA_QualifiedName_clear(&outBrowseName);
-	return strBrowseName;
+	return  browseName;
 }
 
 bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server)

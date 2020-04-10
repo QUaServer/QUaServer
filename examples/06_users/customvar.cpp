@@ -13,17 +13,17 @@ CustomVar::CustomVar(QUaServer *server)
 
 QUaProperty * CustomVar::myProp()
 {
-	return this->findChild<QUaProperty*>("myProp");	
+	return this->browseChild<QUaProperty>("myProp");	
 }
 
 QUaBaseDataVariable * CustomVar::varFoo()
 {
-	return this->findChild<QUaBaseDataVariable*>("varFoo");
+	return this->browseChild<QUaBaseDataVariable>("varFoo");
 }
 
 QUaBaseDataVariable * CustomVar::varBar()
 {
-	return this->findChild<QUaBaseDataVariable*>("varBar");
+	return this->browseChild<QUaBaseDataVariable>("varBar");
 }
 
 QUaAccessLevel CustomVar::userAccessLevel(const QString & strUserName)

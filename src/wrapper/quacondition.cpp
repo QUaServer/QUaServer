@@ -504,21 +504,21 @@ QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 	{
 		return nullptr;
 	}
+	QUaQualifiedName browseName = this->browseName();
+	browseName.seName(QString("%1_branch%2")
+		.arg(browseName.name())
+		.arg(m_branches.count())
+	);
 	// NOTE : must pass nullptr as parent because cloneNode uses the
 	//        serialization API which recurses all children and if this
 	//        has new branch as children, when deserializing it will deserialize
 	//        the branch with a branch which will have a branch and so on...
-	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, strNodeId));
+	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, browseName, strNodeId));
 	branch->setParent(this); // set qt parent for memory management
 	branch->setIsBranch(true);
 	branch->setBranchId(branch->nodeId());
-	QString strOrigConditionName = this->browseName();
-	QString strName = QString("%1_branch%2")
-		.arg(strOrigConditionName)
-		.arg(m_branches.count());
-	branch->setBrowseName(strName);
-	branch->QUaNode::setDisplayName(strName);
-	branch->setConditionName(strOrigConditionName);
+	branch->QUaNode::setDisplayName(browseName.name());
+	branch->setConditionName(browseName.name());
 	// NOTE : specification
 	// A ConditionBranch is a copy of the Condition instance state that can change independently of
 	// the current Condition instance state.Each Branch has an identifier called a BranchId which is

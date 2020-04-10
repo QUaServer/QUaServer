@@ -56,12 +56,10 @@ int main(int argc, char *argv[])
 
 	// NOTE : the variables need to be overall writable
 	//        user-level access is defined later
-	auto var1 = objsFolder->addProperty();
-	var1->setDisplayName("var1");
+	auto var1 = objsFolder->addProperty("var1");
 	var1->setWriteAccess(true);
 	var1->setValue(123);
-	auto var2 = objsFolder->addProperty();
-	var2->setDisplayName("var2");
+	auto var2 = objsFolder->addProperty("var2");
 	var2->setWriteAccess(true);
 	var2->setValue(1.23);
 
@@ -85,14 +83,10 @@ int main(int argc, char *argv[])
 
 	// Cascading access control
 
-	auto * obj = objsFolder->addBaseObject();
-	obj->setDisplayName("obj");
+	auto obj       = objsFolder->addBaseObject("obj");
+	auto subobj    = obj->addBaseObject("subobj");
+	auto subsubvar = subobj->addProperty("subsubvar");
 
-	auto * subobj = obj->addBaseObject();
-	subobj->setDisplayName("subobj");
-
-	auto subsubvar = subobj->addProperty();
-	subsubvar->setDisplayName("subsubvar");
 	subsubvar->setWriteAccess(true);
 	subsubvar->setValue("hola");
 
@@ -103,10 +97,8 @@ int main(int argc, char *argv[])
 
 	// Custom types access control
 
-	auto custom1 = objsFolder->addChild<CustomVar>();
-	custom1->setDisplayName("custom1");
-	auto custom2 = objsFolder->addChild<CustomVar>();
-	custom2->setDisplayName("custom2");
+	auto custom1 = objsFolder->addChild<CustomVar>("custom1");
+	auto custom2 = objsFolder->addChild<CustomVar>("custom2");
 
 	// Set specific callbacks
 	custom1->varFoo()->setUserAccessLevelCallback(&juanCanWrite);

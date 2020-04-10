@@ -37,18 +37,14 @@ int main(int argc, char *argv[])
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	auto srcObj = objsFolder->addChild<QUaBaseObject>("ns=0;s=source_object");
-	srcObj->setBrowseName("SourceObject");
-	srcObj->setDisplayName("SourceObject");
+	auto srcObj = objsFolder->addChild<QUaBaseObject>("SourceObject", "ns=0;s=source_object");
 	srcObj->setEventNotifierSubscribeToEvents();
 	srcObj->addMethod("delete",
 	[srcObj]() {
 		delete srcObj;
 	});
 
-	auto condObj = srcObj->addChild<QUaAcknowledgeableCondition>();
-	condObj->setBrowseName("MyAcknowledgeableCondition");
-	condObj->setDisplayName("MyAcknowledgeableCondition");
+	auto condObj = srcObj->addChild<QUaAcknowledgeableCondition>("MyAcknowledgeableCondition");
 	condObj->setConfirmAllowed(true);
 	//condObj->addMethod("resetStates",
 	//[condObj]() {

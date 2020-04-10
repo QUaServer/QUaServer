@@ -25,9 +25,7 @@ int main(int argc, char *argv[])
 	});
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
-	auto obj = objsFolder->addBaseObject();
-	obj->setDisplayName("obj");
-	obj->setBrowseName ("obj");
+	auto obj = objsFolder->addBaseObject("obj");
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

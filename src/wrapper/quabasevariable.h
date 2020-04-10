@@ -3,100 +3,11 @@
 
 #include <QUaNode>
 
-/*
-typedef struct {                          // UA_VariableTypeAttributes_default
-	// Node Attributes
-	UA_UInt32        specifiedAttributes; // 0,
-	UA_LocalizedText displayName;         // {{0, NULL}, {0, NULL}},
-	UA_LocalizedText description;         // {{0, NULL}, {0, NULL}},
-	UA_UInt32        writeMask;           // 0,
-	UA_UInt32        userWriteMask;       // 0,
-	// Variable Type Attributes
-	UA_Variant       value;               // {NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL},
-	UA_NodeId        dataType;            // {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_BASEDATATYPE}},
-	UA_Int32         valueRank;           // UA_VALUERANK_ANY,
-	size_t           arrayDimensionsSize; // 0,
-	UA_UInt32        *arrayDimensions;    // NULL,
-	UA_Boolean       isAbstract;          // false
-} UA_VariableTypeAttributes;
-
-typedef struct {                              // UA_VariableAttributes_default
-	// Node Attributes
-	UA_UInt32        specifiedAttributes;     // 0,
-	UA_LocalizedText displayName;             // {{0, NULL}, {0, NULL}},
-	UA_LocalizedText description;             // {{0, NULL}, {0, NULL}},
-	UA_UInt32        writeMask;               // 0,
-	UA_UInt32        userWriteMask;           // 0,
-	// Variable Attributes
-	UA_Variant       value;                   // {NULL, UA_VARIANT_DATA, 0, NULL, 0, NULL},
-	UA_NodeId        dataType;                // {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_BASEDATATYPE}},
-	UA_Int32         valueRank;               // UA_VALUERANK_ANY,
-	size_t           arrayDimensionsSize;     // 0,
-	UA_UInt32        *arrayDimensions;        // NULL,
-	UA_Byte          accessLevel;             // UA_ACCESSLEVELMASK_READ,
-	UA_Byte          userAccessLevel;         // 0,
-	UA_Double        minimumSamplingInterval; // 0.0,
-	UA_Boolean       historizing;             // false
-} UA_VariableAttributes;
-
-*/
-
 // Part 5 - 7.2 : BaseVariableType
 /*
 The BaseVariableType is the abstract base type for all other VariableTypes. 
 However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
 */
-
-class QUaDataType
-{
-
-public:
-    QUaDataType();
-	QUaDataType(const QMetaType::Type& metaType);
-    QUaDataType(const QString& strType);
-    QUaDataType(const QByteArray& byteType);
-	operator QMetaType::Type() const;
-	operator QString() const;
-	bool operator==(const QMetaType::Type& metaType);
-	void operator=(const QString& strType);
-
-private:
-	QUa::Type m_type;
-	static QMetaEnum m_metaEnum;
-};
-
-Q_DECLARE_METATYPE(QUaDataType);
-
-inline uint qHash(const QUaStatus& key, uint seed)
-{
-	Q_UNUSED(seed);
-	return static_cast<uint>(key);
-}
-
-class QUaStatusCode
-{
-
-public:
-	QUaStatusCode();
-	QUaStatusCode(const QUaStatus& uaStatus);
-	QUaStatusCode(const UA_StatusCode& intStatus);
-	QUaStatusCode(const QString& strStatus);
-	QUaStatusCode(const QByteArray& byteType);
-	operator QUaStatus() const;
-	operator UA_StatusCode() const;
-	operator QString() const;
-	bool operator==(const QUaStatus& uaStatus);
-	void operator=(const QString& strStatus);
-
-	static QString longDescription(const QUaStatusCode& statusCode);
-
-private:
-	QUaStatus m_status;
-	static QMetaEnum m_metaEnum;
-	static QHash<QUaStatus, QString> m_descriptions;
-};
-
-Q_DECLARE_METATYPE(QUaStatusCode);
 
 class QUaBaseVariable : public QUaNode
 {

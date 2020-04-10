@@ -15,27 +15,27 @@ TemperatureSensor::TemperatureSensor(QUaServer *server)
 
 QUaProperty * TemperatureSensor::model()
 {
-	return this->findChild<QUaProperty*>("model");
+	return this->browseChild<QUaProperty>("model");
 }
 
 QUaProperty * TemperatureSensor::brand()
 {
-	return this->findChild<QUaProperty*>("brand");
+	return this->browseChild<QUaProperty>("brand");
 }
 
 QUaProperty * TemperatureSensor::units()
 {
-	return this->findChild<QUaProperty*>("units");
+	return this->browseChild<QUaProperty>("units");
 }
 
 QUaBaseDataVariable * TemperatureSensor::status()
 {
-	return this->findChild<QUaBaseDataVariable*>("status");
+	return this->browseChild<QUaBaseDataVariable>("status");
 }
 
 QUaBaseDataVariable * TemperatureSensor::currentValue()
 {
-	return this->findChild<QUaBaseDataVariable*>("currentValue");
+	return this->browseChild<QUaBaseDataVariable>("currentValue");
 }
 
 void TemperatureSensor::turnOn()

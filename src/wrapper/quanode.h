@@ -24,167 +24,6 @@ class QUaCondition;
 
 #include <QUaTypesConverter>
 
-// traits used to static assert that a method cannot be used
-// https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
-template <typename T>
-struct QUaFail : std::false_type
-{
-};
-
-// to have UA_NodeId as a hash key
-inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
-{
-	return e1.namespaceIndex     == e2.namespaceIndex
-		&& e1.identifierType     == e2.identifierType
-		&& (e1.identifierType == UA_NODEIDTYPE_NUMERIC    ? e1.identifier.numeric == e2.identifier.numeric :
-			e1.identifierType == UA_NODEIDTYPE_STRING     ? UA_String_equal    (&e1.identifier.string    , &e2.identifier.string    ) :
-			e1.identifierType == UA_NODEIDTYPE_GUID       ? UA_Guid_equal      (&e1.identifier.guid      , &e2.identifier.guid      ) :
-			e1.identifierType == UA_NODEIDTYPE_BYTESTRING ? UA_ByteString_equal(&e1.identifier.byteString, &e2.identifier.byteString) : false);
-}
-
-inline uint qHash(const UA_NodeId &key, uint seed)
-{
-	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ (key.identifierType == UA_NODEIDTYPE_NUMERIC ? qHash(key.identifier.numeric, seed) : UA_NodeId_hash(&key));
-}
-
-struct QUaReferenceType
-{
-	QString strForwardName;
-	QString strInverseName;
-};
-Q_DECLARE_METATYPE(QUaReferenceType);
-
-QDebug operator<<(QDebug debug, const QUaReferenceType& refType);
-
-// to have QUaReferenceType as a hash key
-inline bool operator==(const QUaReferenceType& e1, const QUaReferenceType& e2)
-{
-	return e1.strForwardName.compare(e2.strForwardName, Qt::CaseSensitive) == 0
-		&& e1.strInverseName.compare(e2.strInverseName, Qt::CaseSensitive) == 0;
-}
-
-inline bool operator!=(const QUaReferenceType& e1, const QUaReferenceType& e2)
-{
-	return !(e1 == e2);
-}
-
-inline uint qHash(const QUaReferenceType& key, uint seed)
-{
-	return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
-}
-
-struct QUaForwardReference
-{
-	QString targetNodeId;
-	QString targetType;
-	QUaReferenceType refType;
-};
-
-inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference& e2)
-{
-	return e1.targetNodeId.compare(e2.targetNodeId, Qt::CaseSensitive) == 0
-		&& e1.refType == e2.refType;
-}
-
-namespace QUa
-{
-	Q_NAMESPACE
-
-	enum class Type
-	{
-		Bool        = QMetaType::Bool,
-		Char        = QMetaType::Char,
-		SChar       = QMetaType::SChar,
-		UChar       = QMetaType::UChar,
-		Short       = QMetaType::Short,
-		UShort      = QMetaType::UShort,
-		Int         = QMetaType::Int,
-		UInt        = QMetaType::UInt,
-		Long        = QMetaType::Long,
-		LongLong    = QMetaType::LongLong,
-		ULong       = QMetaType::ULong,
-		ULongLong   = QMetaType::ULongLong,
-		Float       = QMetaType::Float,
-		Double      = QMetaType::Double,
-		QString     = QMetaType::QString,
-		QDateTime   = QMetaType::QDateTime,
-		QUuid       = QMetaType::QUuid,
-		QByteArray  = QMetaType::QByteArray,
-		UnknownType = QMetaType::UnknownType,
-		LocalizedText           = METATYPE_LOCALIZEDTEXT,
-		TimeZoneDataType        = METATYPE_TIMEZONEDATATYPE,
-		NodeId                  = METATYPE_NODEID,
-		ChangeStructureDatatype = METATYPE_CHANGESTRUCTUREDATATYPE,
-		Image                   = METATYPE_IMAGE,
-		StatusCode              = METATYPE_STATUSCODE
-	};
-	Q_ENUM_NS(Type)
-
-	// Part 8 - 6.3.2 Operation level result codes
-	enum class Status
-	{
-		Good                                    = static_cast<int>(UA_STATUSCODE_GOOD),              
-		GoodLocalOverride                       = static_cast<int>(UA_STATUSCODE_GOODLOCALOVERRIDE), 
-		Uncertain                               = static_cast<int>(0x40000000),                      
-		UncertainNoCommunicationLastUsableValue = static_cast<int>(UA_STATUSCODE_UNCERTAINNOCOMMUNICATIONLASTUSABLEVALUE),
-		UncertainLastUsableValue                = static_cast<int>(UA_STATUSCODE_UNCERTAINLASTUSABLEVALUE),
-		UncertainSubstituteValue                = static_cast<int>(UA_STATUSCODE_UNCERTAINSUBSTITUTEVALUE),
-		UncertainInitialValue                   = static_cast<int>(UA_STATUSCODE_UNCERTAININITIALVALUE),
-		UncertainSensorNotAccurate              = static_cast<int>(UA_STATUSCODE_UNCERTAINSENSORNOTACCURATE),
-		UncertainEngineeringUnitsExceeded       = static_cast<int>(UA_STATUSCODE_UNCERTAINENGINEERINGUNITSEXCEEDED),
-		UncertainSubNormal                      = static_cast<int>(UA_STATUSCODE_UNCERTAINSUBNORMAL),
-		Bad                                     = static_cast<int>(0x80000000),                      
-		BadConfigurationError	                = static_cast<int>(UA_STATUSCODE_BADCONFIGURATIONERROR),
-		BadNotConnected			                = static_cast<int>(UA_STATUSCODE_BADNOTCONNECTED),
-		BadDeviceFailure		                = static_cast<int>(UA_STATUSCODE_BADDEVICEFAILURE),
-		BadSensorFailure		                = static_cast<int>(UA_STATUSCODE_BADSENSORFAILURE),
-		BadOutOfService			                = static_cast<int>(UA_STATUSCODE_BADOUTOFSERVICE),
-		BadDeadbandFilterInvalid                = static_cast<int>(UA_STATUSCODE_BADDEADBANDFILTERINVALID)
-	};
-	Q_ENUM_NS(Status)
-
-	enum class LogLevel {
-		Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
-		Debug   = UA_LogLevel::UA_LOGLEVEL_DEBUG,
-		Info    = UA_LogLevel::UA_LOGLEVEL_INFO,
-		Warning = UA_LogLevel::UA_LOGLEVEL_WARNING,
-		Error   = UA_LogLevel::UA_LOGLEVEL_ERROR,
-		Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
-	};
-	Q_ENUM_NS(LogLevel)
-
-	enum class LogCategory {
-		Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
-		SecureChannel  = UA_LogCategory::UA_LOGCATEGORY_SECURECHANNEL,
-		Session        = UA_LogCategory::UA_LOGCATEGORY_SESSION,
-		Server         = UA_LogCategory::UA_LOGCATEGORY_SERVER,
-		Client         = UA_LogCategory::UA_LOGCATEGORY_CLIENT,
-		UserLand       = UA_LogCategory::UA_LOGCATEGORY_USERLAND,
-		SecurityPolicy = UA_LogCategory::UA_LOGCATEGORY_SECURITYPOLICY,
-		Serialization,
-		History,
-		Application
-	};
-	Q_ENUM_NS(LogCategory)
-}
-typedef QUa::LogLevel    QUaLogLevel;
-typedef QUa::LogCategory QUaLogCategory;
-typedef QUa::Status      QUaStatus;
-
-struct QUaLog
-{
-	// default constructor required by Qt
-	QUaLog();
-	// consutructor accepting QString instead of QByteArray (to support generating messages with QObject::tr)
-	QUaLog(const QString& strMessage, const QUaLogLevel& logLevel, const QUaLogCategory& logCategory);
-	// members
-	QByteArray     message;
-	QUaLogLevel    level;
-	QUaLogCategory category;
-	QDateTime      timestamp;
-};
-Q_DECLARE_METATYPE(QUaLog);
-
 // trait used to check if type has bool T::serializeStart(QQueue<QUaLog>&)
 template <typename T, typename = void>
 struct QUaHasMethodSerializeStart
@@ -244,96 +83,6 @@ typedef struct {
 } UA_NodeAttributes;
 */
 
-union QUaWriteMask
-{
-	struct bit_map {
-		bool bAccessLevel             : 1; // UA_WRITEMASK_ACCESSLEVEL
-		bool bArrrayDimensions        : 1; // UA_WRITEMASK_ARRRAYDIMENSIONS
-		bool bBrowseName              : 1; // UA_WRITEMASK_BROWSENAME
-		bool bContainsNoLoops         : 1; // UA_WRITEMASK_CONTAINSNOLOOPS
-		bool bDataType                : 1; // UA_WRITEMASK_DATATYPE
-		bool bDescription             : 1; // UA_WRITEMASK_DESCRIPTION
-		bool bDisplayName             : 1; // UA_WRITEMASK_DISPLAYNAME
-		bool bEventNotifier           : 1; // UA_WRITEMASK_EVENTNOTIFIER
-		bool bExecutable              : 1; // UA_WRITEMASK_EXECUTABLE
-		bool bHistorizing             : 1; // UA_WRITEMASK_HISTORIZING
-		bool bInverseName             : 1; // UA_WRITEMASK_INVERSENAME
-		bool bIsAbstract              : 1; // UA_WRITEMASK_ISABSTRACT
-		bool bMinimumSamplingInterval : 1; // UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL
-		bool bNodeClass               : 1; // UA_WRITEMASK_NODECLASS
-		bool bNodeId                  : 1; // UA_WRITEMASK_NODEID
-		bool bSymmetric               : 1; // UA_WRITEMASK_SYMMETRIC
-		bool bUserAccessLevel         : 1; // UA_WRITEMASK_USERACCESSLEVEL
-		bool bUserExecutable          : 1; // UA_WRITEMASK_USEREXECUTABLE
-		bool bUserWriteMask           : 1; // UA_WRITEMASK_USERWRITEMASK
-		bool bValueRank               : 1; // UA_WRITEMASK_VALUERANK
-		bool bWriteMask               : 1; // UA_WRITEMASK_WRITEMASK
-		bool bValueForVariableType    : 1; // UA_WRITEMASK_VALUEFORVARIABLETYPE
-	} bits;
-	quint32 intValue;
-	// constructors
-	QUaWriteMask()
-	{
-		// all attributes writable by default (getUserRightsMask_default returns 0xFFFFFFFF)
-		bits.bAccessLevel             = true;
-		bits.bArrrayDimensions        = true;
-		bits.bBrowseName              = true;
-		bits.bContainsNoLoops         = true;
-		bits.bDataType                = true;
-		bits.bDescription             = true;
-		bits.bDisplayName             = true;
-		bits.bEventNotifier           = true;
-		bits.bExecutable              = true;
-		bits.bHistorizing             = true;
-		bits.bInverseName             = true;
-		bits.bIsAbstract              = true;
-		bits.bMinimumSamplingInterval = true;
-		bits.bNodeClass               = true;
-		bits.bNodeId                  = true;
-		bits.bSymmetric               = true;
-		bits.bUserAccessLevel         = true;
-		bits.bUserExecutable          = true;
-		bits.bUserWriteMask           = true;
-		bits.bValueRank               = true;
-		bits.bWriteMask               = true;
-		bits.bValueForVariableType    = true;
-	};
-	QUaWriteMask(const quint32& value)
-	{
-		intValue = value;
-	};
-};
-
-union QUaAccessLevel
-{
-	struct bit_map {
-		bool bRead           : 1; // UA_ACCESSLEVELMASK_READ
-		bool bWrite          : 1; // UA_ACCESSLEVELMASK_WRITE
-		bool bHistoryRead    : 1; // UA_ACCESSLEVELMASK_HISTORYREAD
-		bool bHistoryWrite   : 1; // UA_ACCESSLEVELMASK_HISTORYWRITE
-		bool bSemanticChange : 1; // UA_ACCESSLEVELMASK_SEMANTICCHANGE
-		bool bStatusWrite    : 1; // UA_ACCESSLEVELMASK_STATUSWRITE
-		bool bTimestampWrite : 1; // UA_ACCESSLEVELMASK_TIMESTAMPWRITE
-	} bits;
-	quint8 intValue;
-	// constructors
-	QUaAccessLevel()
-	{
-		// read only by default
-		bits.bRead           = true;
-		bits.bWrite          = false;
-		bits.bHistoryRead    = false;
-		bits.bHistoryWrite   = false;
-		bits.bSemanticChange = false;
-		bits.bStatusWrite    = false;
-		bits.bTimestampWrite = false;
-	};
-	QUaAccessLevel(const quint8& value)
-	{
-		intValue = value;
-	};
-};
-
 class QUaNode : public QObject
 {
 	friend class QUaServer;
@@ -368,7 +117,7 @@ class QUaNode : public QObject
 
 		// Other Properties
 
-		Q_PROPERTY(QString browseName READ browseName WRITE setBrowseName NOTIFY browseNameChanged)
+		Q_PROPERTY(QString browseName READ browseName)
 
 public:
 	explicit QUaNode(
@@ -399,45 +148,56 @@ public:
 	QString nodeId() const;
 	QString nodeClass() const;
 
-	QString browseName() const;
-	void    setBrowseName(const QString& browseName);
+	QUaQualifiedName browseName() const;
 
 	// Instance Creation API
 
-	virtual QUaProperty *         addProperty        (const QString& strNodeId = "");
-	virtual QUaBaseDataVariable * addBaseDataVariable(const QString& strNodeId = "");
-	virtual QUaBaseObject *       addBaseObject      (const QString& strNodeId = "");
-	virtual QUaFolderObject *     addFolderObject    (const QString& strNodeId = "");
+	virtual QUaProperty * addProperty(
+		const QUaQualifiedName& browseName,
+		const QString& strNodeId = ""
+	);
+	virtual QUaBaseDataVariable * addBaseDataVariable(
+		const QUaQualifiedName& browseName,
+		const QString& strNodeId = ""
+	);
+	virtual QUaBaseObject * addBaseObject(
+		const QUaQualifiedName& browseName,
+		const QString& strNodeId = ""
+	);
+	virtual QUaFolderObject * addFolderObject(
+		const QUaQualifiedName& browseName,
+		const QString& strNodeId = ""
+	);
 
 	// Browse API
 	// (* actually browses using QObject tree)
 
 	QString typeDefinitionNodeId     () const;
 	QString typeDefinitionDisplayName() const;
-	QString typeDefinitionBrowseName () const;
+	QUaQualifiedName typeDefinitionBrowseName () const;
 
-	// if strBrowseName empty, get all children
+	// if browseName empty, get all children
 	template<typename T>
-	QList<T*> browseChildren(const QString& strBrowseName = QString()) const;
+	QList<T*> browseChildren() const;
 	// specialization
-	QList<QUaNode*> browseChildren(const QString& strBrowseName = QString()) const;
+	QList<QUaNode*> browseChildren() const;
 
 	// just get the first one
 	// if instantiateOptional then create optional child of instance declaration (if child exists in type)
 	template<typename T>
-	T* browseChild(const QString& strBrowseName, const bool& instantiateOptional = false);
+	T* browseChild(const QUaQualifiedName& browseName, const bool& instantiateOptional = false);
 	// specialization
-	QUaNode* browseChild(const QString& strBrowseName, const bool& instantiateOptional = false);
+	QUaNode* browseChild(const QUaQualifiedName& browseName, const bool& instantiateOptional = false);
 
-	bool hasChild(const QString& strBrowseName);
+	bool hasChild(const QUaQualifiedName& browseName);
 
 	template<typename T>
-	T* browsePath(const QStringList& strBrowsePath) const;
+	T* browsePath(const QUaQualifiedNameList& browsePath) const;
 	// specialization
-	QUaNode* browsePath(const QStringList& strBrowsePath) const;
+	QUaNode* browsePath(const QUaQualifiedNameList& browsePath) const;
 
 	// get node's browse path starting from ObjectsFolder
-	QStringList nodeBrowsePath() const;
+	QUaQualifiedNameList nodeBrowsePath() const;
 
 	// Reference API
 
@@ -517,14 +277,17 @@ public:
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
 	// Clone API
-	QUaNode* cloneNode(QUaNode* parentNode, const QString& strNodeId = "");
+	QUaNode* cloneNode(
+		QUaNode* parentNode = nullptr, 
+		const QString& browseName = "",
+		const QString& strNodeId = ""
+	);
 
 signals:
 
 	void displayNameChanged(const QString& displayName);
 	void descriptionChanged(const QString& description);
 	void writeMaskChanged(const quint32& writeMask);
-	void browseNameChanged(const QString& browseName);
 
 	void childAdded(QUaNode* childNode);
 	void referenceAdded(const QUaReferenceType &refType, QUaNode* nodeTarget, const bool& isForward);
@@ -536,13 +299,13 @@ protected:
 	// to check which session is calling a service (read, write, method call, etc)
 	const QUaSession* currentSession() const;
 	// instatiate child with optional modelling rule
-	QUaNode* instantiateOptionalChild(const QString& strBrowseName);
+	QUaNode* instantiateOptionalChild(const QUaQualifiedName& browseName);
 	// check if instance has an optional method with given browse name
-	bool hasOptionalMethod(const QString& strMethodName) const;
+	bool hasOptionalMethod(const QUaQualifiedName& methodName) const;
 	// gets optional method from type and adds a reference from this instance to the method
-	bool addOptionalMethod(const QString& strMethodName);
+	bool addOptionalMethod(const QUaQualifiedName& methodName);
 	// removes the reference by the method above
-	bool removeOptionalMethod(const QString& strMethodName);
+	bool removeOptionalMethod(const QUaQualifiedName& methodName);
 
 
 
@@ -566,8 +329,8 @@ private:
 	static QUaNode* getNodeContext(const UA_NodeId& nodeId, UA_Server* server);
 	static void*    getVoidContext(const UA_NodeId& nodeId, UA_Server* server);
 
-	static QString getBrowseName(const UA_NodeId& nodeId, QUaServer* server);
-	static QString getBrowseName(const UA_NodeId& nodeId, UA_Server* server);
+	static QUaQualifiedName getBrowseName(const UA_NodeId& nodeId, QUaServer* server);
+	static QUaQualifiedName getBrowseName(const UA_NodeId& nodeId, UA_Server* server);
 
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server);
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server);
@@ -654,11 +417,11 @@ private:
 };
 
 template<typename T>
-inline QList<T*> QUaNode::browseChildren(const QString& strBrowseName/* = QString() */) const
+inline QList<T*> QUaNode::browseChildren() const
 {
 	QList<T*> retList;
 	// call QUaNode specialization
-	auto originalList = browseChildren(strBrowseName);
+	auto originalList = this->browseChildren();
 	// filter out the ones that downcast to T*
 	for (int i = 0; i < originalList.count(); i++)
 	{
@@ -673,16 +436,16 @@ inline QList<T*> QUaNode::browseChildren(const QString& strBrowseName/* = QStrin
 
 template<typename T>
 inline T* QUaNode::browseChild(
-	const QString& strBrowseName, 
+	const QUaQualifiedName& browseName,
 	const bool& instantiateOptional)
 {
-	return qobject_cast<T*>(this->browseChild(strBrowseName, instantiateOptional));
+	return qobject_cast<T*>(this->browseChild(browseName, instantiateOptional));
 }
 
 template<typename T>
-inline T* QUaNode::browsePath(const QStringList& strBrowsePath) const
+inline T* QUaNode::browsePath(const QUaQualifiedNameList& browsePath) const
 {
-	return qobject_cast<T*>(this->browsePath(strBrowsePath));
+	return qobject_cast<T*>(this->browsePath(browsePath));
 }
 
 template<typename T>

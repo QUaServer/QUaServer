@@ -160,8 +160,11 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 		// handle events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		// check if event
-		if (metaObject.inherits(&QUaBaseEvent::staticMetaObject) &&
-		   !metaObject.inherits(&QUaCondition::staticMetaObject))
+		if (metaObject.inherits(&QUaBaseEvent::staticMetaObject)
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+			&& !metaObject.inherits(&QUaCondition::staticMetaObject)
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+			)
 		{
 			break;
 		}
@@ -425,9 +428,9 @@ void QUaServer::bindMethod(
 	};
 }
 
-QHash<QString, int> QUaServer::metaMethodIndexes(const QMetaObject& metaObject)
+QHash<QUaQualifiedName, int> QUaServer::metaMethodIndexes(const QMetaObject& metaObject)
 {
-	QHash<QString, int> retHash;
+	QHash<QUaQualifiedName, int> retHash;
 	for (int methIdx = metaObject.methodOffset(); methIdx < metaObject.methodCount(); methIdx++)
 	{
 		QMetaMethod metaMethod = metaObject.method(methIdx);
@@ -438,8 +441,8 @@ QHash<QString, int> QUaServer::metaMethodIndexes(const QMetaObject& metaObject)
 			continue;
 		}
 		// add method
-		auto strMethName = metaMethod.name();
-		retHash[strMethName] = methIdx;
+		QUaQualifiedName methName = QString(metaMethod.name());
+		retHash[methName] = methIdx;
 	}
 	return retHash;
 }
@@ -747,9 +750,9 @@ void QUaServer::closeSession(UA_Server        * server,
 	// get server
 	QUaServer *srv = QUaServer::getServerNodeContext(server);
 	// remove session from hash
-	Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
 	if (!srv->m_hashSessions.contains(*sessionId))
 	{
+		// TODO : failed connection, bad identity log message
 		return;
 	}
 	auto session = srv->m_hashSessions.take(*sessionId);
@@ -1134,6 +1137,17 @@ void QUaServer::setupServer()
 	});
 	QMetaType::registerConverter<QString, QUaStatusCode>([](QString strStatusCode) {
 		return QUaStatusCode(strStatusCode);
+	});
+	// qualified name
+	if (QMetaType::type("QUaQualifiedName") == QMetaType::UnknownType)
+	{
+		qRegisterMetaType<QUaQualifiedName>("QUaQualifiedName");
+	}
+	QMetaType::registerConverter<QUaQualifiedName, QString>([](QUaQualifiedName qualName) {
+		return qualName.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaQualifiedName>([](QString strQualName) {
+		return QUaQualifiedName(strQualName);
 	});
 	// Server stuff
 	UA_StatusCode st;
@@ -1569,6 +1583,7 @@ void QUaServer::registerTypeInternal(
 		return;
 	}
 	// create new type browse name
+	// TODO : use QUaQualifiedName?
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
 	browseName.name = QUaTypesConverter::uaStringFromQString(strClassName);
@@ -1784,7 +1799,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		metaObject.superClass() == &QUaNode::staticMetaObject,
 		"QUaServer::registerTypeDefaults", "Parent must already be registered.");
 	m_hashMandatoryChildren[strClassName] =
-		m_hashMandatoryChildren.value(strParentClassName, QStringList());
+		m_hashMandatoryChildren.value(strParentClassName, QList<QUaQualifiedName>());
 	// get mandatory children browse names
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
 	for (auto childNodeId : chidrenNodeIds)
@@ -1795,13 +1810,13 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 			continue;
 		}
 		// sometimes children repeat parent's mandatory, no need to add twice
-		QString strMandatoryBrowseName = QUaNode::getBrowseName(childNodeId, m_server);
-		if (m_hashMandatoryChildren[strClassName].contains(strMandatoryBrowseName))
+		QUaQualifiedName mandatoryBrowseName = QUaNode::getBrowseName(childNodeId, m_server);
+		if (m_hashMandatoryChildren[strClassName].contains(mandatoryBrowseName))
 		{
 			continue;
 		}
 		m_hashMandatoryChildren[strClassName]
-			<< strMandatoryBrowseName;
+			<< mandatoryBrowseName;
 	}
 	// cleanup for mandatory children
 	for (int i = 0; i < chidrenNodeIds.count(); i++)
@@ -1810,7 +1825,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	}
 	// get qt type methods by name
 	// loop meta methods and find out which ones inherit from
-	QHash<QString, int> hashQtMethods = QUaServer::metaMethodIndexes(metaObject);
+	QHash<QUaQualifiedName, int> hashQtMethods = QUaServer::metaMethodIndexes(metaObject);
 	// get all ua methods
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_server);
 	// try to match ua methods with qt meta methods (by browse name)
@@ -1823,18 +1838,18 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 			continue;
 		}
 		// check mandatory ua method exists on qt type
-		QString strMethBrowseName = QUaNode::getBrowseName(methodNodeId, m_server);
-		Q_ASSERT_X(hashQtMethods.contains(strMethBrowseName), "QUaServer::registerTypeDefaults",
+		QUaQualifiedName methBrowseName = QUaNode::getBrowseName(methodNodeId, m_server);
+		Q_ASSERT_X(hashQtMethods.contains(methBrowseName), "QUaServer::registerTypeDefaults",
 			"Qt type does not implement method. Qt types must implement both mandatory and optional.");
-		if (!hashQtMethods.contains(strMethBrowseName))
+		if (!hashQtMethods.contains(methBrowseName))
 		{
-			qDebug() << "Error Registering" << strMethBrowseName << "for" << strClassName;
+			qDebug() << "Error Registering" << methBrowseName << "for" << strClassName;
 			continue;
 		}
 
 		// TODO : check arguments and return types
 
-		int methIdx = hashQtMethods[strMethBrowseName];
+		int methIdx = hashQtMethods[methBrowseName];
 		QUaServer::bindMethod(this, &methodNodeId, methIdx);
 	}
 	// cleanup for all ua methods
@@ -1866,7 +1881,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		QMetaProperty metaProperty = metaObject.property(i);
 		// check if is meta enum
 		bool      isVariable = false;
-		bool      isEnum = false;
+		bool      isEnum     = false;
 		UA_NodeId enumTypeNodeId = UA_NODEID_NULL;
 		if (metaProperty.isEnumType())
 		{
@@ -1935,7 +1950,9 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		Q_ASSERT(!UA_NodeId_isNull(&propTypeNodeId));
 		// set qualified name, default is class name
 		UA_QualifiedName browseName;
-		browseName.namespaceIndex = 1;
+		// NOTE : use namespace 0 as default to allow QUaNode::browseChild 
+		//        to work with simple strings on custom types
+		browseName.namespaceIndex = 0; 
 		browseName.name = QUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"", bytePropName.data());
@@ -2197,6 +2214,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 UA_NodeId QUaServer::createInstanceInternal(
 	const QMetaObject& metaObject,
 	QUaNode* parentNode,
+	const QUaQualifiedName& browseName,
 	const QString& strNodeId
 )
 {
@@ -2231,10 +2249,13 @@ UA_NodeId QUaServer::createInstanceInternal(
 	UA_NodeId referenceTypeId = parentNode ?
 		QUaServer::getReferenceTypeId(*parentNode->metaObject(), metaObject) :
 		UA_NODEID_NULL;
-	// set qualified name, default is class name
-	UA_QualifiedName browseName;
-	browseName.namespaceIndex = 1;
-	browseName.name = QUaTypesConverter::uaStringFromQString(metaObject.className());
+	// check if browse name already used with parent (if any parent)
+	if (parentNode && parentNode->hasChild(browseName))
+	{
+		Q_ASSERT_X(false, "QUaServer::createInstance", "Requested BrowseName already exists in parent");
+		return UA_NODEID_NULL;
+	}
+	UA_QualifiedName uaBrowseName = browseName;
 	// check if requested node id defined
 	QString strReqNodeId = strNodeId.trimmed();
 	UA_NodeId reqNodeId = UA_NODEID_NULL;
@@ -2245,7 +2266,6 @@ UA_NodeId QUaServer::createInstanceInternal(
 		Q_ASSERT_X(!isUsed, "QUaServer::createInstance", "Requested NodeId already exists");
 		if (isUsed)
 		{
-			UA_QualifiedName_clear(&browseName);
 			return UA_NODEID_NULL;
 		}
 		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
@@ -2273,12 +2293,15 @@ UA_NodeId QUaServer::createInstanceInternal(
 		Q_UNUSED(st);
 		vAttr.arrayDimensionsSize = outArrayDimensions.arrayLength;
 		vAttr.arrayDimensions = static_cast<quint32*>(outArrayDimensions.data);
+		// default displayName is browseName
+		QByteArray byteDisplayName = browseName.name().toUtf8();
+		vAttr.displayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 		// add variable
 		UA_Server_addVariableNode(m_server,
 			reqNodeId,            // requested nodeId
 			parentNode ? parentNode->m_nodeId : UA_NODEID_NULL, // parent (can be null)
 			referenceTypeId,      // parent relation with child
-			browseName,
+			uaBrowseName,
 			typeNodeId,
 			vAttr,
 			nullptr,             // context
@@ -2292,12 +2315,15 @@ UA_NodeId QUaServer::createInstanceInternal(
 		Q_ASSERT(metaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 			metaObject.className() == QUaBaseObject::staticMetaObject.className());
 		UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
+		// default displayName is browseName
+		QByteArray byteDisplayName = browseName.name().toUtf8();
+		oAttr.displayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 		// add object
 		auto st = UA_Server_addObjectNode(m_server,
 			reqNodeId,            // requested nodeId
 			parentNode ? parentNode->m_nodeId : UA_NODEID_NULL, // parent
 			referenceTypeId,      // parent relation with child
-			browseName,
+			uaBrowseName,
 			typeNodeId,
 			oAttr,
 			nullptr,             // context
@@ -2309,7 +2335,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 	UA_NodeId_clear(&reqNodeId);
 	// NOTE : do not UA_NodeId_clear(&typeNodeId); or value in m_mapTypes gets corrupted
 	UA_NodeId_clear(&referenceTypeId);
-	UA_QualifiedName_clear(&browseName);
+	UA_QualifiedName_clear(&uaBrowseName);
 
 	// if child is condition, add non-hierarchical reference and default props
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -2654,6 +2680,7 @@ bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QSt
 	// get namea and stuff
 	QByteArray byteForwardName = refType.strForwardName.toUtf8();
 	QByteArray byteInverseName = refType.strInverseName.toUtf8();
+	// TODO : Use QUaQualifiedName, but then need to change how refsare serialized
 	UA_QualifiedName browseName;
 	browseName.namespaceIndex = 1;
 	browseName.name = QUaTypesConverter::uaStringFromQString(refType.strForwardName);
@@ -2734,26 +2761,25 @@ bool QUaServer::isIdValid(const QString& strNodeId)
 	return res;
 }
 
-QUaNode * QUaServer::browsePath(const QStringList & strBrowsePath) const
+QUaNode * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const
 {
-	if (strBrowsePath.count() <= 0)
+	if (browsePath.count() <= 0)
 	{
 		return nullptr;
 	}
-	QString strFirst = strBrowsePath.first();
+	QUaQualifiedName first = browsePath.first();
 	// check if first is ObjectsFolder
-	if (strFirst.compare(this->objectsFolder()->browseName(), Qt::CaseSensitive) == 0)
+	if (first == this->objectsFolder()->browseName())
 	{
-		return this->objectsFolder()->browsePath(strBrowsePath.mid(1));
+		return this->objectsFolder()->browsePath(browsePath.mid(1));
 	}
 	// then check if first is a child of ObjectsFolder
 	auto listChildren = this->objectsFolder()->browseChildren();
-	for (int i = 0; i < listChildren.count(); i++)
+	for (auto child : listChildren)
 	{
-		auto child = listChildren.at(i);
-		if (strFirst.compare(child->browseName(), Qt::CaseSensitive) == 0)
+		if (first == child->browseName())
 		{
-			return child->browsePath(strBrowsePath.mid(1));
+			return child->browsePath(browsePath.mid(1));
 		}
 	}
 	// if not, then not supported
@@ -2853,50 +2879,4 @@ UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, co
 		Q_ASSERT_X(false, "QUaServer::getReferenceTypeId", "Invalid parent type.");
 	}
 	return referenceTypeId;
-}
-
-QUaSession::QUaSession(QObject* parent/* = 0*/)
-	: QObject(parent)
-{
-	m_timestamp = QDateTime::currentDateTimeUtc();
-}
-
-QString QUaSession::sessionId() const
-{
-	return m_strSessionId;
-}
-
-QString QUaSession::userName() const
-{
-	return m_strUserName;
-}
-
-QString QUaSession::applicationName() const
-{
-	return m_strApplicationName;
-}
-
-QString QUaSession::applicationUri() const
-{
-	return m_strApplicationUri;
-}
-
-QString QUaSession::productUri() const
-{
-	return m_strProductUri;
-}
-
-QString QUaSession::address() const
-{
-	return m_strAddress;
-}
-
-quint16 QUaSession::port() const
-{
-	return m_intPort;
-}
-
-QDateTime QUaSession::timestamp() const
-{
-	return m_timestamp;
 }

@@ -25,115 +25,6 @@ class QUaRefreshEndEvent;
 #include <QUaHistoryBackend>
 #endif // UA_ENABLE_HISTORIZING
 
-// Enum Stuff
-typedef qint64 QUaEnumKey;
-struct QUaEnumEntry
-{
-	QByteArray strDisplayName;
-	QByteArray strDescription;
-};
-Q_DECLARE_METATYPE(QUaEnumEntry);
-inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs) 
-{ 
-	return lhs.strDisplayName == rhs.strDisplayName && lhs.strDescription == rhs.strDescription;
-}
-typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
-typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;
-
-// User validation
-typedef std::function<bool(const QString &, const QString &)> QUaValidationCallback;
-
-// Class whose only pupose is emit signals
-class QUaSignaler : public QObject
-{
-	Q_OBJECT
-public:
-    explicit QUaSignaler(QObject *parent = nullptr) 
-        : QObject(parent) 
-    { 
-        m_processing = false;
-        QObject::connect(
-            this,
-            &QUaSignaler::sendEvent,
-            this,
-            &QUaSignaler::on_sendEvent,
-            Qt::QueuedConnection
-        );
-    };
-    template <typename M1 = const std::function<void(void)>&>
-    inline void execLater(M1&& func)
-    {
-        m_funcs.enqueue(func);
-        if (m_processing)
-        {
-            return;
-        }
-        m_processing = true;
-        emit this->sendEvent(QPrivateSignal());
-    };
-    inline bool processing() const
-    {
-        return m_processing;
-    };
-signals:
-	void signalNewInstance(QUaNode *node);
-    // can only be emitted internally
-    void sendEvent(QPrivateSignal);
-private slots:
-    inline void on_sendEvent()
-    {
-        Q_ASSERT(m_processing);
-        if (m_funcs.isEmpty())
-        {
-            m_processing = false;
-            return;
-        }
-        m_funcs.dequeue()();
-        emit this->sendEvent(QPrivateSignal());
-    };
-private:
-    bool m_processing;
-    QQueue<std::function<void(void)>> m_funcs;
-};
-
-class QUaSession : public QObject
-{
-	friend class QUaServer;
-	Q_OBJECT
-
-	Q_PROPERTY(QString   sessionId       READ sessionId      )
-	Q_PROPERTY(QString   userName        READ userName       )
-	Q_PROPERTY(QString   applicationName READ applicationName)
-	Q_PROPERTY(QString   applicationUri  READ applicationUri )
-	Q_PROPERTY(QString   productUri      READ productUri     )
-	Q_PROPERTY(QString   address         READ address        )
-	Q_PROPERTY(quint16   port            READ port           )
-    Q_PROPERTY(QDateTime timestamp       READ timestamp      )
-
-public:
-
-    explicit QUaSession(QObject* parent = nullptr);
-
-	QString   sessionId     () const;
-	QString   userName       () const;
-	QString   applicationName() const;
-	QString   applicationUri () const;
-	QString   productUri     () const;
-	QString   address        () const;
-	quint16   port           () const;
-    QDateTime timestamp      () const;
-
-private:
-	QString   m_strSessionId;
-	QString   m_strUserName;
-	QString   m_strApplicationName;
-	QString   m_strApplicationUri;
-	QString   m_strProductUri;
-	QString   m_strAddress;
-	quint16   m_intPort;
-    QDateTime m_timestamp;
-};
-
 class QUaServer : public QObject
 {
 	friend class QUaNode;
@@ -265,7 +156,11 @@ public:
     bool isNodeIdUsed(const QString& strNodeId) const;
 	// create instance of a given (variable or object) type
 	template<typename T>
-	T* createInstance(QUaNode * parentNode, const QString &strNodeId = "");
+	T* createInstance(
+        QUaNode * parentNode, 
+        const QUaQualifiedName &browseName,
+        const QString &strNodeId = ""
+    );
 	// get objects folder
 	QUaFolderObject * objectsFolder() const;
 	// get node reference by node id and cast to type (nullptr if node id does not exist)
@@ -282,9 +177,9 @@ public:
 	// (* actually browses using QObject tree)
 
 	template<typename T>
-	T* browsePath(const QStringList &strBrowsePath) const;
+	T* browsePath(const QUaQualifiedNameList &browsePath) const;
 	// specialization
-	QUaNode * browsePath(const QStringList &strBrowsePath) const;
+	QUaNode * browsePath(const QUaQualifiedNameList &browsePath) const;
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -392,7 +287,7 @@ private:
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
-    QHash<QString         , QStringList  > m_hashMandatoryChildren;
+    QHash<QString         , QList<QUaQualifiedName>> m_hashMandatoryChildren;
 
 	QUaValidationCallback m_validationCallback;
 
@@ -458,6 +353,7 @@ private:
 	UA_NodeId createInstanceInternal(
         const QMetaObject &metaObject, 
         QUaNode * parentNode, 
+        const QUaQualifiedName &browseName,
         const QString &strNodeId
     );
 
@@ -550,7 +446,7 @@ private:
         const int       &metaMethodIndex
     );
 
-    static QHash<QString, int> metaMethodIndexes(const QMetaObject& metaObject);
+    static QHash<QUaQualifiedName, int> metaMethodIndexes(const QMetaObject& metaObject);
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 
@@ -733,12 +629,17 @@ inline void QUaServer::registerEnum(const QString &strNodeId/* = ""*/)
 }
 
 template<typename T>
-inline T * QUaServer::createInstance(QUaNode * parentNode, const QString &strNodeId/* = ""*/)
+inline T * QUaServer::createInstance(
+    QUaNode * parentNode, 
+    const QUaQualifiedName &browseName,
+    const QString &strNodeId/* = ""*/
+)
 {
 	// instantiate first in OPC UA
 	UA_NodeId newInstanceNodeId = this->createInstanceInternal(
         T::staticMetaObject, 
         parentNode, 
+        browseName,
         strNodeId
     );
 	if (UA_NodeId_isNull(&newInstanceNodeId))
@@ -781,15 +682,7 @@ inline T * QUaServer::createEvent()
     );
 	// reparent qt
     newEvent->setParent(this);
-    // TODO : this API is only for nodes not reachible in the address space
-//#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-//    // add reference added change to buffer
-//    this->addChange({
-//        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
-//        QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
-//        QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-//    });
-//#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    // NOTE : no change event for nodes not reachible in the address space
 	// return c++ event instance
 	return newEvent;
 }
@@ -802,9 +695,9 @@ inline T * QUaServer::nodeById(const QString &strNodeId)
 }
 
 template<typename T>
-inline T * QUaServer::browsePath(const QStringList & strBrowsePath) const
+inline T * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const
 {
-	return qobject_cast<T*>(this->browsePath(strBrowsePath));
+	return qobject_cast<T*>(this->browsePath(browsePath));
 }
 
 template<typename M>
@@ -1236,6 +1129,7 @@ inline bool QUaNode::deserializeInternal(
         UA_NodeId newInstanceNodeId = this->server()->createInstanceInternal(
             metaObject, 
             this, 
+            /* browseName */QUaQualifiedName(),
             strTargetNodeId
         );
         if (UA_NodeId_isNull(&newInstanceNodeId))
@@ -1284,9 +1178,12 @@ inline bool QUaNode::deserializeInternal(
 }
 
 template<typename T>
-inline T * QUaBaseObject::addChild(const QString &strNodeId/* = ""*/)
+inline T * QUaBaseObject::addChild(
+    const QUaQualifiedName &browseName,
+    const QString &strNodeId/* = ""*/
+)
 {
-    return m_qUaServer->createInstance<T>(this, strNodeId);
+    return m_qUaServer->createInstance<T>(this, browseName, strNodeId);
 }
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1320,9 +1217,12 @@ inline T * QUaBaseObject::createEvent()
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 template<typename T>
-inline T * QUaBaseDataVariable::addChild(const QString &strNodeId/* = ""*/)
+inline T * QUaBaseDataVariable::addChild(
+    const QUaQualifiedName &browseName,
+    const QString &strNodeId/* = ""*/
+)
 {
-    return m_qUaServer->createInstance<T>(this, strNodeId);
+    return m_qUaServer->createInstance<T>(this, strBrowseName, strNodeId);
 }
 
 template<typename T>
@@ -1482,6 +1382,7 @@ struct QUaMethodTraitsBase
         const size_t nArgs = getNumArgs();
         if (nArgs <= 0) return QVector<UA_Argument>();
         return { getTypeUaArgument<Args>(uaServer, iArg++)... };
+        Q_UNUSED(iArg); // ignore unused warning
     }
 
     template<typename T>
@@ -1524,6 +1425,7 @@ struct QUaMethodTraitsBase
         // TODO : cleanup? UA_Variant_deleteMembers(&retVar);
 
         return retVar;
+        Q_UNUSED(iArg); // ignore unused warning
     }
 };
 // general case
@@ -1552,6 +1454,7 @@ struct QOpcUaMethodTraits< void(ClassType::*)(Args...) const > : QUaMethodTraits
         methodCallback(QOpcUaMethodTraits<M>::template convertArgType<Args>(input, iArg--)...);
         // set result
         return UA_Variant();
+        Q_UNUSED(iArg); // ignore unused warning
     }
 };
 // specialization - mutable | no return value
@@ -1592,7 +1495,10 @@ struct QOpcUaMethodTraits< void(*)(Args...) > : QUaMethodTraitsBase<void, void, 
 };
 
 template<typename M>
-inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & methodCallback, const QString & strNodeId)
+inline void QUaBaseObject::addMethod(
+    const QUaQualifiedName &methodName,
+    const M & methodCallback, 
+    const QString & strNodeId)
 {
     // create input arguments
     UA_Argument * p_inputArguments = nullptr;
@@ -1611,9 +1517,8 @@ inline void QUaBaseObject::addMethod(const QString & strMethodName, const M & me
         p_outputArgument = &outputArgument;
     }
     // add method node
-    QByteArray byteMethodName = strMethodName.toUtf8();
     UA_NodeId methNodeId = this->addMethodNodeInternal(
-        byteMethodName,
+        methodName,
         strNodeId,
         QOpcUaMethodTraits<M>::getNumArgs(),
         p_inputArguments,

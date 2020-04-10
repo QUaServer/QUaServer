@@ -67,12 +67,12 @@ public:
 
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
-	T* addChild(const QString &strNodeId = "");
+	T* addChild(const QUaQualifiedName& browseName, const QString &strNodeId = "");
 
 	// Method Creation API
 
 	template<typename M>
-	void addMethod(const QString &strMethodName, const M &methodCallback, const QString & strNodeId = "");
+	void addMethod(const QUaQualifiedName &methodName, const M &methodCallback, const QString & strNodeId = "");
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -91,23 +91,27 @@ protected:
 
 private:
 
-    UA_NodeId addMethodNodeInternal(QByteArray   &byteMethodName,
-		                            const QString  &strNodeId,
-		                            const size_t &nArgs, 
-		                            UA_Argument  *inputArguments, 
-		                            UA_Argument  *outputArgument);
+	UA_NodeId addMethodNodeInternal(
+		const QUaQualifiedName &methodName,
+		const QString          &strNodeId,
+		const size_t           &nArgs,
+		UA_Argument            *inputArguments,
+		UA_Argument            *outputArgument
+	);
 
-	static UA_StatusCode methodCallback(UA_Server        *server,
-		                                const UA_NodeId  *sessionId,
-		                                void             *sessionContext,
-		                                const UA_NodeId  *methodId,
-		                                void             *methodContext,
-		                                const UA_NodeId  *objectId,
-		                                void             *objectContext,
-		                                size_t            inputSize,
-		                                const UA_Variant *input,
-		                                size_t            outputSize,
-		                                UA_Variant       *output);
+	static UA_StatusCode methodCallback(
+		UA_Server        *server,
+		const UA_NodeId  *sessionId,
+		void             *sessionContext,
+		const UA_NodeId  *methodId,
+		void             *methodContext,
+		const UA_NodeId  *objectId,
+		void             *objectContext,
+		size_t            inputSize,
+		const UA_Variant *input,
+		size_t            outputSize,
+		UA_Variant       *output
+	);
 
 	QHash< UA_NodeId, std::function<UA_StatusCode(const UA_Variant*, UA_Variant*)>> m_hashMethods;
 };

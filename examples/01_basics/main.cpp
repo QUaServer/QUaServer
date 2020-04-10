@@ -26,46 +26,33 @@ int main(int argc, char *argv[])
 
 	// basics
 
-	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
+	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable("my_variable");
 	varBaseData->setWriteAccess(true);
-	varBaseData->setDisplayName("my_variable");
 	varBaseData->setValue(1);
 	QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value) {
 		qDebug() << "New value :" << value;
 	});
 
-	QUaProperty * varProp = objsFolder->addProperty("ns=1;s=my_prop");
-	varProp->setDisplayName("my_property");
+	QUaProperty * varProp = objsFolder->addProperty("my_property", "ns=1;s=my_prop");
 	varProp->setValue("hola");
 
-	QUaBaseObject * objBase = objsFolder->addBaseObject();
-	objBase->setDisplayName("my_object");
+	objsFolder->addBaseObject("my_object");
 
-	QUaFolderObject * objFolder = objsFolder->addFolderObject();
-	objFolder->setDisplayName("my_folder");
+	objsFolder->addFolderObject("my_folder");
 
 	// nested nodes and browsing
 
-	QUaBaseObject * obj = objsFolder->addBaseObject();
-	obj->setDisplayName("obj");
-	obj->setBrowseName ("obj");
-	QUaBaseObject * subobj = obj->addBaseObject();
-	subobj->setDisplayName("subobj");
-	subobj->setBrowseName ("subobj");
-	QUaBaseDataVariable * var = subobj->addBaseDataVariable();
-	var->setDisplayName("var");
-	var->setBrowseName ("var");
-	QUaBaseDataVariable * subvar = var->addBaseDataVariable();
-	subvar->setDisplayName("subvar");
-	subvar->setBrowseName ("subvar");
-	QUaProperty * prop = subvar->addProperty();
-	prop->setDisplayName("prop");
-	prop->setBrowseName ("prop");
+	QUaBaseObject       * obj    = objsFolder->addBaseObject("obj");
+	QUaBaseObject       * subobj = obj->addBaseObject("subobj");
+	QUaBaseDataVariable * var    = subobj->addBaseDataVariable("var");
+	QUaBaseDataVariable * subvar = var->addBaseDataVariable("subvar");
+	QUaProperty         * prop   = subvar->addProperty("prop");
+
 	// browse nested children by passing a list of browse names to the (relative) browsePath method
-	Q_ASSERT(obj->browsePath(QStringList() << "subobj") == subobj);
-	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var") == var);
-	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar") == subvar);
-	Q_ASSERT(obj->browsePath(QStringList() << "subobj" << "var" << "subvar" << "prop") == prop);
+	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj") == subobj);
+	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var") == var);
+	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var" << "subvar") == subvar);
+	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var" << "subvar" << "prop") == prop);
 	// browse from server by passing the (absolute) browse of the node (starting at ObjectsFolder)
 	Q_ASSERT(server.browsePath(subobj->nodeBrowsePath()) == subobj);
 	Q_ASSERT(server.browsePath(var   ->nodeBrowsePath()) == var   );
@@ -74,24 +61,18 @@ int main(int argc, char *argv[])
 
 	// temperature sensor model
 
-	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject();
-	sensorsFolder->setDisplayName("Sensors");
+	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject("Sensors");
 
-	QUaBaseObject * objSensor1 = sensorsFolder->addBaseObject();
-	objSensor1->setDisplayName("TempSensor1");
+	QUaBaseObject * objSensor1 = sensorsFolder->addBaseObject("TempSensor1");
 
-	QUaProperty * modelProp = objSensor1->addProperty();
-	modelProp->setDisplayName("Model");
+	QUaProperty * modelProp = objSensor1->addProperty("Model");
 	modelProp->setValue("LM35");
-	QUaProperty * brandProp = objSensor1->addProperty();
-	brandProp->setDisplayName("Brand");
+	QUaProperty * brandProp = objSensor1->addProperty("Brand");
 	brandProp->setValue("Texas Instruments");
-	QUaProperty * euProp = objSensor1->addProperty();
-	euProp->setDisplayName("Units");
+	QUaProperty * euProp = objSensor1->addProperty("Units");
 	euProp->setValue("C");
 
-	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable();
-	valueVar->setDisplayName("Current Value");
+	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable("Current Value");
 	valueVar->setValue(36.7);
 
 	server.start();

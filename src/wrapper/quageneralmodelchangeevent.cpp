@@ -40,7 +40,7 @@ void QUaGeneralModelChangeEvent::setChanges(const QUaChangesList & listVerbs)
 
 QUaProperty * QUaGeneralModelChangeEvent::getChanges() const
 {
-	return this->findChild<QUaProperty*>("Changes");
+	return const_cast<QUaGeneralModelChangeEvent*>(this)->browseChild<QUaProperty>("Changes");
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

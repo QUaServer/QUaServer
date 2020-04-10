@@ -30,8 +30,7 @@ int main(int argc, char *argv[])
 
 	// add methods using lambdas
 
-	auto varNumber = objsFolder->addBaseDataVariable();
-	varNumber->setDisplayName("Number");
+	auto varNumber = objsFolder->addBaseDataVariable("Number");
 	varNumber->setValue(0.0);
 	varNumber->setDataType(QMetaType::Double);
 
@@ -85,10 +84,7 @@ int main(int argc, char *argv[])
 		{
 			return QObject::tr("Error : Object with name %1 already exists.").arg(strName);
 		}
-		obj = objsFolder->addBaseObject(QString("ns=1;s=%1").arg(strName));
-		// NOTE : setBrowseName to strName below, helps browseChild above find the object if already exists
-		obj->setBrowseName(strName);
-		obj->setDisplayName(strName);
+		obj = objsFolder->addBaseObject(strName, QString("ns=1;s=%1").arg(strName));
 		// create delete method for each newly created object
 		obj->addMethod("delete", 
 		[obj]() {
@@ -100,27 +96,20 @@ int main(int argc, char *argv[])
 
 	// temperature sensor model
 
-	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject();
-	sensorsFolder->setDisplayName("Sensors");
+	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject("Sensors");
 
-	QUaBaseObject * objSensor1 = sensorsFolder->addBaseObject();
-	objSensor1->setDisplayName("TempSensor1");
+	QUaBaseObject * objSensor1 = sensorsFolder->addBaseObject("TempSensor1");
 
-	QUaProperty * modelProp = objSensor1->addProperty();
-	modelProp->setDisplayName("Model");
+	QUaProperty * modelProp = objSensor1->addProperty("Model");
 	modelProp->setValue("LM35");
-	QUaProperty * brandProp = objSensor1->addProperty();
-	brandProp->setDisplayName("Brand");
+	QUaProperty * brandProp = objSensor1->addProperty("Brand");
 	brandProp->setValue("Texas Instruments");
-	QUaProperty * euProp = objSensor1->addProperty();
-	euProp->setDisplayName("Units");
+	QUaProperty * euProp = objSensor1->addProperty("Units");
 	euProp->setValue("C");
 
-	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable();
-	valueVar->setDisplayName("Current Value");
+	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable("Current Value");
 	valueVar->setValue(36.7);
-	QUaBaseDataVariable * statusVar = objSensor1->addBaseDataVariable();
-	statusVar->setDisplayName("Status");
+	QUaBaseDataVariable * statusVar = objSensor1->addBaseDataVariable("Status");
 	statusVar->setValue("On");
 
 	objSensor1->addMethod("Turn On", 

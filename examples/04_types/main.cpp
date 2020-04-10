@@ -26,12 +26,9 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	auto sensor1 = objsFolder->addChild<TemperatureSensor>();
-	sensor1->setDisplayName("Sensor1");
-	auto sensor2 = objsFolder->addChild<TemperatureSensor>();
-	sensor2->setDisplayName("Sensor2");
-	auto sensor3 = objsFolder->addChild<TemperatureSensor>();
-	sensor3->setDisplayName("Sensor3");
+	objsFolder->addChild<TemperatureSensor>("Sensor1");
+	objsFolder->addChild<TemperatureSensor>("Sensor2");
+	objsFolder->addChild<TemperatureSensor>("Sensor3");
 
 	server.start();
 

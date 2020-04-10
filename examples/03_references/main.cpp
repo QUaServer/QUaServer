@@ -13,14 +13,10 @@ int main(int argc, char *argv[])
 
 	// create objects
 
-	QUaBaseObject * objSensor1 = objsFolder->addBaseObject();
-	objSensor1->setDisplayName("TempSensor1");
+	QUaBaseObject * objSensor1 = objsFolder->addBaseObject("TempSensor1");
+	QUaBaseObject * objSensor2 = objsFolder->addBaseObject("TempSensor2");
 
-	QUaBaseObject * objSensor2 = objsFolder->addBaseObject();
-	objSensor2->setDisplayName("TempSensor2");
-
-	QUaBaseObject * objSupl1 = objsFolder->addBaseObject();
-	objSupl1->setDisplayName("Mouser");
+	QUaBaseObject * objSupl1 = objsFolder->addBaseObject("Mouser");
 
 	// create references
 
