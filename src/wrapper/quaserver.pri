@@ -32,10 +32,22 @@ ua_alarms_conditions {
     SOURCES += \
     $$PWD/quaconditionvariable.cpp \
     $$PWD/quastatevariable.cpp \
+    $$PWD/quafinitestatevariable.cpp \
     $$PWD/quatwostatevariable.cpp \
+    $$PWD/quatransitionvariable.cpp \
+    $$PWD/quafinitetransitionvariable.cpp \
+    $$PWD/quastatemachine.cpp \
+    $$PWD/quafinitestatemachine.cpp \
+    $$PWD/quaexclusivelimitstatemachine.cpp \
+    $$PWD/quatransition.cpp \
     $$PWD/quacondition.cpp \
     $$PWD/quaacknowledgeablecondition.cpp \
     $$PWD/quaalarmcondition.cpp \
+    $$PWD/quadiscretealarm.cpp \
+    $$PWD/quaoffnormalalarm.cpp \
+    $$PWD/qualimitalarm.cpp \
+    $$PWD/quaexclusivelimitalarm.cpp \
+    $$PWD/quaexclusivelevelalarm.cpp \
     $$PWD/quarefreshstartevent.cpp \
     $$PWD/quarefreshendevent.cpp
 }
@@ -70,10 +82,22 @@ ua_alarms_conditions {
     HEADERS += \
     $$PWD/quaconditionvariable.h \
     $$PWD/quastatevariable.h \
+    $$PWD/quafinitestatevariable.h \
     $$PWD/quatwostatevariable.h \
+    $$PWD/quatransitionvariable.h \
+    $$PWD/quafinitetransitionvariable.h \
+    $$PWD/quastatemachine.h \
+    $$PWD/quafinitestatemachine.h \
+    $$PWD/quaexclusivelimitstatemachine.h \
+    $$PWD/quatransition.h \
     $$PWD/quacondition.h \
     $$PWD/quaacknowledgeablecondition.h \
     $$PWD/quaalarmcondition.h \
+    $$PWD/quadiscretealarm.h \
+    $$PWD/quaoffnormalalarm.h \
+    $$PWD/qualimitalarm.h \
+    $$PWD/quaexclusivelimitalarm.h \
+    $$PWD/quaexclusivelevelalarm.h \
     $$PWD/quarefreshstartevent.h \
     $$PWD/quarefreshendevent.h
 }
@@ -108,10 +132,22 @@ ua_alarms_conditions {
     DISTFILES += \
     $$PWD/QUaConditionVariable \
     $$PWD/QUaStateVariable \
+    $$PWD/QUaFiniteStateVariable \
     $$PWD/QUaTwoStateVariable \
+    $$PWD/QUaTransitionVariable \
+    $$PWD/QUaFiniteTransitionVariable \
+    $$PWD/QUaStateMachine \
+    $$PWD/QUaFiniteStateMachine \
+    $$PWD/QUaExclusiveLimitStateMachine \
+    $$PWD/QUaTransition \
     $$PWD/QUaCondition \
     $$PWD/QUaAcknowledgeableCondition \
     $$PWD/QUaAlarmCondition \
+    $$PWD/QUaDiscreteAlarm \
+    $$PWD/QUaOffNormalAlarm \
+    $$PWD/QUaLimitAlarm \
+    $$PWD/QUaExclusiveLimitAlarm \
+    $$PWD/QUaExclusiveLevelAlarm \
     $$PWD/QUaRefreshStartEvent \
     $$PWD/QUaRefreshEndEvent
 }

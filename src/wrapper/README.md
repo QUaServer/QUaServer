@@ -11,8 +11,8 @@
 | -QUaFiniteStateVariable        | Part 5 - B.4.6    | `BaseVariableType/BaseDataVariableType/StateVariableType/FiniteStateVariableType` |
 | QUaTwoStateVariable            | Part 9 - 5.2      | `BaseVariableType/BaseDataVariableType/StateVariableType/TwoStateVariableType` |
 | QUaConditionVariable           | Part 9 - 5.3      | `BaseVariableType/BaseDataVariableType/ConditionVariableType` |
-| -QUaTransitionVariable         | Part 5 - B.4.4    | `BaseVariableType/TransitionVariableType` |
-| -QUaFiniteTransitionVariable   | Part 5 - B.4.7    | `BaseVariableType/TransitionVariableType/FiniteTransitionVariableType` |
+| -QUaTransitionVariable         | Part 5 - B.4.4    | `BaseVariableType/BaseDataVariableType/TransitionVariableType` |
+| -QUaFiniteTransitionVariable   | Part 5 - B.4.7    | `BaseVariableType/BaseDataVariableType/TransitionVariableType/FiniteTransitionVariableType` |
 | QUaBaseObject                  | Part 5 - 6.2      | `BaseObjectType` |
 | QUaFolderObject                | Part 5 - 6.6      | `BaseObjectType/FolderType` |
 | -QUaStateMachine               | Part 5 - B.4.2    | `BaseObjectType/StateMachineType` |

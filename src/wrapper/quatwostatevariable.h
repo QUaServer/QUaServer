@@ -3,7 +3,9 @@
 
 #include <QUaStateVariable>
 
-// Part 9 - 5.2 : StateVariableType
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+// Part 9 - 5.2 : TwoStateVariableType
 /*
 Most states defined in this standard are simple – i.e. they are either True or False. The
 TwoStateVariableType is introduced specifically for this use case. More complex states are
@@ -108,7 +110,7 @@ public:
 	// TODO and for StateMachine type
 	*/
 
-private:
+protected:
 
 	// NOTE : id (Boolean) inherited
 
@@ -122,6 +124,8 @@ private:
 	QUaProperty* getFalseState();
 
 };
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #endif // QUATWOSTATEVARIABLE_H
 
