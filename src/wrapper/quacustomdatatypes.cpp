@@ -270,6 +270,16 @@ UA_QualifiedName QUaQualifiedName::toUaQualifiedName()
 	return *this;
 }
 
+QUaQualifiedName QUaQualifiedName::fromXmlString(const QString& strXmlQualName)
+{
+	return QUaQualifiedName(strXmlQualName);
+}
+
+QUaQualifiedName QUaQualifiedName::fromUaQualifiedName(const UA_QualifiedName& uaQualName)
+{
+	return QUaQualifiedName(uaQualName);
+}
+
 QUaChangeStructureDataType::QUaChangeStructureDataType()
 	: m_strNodeIdAffected(""),
 	m_strNodeIdAffectedType(""),

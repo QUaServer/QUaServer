@@ -3,30 +3,6 @@
 
 #include <QUaNode>
 
-/*
-typedef struct {                          // UA_ObjectTypeAttributes_default
-	// Node Attributes
-	UA_UInt32        specifiedAttributes; // 0,
-	UA_LocalizedText displayName;         // {{0, NULL}, {0, NULL}},
-	UA_LocalizedText description;         // {{0, NULL}, {0, NULL}},
-	UA_UInt32        writeMask;           // 0,
-	UA_UInt32        userWriteMask;       // 0,
-	// Object Type Attributes
-	UA_Boolean       isAbstract;          // false
-} UA_ObjectTypeAttributes;
-
-typedef struct {                          // UA_ObjectAttributes_default
-	// Node Attributes
-	UA_UInt32        specifiedAttributes; // 0,
-	UA_LocalizedText displayName;         // {{0, NULL}, {0, NULL}},
-	UA_LocalizedText description;         // {{0, NULL}, {0, NULL}},
-	UA_UInt32        writeMask;           // 0,
-	UA_UInt32        userWriteMask;       // 0,
-	// Object Attributes
-	UA_Byte          eventNotifier;       // 0
-} UA_ObjectAttributes;
-*/
-
 // Part 5 - 6.2 : BaseObjectType
 /*
 The BaseObjectType is used as type definition whenever there is an Object 

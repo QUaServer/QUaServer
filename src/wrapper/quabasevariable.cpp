@@ -268,9 +268,9 @@ void QUaBaseVariable::setValue(
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-	else
+	else if (oldType != QMetaType::UnknownType)
 	{
-		// we tried everything we could
+		// we tried everything we could, keep old type
 		newType = oldType;
 	}
 	// convert to UA_Variant and set new value

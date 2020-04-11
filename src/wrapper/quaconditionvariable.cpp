@@ -46,7 +46,7 @@ void QUaConditionVariable::on_setSourceTimestampChanged(const QDateTime& sourceT
 
 QUaProperty* QUaConditionVariable::getSourceTimestamp()
 {
-	return this->findChild<QUaProperty*>("SourceTimestamp");
+	return this->browseChild<QUaProperty>("SourceTimestamp");
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

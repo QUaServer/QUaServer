@@ -997,9 +997,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 		return nullptr;
 	}
 	// convert browse name to qualified name
-	UA_QualifiedName fieldName;
-	fieldName.namespaceIndex = 0;
-	fieldName.name = QUaTypesConverter::uaStringFromQString( browseName);
+	UA_QualifiedName fieldName = browseName;
 	// instantiate according to type
 	UA_NodeId outOptionalNode;
 	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
@@ -1077,6 +1075,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 	QUaNode* child = QUaNode::getNodeContext(outOptionalNode, m_qUaServer->m_server);
 	if (child)
 	{
+		Q_ASSERT(child->browseName() == browseName);
 		// TODO : clean up ?
 		return child;
 	}
@@ -1159,17 +1158,24 @@ QUaNode* QUaNode::cloneNode(
 	QQueue<QUaLog> logOut;
 	QUaInMemorySerializer serializer;
 	this->serialize(serializer, logOut);
+
 	//// [DEBUG]
 	//serializer.qtDebug(
 	//	m_qUaServer, 
 	//	tr("*************** %1 ***************").arg(this->nodeId())
 	//);
-	// replace node id
+
+	// replace nodeId
 	Q_ASSERT(serializer.m_hashNodeTreeData.contains(this->nodeId()));
 	serializer.m_hashNodeTreeData[newInstance->nodeId()] =
 		serializer.m_hashNodeTreeData.take(this->nodeId());
+	// replace browseName
+	Q_ASSERT(serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs.contains("browseName"));
+	serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs["browseName"] = 
+		newInstance->browseName().toXmlString();
 	// deserialize to new instance
 	newInstance->deserialize(serializer, logOut);
+
 	//// [DEBUG]
 	////serializer.clear();
 	//newInstance->serialize(serializer, logOut);
@@ -1197,9 +1203,9 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 		{
 			continue;
 		}
-		// ignore if browse name does not match
+		// ignore if browse name match
 		QUaQualifiedName methBrowseName = QUaNode::getBrowseName(methNodeId, m_qUaServer->m_server);
-		if (methodName != methBrowseName)
+		if (methodName == methBrowseName)
 		{
 			// cleanup
 			for (int i = 0; i < methodsNodeIds.count(); i++)
@@ -1350,21 +1356,23 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 {
 	QMap<QString, QVariant> retMap;
-	auto metaObject = this->metaObject();
+	// first serialize browseName
+	retMap["browseName"] = this->browseName().toXmlString();
 	// list meta props
-	int propCount  = metaObject->propertyCount();
-	int propOffset = QUaNode::staticMetaObject.propertyOffset();
+	auto metaObject = this->metaObject();
+	int  propCount  = metaObject->propertyCount();
+	int  propOffset = QUaNode::staticMetaObject.propertyOffset();
 	for (int i = propOffset; i < propCount; i++)
 	{
 		QMetaProperty metaProperty = metaObject->property(i);
 		QString strPropName = QString(metaProperty.name());
-		Q_ASSERT(!retMap.contains(strPropName));
 		Q_ASSERT(metaProperty.isReadable());
 		// non-writabe props cannot be restored
 		if (!metaProperty.isWritable())
 		{
 			continue;
 		}
+		Q_ASSERT(!retMap.contains(strPropName));
 		// ignore QUaNode * properties (type children)
 		int type = metaProperty.userType();
 		auto propMetaObject = QMetaType::metaObjectForType(type);
@@ -1408,10 +1416,22 @@ void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaL
 {
 	QStringList listAttrsNotInProps = attrs.keys();
 	QStringList listPropsNotInAttrs;
-	auto metaObject = this->metaObject();
+	// first deserialize browseName
+	Q_ASSERT_X(
+		attrs.contains("browseName"), 
+		"QUaNode::deserializeAttrs", 
+		"Deserialized attributes must contain the browseName"
+	);
+	Q_ASSERT_X(
+		QUaQualifiedName::fromXmlString(attrs["browseName"].toString()) == this->browseName(),
+		"QUaNode::deserializeAttrs",
+		"Deserialized browseName does not match instance browseName"
+	);
+	listAttrsNotInProps.removeOne("browseName");
 	// list meta props
-	int propCount = metaObject->propertyCount();
-	int propOffset = QUaNode::staticMetaObject.propertyOffset();
+	auto metaObject = this->metaObject();
+	int  propCount  = metaObject->propertyCount();
+	int  propOffset = QUaNode::staticMetaObject.propertyOffset();
 	for (int i = propOffset; i < propCount; i++)
 	{
 		QMetaProperty metaProperty = metaObject->property(i);
@@ -1443,10 +1463,10 @@ void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaL
 			Q_ASSERT(ok);
 			// write property
 			auto val = attrs[strPropName];
-			if (val.isValid())
+			if (val.isValid() && !val.isNull())
 			{
 				ok = metaProperty.write(this, val);
-				Q_ASSERT(ok);
+				Q_ASSERT_X(ok, "QUaNode::deserializeAttrs", "Invalid value for deserialized attribute.");
 			}
 			continue;
 		}

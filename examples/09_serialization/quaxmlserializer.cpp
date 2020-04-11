@@ -209,7 +209,7 @@ bool QUaXmlSerializer::writeInstance(
 	QDomElement node = m_doc.createElement("n");
 	root.appendChild(node);
 	// copy attributes
-	this->writeAttribute(node, "nodeId"  , nodeId);
+	this->writeAttribute(node, "nodeId", nodeId);
 	auto i = attrs.constBegin();
 	while (i != attrs.constEnd())
 	{

@@ -363,6 +363,11 @@ public:
 	QString toXmlString() const;
 	UA_QualifiedName toUaQualifiedName(); // needs cleanup with UA_QualifiedName_clear after use
 
+	// helpers
+
+	static QUaQualifiedName fromXmlString(const QString& strXmlQualName);
+	static QUaQualifiedName fromUaQualifiedName(const UA_QualifiedName& uaQualName);
+
 	typedef QList<QUaQualifiedName> QUaQualifiedNameList;
 	inline static QString reduce(const QUaQualifiedNameList& browsePath)
 	{

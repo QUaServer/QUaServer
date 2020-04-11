@@ -24,7 +24,8 @@ QHash<int, QString> QUaSqliteSerializer::m_hashTypes = {
 	{QMetaType::QDateTime      , "INTEGER"},
 	{QMetaType::QUuid          , "INTEGER"},
 	{QMetaType::QByteArray     , "BLOB"   },
-	{QMetaType::UnknownType    , "BLOB"   }
+	{QMetaType::UnknownType    , "TEXT"   },
+	{METATYPE_NODEID           , "TEXT"   },
 };
 
 QUaSqliteSerializer::QUaSqliteSerializer()
@@ -628,7 +629,10 @@ bool QUaSqliteSerializer::insertNewInstance(
 	query.bindValue(0, nodeKey);
 	for (int i = 1; i < attrNames.count(); i++)
 	{
-		query.bindValue(i, attrs.value(attrNames.at(i)));
+		auto& value = attrs[attrNames.at(i)];
+		// NOTE : need to fix QMetaType::UChar serialization
+		auto type = static_cast<QMetaType::Type>(value.type());
+		query.bindValue(i, type == QMetaType::UChar ? value.toUInt() : value);
 	}
 	if (!query.exec())
 	{

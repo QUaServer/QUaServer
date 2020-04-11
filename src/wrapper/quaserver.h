@@ -934,7 +934,7 @@ inline bool QUaNode::deserializeInternal(
     // get existing children list to match hierachical forward references
     auto existingChildren = this->browseChildren();
     QHash<QString, QUaNode*> mapExistingChildrenNodeIds;
-    QHash<QString, QList<QUaNode*>> mapExistingChildrenBrowseName;
+    QHash<QUaQualifiedName, QList<QUaNode*>> mapExistingChildrenBrowseName;
     for (auto child : existingChildren)
     {
         mapExistingChildrenNodeIds[child->nodeId()] = child;
@@ -976,119 +976,106 @@ inline bool QUaNode::deserializeInternal(
             // stop deserializing
             return false;
         }
-        // check if ref child already exists by browse name
-        if (attrs.contains("browseName") && !attrs.value("browseName").toString().isEmpty())
+        // check browse name
+        if (!attrs.contains("browseName") || attrs["browseName"].toString().isEmpty())
         {
-            QString strBrowseName = attrs.value("browseName").toString();
-            auto existingBrowseName = mapExistingChildrenBrowseName.value(strBrowseName, QList<QUaNode*>());
-            // deserialize existing
-            if (existingBrowseName.count() > 0)
+            logOut.enqueue({
+                tr("Could not deserialize child of %1 with nodeId %2 (type %3). "
+                "Deserialized attributes does not contain a valid browseName. Ignoring.")
+                        .arg(this->nodeId())
+                        .arg(forwRef.targetNodeId)
+                        .arg(forwRef.targetType),
+                    QUaLogLevel::Error,
+                    QUaLogCategory::Serialization
+            });
+            continue;
+        }
+        QUaQualifiedName browseName = QUaQualifiedName::fromXmlString(attrs["browseName"].toString());
+        auto existingBrowseName = mapExistingChildrenBrowseName.value(browseName, QList<QUaNode*>());
+        // deserialize existing by browseName
+        if (existingBrowseName.count() > 0)
+        {
+            QUaNode* instance = nullptr;
+            if (existingBrowseName.count() > 1)
             {
-                QUaNode* instance = nullptr;
-                if (existingBrowseName.count() > 1)
+                // if existingChildren does not contain an instance it meas it has already been deserialized
+                while (
+                    !existingChildren.isEmpty() &&
+                    !existingChildren.contains(existingBrowseName.first()) && 
+                    existingBrowseName.count() > 0
+                    )
                 {
-                    // if existingChildren does not contain an instance it meas it has already been deserialized
-                    while (
-                        !existingChildren.isEmpty() &&
-                        !existingChildren.contains(existingBrowseName.first()) && 
-                        existingBrowseName.count() > 0
-                        )
-                    {
-                        existingBrowseName.takeFirst();
-                    }
-                    if (existingBrowseName.count() == 0)
-                    {
-                        logOut.enqueue({
-                        tr("All children of %1 with browseName %2 have been deserialized. "
-                        "Ignoring deserialization of forward reference to %3 (type %4).")
-                                .arg(this->nodeId())
-                                .arg(strBrowseName)
-                                .arg(forwRef.targetNodeId)
-                                .arg(forwRef.targetType),
-                            QUaLogLevel::Error,
-                            QUaLogCategory::Serialization
-                        });
-                        continue;
-                    }
+                    existingBrowseName.takeFirst();
+                }
+                if (existingBrowseName.count() == 0)
+                {
+                    logOut.enqueue({
+                    tr("All children of %1 with browseName %2 have been deserialized. "
+                    "Ignoring deserialization of forward reference to %3 (type %4).")
+                            .arg(this->nodeId())
+                            .arg(browseName.toXmlString())
+                            .arg(forwRef.targetNodeId)
+                            .arg(forwRef.targetType),
+                        QUaLogLevel::Error,
+                        QUaLogCategory::Serialization
+                    });
+                    continue;
+                }
+                instance = existingBrowseName.takeFirst();
+                // get the first one with the same type
+                while (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0 &&
+                    existingBrowseName.count() > 0)
+                {
                     instance = existingBrowseName.takeFirst();
-                    // get the first one with the same type
-                    while (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0 &&
-                        existingBrowseName.count() > 0)
-                    {
-                        instance = existingBrowseName.takeFirst();
-                    }
-                    if (existingBrowseName.count() == 0 && 
-                        instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
-                    {
-                        logOut.enqueue({
-                        tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
-                        "Ignoring deserialization of forward reference to %4.")
-                                .arg(this->nodeId())
-                                .arg(strBrowseName)
-                                .arg(forwRef.targetType)
-                                .arg(forwRef.targetNodeId),
-                            QUaLogLevel::Error,
-                            QUaLogCategory::Serialization
-                        });
-                        continue;
-                    }
-                    if (existingBrowseName.count() > 0)
-                    {
-                        logOut.enqueue({
-                            tr("Node %1 contains more than one children with the same browseName attribute %2 and type %3. "
-                            "Deserializing over instance with node id %4.")
-                                .arg(this->nodeId())
-                                .arg(strBrowseName)
-                                .arg(forwRef.targetType)
-                                .arg(instance->nodeId()),
-                            QUaLogLevel::Warning,
-                            QUaLogCategory::Serialization
-                        });
-                    }
                 }
-                else
+                if (existingBrowseName.count() == 0 && 
+                    instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
                 {
-                    // get only child instance with matching browse name
-                    instance = existingBrowseName.takeFirst();
-                    if (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
-                    {
-                        logOut.enqueue({
-                        tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
-                        "Ignoring deserialization of forward reference to %4.")
-                                .arg(this->nodeId())
-                                .arg(strBrowseName)
-                                .arg(forwRef.targetType)
-                                .arg(forwRef.targetNodeId),
-                            QUaLogLevel::Error,
-                            QUaLogCategory::Serialization
-                        });
-                        continue;
-                    }
+                    logOut.enqueue({
+                    tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
+                    "Ignoring deserialization of forward reference to %4.")
+                            .arg(this->nodeId())
+                            .arg(browseName.toXmlString())
+                            .arg(forwRef.targetType)
+                            .arg(forwRef.targetNodeId),
+                        QUaLogLevel::Error,
+                        QUaLogCategory::Serialization
+                    });
+                    continue;
                 }
-                // remove from existingChildren to mark it as deserialized
-                existingChildren.removeOne(instance);
-                // deserialize (recursive)
-                bool ok = instance->deserializeInternal<T>(
-                    deserializer,
-                    attrs,
-                    forwardRefs,
-                    nonHierRefs,
-                    logOut,
-                    instance == m_qUaServer->objectsFolder()
-                );
-                if (!ok)
+                if (existingBrowseName.count() > 0)
                 {
-                    return ok;
+                    logOut.enqueue({
+                        tr("Node %1 contains more than one children with the same browseName attribute %2 and type %3. "
+                        "Deserializing over instance with node id %4.")
+                            .arg(this->nodeId())
+                            .arg(browseName.toXmlString())
+                            .arg(forwRef.targetType)
+                            .arg(instance->nodeId()),
+                        QUaLogLevel::Warning,
+                        QUaLogCategory::Serialization
+                    });
                 }
-                // continue next ref child
-                continue;
             }
-        } // end by browse name
-        // check if child already exists by node id and type matches
-        if (mapExistingChildrenNodeIds.contains(forwRef.targetNodeId) &&
-            mapExistingChildrenNodeIds[forwRef.targetNodeId]->className().compare(forwRef.targetType, Qt::CaseSensitive) == 0)
-        {
-            QUaNode* instance = mapExistingChildrenNodeIds.take(forwRef.targetNodeId);
+            else
+            {
+                // get only child instance with matching browse name
+                instance = existingBrowseName.takeFirst();
+                if (instance->className().compare(forwRef.targetType, Qt::CaseSensitive) != 0)
+                {
+                    logOut.enqueue({
+                    tr("Could not find a child of %1 with browseName %2 that matches the type %3. "
+                    "Ignoring deserialization of forward reference to %4.")
+                            .arg(this->nodeId())
+                            .arg(browseName.toXmlString())
+                            .arg(forwRef.targetType)
+                            .arg(forwRef.targetNodeId),
+                        QUaLogLevel::Error,
+                        QUaLogCategory::Serialization
+                    });
+                    continue;
+                }
+            }
             // remove from existingChildren to mark it as deserialized
             existingChildren.removeOne(instance);
             // deserialize (recursive)
@@ -1106,9 +1093,9 @@ inline bool QUaNode::deserializeInternal(
             }
             // continue next ref child
             continue;
-        } // end by node id
-        // no existing children matched by browse name nor by node id and type
-        // so we must create a new one but before, check node id does not exist
+        }
+        // no existing child matched by browseName, create a new one 
+        // but before, check nodeId does not exist
         QString strTargetNodeId = forwRef.targetNodeId;
         if (this->server()->isNodeIdUsed(strTargetNodeId))
         {
@@ -1129,7 +1116,7 @@ inline bool QUaNode::deserializeInternal(
         UA_NodeId newInstanceNodeId = this->server()->createInstanceInternal(
             metaObject, 
             this, 
-            /* browseName */QUaQualifiedName(),
+            browseName,
             strTargetNodeId
         );
         if (UA_NodeId_isNull(&newInstanceNodeId))
@@ -1222,7 +1209,7 @@ inline T * QUaBaseDataVariable::addChild(
     const QString &strNodeId/* = ""*/
 )
 {
-    return m_qUaServer->createInstance<T>(this, strBrowseName, strNodeId);
+    return m_qUaServer->createInstance<T>(this, browseName, strNodeId);
 }
 
 template<typename T>
