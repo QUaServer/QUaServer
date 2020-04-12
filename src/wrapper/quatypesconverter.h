@@ -30,7 +30,7 @@ namespace QUaTypesConverter {
 	// ua from qt
 	UA_NodeId          uaTypeNodeIdFromQType(const QMetaType::Type &type);
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
-	UA_Variant         uaVariantFromQVariant(const QVariant        & var, QMetaType::Type qtType = QMetaType::UnknownType);
+	UA_Variant         uaVariantFromQVariant(const QVariant &var);
 	// ua from qt : scalar
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	UA_Variant uaVariantFromQVariantScalar(const QVariant &var, const UA_DataType *type);
@@ -39,7 +39,7 @@ namespace QUaTypesConverter {
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	void       uaVariantFromQVariantScalar(const QTTYPE &var, TARGETTYPE *ptr);
 	// ua from qt : array
-	UA_Variant uaVariantFromQVariantArray(const QVariant & var, QMetaType::Type qtType = QMetaType::UnknownType);
+	UA_Variant uaVariantFromQVariantArray(const QVariant & var);
 	template<typename TARGETTYPE, typename QTTYPE>
 	UA_Variant uaVariantFromQVariantArray(const QVariant &var, const UA_DataType *type);
 	template<> // TODO : implement better

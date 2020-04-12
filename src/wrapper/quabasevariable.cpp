@@ -186,7 +186,7 @@ QVariant QUaBaseVariable::value() const
 
 void QUaBaseVariable::setValue(
 	const QVariant        &value, 
-	const QUaStatus       &statusCode      /*QUaStatus::Good*/,
+	const QUaStatusCode   &statusCode      /*QUaStatus::Good*/,
 	const QDateTime       &sourceTimestamp /*= QDateTime()*/,
 	const QDateTime       &serverTimestamp /*= QDateTime()*/,
 	const QMetaType::Type &newTypeConst    /*= QMetaType::UnknownType*/
@@ -198,6 +198,7 @@ void QUaBaseVariable::setValue(
 	if (newType == QMetaType::UnknownType)
 	{
 		newType = (QMetaType::Type)value.type();
+		newType = newType != QMetaType::User ? newType : (QMetaType::Type)value.userType();
 	}
 	// got modifiable copy
 	auto newValue = value;
@@ -268,17 +269,12 @@ void QUaBaseVariable::setValue(
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
-	else if (oldType != QMetaType::UnknownType)
-	{
-		// we tried everything we could, keep old type
-		newType = oldType;
-	}
 	// convert to UA_Variant and set new value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue, newType);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
 		tmpVar, 
-		QUaStatusCode(statusCode),
+		statusCode,
 		sourceTimestamp, 
 		serverTimestamp
 	);
@@ -419,7 +415,7 @@ void QUaBaseVariable::setServerTimestamp(const QDateTime& serverTimestamp)
 	UA_Variant_clear(&value.value);
 }
 
-QUaStatus QUaBaseVariable::statusCode() const
+QUaStatusCode QUaBaseVariable::statusCode() const
 {
 	UA_ReadValueId rv;
 	UA_ReadValueId_init(&rv);
@@ -436,7 +432,7 @@ QUaStatus QUaBaseVariable::statusCode() const
 	return statusCode;
 }
 
-void QUaBaseVariable::setStatusCode(const QUaStatus& statusCode)
+void QUaBaseVariable::setStatusCode(const QUaStatusCode& statusCode)
 {
 	// get value
 	UA_ReadValueId rv;
@@ -463,7 +459,7 @@ void QUaBaseVariable::setStatusCode(const QUaStatus& statusCode)
 	wv.value.sourcePicoseconds    = value.sourcePicoseconds   ;
 	wv.value.hasServerPicoseconds = value.hasServerPicoseconds;
 	wv.value.hasSourcePicoseconds = value.hasSourcePicoseconds;
-	wv.value.status               = QUaStatusCode(statusCode);
+	wv.value.status               = statusCode;
 	wv.value.hasStatus            = true;
 	auto st = UA_Server_write(m_qUaServer->m_server, &wv);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -555,7 +551,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 		oldValue = QVariant((QVariant::Type)dataType);
 	}
 	// set converted or default value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue, dataType);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
 	m_bInternalWrite = true;
 	st = this->setValueInternal(tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);

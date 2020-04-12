@@ -10,6 +10,8 @@
 #include <QUaConditionVariable>
 #include <QUaStateVariable>
 #include <QUaTwoStateVariable>
+#include <QUaFiniteStateVariable>
+#include <QUaTransitionVariable>
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
@@ -917,6 +919,8 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
+	// register custom types to be used with Qt (QVariant and stuff)
+	this->registerCustomTypes();
 	// setup server (other defaults)
 	this->setupServer();
 }
@@ -924,6 +928,9 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 void QUaServer::addChange(const QUaChangeStructureDataType& change)
 {
+	// TODO : broken uaVariantFromQVariantArray
+	return;
+
 	// NOTE : do not check if server is running because we might wanna
 	//        historize offline events
 	if (m_listChanges.contains(change))
@@ -1105,33 +1112,24 @@ UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
 	return ptr;
 }
 
-void QUaServer::setupServer()
+void QUaServer::registerCustomTypes()
 {
 	// Qt Stuff
-	if (QMetaType::type("QUaReferenceType") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaReferenceType>("QUaReferenceType");
-	}
-	if (QMetaType::type("QUaEnumEntry") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaEnumEntry>("QUaEnumEntry");
-	}
+	Q_ASSERT(qMetaTypeId<QTimeZone>       () >= QMetaType::User);
+	Q_ASSERT(qMetaTypeId<QUaReferenceType>() >= QMetaType::User);
+	Q_ASSERT(qMetaTypeId<QUaEnumEntry    >() >= QMetaType::User);
 	// data type
-	if (QMetaType::type("QUaDataType") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaDataType>("QUaDataType");
-	}
+	Q_ASSERT(qMetaTypeId<QUaDataType     >() >= QMetaType::User);
+	// string convertion for serialization
 	QMetaType::registerConverter<QUaDataType, QString>([](QUaDataType type) {
-        return type.operator QString();
+		return type.operator QString();
 	});
 	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
 		return QUaDataType(strType);
 	});
 	// status code
-	if (QMetaType::type("QUaStatusCode") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaStatusCode>("QUaStatusCode");
-	}
+	Q_ASSERT(qMetaTypeId<QUaStatusCode     >() >= QMetaType::User);
+	// string convertion for serialization
 	QMetaType::registerConverter<QUaStatusCode, QString>([](QUaStatusCode statusCode) {
 		return statusCode.operator QString();
 	});
@@ -1139,16 +1137,18 @@ void QUaServer::setupServer()
 		return QUaStatusCode(strStatusCode);
 	});
 	// qualified name
-	if (QMetaType::type("QUaQualifiedName") == QMetaType::UnknownType)
-	{
-		qRegisterMetaType<QUaQualifiedName>("QUaQualifiedName");
-	}
+	Q_ASSERT(qMetaTypeId<QUaQualifiedName   >() >= QMetaType::User);
+	// string convertion for serialization
 	QMetaType::registerConverter<QUaQualifiedName, QString>([](QUaQualifiedName qualName) {
 		return qualName.operator QString();
 	});
 	QMetaType::registerConverter<QString, QUaQualifiedName>([](QString strQualName) {
 		return QUaQualifiedName(strQualName);
 	});
+}
+
+void QUaServer::setupServer()
+{
 	// Server stuff
 	UA_StatusCode st;
 	m_running = false;
@@ -1181,14 +1181,16 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaSystemEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_SYSTEMEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-	this->registerSpecificationType<QUaConditionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE));
-	this->registerSpecificationType<QUaStateVariable    >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE    ));
-	this->registerSpecificationType<QUaTwoStateVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE ));
-	this->registerSpecificationType<QUaCondition        >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
+	this->registerSpecificationType<QUaConditionVariable  >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE  ));
+	this->registerSpecificationType<QUaStateVariable      >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE      ));
+	this->registerSpecificationType<QUaTwoStateVariable   >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE   ));
+	this->registerSpecificationType<QUaFiniteStateVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEVARIABLETYPE));
+	this->registerSpecificationType<QUaTransitionVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONVARIABLETYPE ));
+	this->registerSpecificationType<QUaCondition          >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
 	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
-	this->registerSpecificationType<QUaAlarmCondition   >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE));
-	this->registerSpecificationType<QUaRefreshStartEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE));
-	this->registerSpecificationType<QUaRefreshEndEvent  >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE));
+	this->registerSpecificationType<QUaAlarmCondition     >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE   ));
+	this->registerSpecificationType<QUaRefreshStartEvent  >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE));
+	this->registerSpecificationType<QUaRefreshEndEvent    >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE  ));
 	// register static condition refresh methods
 	// Part 9 - 5.57 and 5.5.8
 	st = UA_Server_setMethodNode_callback(
@@ -2740,9 +2742,9 @@ QUaFolderObject * QUaServer::objectsFolder() const
 	return m_pobjectsFolder;
 }
 
-QUaNode * QUaServer::nodeById(const QString & strNodeId)
+QUaNode * QUaServer::nodeById(const QUaNodeId& nodeIdIn)
 {
-	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
+	UA_NodeId nodeId = nodeIdIn;
 	QUaNode * node = QUaNode::getNodeContext(nodeId, m_server);
 	UA_NodeId_clear(&nodeId);
 	return node;

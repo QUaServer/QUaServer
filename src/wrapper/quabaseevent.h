@@ -46,11 +46,11 @@ public:
 	QByteArray eventId() const;
 	void       setEventId(const QByteArray& eventId);
 	// Specific type of the event.
-	QString eventType() const;
-	void    setEventType(const QString& eventTypeNodeId);
+	QUaNodeId eventType() const;
+	void      setEventType(const QUaNodeId& eventTypeNodeId);
 	// Node that the Event originated from. If is not specific to a Node, then is set to null. 
-	virtual QString sourceNode() const;
-	virtual void    setSourceNode(const QString& sourceNodeId);
+	virtual QUaNodeId sourceNode() const;
+	virtual void      setSourceNode(const QUaNodeId& sourceNodeId);
 	// Description of the source of the Event.
 	QString sourceName() const;
 	void    setSourceName(const QString &strSourceName);
@@ -69,8 +69,8 @@ public:
 	void      setLocalTime(const QTimeZone &localTimeZone);
 
 	// Human-readable description of the Event.
-	QString message() const;
-	void    setMessage(const QString &strMessage);
+	QUaLocalizedText message() const;
+	void             setMessage(const QUaLocalizedText& message);
 	// Urgency of the Event. Value from 1 to 1000, with 1 being the lowest severity and 1000 being the highest. 
 	// A severity of 1 indicates an Event is informational, while 1000 would indicates catastrophic nature.
 	virtual quint16 severity() const;

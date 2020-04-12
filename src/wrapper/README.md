@@ -8,7 +8,7 @@
 | QUaProperty                    | Part 5 - 7.3      | `BaseVariableType/PropertyType` |
 | QUaBaseDataVariable            | Part 5 - 7.4      | `BaseVariableType/BaseDataVariableType` |
 | QUaStateVariable               | Part 5 - B.4.3    | `BaseVariableType/BaseDataVariableType/StateVariableType` |
-| -QUaFiniteStateVariable        | Part 5 - B.4.6    | `BaseVariableType/BaseDataVariableType/StateVariableType/FiniteStateVariableType` |
+| QUaFiniteStateVariable         | Part 5 - B.4.6    | `BaseVariableType/BaseDataVariableType/StateVariableType/FiniteStateVariableType` |
 | QUaTwoStateVariable            | Part 9 - 5.2      | `BaseVariableType/BaseDataVariableType/StateVariableType/TwoStateVariableType` |
 | QUaConditionVariable           | Part 9 - 5.3      | `BaseVariableType/BaseDataVariableType/ConditionVariableType` |
 | -QUaTransitionVariable         | Part 5 - B.4.4    | `BaseVariableType/BaseDataVariableType/TransitionVariableType` |

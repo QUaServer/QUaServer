@@ -52,7 +52,16 @@ public:
 	virtual QVariant value() const;
 	virtual void     setValue(
 		const QVariant        &value, 
-		const QUaStatus       &statusCode      = QUaStatus::Good,
+		const QUaStatusCode   &statusCode      = QUaStatus::Good,
+		const QDateTime       &sourceTimestamp = QDateTime(),
+		const QDateTime       &serverTimestamp = QDateTime(),
+		const QMetaType::Type &newDataType     = QMetaType::UnknownType
+	);
+	// Helper, syntactic sugar for QVariant non-supported types
+	template<typename T> 
+	void setValue(
+		const T &value, 
+		const QUaStatusCode   &statusCode      = QUaStatus::Good,
 		const QDateTime       &sourceTimestamp = QDateTime(),
 		const QDateTime       &serverTimestamp = QDateTime(),
 		const QMetaType::Type &newDataType     = QMetaType::UnknownType
@@ -82,8 +91,8 @@ public:
 	// It is also acceptable for a Server to simply return a severity and a non - specific(0) SubCode.
 	// If the Server has no known value - in particular when Severity is BAD, it shall return a
 	// NULL value
-	QUaStatus statusCode() const;
-	void      setStatusCode(const QUaStatus& statusCode);
+	QUaStatusCode statusCode() const;
+	void          setStatusCode(const QUaStatusCode& statusCode);
 	// If there is no old value, a default value is assigned with the new dataType
 	// If an old value exists and is convertible to the new dataType then the value is converted
 	// If the old value is not convertible, then a default value is assigned with the new dataType and the old value is lost

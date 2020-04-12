@@ -64,20 +64,14 @@ void QUaAlarmCondition::setActiveStateFalseState(const QString& falseState)
 	this->getActiveState()->setFalseState(falseState);
 }
 
-QString QUaAlarmCondition::inputNode() const
+QUaNodeId QUaAlarmCondition::inputNode() const
 {
-	return const_cast<QUaAlarmCondition*>(this)->getInputNode()->value().toString();
+	return const_cast<QUaAlarmCondition*>(this)->getInputNode()->value().value<QUaNodeId>();
 }
 
-void QUaAlarmCondition::setInputNode(const QString& inputNodeId)
+void QUaAlarmCondition::setInputNode(const QUaNodeId& inputNodeId)
 {
-	this->getInputNode()->setValue(
-		inputNodeId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	this->getInputNode()->setValue(inputNodeId);
 }
 
 bool QUaAlarmCondition::suppressedOrShelve() const

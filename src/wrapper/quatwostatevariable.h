@@ -60,8 +60,8 @@ public:
 
 	// value : current state as human readable name (maps to value attribute)
 
-	QString currentStateName() const;
-	void setCurrentStateName(const QString& currentStateName);
+	QUaLocalizedText currentStateName() const;
+	void setCurrentStateName(const QUaLocalizedText& currentStateName);
 
 	// children
 
@@ -88,13 +88,13 @@ public:
 	// Contain the localized string for the TwoStateVariableType value when
 	// its Id Property has the value True
 	// NOTE : optional; not created until one of these methods is called
-	QString trueState() const;
-	void setTrueState(const QString& trueState);
+	QUaLocalizedText trueState() const;
+	void setTrueState(const QUaLocalizedText& trueState);
 	// Contain the localized string for the TwoStateVariableType value when
 	// its Id Property has the value False
 	// NOTE : optional; not created until one of these methods is called
-	QString falseState() const;
-	void setFalseState(const QString& falseState);
+	QUaLocalizedText falseState() const;
+	void setFalseState(const QUaLocalizedText& falseState);
 
 	// TODO . sub states API
 

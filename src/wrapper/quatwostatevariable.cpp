@@ -11,20 +11,14 @@ QUaTwoStateVariable::QUaTwoStateVariable(
 	
 }
 
-QString QUaTwoStateVariable::currentStateName() const
+QUaLocalizedText QUaTwoStateVariable::currentStateName() const
 {
-	return this->value().toString();
+	return this->value().value<QUaLocalizedText>();
 }
 
-void QUaTwoStateVariable::setCurrentStateName(const QString& currentStateName)
+void QUaTwoStateVariable::setCurrentStateName(const QUaLocalizedText& currentStateName)
 {
-	this->setValue(
-		currentStateName,
-		QUaStatus::Good,
-		QDateTime(),
-		QDateTime(),
-		METATYPE_LOCALIZEDTEXT
-	);
+	this->setValue(currentStateName);
 }
 
 bool QUaTwoStateVariable::id()
@@ -57,22 +51,22 @@ void QUaTwoStateVariable::setEffectiveTransitionTime(const QDateTime& effectiveT
 	this->getEffectiveTransitionTime()->setValue(effectiveTransitionTime.toUTC());
 }
 
-QString QUaTwoStateVariable::trueState() const
+QUaLocalizedText QUaTwoStateVariable::trueState() const
 {
-	return const_cast<QUaTwoStateVariable*>(this)->getTrueState()->value().toString();
+	return const_cast<QUaTwoStateVariable*>(this)->getTrueState()->value().value<QUaLocalizedText>();
 }
 
-void QUaTwoStateVariable::setTrueState(const QString& trueState)
+void QUaTwoStateVariable::setTrueState(const QUaLocalizedText& trueState)
 {
 	this->getTrueState()->setValue(trueState);
 }
 
-QString QUaTwoStateVariable::falseState() const
+QUaLocalizedText QUaTwoStateVariable::falseState() const
 {
-	return const_cast<QUaTwoStateVariable*>(this)->getFalseState()->value().toString();
+	return const_cast<QUaTwoStateVariable*>(this)->getFalseState()->value().value<QUaLocalizedText>();
 }
 
-void QUaTwoStateVariable::setFalseState(const QString& falseState)
+void QUaTwoStateVariable::setFalseState(const QUaLocalizedText& falseState)
 {
 	this->getFalseState()->setValue(falseState);
 }

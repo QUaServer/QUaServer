@@ -96,7 +96,7 @@ struct QUaInMemorySerializer
 		QMap<QString, QVariant> attrs;
 		QList<QUaForwardReference> forwardRefs;
 	};
-	QHash<QString, QUaNodeData> m_hashNodeTreeData;
+	QHash<QUaNodeId, QUaNodeData> m_hashNodeTreeData;
 };
 
 QUaNode::QUaNode(
@@ -353,15 +353,15 @@ void QUaNode::setWriteMask(const quint32 & writeMask)
 	emit this->writeMaskChanged(writeMask);
 }
 
-QString QUaNode::nodeId() const
+QUaNodeId QUaNode::nodeId() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
-		return QString();
+		return QUaNodeId();
 	}
-	return QUaTypesConverter::nodeIdToQString(m_nodeId);
+	return m_nodeId;
 }
 
 QString QUaNode::nodeClass() const
@@ -433,17 +433,17 @@ QUaFolderObject * QUaNode::addFolderObject(
 	return m_qUaServer->createInstance<QUaFolderObject>(this, browseName, strNodeId);
 }
 
-QString QUaNode::typeDefinitionNodeId() const
+QUaNodeId QUaNode::typeDefinitionNodeId() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
-		return QString();
+		return QUaNodeId();
 	}
 	UA_NodeId retTypeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
 	// return in string form
-	QString retNodeId = QUaTypesConverter::nodeIdToQString(retTypeId);
+	QUaNodeId retNodeId = retTypeId;
 	UA_NodeId_clear(&retTypeId);
 	return retNodeId;
 }
@@ -520,7 +520,7 @@ QString QUaNode::typeDefinitionDisplayName() const
 	{
 		return QString();
 	}
-	UA_NodeId typeId = QUaTypesConverter::nodeIdFromQString(this->typeDefinitionNodeId());
+	UA_NodeId typeId = this->typeDefinitionNodeId();
 	Q_ASSERT(!UA_NodeId_isNull(&typeId));
 	if (UA_NodeId_isNull(&typeId))
 	{
@@ -545,13 +545,13 @@ QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
-		return QString();
+		return QUaQualifiedName();
 	}
-	UA_NodeId typeId = QUaTypesConverter::nodeIdFromQString(this->typeDefinitionNodeId());
+	UA_NodeId typeId = this->typeDefinitionNodeId();
 	Q_ASSERT(!UA_NodeId_isNull(&typeId));
 	if (UA_NodeId_isNull(&typeId))
 	{
-		return QString();
+		return QUaQualifiedName();
 	}
 	// read browse name
 	UA_QualifiedName outBrowseName;

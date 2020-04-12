@@ -16,24 +16,6 @@ class QUaNode;
 
 Q_DECLARE_METATYPE(QTimeZone);
 
-#define METATYPE_OFFSET_LOCALIZEDTEXT 1
-#define METATYPE_LOCALIZEDTEXT (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_LOCALIZEDTEXT)
-
-#define METATYPE_OFFSET_TIMEZONEDATATYPE 2
-#define METATYPE_TIMEZONEDATATYPE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_TIMEZONEDATATYPE)
-
-#define METATYPE_OFFSET_NODEID 3
-#define METATYPE_NODEID (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_NODEID)
-
-#define METATYPE_OFFSET_CHANGESTRUCTUREDATATYPE 4
-#define METATYPE_CHANGESTRUCTUREDATATYPE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_CHANGESTRUCTUREDATATYPE)
-
-#define METATYPE_OFFSET_IMAGE 5
-#define METATYPE_IMAGE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_IMAGE)
-
-#define METATYPE_OFFSET_STATUSCODE 6
-#define METATYPE_STATUSCODE (QMetaType::Type)(QMetaType::User + METATYPE_OFFSET_STATUSCODE)
-
 // traits used to static assert that a method cannot be used
 // https://stackoverflow.com/questions/24609872/delete-virtual-function-from-a-derived-class
 template <typename T>
@@ -44,12 +26,7 @@ struct QUaFail : std::false_type
 // to have UA_NodeId as a hash key
 inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
 {
-	return e1.namespaceIndex     == e2.namespaceIndex
-		&& e1.identifierType     == e2.identifierType
-		&& (e1.identifierType == UA_NODEIDTYPE_NUMERIC    ? e1.identifier.numeric == e2.identifier.numeric :
-			e1.identifierType == UA_NODEIDTYPE_STRING     ? UA_String_equal    (&e1.identifier.string    , &e2.identifier.string    ) :
-			e1.identifierType == UA_NODEIDTYPE_GUID       ? UA_Guid_equal      (&e1.identifier.guid      , &e2.identifier.guid      ) :
-			e1.identifierType == UA_NODEIDTYPE_BYTESTRING ? UA_ByteString_equal(&e1.identifier.byteString, &e2.identifier.byteString) : false);
+	return UA_NodeId_equal(&e1, &e2);
 }
 
 inline uint qHash(const UA_NodeId &key, uint seed)
@@ -99,36 +76,6 @@ inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference&
 namespace QUa
 {
 	Q_NAMESPACE
-
-	enum class Type
-	{
-		Bool        = QMetaType::Bool,
-		Char        = QMetaType::Char,
-		SChar       = QMetaType::SChar,
-		UChar       = QMetaType::UChar,
-		Short       = QMetaType::Short,
-		UShort      = QMetaType::UShort,
-		Int         = QMetaType::Int,
-		UInt        = QMetaType::UInt,
-		Long        = QMetaType::Long,
-		LongLong    = QMetaType::LongLong,
-		ULong       = QMetaType::ULong,
-		ULongLong   = QMetaType::ULongLong,
-		Float       = QMetaType::Float,
-		Double      = QMetaType::Double,
-		QString     = QMetaType::QString,
-		QDateTime   = QMetaType::QDateTime,
-		QUuid       = QMetaType::QUuid,
-		QByteArray  = QMetaType::QByteArray,
-		UnknownType = QMetaType::UnknownType,
-		LocalizedText           = METATYPE_LOCALIZEDTEXT,
-		TimeZoneDataType        = METATYPE_TIMEZONEDATATYPE,
-		NodeId                  = METATYPE_NODEID,
-		ChangeStructureDatatype = METATYPE_CHANGESTRUCTUREDATATYPE,
-		Image                   = METATYPE_IMAGE,
-		StatusCode              = METATYPE_STATUSCODE
-	};
-	Q_ENUM_NS(Type)
 
 	// Part 8 - 6.3.2 Operation level result codes
 	enum class Status
@@ -286,6 +233,14 @@ union QUaAccessLevel
 	};
 };
 
+#define QMetaType_NodeId                  static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId>())
+#define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode>())
+#define QMetaType_QualifiedName           static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
+#define QMetaType_LocalizedText           static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
+#define QMetaType_TimeZone                static_cast<QMetaType::Type>(qMetaTypeId<QTimeZone>())
+#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
+#define QMetaType_ChangeStructureDataType static_cast<QMetaType::Type>(qMetaTypeId<QUaChangeStructureDataType>())
+
 class QUaDataType
 {
 
@@ -293,15 +248,32 @@ public:
     QUaDataType();
 	QUaDataType(const QMetaType::Type& metaType);
     QUaDataType(const QString& strType);
-    QUaDataType(const QByteArray& byteType);
 	operator QMetaType::Type() const;
 	operator QString() const;
 	bool operator==(const QMetaType::Type& metaType);
 	void operator=(const QString& strType);
 
+	// static
+
+	static bool               isSupportedQType(const QMetaType::Type& type);
+	static QMetaType::Type    qTypeByNodeId   (const UA_NodeId &nodeId);
+	static QMetaType::Type    qTypeByTypeIndex(const int& typeIndex);
+	static UA_NodeId          nodeIdByQType   (const QMetaType::Type& type);
+	static const UA_DataType* dataTypeByQType (const QMetaType::Type& type);
+	static QString            stringByQType   (const QMetaType::Type& type);
+
 private:
-	QUa::Type m_type;
-	static QMetaEnum m_metaEnum;
+	QMetaType::Type m_type;
+	static QHash<QString  , QMetaType::Type> m_custTypesByName;
+	static QHash<UA_NodeId, QMetaType::Type> m_custTypesByNodeId;
+	static QHash<int      , QMetaType::Type> m_custTypesByTypeIndex;
+	struct TypeData
+	{
+		QString            name;
+		UA_NodeId          nodeId;
+		const UA_DataType* dataType;
+	};
+	static QHash<QMetaType::Type, TypeData> m_custTypesByType;
 };
 
 Q_DECLARE_METATYPE(QUaDataType);
@@ -320,7 +292,6 @@ public:
 	QUaStatusCode(const QUaStatus& uaStatus);
 	QUaStatusCode(const UA_StatusCode& intStatus);
 	QUaStatusCode(const QString& strStatus);
-	QUaStatusCode(const QByteArray& byteStatus);
 	operator QUaStatus() const;
 	operator UA_StatusCode() const;
 	operator QString() const;
@@ -333,9 +304,48 @@ private:
 	QUaStatus m_status;
 	static QMetaEnum m_metaEnum;
 	static QHash<QUaStatus, QString> m_descriptions;
+	QUaStatusCode(const QByteArray& byteStatus);
 };
 
 Q_DECLARE_METATYPE(QUaStatusCode);
+
+class QUaNodeId
+{
+public:
+	QUaNodeId();
+	QUaNodeId(const UA_NodeId& uaNodeId);
+	QUaNodeId(const QString& strXmlNodeId);
+	QUaNodeId(const char* strXmlNodeId);
+
+	operator UA_NodeId() const;
+	operator QString() const;
+
+	bool operator==(const QUaNodeId& other) const;
+
+private:
+	quint16 m_namespace;
+	
+};
+
+Q_DECLARE_METATYPE(QUaNodeId);
+
+class QUaLocalizedText
+{
+public:
+	QUaLocalizedText();
+	QUaLocalizedText(const QString& strXmlLocalizedText);
+	QUaLocalizedText(const char* strXmlLocalizedText);
+
+	operator QString() const;
+
+	void operator=(const QString& strXmlLocalizedText);
+
+private:
+	
+
+};
+
+Q_DECLARE_METATYPE(QUaLocalizedText);
 
 class QUaQualifiedName
 {
@@ -361,7 +371,7 @@ public:
 	void seName(const QString& name);
 
 	QString toXmlString() const;
-	UA_QualifiedName toUaQualifiedName(); // needs cleanup with UA_QualifiedName_clear after use
+	UA_QualifiedName toUaQualifiedName() const; // needs cleanup with UA_QualifiedName_clear after use
 
 	// helpers
 
@@ -405,22 +415,22 @@ struct QUaChangeStructureDataType
 	};
 	QUaChangeStructureDataType();
 	QUaChangeStructureDataType(
-		const QString &strNodeIdAffected, 
-		const QString &strNodeIdAffectedType, 
-		const Verb    &uiVerb
+		const QUaNodeId &strNodeIdAffected,
+		const QUaNodeId &strNodeIdAffectedType,
+		const Verb      &uiVerb
 	);
 
-	QString m_strNodeIdAffected;
-	QString m_strNodeIdAffectedType;
-	uchar   m_uiVerb;
+	QUaNodeId m_strNodeIdAffected;
+	QUaNodeId m_strNodeIdAffectedType;
+	uchar     m_uiVerb;
 };
 typedef QUaChangeStructureDataType::Verb QUaChangeVerb;
 typedef QVector<QUaChangeStructureDataType> QUaChangesList;
 
 inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStructureDataType& rhs) 
 {
-	return lhs.m_strNodeIdAffected    .compare(rhs.m_strNodeIdAffected    , Qt::CaseInsensitive) == 0 &&
-		   lhs.m_strNodeIdAffectedType.compare(rhs.m_strNodeIdAffectedType, Qt::CaseInsensitive) == 0 &&
+	return lhs.m_strNodeIdAffected     == rhs.m_strNodeIdAffected     &&
+		   lhs.m_strNodeIdAffectedType == rhs.m_strNodeIdAffectedType &&
 		   lhs.m_uiVerb == rhs.m_uiVerb;
 }
 

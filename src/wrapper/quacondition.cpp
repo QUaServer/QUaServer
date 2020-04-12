@@ -17,9 +17,9 @@ QUaCondition::QUaCondition(
 	m_sourceNode = nullptr;
 	m_isBranch   = false;
 	// force some non-qt datatypes
-	this->getConditionClassId()->setDataType(METATYPE_NODEID);	// NodeId
-	this->getBranchId()->setDataType(METATYPE_NODEID);	        // NodeId
-	this->getQuality()->setDataType(METATYPE_STATUSCODE);	    // StatusCode
+	this->getConditionClassId()->setDataType(QMetaType_NodeId);	// NodeId
+	this->getBranchId()->setDataType(QMetaType_NodeId);	        // NodeId
+	this->getQuality()->setDataType(QMetaType_StatusCode);	    // StatusCode
 	// set default : BaseConditionClassType node id
 	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassId(
@@ -62,7 +62,7 @@ void QUaCondition::setDisplayName(const QString& displayName)
 	this->setConditionName(displayName);
 }
 
-void QUaCondition::setSourceNode(const QString& sourceNodeId)
+void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 {
 	// call base implementation (updates cache)
 	QUaBaseEvent::setSourceNode(sourceNodeId);
@@ -107,7 +107,7 @@ void QUaCondition::setSourceNode(const QString& sourceNodeId)
 			{
 				return;
 			}
-			this->setSourceNode("");
+			this->setSourceNode(QUaNodeId());
 			this->setSourceName("");
 		});
 		// add to hash
@@ -131,20 +131,14 @@ void QUaCondition::setSourceNode(const QString& sourceNodeId)
 	}
 }
 
-QString QUaCondition::conditionClassId() const
+QUaNodeId QUaCondition::conditionClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionClassId()->value().toString();
+	return const_cast<QUaCondition*>(this)->getConditionClassId()->value().value<QUaNodeId>();
 }
 
-void QUaCondition::setConditionClassId(const QString& conditionClassId)
+void QUaCondition::setConditionClassId(const QUaNodeId& conditionClassId)
 {
-	this->getConditionClassId()->setValue(
-		conditionClassId,
-		QUaStatus::Good,
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	this->getConditionClassId()->setValue(conditionClassId);
 }
 
 QString QUaCondition::conditionClassName() const
@@ -157,20 +151,14 @@ void QUaCondition::setConditionClassName(const QString& conditionClassName)
 	this->getConditionClassName()->setValue(conditionClassName);
 }
 
-QString QUaCondition::conditionSubClassId() const
+QUaNodeId QUaCondition::conditionSubClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value().toString();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value().value<QUaNodeId>();
 }
 
-void QUaCondition::setConditionSubClassId(const QString& conditionSubClassId)
+void QUaCondition::setConditionSubClassId(const QUaNodeId& conditionSubClassId)
 {
-	this->getConditionSubClassId()->setValue(
-		conditionSubClassId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	this->getConditionSubClassId()->setValue(conditionSubClassId);
 }
 
 QString QUaCondition::conditionSubClassName() const
@@ -193,20 +181,14 @@ void QUaCondition::setConditionName(const QString& conditionName)
 	this->getConditionName()->setValue(conditionName);
 }
 
-QString QUaCondition::branchId() const
+QUaNodeId QUaCondition::branchId() const
 {
-	return const_cast<QUaCondition*>(this)->getBranchId()->value().toString();
+	return const_cast<QUaCondition*>(this)->getBranchId()->value().value<QUaNodeId>();
 }
 
-void QUaCondition::setBranchId(const QString& branchId)
+void QUaCondition::setBranchId(const QUaNodeId& branchId)
 {
-	this->getBranchId()->setValue(
-		branchId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	this->getBranchId()->setValue(branchId);
 }
 
 bool QUaCondition::retain() const
@@ -258,12 +240,12 @@ void QUaCondition::setRetain(const bool& retain)
 	}
 }
 
-QString QUaCondition::enabledStateCurrentStateName() const
+QUaLocalizedText QUaCondition::enabledStateCurrentStateName() const
 {
 	return const_cast<QUaCondition*>(this)->getEnabledState()->currentStateName();
 }
 
-void QUaCondition::setEnabledStateCurrentStateName(const QString& enabledState)
+void QUaCondition::setEnabledStateCurrentStateName(const QUaLocalizedText& enabledState)
 {
 	this->getEnabledState()->setCurrentStateName(enabledState);
 }
@@ -289,11 +271,11 @@ void QUaCondition::setEnabled(const bool& enabled)
 	// set enable id
 	this->setEnabledStateId(enabled);
 	// update current state name
-	QString strCurrStateName = enabled ?
+	auto currStateName = enabled ?
 		this->enabledStateTrueState() :
 		this->enabledStateFalseState();
 	this->setEnabledStateCurrentStateName(
-		strCurrStateName
+		currStateName
 	);
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// check if trigger
@@ -304,7 +286,7 @@ void QUaCondition::setEnabled(const bool& enabled)
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	QUaBaseEvent::setSeverity(0); // NOTE : do not call reimpl method to void double event
-	this->setMessage(tr("Condition %1").arg(strCurrStateName));
+	this->setMessage(tr("Condition %1").arg(currStateName));
 	this->setTime(time);
 	this->setReceiveTime(time);
 	this->trigger();
@@ -320,40 +302,35 @@ void QUaCondition::setEnabledStateTransitionTime(const QDateTime& transitionTime
 	this->getEnabledState()->setTransitionTime(transitionTime);
 }
 
-QString QUaCondition::enabledStateTrueState() const
+QUaLocalizedText QUaCondition::enabledStateTrueState() const
 {
 	return const_cast<QUaCondition*>(this)->getEnabledState()->trueState();
 }
 
-void QUaCondition::setEnabledStateTrueState(const QString& trueState)
+void QUaCondition::setEnabledStateTrueState(const QUaLocalizedText& trueState)
 {
 	this->getEnabledState()->setTrueState(trueState);
 }
 
-QString QUaCondition::enabledStateFalseState() const
+QUaLocalizedText QUaCondition::enabledStateFalseState() const
 {
 	return const_cast<QUaCondition*>(this)->getEnabledState()->falseState();
 }
 
-void QUaCondition::setEnabledStateFalseState(const QString& falseState)
+void QUaCondition::setEnabledStateFalseState(const QUaLocalizedText& falseState)
 {
 	this->getEnabledState()->setFalseState(falseState);
 }
 
-QUaStatus QUaCondition::quality() const
+QUaStatusCode QUaCondition::quality() const
 {
-	return QUaStatus(const_cast<QUaCondition*>(this)->getQuality()->value().toUInt());
+	return QUaStatus(const_cast<QUaCondition*>(this)->getQuality()->value().value<QUaStatusCode>());
 }
 
-void QUaCondition::setQuality(const QUaStatus& quality)
+void QUaCondition::setQuality(const QUaStatusCode& quality)
 {
-	this->getQuality()->setValue(
-		static_cast<quint32>(quality),
-		QUaStatus::Good,
-		QDateTime(),
-		QDateTime(),
-		METATYPE_STATUSCODE
-	);
+	// NOTE : call template base version but should call specialized version
+	this->getQuality()->QUaBaseVariable::setValue(quality);
 	// check if trigger
 	if (!this->shouldTrigger())
 	{
@@ -580,13 +557,7 @@ void QUaCondition::resetInternals()
 	this->getEnabledState()->setId(false);  // (do not trigger event for this enabled state change)
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// set default : good (do not trigger event for this quality change)
-	this->getQuality()->setValue(
-		static_cast<quint32>(QUaStatus::Good),
-		QUaStatus::Good,
-		QDateTime(),
-		QDateTime(),
-		METATYPE_STATUSCODE
-	);
+	this->getQuality()->QUaBaseVariable::setValue<QUaStatusCode>(QUaStatus::Good);
 	// set default : 0
 	this->setLastSeverity(0);
 	// set default : empty (do not trigger event for this comment change)

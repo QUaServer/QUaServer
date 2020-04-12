@@ -98,8 +98,8 @@ public:
 	// primary input in the calculation of the Alarm state.If this Variable is not in the AddressSpace,
 	// a NULL NodeId shall be provided.In some systems, an Alarm may be calculated based on
 	// multiple Variables Values; it is up to the system to determine which Variable’s NodeId is used
-	QString inputNode() const;
-	void    setInputNode(const QString& inputNodeId);
+	QUaNodeId inputNode() const;
+	void      setInputNode(const QUaNodeId& QUaNodeId);
 
 	// TODO : SuppressedState
 	// TODO : OutOfServiceState

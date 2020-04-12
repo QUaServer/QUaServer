@@ -21,14 +21,14 @@ void QUaStateVariable::setId(const QVariant& id)
 	this->getId()->setValue(id);
 }
 
-QString QUaStateVariable::name() const
+QUaQualifiedName QUaStateVariable::name() const
 {
-	return const_cast<QUaStateVariable*>(this)->getName()->value().toString();
+	return const_cast<QUaStateVariable*>(this)->getName()->value().value<QUaQualifiedName>();
 }
 
-void QUaStateVariable::setName(const QString& name)
+void QUaStateVariable::setName(const QUaQualifiedName& name)
 {
-	this->getName()->setValue(name);
+	this->getName()->setValue(QVariant::fromValue(name));
 }
 
 quint32 QUaStateVariable::number() const
@@ -41,20 +41,14 @@ void QUaStateVariable::setNumber(const quint32& number)
 	this->getNumber()->setValue(number);
 }
 
-QString QUaStateVariable::effectiveDisplayName() const
+QUaLocalizedText QUaStateVariable::effectiveDisplayName() const
 {
-	return const_cast<QUaStateVariable*>(this)->getEffectiveDisplayName()->value().toString();
+	return const_cast<QUaStateVariable*>(this)->getEffectiveDisplayName()->value().value<QUaLocalizedText>();
 }
 
-void QUaStateVariable::setEffectiveDisplayName(const QString& effectiveDisplayName)
+void QUaStateVariable::setEffectiveDisplayName(const QUaLocalizedText& effectiveDisplayName)
 {
-	this->getEffectiveDisplayName()->setValue(
-		effectiveDisplayName,
-		QUaStatus::Good,
-		QDateTime(),
-		QDateTime(),
-		METATYPE_LOCALIZEDTEXT
-	);
+	this->getEffectiveDisplayName()->setValue(effectiveDisplayName);
 }
 
 QUaProperty* QUaStateVariable::getId()

@@ -19,7 +19,7 @@ QUaConditionVariable::QUaConditionVariable(
 
 void QUaConditionVariable::setValue(
 	const QVariant& value, 
-	const QUaStatus& statusCode,
+	const QUaStatusCode& statusCode,
 	const QDateTime& sourceTimestamp, 
 	const QDateTime& serverTimestamp, 
 	const QMetaType::Type& newType)

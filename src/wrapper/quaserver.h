@@ -165,9 +165,9 @@ public:
 	QUaFolderObject * objectsFolder() const;
 	// get node reference by node id and cast to type (nullptr if node id does not exist)
 	template<typename T>
-	T* nodeById(const QString &strNodeId);
+	T* nodeById(const QUaNodeId &nodeId);
 	// get node reference by node id (nullptr if node id does not exist)
-	QUaNode * nodeById(const QString &strNodeId);
+	QUaNode * nodeById(const QUaNodeId& nodeId);
 	// check if a type with type name (C++ class name) is registered
 	bool isTypeNameRegistered(const QString &strTypeName) const;
 	// test if node id format is valid (does not check if instance exist though)
@@ -220,6 +220,11 @@ public:
     template<typename T>
     void setHistorizer(T& historizer);
 #endif // UA_ENABLE_HISTORIZING
+
+    inline static int idQTimeZone()
+    {
+        return qMetaTypeId<QTimeZone>();
+    };
 
 signals:
 	void isRunningChanged            (const bool       &running           );
@@ -324,7 +329,8 @@ private:
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
 		                                    UA_ByteString    &outUaCert, 
 		                                    QByteArray       &outByteCert);
-	void setupServer();
+    void registerCustomTypes();
+    void setupServer();
 	UA_Logger getLogger();
 	// types
     template<typename T>
@@ -689,9 +695,9 @@ inline T * QUaServer::createEvent()
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 template<typename T>
-inline T * QUaServer::nodeById(const QString &strNodeId)
+inline T * QUaServer::nodeById(const QUaNodeId &nodeId)
 {
-	return qobject_cast<T*>(this->nodeById(strNodeId));
+	return qobject_cast<T*>(this->nodeById(nodeId));
 }
 
 template<typename T>
@@ -1210,6 +1216,23 @@ inline T * QUaBaseDataVariable::addChild(
 )
 {
     return m_qUaServer->createInstance<T>(this, browseName, strNodeId);
+}
+
+template<typename T>
+inline void QUaBaseVariable::setValue(
+    const T& value, 
+    const QUaStatusCode   &statusCode, 
+    const QDateTime       &sourceTimestamp, 
+    const QDateTime       &serverTimestamp, 
+    const QMetaType::Type &newDataType)
+{
+    this->setValue(
+        QVariant::fromValue(value),
+        statusCode,
+        sourceTimestamp,
+        serverTimestamp,
+        newDataType
+    );
 }
 
 template<typename T>

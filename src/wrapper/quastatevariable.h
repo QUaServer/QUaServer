@@ -42,8 +42,8 @@ public:
 
 	// Is a QualifiedName which uniquely identifies the current state within the StateMachineType.
 	// NOTE : optional; not created until one of these methods is called
-	QString name() const;
-	void setName(const QString& name);
+	QUaQualifiedName name() const;
+	void setName(const QUaQualifiedName& name);
 
 	// Is an integer which uniquely identifies the current state within the StateMachineType.
 	// NOTE : optional; not created until one of these methods is called
@@ -55,10 +55,10 @@ public:
 	// There is no rule specified for which state or sub-state should be used. 
 	// It is up to the Server and will depend on the semantics of the StateMachineType.
 	// NOTE : optional; not created until one of these methods is called
-	QString effectiveDisplayName() const;
-	void setEffectiveDisplayName(const QString& effectiveDisplayName);
+	QUaLocalizedText effectiveDisplayName() const;
+	void setEffectiveDisplayName(const QUaLocalizedText& effectiveDisplayName);
 
-private:
+protected:
 	// BaseDataType
 	QUaProperty* getId();
 	// QualifiedName

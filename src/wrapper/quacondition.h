@@ -91,7 +91,7 @@ public:
 
 	// SourceNode Property identifies the ConditionSource. 
 	// If the ConditionSource is not a Node in the AddressSpace, the NodeId is set to NULL. 
-	virtual void setSourceNode(const QString& sourceNodeId) override;
+	virtual void setSourceNode(const QUaNodeId& sourceNodeId) override;
 
 	// children
 
@@ -101,8 +101,8 @@ public:
 	// Clients have to specify all individual subtypes of BaseConditionClassType NodeIds. The OfType
 	// operator cannot be applied. BaseConditionClassType is used as class whenever a Condition
 	// cannot be assigned to a more concrete class.
-	QString conditionClassId() const;
-	void    setConditionClassId(const QString& conditionClassId);
+	QUaNodeId conditionClassId() const;
+	void      setConditionClassId(const QUaNodeId& conditionClassId);
 
 	// ConditionClassName provides the display name of the subtype of BaseConditionClassType
 	QString conditionClassName() const;
@@ -116,8 +116,8 @@ public:
 	// NodeIds.The OfType operator cannot be applied.The Client specifies a NULL in the filter, to
 	// return Conditions where no sub class is applied.When returning Conditions, if this optional field
 	// is not available in a Condition, a NULL shall be returned for the field.
-	QString conditionSubClassId() const;
-	void    setConditionSubClassId(const QString& conditionSubClassId);
+	QUaNodeId conditionSubClassId() const;
+	void      setConditionSubClassId(const QUaNodeId& conditionSubClassId);
 
 	// NOTE : optional; not created until one of these methods is called
 	// ConditionSubClassName provides the display name[s] of the ConditionClassType[s] listed in
@@ -145,8 +145,8 @@ public:
 	// DataType is NodeId although the Server is not required to have ConditionBranches in the
 	// Address Space. The use of a NodeId allows the Server to use simple numeric identifiers, strings
 	// or arrays of bytes.
-	QString branchId() const;
-	void    setBranchId(const QString& branchId);
+	QUaNodeId branchId() const;
+	void      setBranchId(const QUaNodeId& branchId);
 
 	// Retain when True describes a Condition (or ConditionBranch) as being in a state that is
 	// interesting for a Client wishing to synchronize its state with the Server’s state.The logic to
@@ -189,16 +189,16 @@ public:
 	// This may not be the complete list. Sub-Types may define additional Variables that trigger 
 	// Event Notifications. In general, changes to Variables of the types TwoStateVariableType or
 	// ConditionVariableType trigger Event Notifications.
-	QString   enabledStateCurrentStateName() const;
-	void      setEnabledStateCurrentStateName(const QString& enabledState);
-	bool      enabledStateId() const;
-	void      setEnabledStateId(const bool& enabledStateId);
-	QDateTime enabledStateTransitionTime() const;
-	void      setEnabledStateTransitionTime(const QDateTime& transitionTime);
-	QString   enabledStateTrueState() const;
-	void      setEnabledStateTrueState(const QString& trueState);
-	QString   enabledStateFalseState() const;
-	void      setEnabledStateFalseState(const QString& falseState);
+	QUaLocalizedText enabledStateCurrentStateName() const;
+	void             setEnabledStateCurrentStateName(const QUaLocalizedText& enabledState);
+	bool             enabledStateId() const;
+	void             setEnabledStateId(const bool& enabledStateId);
+	QDateTime        enabledStateTransitionTime() const;
+	void             setEnabledStateTransitionTime(const QDateTime& transitionTime);
+	QUaLocalizedText enabledStateTrueState() const;
+	void             setEnabledStateTrueState(const QUaLocalizedText& trueState);
+	QUaLocalizedText enabledStateFalseState() const;
+	void             setEnabledStateFalseState(const QUaLocalizedText& falseState);
 	// helper sets EnabledStateId, EnabledStateCurrentStateName, EnabledStateTransitionTime 
 	// and triggers event according to specification
 	// NOTE : change of the Enabled state must be normally make by the client through
@@ -216,8 +216,8 @@ public:
 	// or resource is based on and from which this Alarm was received. For communication errors to
 	// the underlying system, especially those that result in some unavailable Event fields, the quality
 	// shall be Bad_NoCommunication error.
-	QUaStatus quality() const;
-	void      setQuality(const QUaStatus& quality);
+	QUaStatusCode quality() const;
+	void          setQuality(const QUaStatusCode& quality);
 
 	// LastSeverity provides the previous severity of the ConditionBranch. Initially this Variable
 	// contains a zero value; it will return a value only after a severity change.The new severity is

@@ -35,46 +35,34 @@ void QUaBaseEvent::setEventId(const QByteArray& eventId)
     this->getEventId()->setValue(eventId);
 }
 
-QString QUaBaseEvent::eventType() const
+QUaNodeId QUaBaseEvent::eventType() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getEventType()->value().toString();
+	return const_cast<QUaBaseEvent*>(this)->getEventType()->value().value<QUaNodeId>();
 }
 
-void QUaBaseEvent::setEventType(const QString& eventTypeNodeId)
+void QUaBaseEvent::setEventType(const QUaNodeId& eventTypeNodeId)
 {
-	return this->getEventType()->setValue(
-		eventTypeNodeId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	return this->getEventType()->setValue(eventTypeNodeId);
 }
 
-QString QUaBaseEvent::sourceNode() const
+QUaNodeId QUaBaseEvent::sourceNode() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getSourceNode()->value().toString();
+	return const_cast<QUaBaseEvent*>(this)->getSourceNode()->value().value<QUaNodeId>();
 }
 
-void QUaBaseEvent::setSourceNode(const QString& sourceNodeId)
+void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
 {
-	UA_NodeId srcNodeId = QUaTypesConverter::nodeIdFromQString(sourceNodeId);
+	UA_NodeId srcNodeId = sourceNodeId;
 	// set cache
 	UA_NodeId_clear(&m_sourceNodeId);
 	m_sourceNodeId = srcNodeId;
 	// set internally
-	return this->getSourceNode()->setValue(
-		sourceNodeId,
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_NODEID
-	);
+	return this->getSourceNode()->setValue(sourceNodeId);
 }
 
 void QUaBaseEvent::setSourceNodeByRef(const QUaNode* sourceNode)
 {
-    this->setSourceNode(sourceNode ? sourceNode->nodeId()      : "");
+    this->setSourceNode(sourceNode ? sourceNode->nodeId()      : QUaNodeId());
     this->setSourceName(sourceNode ? sourceNode->displayName() : "");
 }
 
@@ -111,34 +99,22 @@ void QUaBaseEvent::setReceiveTime(const QDateTime& dateTime)
 // NOTE : removed because is optional and open62541 now does not add it
 QTimeZone QUaBaseEvent::localTime() const
 {
-	return qvariant_cast<QTimeZone>(const_cast<QUaBaseEvent*>(this)->getLocalTime()->value());
+	return const_cast<QUaBaseEvent*>(this)->getLocalTime()->value().value<QTimeZone>();
 }
 
 void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
 {
-	this->getLocalTime()->setValue(
-		QVariant::fromValue(localTimeZone), 
-		QUaStatusCode(),
-		QDateTime(), 
-		QDateTime(), 
-		METATYPE_TIMEZONEDATATYPE
-	);
+	this->getLocalTime()->setValue(localTimeZone);
 }
 
-QString QUaBaseEvent::message() const
+QUaLocalizedText QUaBaseEvent::message() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getMessage()->value().toString();
+	return const_cast<QUaBaseEvent*>(this)->getMessage()->value().value<QUaLocalizedText>();
 }
 
-void QUaBaseEvent::setMessage(const QString & strMessage)
+void QUaBaseEvent::setMessage(const QUaLocalizedText& message)
 {
-	this->getMessage()->setValue(
-		strMessage, 
-		QUaStatusCode(),
-		QDateTime(),
-		QDateTime(),
-		METATYPE_LOCALIZEDTEXT
-	);
+	this->getMessage()->setValue(message);
 }
 
 quint16 QUaBaseEvent::severity() const

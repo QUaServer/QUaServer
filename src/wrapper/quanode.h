@@ -145,7 +145,7 @@ public:
 	quint32 writeMask() const;
 	void    setWriteMask(const quint32& writeMask);
 
-	QString nodeId() const;
+	QUaNodeId nodeId() const;
 	QString nodeClass() const;
 
 	QUaQualifiedName browseName() const;
@@ -172,8 +172,8 @@ public:
 	// Browse API
 	// (* actually browses using QObject tree)
 
-	QString typeDefinitionNodeId     () const;
-	QString typeDefinitionDisplayName() const;
+	QUaNodeId typeDefinitionNodeId     () const;
+	QString   typeDefinitionDisplayName() const;
 	QUaQualifiedName typeDefinitionBrowseName () const;
 
 	// if browseName empty, get all children
