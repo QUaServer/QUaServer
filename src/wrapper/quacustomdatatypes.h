@@ -77,6 +77,14 @@ namespace QUa
 {
 	Q_NAMESPACE
 
+	enum class NodeIdType {
+		Numeric    = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC,
+		String     = UA_NodeIdType::UA_NODEIDTYPE_STRING,
+		Guid       = UA_NodeIdType::UA_NODEIDTYPE_GUID,
+		ByteString = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING
+	};
+	Q_ENUM_NS(NodeIdType)
+
 	// Part 8 - 6.3.2 Operation level result codes
 	enum class Status
 	{
@@ -309,22 +317,51 @@ private:
 
 Q_DECLARE_METATYPE(QUaStatusCode);
 
+typedef QUa::NodeIdType QUaNodeIdType;
+
 class QUaNodeId
 {
 public:
 	QUaNodeId();
+	~QUaNodeId();
+	QUaNodeId(const quint16& index, const quint32& numericId);
+	QUaNodeId(const quint16& index, const QString& stringId);
+	QUaNodeId(const quint16& index, const char*    stringId);
+	QUaNodeId(const quint16& index, const QUuid& uuId);
+	QUaNodeId(const quint16& index, const QByteArray& byteArrayId);
+	QUaNodeId(const QUaNodeId& other);
 	QUaNodeId(const UA_NodeId& uaNodeId);
-	QUaNodeId(const QString& strXmlNodeId);
-	QUaNodeId(const char* strXmlNodeId);
-
-	operator UA_NodeId() const;
+	QUaNodeId(const QString&   strXmlNodeId);
+	QUaNodeId(const char*      strXmlNodeId);
+	operator UA_NodeId() const; // needs cleanup with UA_NodeId_clear after use
 	operator QString() const;
-
+	void operator= (const UA_NodeId& uaNodeId);
+	void operator= (const QString& strXmlNodeId);
+	void operator= (const char* strXmlNodeId);
+	void operator= (const QUaNodeId& other);
 	bool operator==(const QUaNodeId& other) const;
 
+	quint16 namespaceIndex() const;
+	void    setNamespaceIndex(const quint16& index);
+
+	QUaNodeIdType type() const;
+
+	quint32    numericId()const;
+	void       setNumericId(const quint32& numericId);
+	QString    stringId()const;
+	void       setStringId(const QString& stringId);
+	QUuid      uuId()const;
+	void       setUuId(const QUuid& uuId);
+	QByteArray byteArrayId() const;
+	void       setByteArrayId(const QByteArray& byteArrayId);
+
+	QString   toXmlString() const;
+	UA_NodeId toUaNodeId() const; // needs cleanup with UA_NodeId_clear after use
+
+	void clear();
+
 private:
-	quint16 m_namespace;
-	
+	UA_NodeId m_nodeId;
 };
 
 Q_DECLARE_METATYPE(QUaNodeId);
@@ -333,12 +370,17 @@ class QUaLocalizedText
 {
 public:
 	QUaLocalizedText();
+	QUaLocalizedText(const UA_LocalizedText& uaLocalizedText);
 	QUaLocalizedText(const QString& strXmlLocalizedText);
 	QUaLocalizedText(const char* strXmlLocalizedText);
 
+	operator UA_LocalizedText() const; // needs cleanup with UA_LocalizedText_clear after use
 	operator QString() const;
 
 	void operator=(const QString& strXmlLocalizedText);
+	bool operator==(const QUaLocalizedText& other) const;
+
+	UA_LocalizedText toUaLocalizedText() const; // needs cleanup with UA_LocalizedText_clear after use
 
 private:
 	
@@ -365,7 +407,7 @@ public:
 	bool operator!=(const QUaQualifiedName &other) const;
 
 	quint16 namespaceIndex() const;
-	void setNamespaceIndex(const quint16& namespaceIndex);
+	void setNamespaceIndex(const quint16& index);
 
 	QString name() const;
 	void seName(const QString& name);
@@ -441,13 +483,13 @@ Q_DECLARE_METATYPE(QUaChangeStructureDataType);
 typedef qint64 QUaEnumKey;
 struct QUaEnumEntry
 {
-	QByteArray strDisplayName;
-	QByteArray strDescription;
+	QUaLocalizedText displayName;
+	QUaLocalizedText description;
 };
 Q_DECLARE_METATYPE(QUaEnumEntry);
 inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs) 
 { 
-	return lhs.strDisplayName == rhs.strDisplayName && lhs.strDescription == rhs.strDescription;
+	return lhs.displayName == rhs.displayName && lhs.description == rhs.description;
 }
 typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
 typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;

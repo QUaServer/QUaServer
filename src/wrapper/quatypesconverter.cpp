@@ -276,13 +276,13 @@ UA_Variant uaVariantFromQVariant(const QVariant & var)
 	default:
 		{
 		if(qtType == QMetaType_NodeId)           // 16 : UA_NodeId : { ... }
-			return uaVariantFromQVariantScalar<UA_NodeId, QString>(var, uaType);
+			return uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(var, uaType);
 		if (qtType == QMetaType_StatusCode)      // 19 : UA_StatusCode : uint32_t
 			return uaVariantFromQVariantScalar<UA_StatusCode, quint32>(var, uaType);
 		if (qtType == QMetaType_QualifiedName)   // 20  : UA_QualifiedName : { UA_UInt16 namespaceIndex; UA_String name; }
 			return uaVariantFromQVariantScalar<UA_QualifiedName, QUaQualifiedName>(var, uaType);
 		if (qtType == QMetaType_LocalizedText)   // 21 : UA_LocalizedText : { UA_String locale; UA_String text; }
-			return uaVariantFromQVariantScalar<UA_LocalizedText, QString>(var, uaType);
+			return uaVariantFromQVariantScalar<UA_LocalizedText, QUaLocalizedText>(var, uaType);
 		// TODO : image
 		//if (qtType == QMetaType_Image)
 		//	return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
@@ -362,9 +362,9 @@ void uaVariantFromQVariantScalar<UA_Guid, QUuid>(const QUuid &value, UA_Guid *pt
 }
 // specialization (NodeId)
 template<>
-void uaVariantFromQVariantScalar<UA_NodeId, QString>(const QString &value, UA_NodeId *ptr)
+void uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(const QUaNodeId& value, UA_NodeId* ptr)
 {
-	*ptr = nodeIdFromQString(value);
+	*ptr = value.toUaNodeId();
 }
 // specialization (QualifiedName)
 template<>
@@ -374,9 +374,9 @@ void uaVariantFromQVariantScalar<UA_QualifiedName, QUaQualifiedName>(const QUaQu
 }
 // specialization (LocalizedText)
 template<>
-void uaVariantFromQVariantScalar<UA_LocalizedText, QString>(const QString &value, UA_LocalizedText *ptr)
+void uaVariantFromQVariantScalar<UA_LocalizedText, QUaLocalizedText>(const QUaLocalizedText& value, UA_LocalizedText* ptr)
 {
-	ptr->text = UA_STRING_ALLOC(value.toUtf8().constData());
+	*ptr = value.toUaLocalizedText();
 }
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 // specialization (QTimeZone)
@@ -391,9 +391,9 @@ void uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(const QTimeZone
 template<>
 void uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStructureDataType>(const QUaChangeStructureDataType &value, UA_ModelChangeStructureDataType *ptr)
 {
-	uaVariantFromQVariantScalar<UA_NodeId, QString>(value.m_strNodeIdAffected    , &ptr->affected    );
-	uaVariantFromQVariantScalar<UA_NodeId, QString>(value.m_strNodeIdAffectedType, &ptr->affectedType);
-	uaVariantFromQVariantScalar<UA_Byte  , uchar  >(value.m_uiVerb               , &ptr->verb        );
+	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_strNodeIdAffected    , &ptr->affected    );
+	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_strNodeIdAffectedType, &ptr->affectedType);
+	uaVariantFromQVariantScalar<UA_Byte  , uchar    >(value.m_uiVerb               , &ptr->verb        );
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -406,13 +406,11 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	}
 	// assume that the type of the first elem of the array is the type of all the array
 	auto iter = var.value<QSequentialIterable>();
+
 	// TODO : handle empty event
-	QVariant innerVar = iter.at(0).type();
-	QMetaType::Type qtType = QMetaType::UnknownType;
-	qtType = (QMetaType::Type)innerVar.type();
 
-	// TODO : broken, line below does not work
-
+	QVariant innerVar = iter.at(0);
+	QMetaType::Type qtType = (QMetaType::Type)innerVar.type();
 	qtType = qtType != QMetaType::User ? qtType : (QMetaType::Type)innerVar.userType();
 	auto uaType = uaTypeFromQType(qtType);
 
@@ -459,13 +457,13 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	default:
 		{
 			if (qtType == QMetaType_NodeId)          // 16 : UA_NodeId : { ... }
-				return uaVariantFromQVariantArray<UA_NodeId, QString>(var, uaType);
+				return uaVariantFromQVariantArray<UA_NodeId, QUaNodeId>(var, uaType);
 			if (qtType == QMetaType_StatusCode)      // 19 : UA_StatusCode : uint32_t
 				return uaVariantFromQVariantArray<UA_StatusCode, quint32>(var, uaType);
 			if (qtType == QMetaType_QualifiedName)   // 20  : UA_QualifiedName : { UA_UInt16 namespaceIndex; UA_String name; }
 				return uaVariantFromQVariantArray<UA_QualifiedName, QUaQualifiedName>(var, uaType);
 			if (qtType == QMetaType_LocalizedText)   // 21 : UA_LocalizedText : { UA_String locale; UA_String text; }
-				return uaVariantFromQVariantArray<UA_LocalizedText, QString>(var, uaType);
+				return uaVariantFromQVariantArray<UA_LocalizedText, QUaLocalizedText>(var, uaType);
 			// TODO : image
 			//if (qtType == QMetaType_Image)
 			//	return uaVariantFromQVariantArray<UA_ByteString, QByteArray>(var, uaType);
@@ -618,13 +616,13 @@ QVariant uaVariantToQVariant(const UA_Variant & uaVariant)
 	default:
 	{
 		if(index == UA_TYPES_NODEID)
-			return uaVariantToQVariantScalar<QString, UA_NodeId>(uaVariant, QMetaType_NodeId);
+			return uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(uaVariant, QMetaType_NodeId);
 		if(index == UA_TYPES_STATUSCODE)
 			return uaVariantToQVariantScalar<quint32, UA_StatusCode>(uaVariant, QMetaType_StatusCode);
 		if(index == UA_TYPES_QUALIFIEDNAME)
 			return uaVariantToQVariantScalar<QUaQualifiedName, UA_QualifiedName>(uaVariant, QMetaType_QualifiedName);
 		if(index == UA_TYPES_LOCALIZEDTEXT)
-			return uaVariantToQVariantScalar<QString, UA_LocalizedText   >(uaVariant, QMetaType_LocalizedText);
+			return uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText   >(uaVariant, QMetaType_LocalizedText);
 		// TODO : image
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if(index == UA_TYPES_TIMEZONEDATATYPE)
@@ -875,9 +873,9 @@ QUuid uaVariantToQVariantScalar<QUuid, UA_Guid>(const UA_Guid *data)
 }
 // specialization (NodeId)
 template<>
-QString uaVariantToQVariantScalar<QString, UA_NodeId>(const UA_NodeId *data)
+QUaNodeId uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(const UA_NodeId* data)
 {
-	return nodeIdToQString(*data);
+	return QUaNodeId(*data);
 }
 // specialization (QualifiedName)
 template<>
@@ -887,9 +885,9 @@ QUaQualifiedName uaVariantToQVariantScalar<QUaQualifiedName, UA_QualifiedName>(c
 }
 // specialization (LocalizedText)
 template<>
-QString uaVariantToQVariantScalar<QString, UA_LocalizedText>(const UA_LocalizedText *data)
+QUaLocalizedText uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText>(const UA_LocalizedText* data)
 {
-	return uaStringToQString(data->text);
+	return QUaLocalizedText(*data);
 }
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 // specialization (QTimeZone)
@@ -906,9 +904,9 @@ template<>
 QUaChangeStructureDataType uaVariantToQVariantScalar<QUaChangeStructureDataType, UA_ModelChangeStructureDataType>(const UA_ModelChangeStructureDataType * data)
 {
 	QUaChangeStructureDataType ret;
-	ret.m_strNodeIdAffected     = uaVariantToQVariantScalar<QString, UA_NodeId>(&data->affected    );
-	ret.m_strNodeIdAffectedType = uaVariantToQVariantScalar<QString, UA_NodeId>(&data->affectedType);
-	ret.m_uiVerb                = uaVariantToQVariantScalar<uchar  , UA_Byte  >(&data->verb        );
+	ret.m_strNodeIdAffected     = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affected    );
+	ret.m_strNodeIdAffectedType = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affectedType);
+	ret.m_uiVerb                = uaVariantToQVariantScalar<uchar    , UA_Byte  >(&data->verb        );
 	return ret;
 }
 

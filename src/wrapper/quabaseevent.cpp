@@ -52,10 +52,9 @@ QUaNodeId QUaBaseEvent::sourceNode() const
 
 void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
 {
-	UA_NodeId srcNodeId = sourceNodeId;
 	// set cache
 	UA_NodeId_clear(&m_sourceNodeId);
-	m_sourceNodeId = srcNodeId;
+	m_sourceNodeId = sourceNodeId;
 	// set internally
 	return this->getSourceNode()->setValue(sourceNodeId);
 }

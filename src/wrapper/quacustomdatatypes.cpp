@@ -404,9 +404,9 @@ quint16 QUaQualifiedName::namespaceIndex() const
 	return m_namespace;
 }
 
-void QUaQualifiedName::setNamespaceIndex(const quint16& namespaceIndex)
+void QUaQualifiedName::setNamespaceIndex(const quint16& index)
 {
-	m_namespace = namespaceIndex;
+	m_namespace = index;
 }
 
 QString QUaQualifiedName::name() const
@@ -509,6 +509,11 @@ QUaLocalizedText::QUaLocalizedText()
 	// TODO :
 }
 
+QUaLocalizedText::QUaLocalizedText(const UA_LocalizedText& uaLocalizedText)
+{
+	// TODO :
+}
+
 QUaLocalizedText::QUaLocalizedText(const QString& strXmlLocalizedText)
 {
 	// TODO :
@@ -517,6 +522,12 @@ QUaLocalizedText::QUaLocalizedText(const QString& strXmlLocalizedText)
 QUaLocalizedText::QUaLocalizedText(const char* strXmlLocalizedText)
 {
 	// TODO :
+}
+
+QUaLocalizedText::operator UA_LocalizedText() const
+{
+	// TODO :
+	return UA_LocalizedText();
 }
 
 QUaLocalizedText::operator QString() const
@@ -530,40 +541,218 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 	// TODO :
 }
 
-QUaNodeId::QUaNodeId()
+bool QUaLocalizedText::operator==(const QUaLocalizedText& other) const
 {
 	// TODO :
+	return false;
+}
+
+UA_LocalizedText QUaLocalizedText::toUaLocalizedText() const
+{
+	// TODO :
+	return UA_LocalizedText();
+}
+
+QUaNodeId::QUaNodeId()
+{
+	m_nodeId = UA_NODEID_NULL;
+}
+
+QUaNodeId::~QUaNodeId()
+{
+	this->clear();
+}
+
+QUaNodeId::QUaNodeId(const quint16& index, const quint32& numericId)
+{
+	m_nodeId = UA_NODEID_NULL;
+	this->setNamespaceIndex(index);
+	this->setNumericId(numericId);
+}
+
+QUaNodeId::QUaNodeId(const quint16& index, const QString& stringId)
+{
+	m_nodeId = UA_NODEID_NULL;
+	this->setNamespaceIndex(index);
+	this->setStringId(stringId);
+}
+
+QUaNodeId::QUaNodeId(const quint16& index, const char* stringId)
+{
+	*this = QUaNodeId(index, QString(stringId));
+}
+
+QUaNodeId::QUaNodeId(const quint16& index, const QUuid& uuId)
+{
+	m_nodeId = UA_NODEID_NULL;
+	this->setNamespaceIndex(index);
+	this->setUuId(uuId);
+}
+
+QUaNodeId::QUaNodeId(const quint16& index, const QByteArray& byteArrayId)
+{
+	m_nodeId = UA_NODEID_NULL;
+	this->setNamespaceIndex(index);
+	this->setByteArrayId(byteArrayId);
+}
+
+QUaNodeId::QUaNodeId(const QUaNodeId& other)
+{
+	*this = other;
 }
 
 QUaNodeId::QUaNodeId(const UA_NodeId& uaNodeId)
 {
-	// TODO :
+	*this = uaNodeId;
 }
 
 QUaNodeId::QUaNodeId(const QString& strXmlNodeId)
 {
-	// TODO :
+	*this = strXmlNodeId;
 }
 
 QUaNodeId::QUaNodeId(const char* strXmlNodeId)
 {
-	// TODO :
+	*this = strXmlNodeId;
+}
+
+void QUaNodeId::operator=(const UA_NodeId& uaNodeId)
+{
+	this->clear();
+	UA_NodeId_copy(&uaNodeId, &this->m_nodeId);
+}
+
+void QUaNodeId::operator=(const QString& strXmlNodeId)
+{
+	this->clear();
+	m_nodeId = QUaTypesConverter::nodeIdFromQString(strXmlNodeId);
+}
+
+void QUaNodeId::operator=(const char* strXmlNodeId)
+{
+	*this = QString(strXmlNodeId);
+}
+
+void QUaNodeId::operator=(const QUaNodeId& other)
+{
+	this->clear();
+	UA_NodeId_copy(&other.m_nodeId, &this->m_nodeId);
 }
 
 QUaNodeId::operator UA_NodeId() const
 {
-	// TODO :
-	return UA_NODEID_NULL;
+	UA_NodeId retNodeId;
+	UA_NodeId_copy(&m_nodeId, &retNodeId);
+	return retNodeId;
 }
 
 QUaNodeId::operator QString() const
 {
-	// TODO :
-	return QString();
+	return QUaTypesConverter::nodeIdToQString(m_nodeId);
 }
 
 bool QUaNodeId::operator==(const QUaNodeId& other) const
 {
-	// TODO :
-	return false;
+	return UA_NodeId_equal(&this->m_nodeId, &other.m_nodeId);
+}
+
+quint16 QUaNodeId::namespaceIndex() const
+{
+	return m_nodeId.namespaceIndex;
+}
+
+void QUaNodeId::setNamespaceIndex(const quint16& index)
+{
+	m_nodeId.namespaceIndex = index;
+}
+
+QUaNodeIdType QUaNodeId::type() const
+{
+	return static_cast<QUaNodeIdType>(m_nodeId.identifierType);
+}
+
+quint32 QUaNodeId::numericId() const
+{
+	return m_nodeId.identifier.numeric;
+}
+
+void QUaNodeId::setNumericId(const quint32& numericId)
+{
+	if (m_nodeId.identifierType != UA_NodeIdType::UA_NODEIDTYPE_NUMERIC)
+	{
+		auto index = m_nodeId.namespaceIndex;
+		this->clear();
+		m_nodeId.namespaceIndex = index;
+		m_nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
+	}
+	m_nodeId.identifier.numeric = numericId;
+}
+
+QString QUaNodeId::stringId() const
+{
+	return QUaTypesConverter::uaStringToQString(m_nodeId.identifier.string);
+}
+
+void QUaNodeId::setStringId(const QString& stringId)
+{
+	if (m_nodeId.identifierType != UA_NodeIdType::UA_NODEIDTYPE_STRING)
+	{
+		auto index = m_nodeId.namespaceIndex;
+		this->clear();
+		m_nodeId.namespaceIndex = index;
+		m_nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
+	}
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_String, QString>(stringId, &m_nodeId.identifier.string);
+}
+
+QUuid QUaNodeId::uuId() const
+{
+	return QUaTypesConverter::uaVariantToQVariantScalar<QUuid, UA_Guid>(&m_nodeId.identifier.guid);
+}
+
+void QUaNodeId::setUuId(const QUuid& uuId)
+{
+	if (m_nodeId.identifierType != UA_NodeIdType::UA_NODEIDTYPE_GUID)
+	{
+		auto index = m_nodeId.namespaceIndex;
+		this->clear();
+		m_nodeId.namespaceIndex = index;
+		m_nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
+	}
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_Guid, QUuid>(uuId, &m_nodeId.identifier.guid);
+}
+
+QByteArray QUaNodeId::byteArrayId() const
+{
+	return QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&m_nodeId.identifier.byteString);
+}
+
+void QUaNodeId::setByteArrayId(const QByteArray& byteArrayId)
+{
+	if (m_nodeId.identifierType != UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING)
+	{
+		auto index = m_nodeId.namespaceIndex;
+		this->clear();
+		m_nodeId.namespaceIndex = index;
+		m_nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING;
+	}
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(byteArrayId, &m_nodeId.identifier.byteString);
+}
+
+QString QUaNodeId::toXmlString() const
+{
+	// use ::operator QString()
+	return *this;
+}
+
+UA_NodeId QUaNodeId::toUaNodeId() const
+{
+	// use ::operator UA_NodeId()
+	return *this;
+}
+
+void QUaNodeId::clear()
+{
+	UA_NodeId_clear(&m_nodeId);
+	m_nodeId = UA_NODEID_NULL;
 }

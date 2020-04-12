@@ -35,12 +35,15 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	auto var = objsFolder->addBaseDataVariable("test", "ns=0;s=test");
-
+	auto var1 = objsFolder->addBaseDataVariable("var1", "ns=0;s=var1");
 	QUaQualifiedName someName(1, "whatever");
-	qDebug() << qMetaTypeId<QUaQualifiedName>();
+	var1->setValue(someName);
+	Q_ASSERT(var1->value().value<QUaQualifiedName>() == someName);
 
-	var->setValue(someName);
+	auto var2 = objsFolder->addBaseDataVariable("var2", "ns=0;s=var2");
+	QUaNodeId someNodeId(1, "whatever");
+	var2->setValue(someNodeId);
+	Q_ASSERT(var2->value().value<QUaNodeId>() == someNodeId);
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 ////

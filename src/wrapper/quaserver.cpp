@@ -683,7 +683,7 @@ void QUaServer::newSession(QUaServer* server,
 	UA_ApplicationDescription clientDescription = session->clientDescription;
 	QString strApplicationUri  = QUaTypesConverter::uaStringToQString(clientDescription.applicationUri);
 	QString strProductUri      = QUaTypesConverter::uaStringToQString(clientDescription.productUri);
-	QString strApplicationName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&clientDescription.applicationName);
+	QString strApplicationName = QUaTypesConverter::uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText>(&clientDescription.applicationName);
 	// get connection data
 	QString strAddress;
 	quint16 intPort;
@@ -928,9 +928,6 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 void QUaServer::addChange(const QUaChangeStructureDataType& change)
 {
-	// TODO : broken uaVariantFromQVariantArray
-	return;
-
 	// NOTE : do not check if server is running because we might wanna
 	//        historize offline events
 	if (m_listChanges.contains(change))
@@ -2485,8 +2482,8 @@ void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumM
 		i.next();
 		vectEnumValues.append({
 			(UA_Int64)i.key(),
-			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().strDisplayName.data()),
-			UA_LOCALIZEDTEXT((char*)"", (char*)i.value().strDescription.data())
+			i.value().displayName,
+			i.value().description
 			});
 	}
 	st = QUaServer::addEnumValues(m_server, &reqNodeId, vectEnumValues.count(), vectEnumValues.data());
@@ -2518,9 +2515,7 @@ QUaEnumMap QUaServer::enumMap(const QString& strEnumName) const
 	for (size_t i = 0; i < enumValues.arrayLength; i++)
 	{
 		UA_EnumValueType* enumVal = &enumArr[i];
-		QString strDisplayName = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->displayName);
-		QString strDescription = QUaTypesConverter::uaVariantToQVariantScalar<QString, UA_LocalizedText>(&enumVal->description);
-		retMap.insert(enumVal->value, { strDisplayName.toUtf8(), strDescription.toUtf8() });
+		retMap.insert(enumVal->value, { enumVal->displayName, enumVal->description });
 	}
 	// clean up
 	UA_Variant_clear(&enumValues);
@@ -2634,13 +2629,9 @@ void QUaServer::updateEnum(const UA_NodeId& enumNodeId, const QUaEnumMap& mapEnu
 	for (int i = 0; i < mapEnum.count(); i++)
 	{
 		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
-		valueEnum[i].value = (UA_Int64)listKeys.at(i);
-		QUaTypesConverter::uaVariantFromQVariantScalar
-			<UA_LocalizedText, QString>
-			(mapEnum[listKeys.at(i)].strDisplayName, &valueEnum[i].displayName);
-		QUaTypesConverter::uaVariantFromQVariantScalar
-			<UA_LocalizedText, QString>
-			(mapEnum[listKeys.at(i)].strDescription, &valueEnum[i].description);
+		valueEnum[i].value       = (UA_Int64)listKeys.at(i);
+		valueEnum[i].displayName = mapEnum[listKeys.at(i)].displayName;
+		valueEnum[i].description = mapEnum[listKeys.at(i)].description;
 	}
 	// create variant with array of enum values
 	UA_Variant_init(&enumValues);

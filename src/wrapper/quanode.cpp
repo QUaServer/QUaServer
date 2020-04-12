@@ -270,11 +270,11 @@ QString QUaNode::displayName() const
 	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, m_nodeId, &outDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	QString strDisplayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	QString displayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
 	// cleanup
 	UA_LocalizedText_clear(&outDisplayName);
 	// return
-	return strDisplayName;
+	return displayName;
 }
 
 void QUaNode::setDisplayName(const QString & displayName)
@@ -531,12 +531,12 @@ QString QUaNode::typeDefinitionDisplayName() const
 	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, typeId, &outDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	QString strDisplayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	QString displayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
 	// cleanup
 	UA_NodeId_clear(&typeId);
 	UA_LocalizedText_clear(&outDisplayName);
 	// return
-	return strDisplayName;
+	return displayName;
 }
 
 QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
