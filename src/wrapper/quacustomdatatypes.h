@@ -358,6 +358,8 @@ public:
 	QString   toXmlString() const;
 	UA_NodeId toUaNodeId() const; // needs cleanup with UA_NodeId_clear after use
 
+	bool isNull() const;
+
 	void clear();
 
 private:
@@ -370,6 +372,8 @@ class QUaLocalizedText
 {
 public:
 	QUaLocalizedText();
+	QUaLocalizedText(const QString& locale, const QString& text);
+	QUaLocalizedText(const char* locale, const char* text);
 	QUaLocalizedText(const UA_LocalizedText& uaLocalizedText);
 	QUaLocalizedText(const QString& strXmlLocalizedText);
 	QUaLocalizedText(const char* strXmlLocalizedText);
@@ -377,14 +381,23 @@ public:
 	operator UA_LocalizedText() const; // needs cleanup with UA_LocalizedText_clear after use
 	operator QString() const;
 
-	void operator=(const QString& strXmlLocalizedText);
+	void operator= (const UA_LocalizedText& uaLocalizedText);
+	void operator= (const QString& strXmlLocalizedText);
+	void operator= (const char* strXmlLocalizedText);
+	void operator= (const QUaLocalizedText& other);
 	bool operator==(const QUaLocalizedText& other) const;
 
+	QString locale() const;
+	void    setLocale(const QString& locale);
+	QString text() const;
+	void    setText(const QString& text);
+
+	QString          toXmlString() const;
 	UA_LocalizedText toUaLocalizedText() const; // needs cleanup with UA_LocalizedText_clear after use
 
 private:
-	
-
+	QString m_locale;
+	QString m_text;
 };
 
 Q_DECLARE_METATYPE(QUaLocalizedText);
@@ -414,6 +427,8 @@ public:
 
 	QString toXmlString() const;
 	UA_QualifiedName toUaQualifiedName() const; // needs cleanup with UA_QualifiedName_clear after use
+
+	bool isEmpty() const;
 
 	// helpers
 
@@ -457,13 +472,13 @@ struct QUaChangeStructureDataType
 	};
 	QUaChangeStructureDataType();
 	QUaChangeStructureDataType(
-		const QUaNodeId &strNodeIdAffected,
-		const QUaNodeId &strNodeIdAffectedType,
+		const QUaNodeId &nodeIdAffected,
+		const QUaNodeId &nodeIdAffectedType,
 		const Verb      &uiVerb
 	);
 
-	QUaNodeId m_strNodeIdAffected;
-	QUaNodeId m_strNodeIdAffectedType;
+	QUaNodeId m_nodeIdAffected;
+	QUaNodeId m_nodeIdAffectedType;
 	uchar     m_uiVerb;
 };
 typedef QUaChangeStructureDataType::Verb QUaChangeVerb;
@@ -471,8 +486,8 @@ typedef QVector<QUaChangeStructureDataType> QUaChangesList;
 
 inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStructureDataType& rhs) 
 {
-	return lhs.m_strNodeIdAffected     == rhs.m_strNodeIdAffected     &&
-		   lhs.m_strNodeIdAffectedType == rhs.m_strNodeIdAffectedType &&
+	return lhs.m_nodeIdAffected     == rhs.m_nodeIdAffected     &&
+		   lhs.m_nodeIdAffectedType == rhs.m_nodeIdAffectedType &&
 		   lhs.m_uiVerb == rhs.m_uiVerb;
 }
 

@@ -142,7 +142,32 @@ namespace QUaTypesConverter {
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING);
 		}
+		else if (std::is_same<T, QUaNodeId>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID);
+		}
+		else if (std::is_same<T, QUaStatusCode>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE);
+		}
+		else if (std::is_same<T, QUaQualifiedName>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME);
+		}
+		else if (std::is_same<T, QUaLocalizedText>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);
+		}
+		// TODO : image
+		//else if (std::is_same<T, QImage>::value)
+		//{
+		//	return UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE);
+		//}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		else if (std::is_same<T, QTimeZone>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE);
+		}
 		else if (std::is_same<T, QUaChangeStructureDataType>::value)
 		{
 			return UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE);
@@ -227,16 +252,40 @@ namespace QUaTypesConverter {
 		{
 			return QMetaType::QVariantList;
 		}
+		else if (std::is_same<T, QUaNodeId>::value)
+		{
+			return QMetaType_NodeId;
+		}
+		else if (std::is_same<T, QUaStatusCode>::value)
+		{
+			return QMetaType_StatusCode;
+		}
+		else if (std::is_same<T, QUaQualifiedName>::value)
+		{
+			return QMetaType_QualifiedName;
+		}
+		else if (std::is_same<T, QUaLocalizedText>::value)
+		{
+			return QMetaType_LocalizedText;
+		}
+		// TODO : image
+		//else if (std::is_same<T, QImage>::value)
+		//{
+		//	return QMetaType_Image;
+		//}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		else if (std::is_same<T, QTimeZone>::value)
+		{
+			return QMetaType_TimeZone;
+		}
 		else if (std::is_same<T, QUaChangeStructureDataType>::value)
 		{
-			return (QMetaType)METATYPE_CHANGESTRUCTUREDATATYPE;
+			return QMetaType_ChangeStructureDataType;
 		}
 #endif
 		Q_ASSERT_X(false, "qtTypeFromCpp", "Unsupported type");
 		return QMetaType::UnknownType;
 	}
-
 }
 
 QT_END_NAMESPACE

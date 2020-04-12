@@ -391,9 +391,9 @@ void uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(const QTimeZone
 template<>
 void uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStructureDataType>(const QUaChangeStructureDataType &value, UA_ModelChangeStructureDataType *ptr)
 {
-	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_strNodeIdAffected    , &ptr->affected    );
-	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_strNodeIdAffectedType, &ptr->affectedType);
-	uaVariantFromQVariantScalar<UA_Byte  , uchar    >(value.m_uiVerb               , &ptr->verb        );
+	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_nodeIdAffected    , &ptr->affected    );
+	uaVariantFromQVariantScalar<UA_NodeId, QUaNodeId>(value.m_nodeIdAffectedType, &ptr->affectedType);
+	uaVariantFromQVariantScalar<UA_Byte  , uchar    >(value.m_uiVerb            , &ptr->verb        );
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -904,9 +904,9 @@ template<>
 QUaChangeStructureDataType uaVariantToQVariantScalar<QUaChangeStructureDataType, UA_ModelChangeStructureDataType>(const UA_ModelChangeStructureDataType * data)
 {
 	QUaChangeStructureDataType ret;
-	ret.m_strNodeIdAffected     = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affected    );
-	ret.m_strNodeIdAffectedType = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affectedType);
-	ret.m_uiVerb                = uaVariantToQVariantScalar<uchar    , UA_Byte  >(&data->verb        );
+	ret.m_nodeIdAffected     = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affected    );
+	ret.m_nodeIdAffectedType = uaVariantToQVariantScalar<QUaNodeId, UA_NodeId>(&data->affectedType);
+	ret.m_uiVerb             = uaVariantToQVariantScalar<uchar    , UA_Byte  >(&data->verb        );
 	return ret;
 }
 

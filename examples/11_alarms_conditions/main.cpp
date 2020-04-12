@@ -35,15 +35,25 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	auto var1 = objsFolder->addBaseDataVariable("var1", "ns=0;s=var1");
+	// NOTE : inavlid namespace when ns > 1 ?
+
+	auto var1 = objsFolder->addBaseDataVariable("var1", "ns=1;s=var1");
+	var1->setWriteAccess(true);
 	QUaQualifiedName someName(1, "whatever");
 	var1->setValue(someName);
 	Q_ASSERT(var1->value().value<QUaQualifiedName>() == someName);
 
 	auto var2 = objsFolder->addBaseDataVariable("var2", "ns=0;s=var2");
+	var2->setWriteAccess(true);
 	QUaNodeId someNodeId(1, "whatever");
 	var2->setValue(someNodeId);
 	Q_ASSERT(var2->value().value<QUaNodeId>() == someNodeId);
+
+	auto var3 = objsFolder->addBaseDataVariable("var3", {1, "var3"});
+	var3->setWriteAccess(true);
+	QUaLocalizedText someLocalizedText("fr", "whatever");
+	var3->setValue(someLocalizedText);
+	Q_ASSERT(var3->value().value<QUaLocalizedText>() == someLocalizedText);
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 ////

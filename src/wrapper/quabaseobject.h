@@ -43,12 +43,16 @@ public:
 
     // NOTE : implemented in qopcuaserver.h to avoid compiler errors
 	template<typename T>
-	T* addChild(const QUaQualifiedName& browseName, const QString &strNodeId = "");
+	T* addChild(const QUaQualifiedName& browseName, const QUaNodeId &nodeId = QUaNodeId());
 
 	// Method Creation API
 
 	template<typename M>
-	void addMethod(const QUaQualifiedName &methodName, const M &methodCallback, const QString & strNodeId = "");
+	void addMethod(
+		const QUaQualifiedName &methodName, 
+		const M &methodCallback, 
+		const QUaNodeId& nodeId = QUaNodeId()
+	);
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -69,7 +73,7 @@ private:
 
 	UA_NodeId addMethodNodeInternal(
 		const QUaQualifiedName &methodName,
-		const QString          &strNodeId,
+		const QUaNodeId        &nodeId,
 		const size_t           &nArgs,
 		UA_Argument            *inputArguments,
 		UA_Argument            *outputArgument

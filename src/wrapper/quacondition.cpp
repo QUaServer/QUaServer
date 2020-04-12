@@ -102,8 +102,8 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 			m_sourceNode = nullptr;
 			// if this node has been removed from library we cannot write to it
 			// but C++ instance still exists for a little longer
-			QString strNodeId = this->nodeId();
-			if (!m_qUaServer->isNodeIdUsed(strNodeId))
+			QUaNodeId nodeId = this->nodeId();
+			if (!m_qUaServer->isNodeIdUsed(nodeId))
 			{
 				return;
 			}
@@ -473,7 +473,7 @@ void QUaCondition::AddComment(QByteArray EventId, QString Comment)
 	emit this->addedComment(Comment);
 }
 
-QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
+QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 {
 	// Are branches of branches supported?
 	Q_ASSERT(!this->isBranch());
@@ -490,7 +490,7 @@ QUaCondition* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
 	//        serialization API which recurses all children and if this
 	//        has new branch as children, when deserializing it will deserialize
 	//        the branch with a branch which will have a branch and so on...
-	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, browseName, strNodeId));
+	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, browseName, nodeId));
 	branch->setParent(this); // set qt parent for memory management
 	branch->setIsBranch(true);
 	branch->setBranchId(branch->nodeId());

@@ -69,9 +69,9 @@ struct QUaInMemorySerializer
 		qDebug() << header;
 		auto listNodeIds = m_hashNodeTreeData.keys();
 		std::sort(listNodeIds.begin(), listNodeIds.end(),
-		[this, server](const QString& strNodeId1, const QString& strNodeId2) -> bool {
-			QString browse1 = QUaQualifiedName::reduce(server->nodeById(strNodeId1)->nodeBrowsePath());
-			QString browse2 = QUaQualifiedName::reduce(server->nodeById(strNodeId2)->nodeBrowsePath());
+		[this, server](const QUaNodeId& nodeId1, const QUaNodeId& nodeId2) -> bool {
+			QString browse1 = QUaQualifiedName::reduce(server->nodeById(nodeId1)->nodeBrowsePath());
+			QString browse2 = QUaQualifiedName::reduce(server->nodeById(nodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
 		});
 		for (auto nodeId : listNodeIds)
@@ -403,34 +403,34 @@ QUaQualifiedName QUaNode::browseName() const
 
 QUaProperty * QUaNode::addProperty(
 	const QUaQualifiedName& browseName,
-	const QString &strNodeId/* = ""*/
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
-	return m_qUaServer->createInstance<QUaProperty>(this, browseName, strNodeId);
+	return m_qUaServer->createInstance<QUaProperty>(this, browseName, nodeId);
 }
 
-QUaBaseDataVariable * QUaNode::addBaseDataVariable(
+QUaBaseDataVariable* QUaNode::addBaseDataVariable(
 	const QUaQualifiedName& browseName,
-	const QString &strNodeId/* = ""*/
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
-	return m_qUaServer->createInstance<QUaBaseDataVariable>(this, browseName, strNodeId);
+	return m_qUaServer->createInstance<QUaBaseDataVariable>(this, browseName, nodeId);
 }
 
-QUaBaseObject * QUaNode::addBaseObject(
+QUaBaseObject* QUaNode::addBaseObject(
 	const QUaQualifiedName& browseName,
-	const QString &strNodeId/* = ""*/
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
-	return m_qUaServer->createInstance<QUaBaseObject>(this, browseName, strNodeId);
+	return m_qUaServer->createInstance<QUaBaseObject>(this, browseName, nodeId);
 }
 
-QUaFolderObject * QUaNode::addFolderObject(
+QUaFolderObject* QUaNode::addFolderObject(
 	const QUaQualifiedName& browseName,
-	const QString &strNodeId/* = ""*/
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
-	return m_qUaServer->createInstance<QUaFolderObject>(this, browseName, strNodeId);
+	return m_qUaServer->createInstance<QUaFolderObject>(this, browseName, nodeId);
 }
 
 QUaNodeId QUaNode::typeDefinitionNodeId() const
@@ -1129,16 +1129,16 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 
 QUaNode* QUaNode::cloneNode(
 	QUaNode* parentNode/* = nullptr*/,
-	const QString&  browseName/* = ""*/,
-	const QString& strNodeId/* = ""*/
+	const QUaQualifiedName&  browseName/* = ""*/,
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
 	// create new clean instance of the same type
 	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal(
 		*this->metaObject(),
 		parentNode,
-		 browseName.isEmpty() ? this->browseName() :  browseName,
-		strNodeId
+		browseName.isEmpty() ? this->browseName() :  browseName,
+		nodeId
 	);
 	if (UA_NodeId_isNull(&newInstanceNodeId))
 	{

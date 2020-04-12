@@ -1564,7 +1564,7 @@ void QUaServer::setMaxSessions(const quint16& maxSessions)
 
 void QUaServer::registerTypeInternal(
 	const QMetaObject& metaObject, 
-	const QString& strNodeId/* = ""*/
+	const QUaNodeId& nodeId/* = ""*/
 )
 {
 	// check if OPC UA relevant
@@ -1595,20 +1595,18 @@ void QUaServer::registerTypeInternal(
 	}
 	Q_ASSERT_X(m_mapTypes.contains(strBaseClassName), "QUaServer::registerType", "Base object type not registered.");
 	// check if requested node id defined
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = UA_NODEID_NULL;
-	if (!strReqNodeId.isEmpty())
+	if (!nodeId.isNull())
 	{
 		// check if requested node id exists
-		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		bool isUsed = this->isNodeIdUsed(nodeId);
 		Q_ASSERT_X(!isUsed, "QUaServer::registerType", "Requested NodeId already exists");
 		if (isUsed)
 		{
 			UA_QualifiedName_clear(&browseName);
 			return;
 		}
-		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
+	UA_NodeId reqNodeId = nodeId;
 	// check if variable or object
 	if (metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
@@ -1729,7 +1727,7 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 	for (int i = 0; i < retRefSet.count(); i++)
 	{
 		// when browsing ObjectsFolder there are children with null context (Server object and children)
-		QUaNode * node = QUaNode::getNodeContext(retRefSet[i], m_server);
+		QUaNode* node = QUaNode::getNodeContext(retRefSet[i], m_server);
 		if (node)
 		{
 			retList << node;
@@ -1739,7 +1737,7 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 	return retList;
 }
 
-void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QString& strNodeId/* = ""*/)
+void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QUaNodeId& nodeId/* = ""*/)
 {
 	// compose enum name
 #if QT_VERSION >= 0x051200
@@ -1754,7 +1752,7 @@ void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QString& strNodeId
 		mapEnum.insert(metaEnum.value(i), { metaEnum.key(i), "" });
 	}
 	// call other method
-	this->registerEnum(strBrowseName, mapEnum, strNodeId);
+	this->registerEnum(strBrowseName, mapEnum, nodeId);
 }
 
 void QUaServer::registerTypeLifeCycle(const UA_NodeId& typeNodeId, const QMetaObject& metaObject)
@@ -1777,7 +1775,7 @@ void QUaServer::registerTypeLifeCycle(const UA_NodeId& typeNodeId, const QMetaOb
 	// set generic constructor (that calls custom one internally)
 	UA_NodeTypeLifecycle lifecycle;
 	lifecycle.constructor = &QUaServer::uaConstructor;
-	lifecycle.destructor  = &QUaServer::uaDestructor;
+	lifecycle.destructor = &QUaServer::uaDestructor;
 	auto st = UA_Server_setNodeTypeLifecycle(m_server, typeNodeId, lifecycle);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st)
@@ -1880,7 +1878,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		QMetaProperty metaProperty = metaObject.property(i);
 		// check if is meta enum
 		bool      isVariable = false;
-		bool      isEnum     = false;
+		bool      isEnum = false;
 		UA_NodeId enumTypeNodeId = UA_NODEID_NULL;
 		if (metaProperty.isEnumType())
 		{
@@ -1919,8 +1917,8 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 				continue;
 			}
 			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&metaObject), 
-				"QUaServer::addMetaProperties", 
+			Q_ASSERT_X(!propMetaObject.inherits(&metaObject),
+				"QUaServer::addMetaProperties",
 				"Qt MetaProperty type cannot inherit from Class.");
 			if (propMetaObject.inherits(&metaObject) && !isEnum)
 			{
@@ -1951,7 +1949,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		UA_QualifiedName browseName;
 		// NOTE : use namespace 0 as default to allow QUaNode::browseChild 
 		//        to work with simple strings on custom types
-		browseName.namespaceIndex = 0; 
+		browseName.namespaceIndex = 0;
 		browseName.name = QUaTypesConverter::uaStringFromQString(strPropName);
 		// display name
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"", bytePropName.data());
@@ -2049,9 +2047,9 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			continue;
 		}
 		// validate return type
-		auto returnType  = (QMetaType::Type)metaMethod.returnType();
+		auto returnType = (QMetaType::Type)metaMethod.returnType();
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
-		bool isEnumType  = this->m_hashEnums.contains(metaMethod.typeName());
+		bool isEnumType = this->m_hashEnums.contains(metaMethod.typeName());
 		bool isArrayType = QUaTypesConverter::isQTypeArray(returnType);
 		bool isValidType = isSupported || isEnumType || isArrayType;
 		// NOTE : enums are QMetaType::UnknownType
@@ -2186,9 +2184,9 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 		//        metaMethod directly was not working in some cases the internal data
 		//        of the metaMethod was deleted which resulted in access violation
 		m_hashMethods[methNodeId] = [methIdx, this](
-			void* objectContext, 
-			const UA_Variant* input, 
-			UA_Variant* output) 
+			void* objectContext,
+			const UA_Variant* input,
+			UA_Variant* output)
 		{
 			// get object instance that owns method
 #ifdef QT_DEBUG 
@@ -2214,22 +2212,22 @@ UA_NodeId QUaServer::createInstanceInternal(
 	const QMetaObject& metaObject,
 	QUaNode* parentNode,
 	const QUaQualifiedName& browseName,
-	const QString& strNodeId
+	const QUaNodeId& nodeId
 )
 {
 	// check if OPC UA relevant
 	if (!metaObject.inherits(&QUaNode::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createInstance", 
+		Q_ASSERT_X(false, "QUaServer::createInstance",
 			"Unsupported base class. It must derive from QUaNode");
 		return UA_NODEID_NULL;
 	}
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check if inherits BaseEventType, in which case this method cannot be used
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject) &&
-	   !metaObject.inherits(&QUaCondition::staticMetaObject))
+		!metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createInstanceInternal", 
+		Q_ASSERT_X(false, "QUaServer::createInstanceInternal",
 			"Cannot use createInstance to create Non-Condition Events. Use createEvent method instead");
 		return UA_NODEID_NULL;
 	}
@@ -2256,21 +2254,19 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 	UA_QualifiedName uaBrowseName = browseName;
 	// check if requested node id defined
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = UA_NODEID_NULL;
-	if (!strReqNodeId.isEmpty())
+	if (!nodeId.isNull())
 	{
 		// check if requested node id exists
-		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		bool isUsed = this->isNodeIdUsed(nodeId);
 		Q_ASSERT_X(!isUsed, "QUaServer::createInstance", "Requested NodeId already exists");
 		if (isUsed)
 		{
 			return UA_NODEID_NULL;
 		}
-		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// NOTE : calling UA_Server_addXXX below will trigger QUaServer::uaConstructor
 	// which will instantiate the respective Qt instance and binding
+	UA_NodeId reqNodeId = nodeId;
 	UA_NodeId nodeIdNewInstance;
 	// check if variable or object 
 	// NOTE : a type is considered to inherit itself 
@@ -2330,6 +2326,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+	Q_ASSERT_X(!UA_NodeId_isNull(&nodeIdNewInstance), "QUaServer::createInstanceInternal", "Something went wrong");
 	// clean up
 	UA_NodeId_clear(&reqNodeId);
 	// NOTE : do not UA_NodeId_clear(&typeNodeId); or value in m_mapTypes gets corrupted
@@ -2359,7 +2356,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 			parentNode->nodeId(),
 			parentNode->typeDefinitionNodeId(),
 			QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-		});
+			});
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -2376,7 +2373,7 @@ UA_NodeId QUaServer::createEventInternal(
 	// check if derives from event
 	if (!metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
-		Q_ASSERT_X(false, "QUaServer::createEvent", 
+		Q_ASSERT_X(false, "QUaServer::createEvent",
 			"Unsupported event class. It must derive from QUaBaseEvent");
 		return UA_NODEID_NULL;
 	}
@@ -2421,7 +2418,7 @@ QMetaObject QUaServer::getRegisteredMetaObject(const QString& strClassName) cons
 	return m_hashMetaObjects.value(strClassName);
 }
 
-void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumMap, const QString& strNodeId)
+void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumMap, const QUaNodeId& nodeId)
 {
 	// check if already exists
 	if (m_hashEnums.contains(strEnumName))
@@ -2436,22 +2433,20 @@ void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumM
 	ddaatt.description = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
 	ddaatt.displayName = UA_LOCALIZEDTEXT((char*)(""), charEnumName);
 	// check if requested node id defined
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = UA_NODEID_NULL;
-	if (!strReqNodeId.isEmpty())
+	if (!nodeId.isNull())
 	{
 		// check if requested node id exists
-		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		bool isUsed = this->isNodeIdUsed(nodeId);
 		Q_ASSERT_X(!isUsed, "QUaServer::registerEnum", "Requested NodeId already exists");
 		if (isUsed)
 		{
 			return;
 		}
-		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// if null, then assign one because is feaking necessary
 	// https://github.com/open62541/open62541/issues/2584
-	if (UA_NodeId_isNull(&reqNodeId))
+	UA_NodeId reqNodeId = nodeId;
+	if (nodeId.isNull())
 	{
 		// [IMPORTANT] : _ALLOC version is necessary
 		reqNodeId = UA_NODEID_STRING_ALLOC(1, charEnumName);
@@ -2629,7 +2624,7 @@ void QUaServer::updateEnum(const UA_NodeId& enumNodeId, const QUaEnumMap& mapEnu
 	for (int i = 0; i < mapEnum.count(); i++)
 	{
 		UA_init(&valueEnum[i], &UA_TYPES[UA_TYPES_ENUMVALUETYPE]);
-		valueEnum[i].value       = (UA_Int64)listKeys.at(i);
+		valueEnum[i].value = (UA_Int64)listKeys.at(i);
 		valueEnum[i].displayName = mapEnum[listKeys.at(i)].displayName;
 		valueEnum[i].description = mapEnum[listKeys.at(i)].description;
 	}
@@ -2649,7 +2644,7 @@ void QUaServer::updateEnum(const UA_NodeId& enumNodeId, const QUaEnumMap& mapEnu
 	UA_free(valueEnum);
 }
 
-bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QString &strNodeId/* = ""*/)
+bool QUaServer::registerReferenceType(const QUaReferenceType& refType, const QUaNodeId& nodeId/* = ""*/)
 {
 	// first check if already registered
 	if (m_hashRefTypes.contains(refType))
@@ -2657,18 +2652,15 @@ bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QSt
 		return true;
 	}
 	// check if requested node id defined
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = UA_NODEID_NULL;
-	if (!strReqNodeId.isEmpty())
+	if (!nodeId.isNull())
 	{
 		// check if requested node id exists
-		bool isUsed = this->isNodeIdUsed(strReqNodeId);
+		bool isUsed = this->isNodeIdUsed(nodeId);
 		Q_ASSERT_X(!isUsed, "QUaServer::registerReferenceType", "Requested NodeId already exists");
 		if (isUsed)
 		{
 			return false;
 		}
-		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
 	}
 	// get namea and stuff
 	QByteArray byteForwardName = refType.strForwardName.toUtf8();
@@ -2681,6 +2673,7 @@ bool QUaServer::registerReferenceType(const QUaReferenceType &refType, const QSt
 	UA_ReferenceTypeAttributes refattr = UA_ReferenceTypeAttributes_default;
 	refattr.displayName = UA_LOCALIZEDTEXT((char*)(""), byteForwardName.data());
 	refattr.inverseName = UA_LOCALIZEDTEXT((char*)(""), byteInverseName.data());
+	UA_NodeId reqNodeId = nodeId;
 	UA_NodeId outNewNodeId;
 	auto st = UA_Server_addReferenceTypeNode(
 		m_server,
@@ -2712,31 +2705,26 @@ bool QUaServer::referenceTypeRegistered(const QUaReferenceType& refType) const
 	return m_hashRefTypes.contains(refType);
 }
 
-bool QUaServer::isNodeIdUsed(const QString& strNodeId) const
+bool QUaServer::isNodeIdUsed(const QUaNodeId& nodeId) const
 {
-	QString strReqNodeId = strNodeId.trimmed();
-	UA_NodeId reqNodeId = UA_NODEID_NULL;
-	if (!strReqNodeId.isEmpty())
-	{
-		reqNodeId = QUaTypesConverter::nodeIdFromQString(strReqNodeId);
-	}
 	// check if requested node id exists
-	UA_NodeId testNodeId = UA_NODEID_NULL;
+	UA_NodeId reqNodeId  = nodeId;
+	UA_NodeId testNodeId = nodeId;
 	auto st = UA_Server_readNodeId(m_server, reqNodeId, &testNodeId);
 	UA_NodeId_clear(&reqNodeId);
 	UA_NodeId_clear(&testNodeId);
 	return st == UA_STATUSCODE_GOOD;
 }
 
-QUaFolderObject * QUaServer::objectsFolder() const
+QUaFolderObject* QUaServer::objectsFolder() const
 {
 	return m_pobjectsFolder;
 }
 
-QUaNode * QUaServer::nodeById(const QUaNodeId& nodeIdIn)
+QUaNode* QUaServer::nodeById(const QUaNodeId& nodeIdIn)
 {
 	UA_NodeId nodeId = nodeIdIn;
-	QUaNode * node = QUaNode::getNodeContext(nodeId, m_server);
+	QUaNode* node = QUaNode::getNodeContext(nodeId, m_server);
 	UA_NodeId_clear(&nodeId);
 	return node;
 }
@@ -2744,14 +2732,6 @@ QUaNode * QUaServer::nodeById(const QUaNodeId& nodeIdIn)
 bool QUaServer::isTypeNameRegistered(const QString& strTypeName) const
 {
 	return m_mapTypes.contains(strTypeName);
-}
-
-bool QUaServer::isIdValid(const QString& strNodeId)
-{
-	UA_NodeId nodeId = QUaTypesConverter::nodeIdFromQString(strNodeId);
-	bool res = !UA_NodeId_isNull(&nodeId);
-	UA_NodeId_clear(&nodeId);
-	return res;
 }
 
 QUaNode * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const

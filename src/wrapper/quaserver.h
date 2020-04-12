@@ -120,7 +120,7 @@ public:
 
 	// register type in order to assign it a typeNodeId
 	template<typename T>
-	void registerType(const QString &strNodeId = "");
+	void registerType(const QUaNodeId &nodeId = "");
 	// get all instances of a type
 	template<typename T>
 	QList<T*> typeInstances();
@@ -136,8 +136,8 @@ public:
 		                                    TFunc1 callback);
 	// register enum in order to use it as data type
 	template<typename T>
-	void registerEnum(const QString &strNodeId = "");
-	void registerEnum(const QString &strEnumName, const QUaEnumMap &enumMap, const QString &strNodeId = "");
+	void registerEnum(const QUaNodeId &nodeId = QUaNodeId());
+	void registerEnum(const QString &strEnumName, const QUaEnumMap &enumMap, const QUaNodeId &nodeId = QUaNodeId());
 	// enum helpers
 	bool        isEnumRegistered(const QString &strEnumName) const;
 	QUaEnumMap  enumMap         (const QString &strEnumName) const;
@@ -146,20 +146,20 @@ public:
 	void        removeEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue);
 	
 	// register custom non-hierarchical reference type
-	bool registerReferenceType(const QUaReferenceType &refType, const QString& strNodeId = "");
+	bool registerReferenceType(const QUaReferenceType &refType, const QUaNodeId& nodeId = "");
 	// get list of registered reference types
 	const QList<QUaReferenceType> referenceTypes() const;
 	// check if a reference type is already registered
 	bool referenceTypeRegistered(const QUaReferenceType& refType) const;
 
     // check if a node id is available (not used), not necessarily by an instance, but could be a type for example
-    bool isNodeIdUsed(const QString& strNodeId) const;
+    bool isNodeIdUsed(const QUaNodeId& nodeId) const;
 	// create instance of a given (variable or object) type
 	template<typename T>
 	T* createInstance(
         QUaNode * parentNode, 
         const QUaQualifiedName &browseName,
-        const QString &strNodeId = ""
+        const QUaNodeId &nodeId = ""
     );
 	// get objects folder
 	QUaFolderObject * objectsFolder() const;
@@ -170,8 +170,6 @@ public:
 	QUaNode * nodeById(const QUaNodeId& nodeId);
 	// check if a type with type name (C++ class name) is registered
 	bool isTypeNameRegistered(const QString &strTypeName) const;
-	// test if node id format is valid (does not check if instance exist though)
-	static bool isIdValid(const QString &strNodeId);
 
 	// Browse API
 	// (* actually browses using QObject tree)
@@ -335,7 +333,7 @@ private:
 	// types
     template<typename T>
     void registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract = false);
-	void registerTypeInternal(const QMetaObject &metaObject, const QString &strNodeId = "");
+	void registerTypeInternal(const QMetaObject &metaObject, const QUaNodeId &nodeId = QUaNodeId());
 	QList<QUaNode*> typeInstances(const QMetaObject &metaObject);
 	template<typename T, typename M>
 	QMetaObject::Connection instanceCreated(
@@ -344,7 +342,7 @@ private:
 		const M &callback
 	);
 	// enums
-	void       registerEnum(const QMetaEnum &metaEnum, const QString &strNodeId = "");
+	void       registerEnum(const QMetaEnum &metaEnum, const QUaNodeId &nodeId = QUaNodeId());
 	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId) const;
 	UA_Variant enumValues(const UA_NodeId &enumNodeId) const;
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
@@ -360,7 +358,7 @@ private:
         const QMetaObject &metaObject, 
         QUaNode * parentNode, 
         const QUaQualifiedName &browseName,
-        const QString &strNodeId
+        const QUaNodeId &nodeId
     );
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -525,10 +523,10 @@ private:
 };
 
 template<typename T>
-inline void QUaServer::registerType(const QString &strNodeId/* = ""*/)
+inline void QUaServer::registerType(const QUaNodeId &nodeId/* = ""*/)
 {
 	// call internal method
-	this->registerTypeInternal(T::staticMetaObject, strNodeId);
+	this->registerTypeInternal(T::staticMetaObject, nodeId);
 }
 
 template<typename T>
@@ -628,17 +626,17 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 }
 
 template<typename T>
-inline void QUaServer::registerEnum(const QString &strNodeId/* = ""*/)
+inline void QUaServer::registerEnum(const QUaNodeId &nodeId/* = ""*/)
 {
 	// call internal method
-	this->registerEnum(QMetaEnum::fromType<T>(), strNodeId);
+	this->registerEnum(QMetaEnum::fromType<T>(), nodeId);
 }
 
 template<typename T>
 inline T * QUaServer::createInstance(
     QUaNode * parentNode, 
     const QUaQualifiedName &browseName,
-    const QString &strNodeId/* = ""*/
+    const QUaNodeId &nodeId/* = ""*/
 )
 {
 	// instantiate first in OPC UA
@@ -646,7 +644,7 @@ inline T * QUaServer::createInstance(
         T::staticMetaObject, 
         parentNode, 
         browseName,
-        strNodeId
+        nodeId
     );
 	if (UA_NodeId_isNull(&newInstanceNodeId))
 	{
@@ -1173,10 +1171,10 @@ inline bool QUaNode::deserializeInternal(
 template<typename T>
 inline T * QUaBaseObject::addChild(
     const QUaQualifiedName &browseName,
-    const QString &strNodeId/* = ""*/
+    const QUaNodeId &nodeId/* = ""*/
 )
 {
-    return m_qUaServer->createInstance<T>(this, browseName, strNodeId);
+    return m_qUaServer->createInstance<T>(this, browseName, nodeId);
 }
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1212,10 +1210,10 @@ inline T * QUaBaseObject::createEvent()
 template<typename T>
 inline T * QUaBaseDataVariable::addChild(
     const QUaQualifiedName &browseName,
-    const QString &strNodeId/* = ""*/
+    const QUaNodeId &nodeId/* = ""*/
 )
 {
-    return m_qUaServer->createInstance<T>(this, browseName, strNodeId);
+    return m_qUaServer->createInstance<T>(this, browseName, nodeId);
 }
 
 template<typename T>
@@ -1508,7 +1506,7 @@ template<typename M>
 inline void QUaBaseObject::addMethod(
     const QUaQualifiedName &methodName,
     const M & methodCallback, 
-    const QString & strNodeId)
+    const QUaNodeId & nodeId)
 {
     // create input arguments
     UA_Argument * p_inputArguments = nullptr;
@@ -1529,7 +1527,7 @@ inline void QUaBaseObject::addMethod(
     // add method node
     UA_NodeId methNodeId = this->addMethodNodeInternal(
         methodName,
-        strNodeId,
+        nodeId,
         QOpcUaMethodTraits<M>::getNumArgs(),
         p_inputArguments,
         p_outputArgument

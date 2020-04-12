@@ -101,11 +101,11 @@ public:
 	/*
 	QList<QUaTwoStateVariable*> browseTrueSubStates() const;
 
-	QUaTwoStateVariable* addTrueSubState(const QString& strNodeId = "");
+	QUaTwoStateVariable* addTrueSubState(const QUaNodeId& nodeId = QUaNodeId());
 
 	QList<QUaTwoStateVariable*> browseFalseSubStates() const;
 
-	QUaTwoStateVariable* addFalseSubState(const QString& strNodeId = "");
+	QUaTwoStateVariable* addFalseSubState(const QUaNodeId& nodeId = QUaNodeId());
 
 	// TODO and for StateMachine type
 	*/

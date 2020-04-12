@@ -431,6 +431,11 @@ UA_QualifiedName QUaQualifiedName::toUaQualifiedName() const
 	return *this;
 }
 
+bool QUaQualifiedName::isEmpty() const
+{
+	return m_name.isEmpty();
+}
+
 QUaQualifiedName QUaQualifiedName::fromXmlString(const QString& strXmlQualName)
 {
 	return QUaQualifiedName(strXmlQualName);
@@ -442,18 +447,16 @@ QUaQualifiedName QUaQualifiedName::fromUaQualifiedName(const UA_QualifiedName& u
 }
 
 QUaChangeStructureDataType::QUaChangeStructureDataType()
-	: m_strNodeIdAffected(""),
-	m_strNodeIdAffectedType(""),
-	m_uiVerb(QUaChangeVerb::NodeAdded)
+	: m_uiVerb(QUaChangeVerb::NodeAdded)
 {
 }
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(
-	const QUaNodeId& strNodeIdAffected,
-	const QUaNodeId& strNodeIdAffectedType,
+	const QUaNodeId& nodeIdAffected,
+	const QUaNodeId& nodeIdAffectedType,
 	const Verb& uiVerb)
-	: m_strNodeIdAffected(strNodeIdAffected),
-	m_strNodeIdAffectedType(strNodeIdAffectedType),
+	: m_nodeIdAffected(nodeIdAffected),
+	m_nodeIdAffectedType(nodeIdAffectedType),
 	m_uiVerb(uiVerb)
 {
 }
@@ -506,51 +509,137 @@ QDateTime QUaSession::timestamp() const
 
 QUaLocalizedText::QUaLocalizedText()
 {
-	// TODO :
+	m_locale = QString();
+	m_text   = QString();
+}
+
+QUaLocalizedText::QUaLocalizedText(const QString& locale, const QString& text)
+{
+	m_locale = locale;
+	m_text   = text;
+}
+
+QUaLocalizedText::QUaLocalizedText(const char* locale, const char* text)
+{
+	*this = QUaLocalizedText(QString(locale), QString(text));
 }
 
 QUaLocalizedText::QUaLocalizedText(const UA_LocalizedText& uaLocalizedText)
 {
-	// TODO :
+	*this = uaLocalizedText;
 }
 
 QUaLocalizedText::QUaLocalizedText(const QString& strXmlLocalizedText)
 {
-	// TODO :
+	*this = strXmlLocalizedText;
 }
 
 QUaLocalizedText::QUaLocalizedText(const char* strXmlLocalizedText)
 {
-	// TODO :
+	*this = strXmlLocalizedText;
 }
 
 QUaLocalizedText::operator UA_LocalizedText() const
 {
-	// TODO :
-	return UA_LocalizedText();
+	UA_LocalizedText uaLocalizedText;
+	uaLocalizedText.locale = QUaTypesConverter::uaStringFromQString(m_locale);
+	uaLocalizedText.text = QUaTypesConverter::uaStringFromQString(m_text);
+	return uaLocalizedText;
 }
 
 QUaLocalizedText::operator QString() const
 {
-	// TODO :
-	return QString();
+	return m_locale.isEmpty() ? m_text : QString("l=%1;t=%2").arg(m_locale).arg(m_text);
+}
+
+void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
+{
+	m_locale = QUaTypesConverter::uaStringToQString(uaLocalizedText.locale);
+	m_text = QUaTypesConverter::uaStringToQString(uaLocalizedText.text);
 }
 
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
-	// TODO :
+	m_locale = QString();
+	m_text = strXmlLocalizedText;
+	QStringList components = strXmlLocalizedText.split(QLatin1String(";"));
+	// check if valid xml format
+	if (components.size() != 2)
+	{
+		// if no valid xml format, assume ns = 0 and given string is name
+		return;
+	}
+	// check if valid namespace found, else assume ns = 0 and given string is name
+	QString new_locale;
+	if (components.at(0).contains(QRegularExpression(QLatin1String("^l=")))) {
+		/*bool success = false;
+		uint ns = components.at(0).midRef(3).toString().toUInt(&success);
+		if (!success || ns > (std::numeric_limits<quint16>::max)())
+		{
+			return;
+		}
+		new_ns = ns;*/
+		new_locale = components.at(0).midRef(2).toString();
+	}
+	// check if valid name found, else assume ns = 0 and given string is name
+	if (!components.last().contains(QRegularExpression(QLatin1String("^t="))))
+	{
+		return;
+	}
+	// if reached here, xml format is correct
+	/*m_namespace = new_ns;
+	m_name = components.last().midRef(2).toString();*/
+	m_locale = new_locale;
+	m_text   = components.last().midRef(2).toString();
+}
+
+void QUaLocalizedText::operator=(const char* strXmlLocalizedText)
+{
+	*this = QString(strXmlLocalizedText);
+}
+
+void QUaLocalizedText::operator=(const QUaLocalizedText& other)
+{
+	m_locale = other.m_locale;
+	m_text = other.m_text;
 }
 
 bool QUaLocalizedText::operator==(const QUaLocalizedText& other) const
 {
-	// TODO :
-	return false;
+	return this->m_locale.compare(other.m_locale, Qt::CaseSensitive) == 0 &&
+		this->m_text.compare(other.m_text, Qt::CaseSensitive) == 0;
+}
+
+QString QUaLocalizedText::locale() const
+{
+	return m_locale;
+}
+
+void QUaLocalizedText::setLocale(const QString& locale)
+{
+	m_locale = locale;
+}
+
+QString QUaLocalizedText::text() const
+{
+	return m_text;
+}
+
+void QUaLocalizedText::setText(const QString& text)
+{
+	m_text = text;
+}
+
+QString QUaLocalizedText::toXmlString() const
+{
+	// use ::operator QString()
+	return *this;
 }
 
 UA_LocalizedText QUaLocalizedText::toUaLocalizedText() const
 {
-	// TODO :
-	return UA_LocalizedText();
+	// use ::operator UA_LocalizedText()
+	return *this;
 }
 
 QUaNodeId::QUaNodeId()
@@ -749,6 +838,11 @@ UA_NodeId QUaNodeId::toUaNodeId() const
 {
 	// use ::operator UA_NodeId()
 	return *this;
+}
+
+bool QUaNodeId::isNull() const
+{
+	return UA_NodeId_isNull(&m_nodeId);
 }
 
 void QUaNodeId::clear()

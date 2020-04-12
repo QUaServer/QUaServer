@@ -83,7 +83,7 @@ void QUaBaseObject::setMethodReturnStatusCode(const UA_StatusCode& statusCode)
 
 UA_NodeId QUaBaseObject::addMethodNodeInternal(
 	const QUaQualifiedName& methodName,
-	const QString& strNodeId,
+	const QUaNodeId& nodeId,
 	const size_t& nArgs,
 	UA_Argument* inputArguments,
 	UA_Argument* outputArgument
@@ -98,7 +98,7 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(
                                                byteMethodName.data());
     methAttr.displayName    = UA_LOCALIZEDTEXT((char *)"",
                                                byteMethodName.data());
-    UA_NodeId   user_nodeId = strNodeId.isEmpty() ? UA_NODEID_NULL : QUaTypesConverter::nodeIdFromQString(strNodeId);
+    UA_NodeId user_nodeId = nodeId;
     // create callback
     UA_NodeId methNodeId;
 	UA_QualifiedName browseName = methodName;
@@ -118,6 +118,7 @@ UA_NodeId QUaBaseObject::addMethodNodeInternal(
         &methNodeId);
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
     Q_UNUSED(st);
+	UA_NodeId_clear(&user_nodeId);
 	UA_QualifiedName_clear(&browseName);
     // return new method node id
     return methNodeId;

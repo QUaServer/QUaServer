@@ -154,27 +154,27 @@ public:
 
 	virtual QUaProperty * addProperty(
 		const QUaQualifiedName& browseName,
-		const QString& strNodeId = ""
+		const QUaNodeId& nodeId = QUaNodeId()
 	);
-	virtual QUaBaseDataVariable * addBaseDataVariable(
+	virtual QUaBaseDataVariable* addBaseDataVariable(
 		const QUaQualifiedName& browseName,
-		const QString& strNodeId = ""
+		const QUaNodeId& nodeId = QUaNodeId()
 	);
-	virtual QUaBaseObject * addBaseObject(
+	virtual QUaBaseObject* addBaseObject(
 		const QUaQualifiedName& browseName,
-		const QString& strNodeId = ""
+		const QUaNodeId& nodeId = QUaNodeId()
 	);
-	virtual QUaFolderObject * addFolderObject(
+	virtual QUaFolderObject* addFolderObject(
 		const QUaQualifiedName& browseName,
-		const QString& strNodeId = ""
+		const QUaNodeId& nodeId = QUaNodeId()
 	);
 
 	// Browse API
 	// (* actually browses using QObject tree)
 
-	QUaNodeId typeDefinitionNodeId     () const;
+	QUaNodeId typeDefinitionNodeId() const;
 	QString   typeDefinitionDisplayName() const;
-	QUaQualifiedName typeDefinitionBrowseName () const;
+	QUaQualifiedName typeDefinitionBrowseName() const;
 
 	// if browseName empty, get all children
 	template<typename T>
@@ -261,7 +261,7 @@ public:
 	// bool T::serializeStart(QQueue<QUaLog>& logOut);
 	// bool T::serializeEnd(QQueue<QUaLog>& logOut);
 	template<typename T>
-	bool serialize(T& serializer, QQueue<QUaLog> &logOut);
+	bool serialize(T& serializer, QQueue<QUaLog>& logOut);
 	// T must implement:
 	// bool T::readInstance(
 	// 	const QString& nodeId,
@@ -278,9 +278,9 @@ public:
 
 	// Clone API
 	QUaNode* cloneNode(
-		QUaNode* parentNode = nullptr, 
-		const QString& browseName = "",
-		const QString& strNodeId = ""
+		QUaNode* parentNode = nullptr,
+		const QUaQualifiedName& browseName = QUaQualifiedName(),
+		const QUaNodeId& nodeId = QUaNodeId()
 	);
 
 signals:

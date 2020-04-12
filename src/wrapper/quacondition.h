@@ -282,10 +282,10 @@ public:
 	// When the state represented by a ConditionBranch does not need further attention, a final 
 	// Event Notification for this branch will have the Retain Property set to False.
 
-	QUaCondition* createBranch(const QString& strNodeId = "");
+	QUaCondition* createBranch(const QUaNodeId& nodeId = QUaNodeId());
 
 	template<typename T>
-	T* createBranch(const QString& strNodeId = "");
+	T* createBranch(const QUaNodeId& nodeId = QUaNodeId());
 
 	// get all branches
 	QList<QUaCondition*> branches() const;
@@ -387,9 +387,9 @@ private:
 };
 
 template<typename T>
-inline T* QUaCondition::createBranch(const QString& strNodeId/* = ""*/)
+inline T* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 {
-	return qobject_cast<T*>(this->createBranch(strNodeId));
+	return qobject_cast<T*>(this->createBranch(nodeId));
 }
 
 template<typename T>
