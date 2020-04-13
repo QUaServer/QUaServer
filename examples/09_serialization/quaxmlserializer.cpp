@@ -196,7 +196,7 @@ bool QUaXmlSerializer::serializeEnd(QQueue<QUaLog>& logOut)
 }
 
 bool QUaXmlSerializer::writeInstance(
-	const QString& nodeId, 
+	const QUaNodeId& nodeId,
 	const QString& typeName, 
 	const QMap<QString, QVariant>& attrs, 
 	const QList<QUaForwardReference>& forwardRefs,
@@ -209,7 +209,7 @@ bool QUaXmlSerializer::writeInstance(
 	QDomElement node = m_doc.createElement("n");
 	root.appendChild(node);
 	// copy attributes
-	this->writeAttribute(node, "nodeId", nodeId);
+	this->writeAttribute(node, "nodeId", nodeId.toXmlString());
 	auto i = attrs.constBegin();
 	while (i != attrs.constEnd())
 	{
@@ -221,7 +221,7 @@ bool QUaXmlSerializer::writeInstance(
 	{
 		QDomElement refElem = m_doc.createElement("r");
 		node.appendChild(refElem);
-		this->writeAttribute(refElem, "targetNodeId", ref.targetNodeId);
+		this->writeAttribute(refElem, "targetNodeId", ref.targetNodeId.toXmlString());
 		this->writeAttribute(refElem, "targetType"  , ref.targetType);
 		this->writeAttribute(refElem, "forwardName" , ref.refType.strForwardName);
 		this->writeAttribute(refElem, "inverseName" , ref.refType.strInverseName);
@@ -309,7 +309,7 @@ void QUaXmlSerializer::writeAttribute(
 	node.setAttribute(strName, varValue.toString());
 }
 
-QString QUaXmlSerializer::readNodeIdAttribute(
+QUaNodeId QUaXmlSerializer::readNodeIdAttribute(
 	QDomElement& node, 
 	QQueue<QUaLog>& logOut)
 {
@@ -322,20 +322,11 @@ QString QUaXmlSerializer::readNodeIdAttribute(
 		});
 		return "";
 	}
-	QString nodeId = node.attribute("nodeId", "");
-	if (nodeId.isEmpty())
+	QUaNodeId nodeId = node.attribute("nodeId", "");
+	if (nodeId.isNull())
 	{
 		logOut << QUaLog({
 			QObject::tr("Found node element with empty nodeId attribute. Ignoring."),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-		});
-		return "";
-	}
-	if (!QUaServer::isIdValid(nodeId))
-	{
-		logOut << QUaLog({
-			QObject::tr("Found node element with invalid nodeId attribute %1. Ignoring.").arg(nodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::Serialization
 		});
@@ -367,7 +358,7 @@ QVariant QUaXmlSerializer::readAttribute(
 	return strValue;
 }
 
-QString QUaXmlSerializer::readNodeIdTargetAttribute(
+QUaNodeId QUaXmlSerializer::readNodeIdTargetAttribute(
 	QDomElement& ref, 
 	QQueue<QUaLog>& logOut)
 {
@@ -380,8 +371,8 @@ QString QUaXmlSerializer::readNodeIdTargetAttribute(
 		});
 		return "";
 	}
-	QString targetNodeId = ref.attribute("targetNodeId", "");
-	if (targetNodeId.isEmpty())
+	QUaNodeId targetNodeId = ref.attribute("targetNodeId", "");
+	if (targetNodeId.isNull())
 	{
 		logOut << QUaLog({
 			QObject::tr("Found reference element with empty targetNodeId attribute. Ignoring."),

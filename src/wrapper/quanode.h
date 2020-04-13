@@ -251,7 +251,7 @@ public:
 
 	// T must implement:
 	// bool T::writeInstance(
-	// 	const QString& nodeId,
+	// 	const QUaNodeId& nodeId,
 	// 	const QString& typeName,
 	// 	const QMap<QString, QVariant>& attrs,
 	// 	const QList<QUaForwardReference>& forwardRefs,
@@ -264,7 +264,7 @@ public:
 	bool serialize(T& serializer, QQueue<QUaLog>& logOut);
 	// T must implement:
 	// bool T::readInstance(
-	// 	const QString& nodeId,
+	// 	const QUaNodeId& nodeId,
 	// 	QString& typeName,
 	// 	QMap<QString, QVariant>& attrs,
 	// 	QList<QUaForwardReference>& forwardRefs,

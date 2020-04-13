@@ -58,7 +58,7 @@ public:
 		const QMetaType::Type &newDataType     = QMetaType::UnknownType
 	);
 	// Helper, syntactic sugar for QVariant non-supported types
-	template<typename T> 
+	template<typename T>
 	void setValue(
 		const T &value, 
 		const QUaStatusCode   &statusCode      = QUaStatus::Good,
@@ -66,6 +66,23 @@ public:
 		const QDateTime       &serverTimestamp = QDateTime(),
 		const QMetaType::Type &newDataType     = QMetaType::UnknownType
 	);
+	// Fix for introducing helper above
+	inline void setValue(
+		const char            *value, 
+		const QUaStatusCode   &statusCode      = QUaStatus::Good,
+		const QDateTime       &sourceTimestamp = QDateTime(),
+		const QDateTime       &serverTimestamp = QDateTime(),
+		const QMetaType::Type &newDataType     = QMetaType::UnknownType
+	)
+	{
+		this->setValue(
+			QString(value),
+			statusCode,
+			sourceTimestamp,
+			serverTimestamp,
+			newDataType
+		);
+	};
 	// The sourceTimestamp is used to reflect the timestamp that was applied to a Variable 
 	// value by the data source. The sourceTimestamp shall be UTC time and should indicate 
 	// the time of the last change of the value or statusCode.
@@ -194,5 +211,22 @@ private:
 		const QDateTime     &serverTimestamp = QDateTime()
 	);
 };
+
+template<typename T>
+inline void QUaBaseVariable::setValue(
+	const T& value,
+	const QUaStatusCode& statusCode,
+	const QDateTime& sourceTimestamp,
+	const QDateTime& serverTimestamp,
+	const QMetaType::Type& newDataType)
+{
+	this->setValue(
+		QVariant::fromValue(value),
+		statusCode,
+		sourceTimestamp,
+		serverTimestamp,
+		newDataType
+	);
+}
 
 #endif // QUABASEVARIABLE_H

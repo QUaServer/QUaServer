@@ -26,7 +26,7 @@ public:
 
 	// required API for QUaNode::serialize
 	bool writeInstance(
-		const QString &nodeId,
+		const QUaNodeId &nodeId,
 		const QString &typeName,
 		const QMap<QString, QVariant> &attrs,
 		const QList<QUaForwardReference> &forwardRefs,
@@ -76,7 +76,7 @@ private:
 		const QVariant& varValue
 	);
 	// helper to decode nodeId
-	QString readNodeIdAttribute(
+	QUaNodeId readNodeIdAttribute(
 		QDomElement& node,
 		QQueue<QUaLog>& logOut
 	);
@@ -86,7 +86,7 @@ private:
 		QQueue<QUaLog>& logOut
 	);
 	// helper to decode targetNodeId
-	QString readNodeIdTargetAttribute(
+	QUaNodeId readNodeIdTargetAttribute(
 		QDomElement& ref,
 		QQueue<QUaLog>& logOut
 	);

@@ -5,6 +5,9 @@
 #include <QUaBaseDataVariable>
 #include <QUaFolderObject>
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#include <QUaBaseEvent>
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #include <QUaCondition>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

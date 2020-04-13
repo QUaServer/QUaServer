@@ -35,9 +35,9 @@ int main(int argc, char *argv[])
 
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
-	// NOTE : inavlid namespace when ns > 1 ?
+	// NOTE : invalid namespace when ns > 1 ?
 
-	auto var1 = objsFolder->addBaseDataVariable("var1", "ns=1;s=var1");
+	auto var1 = objsFolder->addBaseDataVariable("var1", { 1, "var1" });
 	var1->setWriteAccess(true);
 	QUaQualifiedName someName(1, "whatever");
 	var1->setValue(someName);

@@ -1217,23 +1217,6 @@ inline T * QUaBaseDataVariable::addChild(
 }
 
 template<typename T>
-inline void QUaBaseVariable::setValue(
-    const T& value, 
-    const QUaStatusCode   &statusCode, 
-    const QDateTime       &sourceTimestamp, 
-    const QDateTime       &serverTimestamp, 
-    const QMetaType::Type &newDataType)
-{
-    this->setValue(
-        QVariant::fromValue(value),
-        statusCode,
-        sourceTimestamp,
-        serverTimestamp,
-        newDataType
-    );
-}
-
-template<typename T>
 inline void QUaBaseVariable::setDataTypeEnum()
 {
 	// register if not registered

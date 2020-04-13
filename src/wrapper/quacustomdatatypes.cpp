@@ -4,6 +4,15 @@
 
 #include<QMetaEnum>
 
+/* NOTE : for registering new custom types wrapping open62541 types follow steps below:
+- Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
+- Add constructors, equality operators converting the underlying type, string for serializaton
+- Provide any helper methods and member accessors, register to Qt using Q_DECLARE_METATYPE
+- Add a #define in quacustomdatatypes.h for the Qt type id qMetaTypeId<T>QMetaType_QualifiedName
+- Add the type's UA_NODEID_, UA_TYPES_, etc to the static hashes of QUaDataType:: (below)
+- Add to quatypesconverter.h and .cpp specilzations for templated convertion methods and add to switch statements
+- Register QString converters in QUaServer::registerCustomTypes using QMetaType::registerConverter
+*/
 QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("Bool")                      , QMetaType::Bool                  },
 	{QString("Char")                      , QMetaType::Char                  },
@@ -28,9 +37,12 @@ QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("QUaStatusCode")             , QMetaType_StatusCode             },
 	{QString("QUaQualifiedName")          , QMetaType_QualifiedName          },
 	{QString("QUaLocalizedText")          , QMetaType_LocalizedText          },
+	// TODO : image
+	//{QString("QImage")                    , QMetaType_Image                  },
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENT
 	{QString("QTimeZone")                 , QMetaType_TimeZone               },
-	{QString("QImage")                    , QMetaType_Image                  },
 	{QString("QUaChangeStructureDataType"), QMetaType_ChangeStructureDataType}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
 QHash<UA_NodeId, QMetaType::Type> QUaDataType::m_custTypesByNodeId = {
@@ -58,9 +70,12 @@ QHash<UA_NodeId, QMetaType::Type> QUaDataType::m_custTypesByNodeId = {
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , QMetaType_StatusCode             },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , QMetaType_QualifiedName          },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , QMetaType_LocalizedText          },
+	// TODO : image
+	//{UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , QMetaType_Image                  },
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , QMetaType_TimeZone               },
-	{UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , QMetaType_Image                  },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), QMetaType_ChangeStructureDataType}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
 QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
@@ -87,9 +102,12 @@ QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
 	{UA_TYPES_STATUSCODE                  , QMetaType_StatusCode             },
 	{UA_TYPES_QUALIFIEDNAME               , QMetaType_QualifiedName          },
 	{UA_TYPES_LOCALIZEDTEXT               , QMetaType_LocalizedText          },
+	// TODO : image
+	//{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{UA_TYPES_TIMEZONEDATATYPE            , QMetaType_TimeZone               },
-	{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
 	{UA_TYPES_MODELCHANGESTRUCTUREDATATYPE, QMetaType_ChangeStructureDataType}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
 QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
@@ -116,9 +134,12 @@ QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
 	{ QMetaType_StatusCode              , {QString("QUaStatusCode")              , UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , &UA_TYPES[UA_TYPES_STATUSCODE                  ]} },
 	{ QMetaType_QualifiedName           , {QString("QUaQualifiedName")           , UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , &UA_TYPES[UA_TYPES_QUALIFIEDNAME               ]} },
 	{ QMetaType_LocalizedText           , {QString("QUaLocalizedText")           , UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , &UA_TYPES[UA_TYPES_LOCALIZEDTEXT               ]} },
+	// TODO : image
+	//{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{ QMetaType_TimeZone                , {QString("QTimeZone")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE            ]} },
-	{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
 	{ QMetaType_ChangeStructureDataType , {QString("QUaChangeStructureDataType") , UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), &UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE]} }
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
 QUaDataType::QUaDataType()
@@ -849,4 +870,9 @@ void QUaNodeId::clear()
 {
 	UA_NodeId_clear(&m_nodeId);
 	m_nodeId = UA_NODEID_NULL;
+}
+
+quint32 QUaNodeId::internalHash() const
+{
+	return UA_NodeId_hash(&m_nodeId);
 }

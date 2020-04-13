@@ -17,11 +17,14 @@ void setupDefaultAddressSpace(QUaServer &server)
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
 	// create some instances of basic types
-	QUaBaseDataVariable* varBaseData = objsFolder->addBaseDataVariable("my_variable");
+	QUaBaseDataVariable* varBaseData = objsFolder->addBaseDataVariable({ 1, "my_variable" });
 	varBaseData->setWriteAccess(true);
-	varBaseData->setValue(1);
+	QUaNodeId someNodeId(1, "my_variable");
+	varBaseData->setValue(someNodeId);
 	QUaProperty* varProp = objsFolder->addProperty("my_property", "ns=1;s=my_prop");
-	varProp->setValue("hola");
+	QUaLocalizedText someText("es", "hola");
+	varProp->setValue(someText);
+	varProp->setWriteAccess(true);
 	QUaBaseObject*   objBase    = objsFolder->addBaseObject("my_object", "ns=1;s=my_obj");
 	QUaFolderObject* objFolder  = objsFolder->addFolderObject("my_folder");
 	QUaProperty*     varSubProp = objBase->addProperty("my_sub_property");

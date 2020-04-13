@@ -24,10 +24,10 @@ int main(int argc, char *argv[])
 		qDebug() << "Connected" << sessionData->address() << ":" << sessionData->port() << "|" << sessionData->applicationName();
 	});
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 	QUaFolderObject * objsFolder = server.objectsFolder();
 	auto obj = objsFolder->addBaseObject("obj");
-
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Create event with server as originator
 	auto server_event = server.createEvent<MyEvent>();

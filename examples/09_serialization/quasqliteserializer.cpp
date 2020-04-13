@@ -13,7 +13,6 @@ QHash<int, QString> QUaSqliteSerializer::m_hashTypes = {
 	{QMetaType::UShort         , "INTEGER"},
 	{QMetaType::Int            , "INTEGER"},
 	{QMetaType::UInt           , "INTEGER"},
-	{qMetaTypeId<QUaDataType>(), "INTEGER"},
 	{QMetaType::Long           , "INTEGER"},
 	{QMetaType::LongLong       , "INTEGER"},
 	{QMetaType::ULong          , "INTEGER"},
@@ -25,7 +24,11 @@ QHash<int, QString> QUaSqliteSerializer::m_hashTypes = {
 	{QMetaType::QUuid          , "INTEGER"},
 	{QMetaType::QByteArray     , "BLOB"   },
 	{QMetaType::UnknownType    , "TEXT"   },
-	{METATYPE_NODEID           , "TEXT"   },
+	{qMetaTypeId<QUaDataType>(), "INTEGER"},
+	{QMetaType_NodeId          , "TEXT"   },
+	{QMetaType_StatusCode      , "TEXT"   },
+	{QMetaType_QualifiedName   , "TEXT"   },
+	{QMetaType_LocalizedText   , "TEXT"   }
 };
 
 QUaSqliteSerializer::QUaSqliteSerializer()
@@ -136,7 +139,7 @@ bool QUaSqliteSerializer::serializeEnd(QQueue<QUaLog>& logOut)
 }
 
 bool QUaSqliteSerializer::writeInstance(
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	const QString& typeName,
 	const QMap<QString, QVariant>& attrs,
 	const QList<QUaForwardReference>& forwardRefs,
@@ -255,7 +258,7 @@ bool QUaSqliteSerializer::deserializeEnd(QQueue<QUaLog>& logOut)
 }
 
 bool QUaSqliteSerializer::readInstance(
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	const QString& typeName,
 	QMap<QString, QVariant>& attrs,
 	QList<QUaForwardReference>& forwardRefs,
@@ -540,7 +543,7 @@ bool QUaSqliteSerializer::createTypeTable(
 bool QUaSqliteSerializer::nodeIdInTypeTable(
 	QSqlDatabase& db, 
 	const QString& typeName, 
-	const QString& nodeId, 
+	const QUaNodeId& nodeId,
 	bool& nodeExists, 
 	qint32& nodeKey,
 	QQueue<QUaLog>& logOut)
@@ -590,14 +593,14 @@ bool QUaSqliteSerializer::nodeIdInTypeTable(
 
 bool QUaSqliteSerializer::insertNewNode(
 	QSqlDatabase& db, 
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	qint32& nodeKey, 
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
 	Q_ASSERT(m_prepStmts.contains("QUaNode"));
 	QSqlQuery& query = m_prepStmts["QUaNode"];
-	query.bindValue(0, nodeId);
+	query.bindValue(0, nodeId.toXmlString());
 	if (!query.exec())
 	{
 		logOut << QUaLog({
@@ -664,7 +667,7 @@ bool QUaSqliteSerializer::addReferences(
 		query.bindValue(1, forwRef.refType.strForwardName);
 		query.bindValue(2, forwRef.refType.strInverseName);
 		query.bindValue(3, forwRef.targetType);
-		query.bindValue(4, forwRef.targetNodeId);
+		query.bindValue(4, forwRef.targetNodeId.toXmlString());
 		if (!query.exec())
 		{
 			logOut << QUaLog({
@@ -701,7 +704,7 @@ bool QUaSqliteSerializer::removeReferences(
 		query.bindValue(1, forwRef.refType.strForwardName);
 		query.bindValue(2, forwRef.refType.strInverseName);
 		query.bindValue(3, forwRef.targetType);
-		query.bindValue(4, forwRef.targetNodeId);
+		query.bindValue(4, forwRef.targetNodeId.toXmlString());
 		if (!query.exec())
 		{
 			logOut << QUaLog({
@@ -760,7 +763,7 @@ bool QUaSqliteSerializer::updateInstance(
 bool QUaSqliteSerializer::nodeAttributes(
 	QSqlDatabase& db, 
 	const QString& typeName, 
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	QMap<QString, QVariant>& attrs, 
 	QQueue<QUaLog>& logOut)
 {
@@ -797,7 +800,7 @@ bool QUaSqliteSerializer::nodeAttributes(
 	}
 	// bind node id
 	QSqlQuery& query = m_prepStmts[typeName];
-	query.bindValue(0, nodeId);
+	query.bindValue(0, nodeId.toXmlString());
 	// exec
 	if (!query.exec())
 	{
@@ -841,7 +844,7 @@ bool QUaSqliteSerializer::nodeAttributes(
 
 bool QUaSqliteSerializer::nodeReferences(
 	QSqlDatabase& db, 
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	QList<QUaForwardReference>& forwardRefs, 
 	QQueue<QUaLog>& logOut)
 {
@@ -878,7 +881,7 @@ bool QUaSqliteSerializer::nodeReferences(
 	}
 	// bind node id
 	QSqlQuery& query = m_prepStmts["QUaForwardReference"];
-	query.bindValue(0, nodeId);
+	query.bindValue(0, nodeId.toXmlString());
 	// exec
 	if (!query.exec())
 	{

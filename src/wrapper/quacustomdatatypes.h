@@ -31,46 +31,13 @@ inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
 
 inline uint qHash(const UA_NodeId &key, uint seed)
 {
-	return qHash(key.namespaceIndex, seed) ^ qHash(key.identifierType, seed) ^ (key.identifierType == UA_NODEIDTYPE_NUMERIC ? qHash(key.identifier.numeric, seed) : UA_NodeId_hash(&key));
-}
-
-struct QUaReferenceType
-{
-	QString strForwardName;
-	QString strInverseName;
-};
-Q_DECLARE_METATYPE(QUaReferenceType);
-
-QDebug operator<<(QDebug debug, const QUaReferenceType& refType);
-
-// to have QUaReferenceType as a hash key
-inline bool operator==(const QUaReferenceType& e1, const QUaReferenceType& e2)
-{
-	return e1.strForwardName.compare(e2.strForwardName, Qt::CaseSensitive) == 0
-		&& e1.strInverseName.compare(e2.strInverseName, Qt::CaseSensitive) == 0;
-}
-
-inline bool operator!=(const QUaReferenceType& e1, const QUaReferenceType& e2)
-{
-	return !(e1 == e2);
-}
-
-inline uint qHash(const QUaReferenceType& key, uint seed)
-{
-	return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
-}
-
-struct QUaForwardReference
-{
-	QString targetNodeId;
-	QString targetType;
-	QUaReferenceType refType;
-};
-
-inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference& e2)
-{
-	return e1.targetNodeId.compare(e2.targetNodeId, Qt::CaseSensitive) == 0
-		&& e1.refType == e2.refType;
+	return 
+		qHash(key.namespaceIndex, seed) ^ 
+		qHash(key.identifierType, seed) ^ 
+		(key.identifierType == UA_NODEIDTYPE_NUMERIC ? 
+			qHash(key.identifier.numeric, seed) : 
+			UA_NodeId_hash(&key)
+		);
 }
 
 namespace QUa
@@ -245,9 +212,12 @@ union QUaAccessLevel
 #define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode>())
 #define QMetaType_QualifiedName           static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
 #define QMetaType_LocalizedText           static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
+// TODO :image
+//#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #define QMetaType_TimeZone                static_cast<QMetaType::Type>(qMetaTypeId<QTimeZone>())
-#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
 #define QMetaType_ChangeStructureDataType static_cast<QMetaType::Type>(qMetaTypeId<QUaChangeStructureDataType>())
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 class QUaDataType
 {
@@ -346,11 +316,11 @@ public:
 
 	QUaNodeIdType type() const;
 
-	quint32    numericId()const;
+	quint32    numericId() const;
 	void       setNumericId(const quint32& numericId);
-	QString    stringId()const;
+	QString    stringId() const;
 	void       setStringId(const QString& stringId);
-	QUuid      uuId()const;
+	QUuid      uuId() const;
 	void       setUuId(const QUuid& uuId);
 	QByteArray byteArrayId() const;
 	void       setByteArrayId(const QByteArray& byteArrayId);
@@ -362,11 +332,24 @@ public:
 
 	void clear();
 
+	quint32 internalHash() const;
+
 private:
 	UA_NodeId m_nodeId;
 };
 
 Q_DECLARE_METATYPE(QUaNodeId);
+
+inline uint qHash(const QUaNodeId& key, uint seed)
+{
+	return 
+		qHash(key.namespaceIndex(), seed) ^ 
+		qHash(static_cast<int>(key.type()), seed) ^ 
+		(key.type() == QUaNodeIdType::Numeric ? 
+			qHash(key.numericId(), seed) :
+			key.internalHash()
+		);
+}
 
 class QUaLocalizedText
 {
@@ -602,5 +585,46 @@ private:
 	quint16   m_intPort;
     QDateTime m_timestamp;
 };
+
+
+struct QUaReferenceType
+{
+	QString strForwardName;
+	QString strInverseName;
+};
+Q_DECLARE_METATYPE(QUaReferenceType);
+
+QDebug operator<<(QDebug debug, const QUaReferenceType& refType);
+
+// to have QUaReferenceType as a hash key
+inline bool operator==(const QUaReferenceType& e1, const QUaReferenceType& e2)
+{
+	return e1.strForwardName.compare(e2.strForwardName, Qt::CaseSensitive) == 0
+		&& e1.strInverseName.compare(e2.strInverseName, Qt::CaseSensitive) == 0;
+}
+
+inline bool operator!=(const QUaReferenceType& e1, const QUaReferenceType& e2)
+{
+	return !(e1 == e2);
+}
+
+inline uint qHash(const QUaReferenceType& key, uint seed)
+{
+	return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
+}
+
+struct QUaForwardReference
+{
+	QUaNodeId targetNodeId;
+	QString   targetType;
+	QUaReferenceType refType;
+};
+
+inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference& e2)
+{
+	return e1.targetNodeId == e2.targetNodeId
+		&& e1.targetType.compare(e2.targetType, Qt::CaseSensitive) == 0
+		&& e1.refType == e2.refType;
+}
 
 #endif // QUACUSTOMDATATYPES_H
