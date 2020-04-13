@@ -53,7 +53,7 @@ void QUaTwoStateVariable::setEffectiveTransitionTime(const QDateTime& effectiveT
 
 QUaLocalizedText QUaTwoStateVariable::trueState() const
 {
-	return const_cast<QUaTwoStateVariable*>(this)->getTrueState()->value().value<QUaLocalizedText>();
+	return const_cast<QUaTwoStateVariable*>(this)->getTrueState()->value<QUaLocalizedText>();
 }
 
 void QUaTwoStateVariable::setTrueState(const QUaLocalizedText& trueState)
@@ -63,7 +63,7 @@ void QUaTwoStateVariable::setTrueState(const QUaLocalizedText& trueState)
 
 QUaLocalizedText QUaTwoStateVariable::falseState() const
 {
-	return const_cast<QUaTwoStateVariable*>(this)->getFalseState()->value().value<QUaLocalizedText>();
+	return const_cast<QUaTwoStateVariable*>(this)->getFalseState()->value<QUaLocalizedText>();
 }
 
 void QUaTwoStateVariable::setFalseState(const QUaLocalizedText& falseState)

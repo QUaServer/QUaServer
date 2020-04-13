@@ -562,7 +562,7 @@ QMetaType::Type uaTypeToQType(const UA_DataType * uaType)
 	return QUaDataType::qTypeByTypeIndex(uaType->typeIndex);
 }
 
-QVariant uaVariantToQVariant(const UA_Variant & uaVariant)
+QVariant uaVariantToQVariant(const UA_Variant & uaVariant, const ArrayType& arrType /*= ArrayType::QList*/)
 {
 	// TODO : support multidimentional arrays
 
@@ -572,7 +572,7 @@ QVariant uaVariantToQVariant(const UA_Variant & uaVariant)
 	// first check if array
 	if (!UA_Variant_isScalar(&uaVariant))
 	{
-		return uaVariantToQVariantArray(uaVariant);
+		return uaVariantToQVariantArray(uaVariant, arrType);
 	}
 	// handle scalar
 	auto index = uaVariant.type->typeIndex;
@@ -834,7 +834,7 @@ QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant & uaVa
 {
 	Q_ASSERT(type == QMetaType::UnknownType);
 	Q_UNUSED(uaVariant);
-	return QVariant((QVariant::Type)QMetaType::UnknownType);
+	return QVariant(static_cast<QVariant::Type>(QMetaType::UnknownType));
 }
 
 template<typename TARGETTYPE, typename UATYPE>

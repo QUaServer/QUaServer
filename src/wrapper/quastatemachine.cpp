@@ -15,7 +15,7 @@ QUaStateMachine::QUaStateMachine(
 
 QUaLocalizedText QUaStateMachine::currentState() const
 {
-	return const_cast<QUaStateMachine*>(this)->getCurrentState()->value().value<QUaLocalizedText>();
+	return const_cast<QUaStateMachine*>(this)->getCurrentState()->value<QUaLocalizedText>();
 }
 
 void QUaStateMachine::setCurrentState(const QUaLocalizedText& currentState)
@@ -25,7 +25,7 @@ void QUaStateMachine::setCurrentState(const QUaLocalizedText& currentState)
 
 QUaLocalizedText QUaStateMachine::lastTransition() const
 {
-	return const_cast<QUaStateMachine*>(this)->getLastTransition()->value().value<QUaLocalizedText>();
+	return const_cast<QUaStateMachine*>(this)->getLastTransition()->value<QUaLocalizedText>();
 }
 
 void QUaStateMachine::setLastTransition(const QUaLocalizedText& lastTransition)

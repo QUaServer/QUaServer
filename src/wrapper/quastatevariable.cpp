@@ -23,7 +23,7 @@ void QUaStateVariable::setId(const QVariant& id)
 
 QUaQualifiedName QUaStateVariable::name() const
 {
-	return const_cast<QUaStateVariable*>(this)->getName()->value().value<QUaQualifiedName>();
+	return const_cast<QUaStateVariable*>(this)->getName()->value<QUaQualifiedName>();
 }
 
 void QUaStateVariable::setName(const QUaQualifiedName& name)
@@ -43,7 +43,7 @@ void QUaStateVariable::setNumber(const quint32& number)
 
 QUaLocalizedText QUaStateVariable::effectiveDisplayName() const
 {
-	return const_cast<QUaStateVariable*>(this)->getEffectiveDisplayName()->value().value<QUaLocalizedText>();
+	return const_cast<QUaStateVariable*>(this)->getEffectiveDisplayName()->value<QUaLocalizedText>();
 }
 
 void QUaStateVariable::setEffectiveDisplayName(const QUaLocalizedText& effectiveDisplayName)

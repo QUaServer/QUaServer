@@ -161,6 +161,14 @@ void QUaBaseVariable::setReadCallback(const std::function<QVariant()>& readCallb
 
 QVariant QUaBaseVariable::value() const
 {
+	return this->getValueInternal();
+}
+
+QVariant QUaBaseVariable::getValueInternal(
+	const QUaTypesConverter::ArrayType& arrType
+	 /* = QUaTypesConverter::ArrayType::QList*/
+) const
+{
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
@@ -178,7 +186,7 @@ QVariant QUaBaseVariable::value() const
 		UA_TIMESTAMPSTORETURN_NEITHER
 	);
 	// convert
-	QVariant outVar = QUaTypesConverter::uaVariantToQVariant(value.value);
+	QVariant outVar = QUaTypesConverter::uaVariantToQVariant(value.value, arrType);
 	// clenaup
 	UA_DataValue_clear(&value);
 	return outVar;
@@ -267,6 +275,7 @@ void QUaBaseVariable::setValue(
 	}
 	// convert to UA_Variant and set new value
 	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
+	// mask as internal write to avoid emitting valueChange signal on QUaBaseVariable::onWrite
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
 		uaVar,
@@ -465,7 +474,7 @@ void QUaBaseVariable::setStatusCode(const QUaStatusCode& statusCode)
 
 QMetaType::Type QUaBaseVariable::dataType() const
 {
-return m_dataType;
+	return m_dataType;
 }
 
 QString QUaBaseVariable::dataTypeNodeId() const
@@ -526,7 +535,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 			else
 			{
 				// else set default value for type
-				varCurr = QVariant((QVariant::Type)dataType);
+				varCurr = QVariant(static_cast<QVariant::Type>(dataType));
 			}
 			// append to list of converted values
 			listConvValues.append(varCurr);
@@ -543,7 +552,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	else
 	{
 		// else set default value for type
-		oldValue = QVariant((QVariant::Type)dataType);
+		oldValue = QVariant(static_cast<QVariant::Type>(dataType));
 	}
 	// set converted or default value
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
@@ -560,7 +569,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	Q_UNUSED(st);
 	// update cache
 	m_dataType = dataType;
-	Q_ASSERT(this->dataTypeInternal() == m_dataType);
+	//Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)

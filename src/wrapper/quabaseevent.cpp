@@ -37,7 +37,7 @@ void QUaBaseEvent::setEventId(const QByteArray& eventId)
 
 QUaNodeId QUaBaseEvent::eventType() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getEventType()->value().value<QUaNodeId>();
+	return const_cast<QUaBaseEvent*>(this)->getEventType()->value<QUaNodeId>();
 }
 
 void QUaBaseEvent::setEventType(const QUaNodeId& eventTypeNodeId)
@@ -47,7 +47,7 @@ void QUaBaseEvent::setEventType(const QUaNodeId& eventTypeNodeId)
 
 QUaNodeId QUaBaseEvent::sourceNode() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getSourceNode()->value().value<QUaNodeId>();
+	return const_cast<QUaBaseEvent*>(this)->getSourceNode()->value<QUaNodeId>();
 }
 
 void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
@@ -98,7 +98,7 @@ void QUaBaseEvent::setReceiveTime(const QDateTime& dateTime)
 // NOTE : removed because is optional and open62541 now does not add it
 QTimeZone QUaBaseEvent::localTime() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getLocalTime()->value().value<QTimeZone>();
+	return const_cast<QUaBaseEvent*>(this)->getLocalTime()->value<QTimeZone>();
 }
 
 void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
@@ -108,7 +108,7 @@ void QUaBaseEvent::setLocalTime(const QTimeZone & localTimeZone)
 
 QUaLocalizedText QUaBaseEvent::message() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getMessage()->value().value<QUaLocalizedText>();
+	return const_cast<QUaBaseEvent*>(this)->getMessage()->value<QUaLocalizedText>();
 }
 
 void QUaBaseEvent::setMessage(const QUaLocalizedText& message)

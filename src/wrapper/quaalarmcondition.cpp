@@ -66,7 +66,7 @@ void QUaAlarmCondition::setActiveStateFalseState(const QString& falseState)
 
 QUaNodeId QUaAlarmCondition::inputNode() const
 {
-	return const_cast<QUaAlarmCondition*>(this)->getInputNode()->value().value<QUaNodeId>();
+	return const_cast<QUaAlarmCondition*>(this)->getInputNode()->value<QUaNodeId>();
 }
 
 void QUaAlarmCondition::setInputNode(const QUaNodeId& inputNodeId)

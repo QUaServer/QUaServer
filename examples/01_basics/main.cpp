@@ -29,12 +29,14 @@ int main(int argc, char *argv[])
 	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable("my_variable");
 	varBaseData->setWriteAccess(true);
 	varBaseData->setValue(1);
+	Q_ASSERT(varBaseData->value<int>() == 1);
 	QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value) {
 		qDebug() << "New value :" << value;
 	});
 
 	QUaProperty * varProp = objsFolder->addProperty("my_property", "ns=1;s=my_prop");
 	varProp->setValue("hola");
+	Q_ASSERT(varProp->value<QString>() == QString("hola"));
 
 	objsFolder->addBaseObject("my_object");
 
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
 
 	QUaBaseDataVariable * valueVar = objSensor1->addBaseDataVariable("Current Value");
 	valueVar->setValue(36.7);
+	Q_ASSERT(valueVar->value<double>() == 36.7);
 
 	server.start();
 

@@ -80,13 +80,13 @@ public:
 
 	// The AvailableStates Variable provides a NodeId list of the States that are present in the
 	// StateMachine instance.The list may change during operation of the Server.
-	QVector<QUaNodeId> availableStates() const;
-	void setAvailableStates(const QVector<QUaNodeId>& availableStates);
+	QList<QUaNodeId> availableStates() const;
+	void setAvailableStates(const QList<QUaNodeId>& availableStates);
 
 	// The AvailableTransitions Variable provides a NodeId list of the Transitions that are present in
 	// the StateMachine instance.The list may change during operation of the Server.
-	QVector<QUaNodeId> availableTransitions() const;
-	void setAvailableTransitions(const QVector<QUaNodeId>& availableTransitions);
+	QList<QUaNodeId> availableTransitions() const;
+	void setAvailableTransitions(const QList<QUaNodeId>& availableTransitions);
 
 protected:
 	QUaBaseDataVariable* getAvailableStates();

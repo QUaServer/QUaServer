@@ -13,7 +13,7 @@ QUaFiniteStateVariable::QUaFiniteStateVariable(
 
 QUaNodeId QUaFiniteStateVariable::id() const
 {
-	return const_cast<QUaFiniteStateVariable*>(this)->getId()->value().value<QUaNodeId>();
+	return const_cast<QUaFiniteStateVariable*>(this)->getId()->value<QUaNodeId>();
 }
 
 void QUaFiniteStateVariable::setId(const QUaNodeId& nodeId)

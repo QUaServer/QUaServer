@@ -23,7 +23,7 @@ void QUaTransitionVariable::setId(const QVariant& id)
 
 QUaQualifiedName QUaTransitionVariable::name() const
 {
-	return const_cast<QUaTransitionVariable*>(this)->getName()->value().value<QUaQualifiedName>();
+	return const_cast<QUaTransitionVariable*>(this)->getName()->value<QUaQualifiedName>();
 }
 
 void QUaTransitionVariable::setName(const QUaQualifiedName& name)

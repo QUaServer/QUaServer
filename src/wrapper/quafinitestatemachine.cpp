@@ -11,22 +11,22 @@ QUaFiniteStateMachine::QUaFiniteStateMachine(
 	
 }
 
-QVector<QUaNodeId> QUaFiniteStateMachine::availableStates() const
+QList<QUaNodeId> QUaFiniteStateMachine::availableStates() const
 {
-	return const_cast<QUaFiniteStateMachine*>(this)->getAvailableStates()->value().value<QVector<QUaNodeId>>();
+	return const_cast<QUaFiniteStateMachine*>(this)->getAvailableStates()->value<QList<QUaNodeId>>();
 }
 
-void QUaFiniteStateMachine::setAvailableStates(const QVector<QUaNodeId>& availableStates)
+void QUaFiniteStateMachine::setAvailableStates(const QList<QUaNodeId>& availableStates)
 {
 	this->getAvailableStates()->setValue(availableStates);
 }
 
-QVector<QUaNodeId> QUaFiniteStateMachine::availableTransitions() const
+QList<QUaNodeId> QUaFiniteStateMachine::availableTransitions() const
 {
-	return const_cast<QUaFiniteStateMachine*>(this)->getAvailableTransitions()->value().value<QVector<QUaNodeId>>();
+	return const_cast<QUaFiniteStateMachine*>(this)->getAvailableTransitions()->value<QList<QUaNodeId>>();
 }
 
-void QUaFiniteStateMachine::setAvailableTransitions(const QVector<QUaNodeId>& availableTransitions)
+void QUaFiniteStateMachine::setAvailableTransitions(const QList<QUaNodeId>& availableTransitions)
 {
 	this->getAvailableTransitions()->setValue(availableTransitions);
 }

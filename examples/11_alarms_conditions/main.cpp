@@ -14,7 +14,7 @@
 #include <QUaFiniteStateMachine>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	QCoreApplication a(argc, argv);
 
@@ -22,20 +22,20 @@ int main(int argc, char *argv[])
 	server.registerEnum<QUaStatus>();
 
 	QObject::connect(&server, &QUaServer::logMessage,
-    [](const QUaLog &log) {
-        qDebug() 
-			<< "["   << log.timestamp.toLocalTime().toString("dd.MM.yyyy hh:mm:ss.zzz")
-			<< "]["  << log.level
-			<< "]["  << log.category
-			<< "] :" << log.message;
-    });
+		[](const QUaLog& log) {
+			qDebug()
+				<< "[" << log.timestamp.toLocalTime().toString("dd.MM.yyyy hh:mm:ss.zzz")
+				<< "][" << log.level
+				<< "][" << log.category
+				<< "] :" << log.message;
+		});
 	QObject::connect(&server, &QUaServer::clientConnected,
-	[](const QUaSession * sessionData)
-	{
-		qDebug() << "Connected" << sessionData->address() << ":" << sessionData->port() << "|" << sessionData->applicationName();
-	});
+		[](const QUaSession* sessionData)
+		{
+			qDebug() << "Connected" << sessionData->address() << ":" << sessionData->port() << "|" << sessionData->applicationName();
+		});
 
-	QUaFolderObject * objsFolder = server.objectsFolder();
+	QUaFolderObject* objsFolder = server.objectsFolder();
 
 	// NOTE : invalid namespace when ns > 1 ?
 
@@ -43,19 +43,19 @@ int main(int argc, char *argv[])
 	var1->setWriteAccess(true);
 	QUaQualifiedName someName(1, "whatever");
 	var1->setValue(someName);
-	Q_ASSERT(var1->value().value<QUaQualifiedName>() == someName);
+	Q_ASSERT(var1->value<QUaQualifiedName>() == someName);
 
 	auto var2 = objsFolder->addBaseDataVariable("var2", "ns=0;s=var2");
 	var2->setWriteAccess(true);
 	QUaNodeId someNodeId(1, "whatever");
 	var2->setValue(someNodeId);
-	Q_ASSERT(var2->value().value<QUaNodeId>() == someNodeId);
+	Q_ASSERT(var2->value<QUaNodeId>() == someNodeId);
 
-	auto var3 = objsFolder->addBaseDataVariable("var3", {1, "var3"});
+	auto var3 = objsFolder->addBaseDataVariable("var3", { 1, "var3" });
 	var3->setWriteAccess(true);
 	QUaLocalizedText someLocalizedText("fr", "whatever");
 	var3->setValue(someLocalizedText);
-	Q_ASSERT(var3->value().value<QUaLocalizedText>() == someLocalizedText);
+	Q_ASSERT(var3->value<QUaLocalizedText>() == someLocalizedText);
 
 	auto var4 = objsFolder->addBaseDataVariable("var4", { 0, "var4" });
 	var4->setWriteAccess(true);
@@ -65,6 +65,10 @@ int main(int argc, char *argv[])
 		<< var2->nodeId()
 		<< var3->nodeId();
 	var4->setValue(vectNodes);
+	for (auto nodeId : var4->value<QVector<QUaNodeId>>())
+	{
+		qDebug() << nodeId.toXmlString();
+	}
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 ////

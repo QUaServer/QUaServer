@@ -133,7 +133,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 
 QUaNodeId QUaCondition::conditionClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionClassId()->value().value<QUaNodeId>();
+	return const_cast<QUaCondition*>(this)->getConditionClassId()->value<QUaNodeId>();
 }
 
 void QUaCondition::setConditionClassId(const QUaNodeId& conditionClassId)
@@ -143,7 +143,7 @@ void QUaCondition::setConditionClassId(const QUaNodeId& conditionClassId)
 
 QUaLocalizedText QUaCondition::conditionClassName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionClassName()->value().value<QUaLocalizedText>();
+	return const_cast<QUaCondition*>(this)->getConditionClassName()->value<QUaLocalizedText>();
 }
 
 void QUaCondition::setConditionClassName(const QUaLocalizedText& conditionClassName)
@@ -154,7 +154,7 @@ void QUaCondition::setConditionClassName(const QUaLocalizedText& conditionClassN
 /* TODO : arrays!
 QUaNodeId QUaCondition::conditionSubClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value().value<QUaNodeId>();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value<QUaNodeId>();
 }
 
 void QUaCondition::setConditionSubClassId(const QUaNodeId& conditionSubClassId)
@@ -164,7 +164,7 @@ void QUaCondition::setConditionSubClassId(const QUaNodeId& conditionSubClassId)
 
 QUaLocalizedText QUaCondition::conditionSubClassName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value().value<QUaLocalizedText>();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value<QUaLocalizedText>();
 }
 
 void QUaCondition::setConditionSubClassName(const QUaLocalizedText& conditionSubClassName)
@@ -185,7 +185,7 @@ void QUaCondition::setConditionName(const QString& conditionName)
 
 QUaNodeId QUaCondition::branchId() const
 {
-	return const_cast<QUaCondition*>(this)->getBranchId()->value().value<QUaNodeId>();
+	return const_cast<QUaCondition*>(this)->getBranchId()->value<QUaNodeId>();
 }
 
 void QUaCondition::setBranchId(const QUaNodeId& branchId)
@@ -326,7 +326,7 @@ void QUaCondition::setEnabledStateFalseState(const QUaLocalizedText& falseState)
 
 QUaStatusCode QUaCondition::quality() const
 {
-	return QUaStatus(const_cast<QUaCondition*>(this)->getQuality()->value().value<QUaStatusCode>());
+	return QUaStatus(const_cast<QUaCondition*>(this)->getQuality()->value<QUaStatusCode>());
 }
 
 void QUaCondition::setQuality(const QUaStatusCode& quality)

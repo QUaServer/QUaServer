@@ -3,6 +3,25 @@
 
 #include <QUaNode>
 
+// traits to detect if T is container and get inner_type
+// NOTE : had to remove template template parameters because is c++17
+template <typename T>
+struct container_traits : std::false_type {};
+
+template <typename T>
+struct container_traits<QList<T>> : std::true_type
+{
+	using inner_type = T;
+	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QList;
+};
+
+template <typename T>
+struct container_traits<QVector<T>> : std::true_type
+{
+	using inner_type = T;
+	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
+};
+
 // Part 5 - 7.2 : BaseVariableType
 /*
 The BaseVariableType is the abstract base type for all other VariableTypes. 
@@ -42,6 +61,10 @@ public:
 
 	// Attributes API
 
+	virtual QVariant value() const;
+	template<typename T>
+	T value() const;
+
 	// The data value.If the StatusCode indicates an error then the value is to be
 	// ignoredand the Server shall set it to null.
 	// - If the new value is the same dataType or convertible to the old dataType, 
@@ -49,8 +72,7 @@ public:
 	// - If the new value has a new type different and not convertible to the old dataType, 
 	//   the dataType is updated
 	// - If newDataType is defined, the new type is forced
-	virtual QVariant value() const;
-	virtual void     setValue(
+	virtual void setValue(
 		const QVariant        &value, 
 		const QUaStatusCode   &statusCode      = QUaStatus::Good,
 		const QDateTime       &sourceTimestamp = QDateTime(),
@@ -200,10 +222,20 @@ private:
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;
 
-	protected:
+protected:
 
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
 	QMetaType::Type dataTypeInternal() const;
+	// if T scalar
+	template<typename T>
+	T valueInternal(std::false_type) const;
+	// if T array
+	template<typename T>
+	T valueInternal(std::true_type) const;
+	// internal
+	QVariant getValueInternal(
+		const QUaTypesConverter::ArrayType& arrType = QUaTypesConverter::ArrayType::QList
+	) const;
 	UA_StatusCode setValueInternal(
 		const UA_Variant    &value,
 		const UA_StatusCode &status = UA_STATUSCODE_GOOD,
@@ -211,6 +243,24 @@ private:
 		const QDateTime     &serverTimestamp = QDateTime()
 	);
 };
+// generic version scalar or array
+template<typename T>
+inline T QUaBaseVariable::value() const
+{
+	return this->valueInternal<T>(container_traits<T>());
+}
+// if scalar
+template<typename T>
+inline T QUaBaseVariable::valueInternal(std::false_type) const
+{
+	return this->getValueInternal().value<T>();
+}
+// if array
+template<typename T>
+inline T QUaBaseVariable::valueInternal(std::true_type) const
+{
+	return this->getValueInternal(container_traits<T>::arrType).value<T>();
+}
 
 template<typename T>
 inline void QUaBaseVariable::setValue(

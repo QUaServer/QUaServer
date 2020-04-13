@@ -45,10 +45,17 @@ namespace QUaTypesConverter {
 	template<> // TODO : implement better
 	UA_Variant uaVariantFromQVariantArray<UA_Variant, QVariant>(const QVariant & var, const UA_DataType * type);
 
+	// ua to qt : array
+	enum class ArrayType
+	{
+		QList   = 0,
+		QVector = 1,
+		Invalid = 2
+	};
 	// ua to qt
 	QMetaType::Type uaTypeNodeIdToQType(const UA_NodeId   *nodeId   );
 	QMetaType::Type uaTypeToQType      (const UA_DataType *uaType   );
-	QVariant        uaVariantToQVariant(const UA_Variant  &uaVariant);
+	QVariant        uaVariantToQVariant(const UA_Variant  &uaVariant, const ArrayType& arrType = ArrayType::QList);
 	// ua to qt : scalar
 	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	QVariant   uaVariantToQVariantScalar(const UA_Variant &uaVariant, QMetaType::Type type);
@@ -57,13 +64,6 @@ namespace QUaTypesConverter {
 	QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant & uaVariant, QMetaType::Type type);
 	template<typename TARGETTYPE, typename UATYPE> // has specializations
 	TARGETTYPE uaVariantToQVariantScalar(const UATYPE *data);
-	// ua to qt : array
-	enum class ArrayType
-	{
-		QList   = 0,
-		QVector = 1,
-		Invalid = 2
-	};
 	QVariant uaVariantToQVariantArray (const UA_Variant &uaVariant, 
 		                               const ArrayType  &arrType = ArrayType::QList);
 	QVariant uaVariantToQVariantList  (const UA_Variant &uaVariant);
