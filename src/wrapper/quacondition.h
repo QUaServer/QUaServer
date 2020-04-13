@@ -105,9 +105,10 @@ public:
 	void      setConditionClassId(const QUaNodeId& conditionClassId);
 
 	// ConditionClassName provides the display name of the subtype of BaseConditionClassType
-	QString conditionClassName() const;
-	void    setConditionClassName(const QString& conditionClassName);
+	QUaLocalizedText conditionClassName() const;
+	void    setConditionClassName(const QUaLocalizedText& conditionClassName);
 
+	/* TODO : arrays!
 	// NOTE : optional; not created until one of these methods is called
 	// ConditionSubClassId specifies additional class[es] that apply to the Condition.It is the NodeId
 	// of the corresponding subtype of BaseConditionClassType.See 5.9.6 for the definition of
@@ -122,8 +123,9 @@ public:
 	// NOTE : optional; not created until one of these methods is called
 	// ConditionSubClassName provides the display name[s] of the ConditionClassType[s] listed in
 	// the ConditionSubClassId.
-	QString conditionSubClassName() const;
-	void    setConditionSubClassName(const QString& conditionSubClassName);
+	QUaLocalizedText conditionSubClassName() const;
+	void    setConditionSubClassName(const QUaLocalizedText& conditionSubClassName);
+	*/
 
 	// ConditionName identifies the Condition instance that the Event originated from. It can be used
 	// together with the SourceName in a user display to distinguish between different Condition

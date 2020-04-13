@@ -11,12 +11,12 @@ QUaFiniteStateVariable::QUaFiniteStateVariable(
 	
 }
 
-QString QUaFiniteStateVariable::id() const
+QUaNodeId QUaFiniteStateVariable::id() const
 {
-	return const_cast<QUaFiniteStateVariable*>(this)->getId()->value().toString();
+	return const_cast<QUaFiniteStateVariable*>(this)->getId()->value().value<QUaNodeId>();
 }
 
-void QUaFiniteStateVariable::setId(const QString& nodeId)
+void QUaFiniteStateVariable::setId(const QUaNodeId& nodeId)
 {
 	this->getId()->setValue(nodeId);
 }

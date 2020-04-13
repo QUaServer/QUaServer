@@ -11,4 +11,14 @@ QUaFiniteTransitionVariable::QUaFiniteTransitionVariable(
 	
 }
 
+QUaNodeId QUaFiniteTransitionVariable::id() const
+{
+	return const_cast<QUaFiniteTransitionVariable*>(this)->getId()->value().value<QUaNodeId>();
+}
+
+void QUaFiniteTransitionVariable::setId(const QUaNodeId& nodeId)
+{
+	this->getId()->setValue(nodeId);
+}
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

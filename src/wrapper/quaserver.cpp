@@ -12,9 +12,12 @@
 #include <QUaTwoStateVariable>
 #include <QUaFiniteStateVariable>
 #include <QUaTransitionVariable>
+#include <QUaFiniteTransitionVariable>
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
+#include <QUaStateMachine>
+#include <QUaFiniteStateMachine>
 #include <QUaRefreshStartEvent>
 #include <QUaRefreshEndEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -1196,16 +1199,19 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaSystemEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_SYSTEMEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-	this->registerSpecificationType<QUaConditionVariable  >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE  ));
-	this->registerSpecificationType<QUaStateVariable      >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE      ));
-	this->registerSpecificationType<QUaTwoStateVariable   >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE   ));
-	this->registerSpecificationType<QUaFiniteStateVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEVARIABLETYPE));
-	this->registerSpecificationType<QUaTransitionVariable >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONVARIABLETYPE ));
-	this->registerSpecificationType<QUaCondition          >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
+	this->registerSpecificationType<QUaConditionVariable       >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE  ));
+	this->registerSpecificationType<QUaStateVariable           >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE      ));
+	this->registerSpecificationType<QUaTwoStateVariable        >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE   ));
+	this->registerSpecificationType<QUaFiniteStateVariable     >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEVARIABLETYPE));
+	this->registerSpecificationType<QUaTransitionVariable      >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONVARIABLETYPE ));
+	this->registerSpecificationType<QUaFiniteTransitionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITETRANSITIONVARIABLETYPE));
+	this->registerSpecificationType<QUaCondition               >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
 	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
-	this->registerSpecificationType<QUaAlarmCondition     >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE   ));
-	this->registerSpecificationType<QUaRefreshStartEvent  >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE));
-	this->registerSpecificationType<QUaRefreshEndEvent    >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE  ));
+	this->registerSpecificationType<QUaAlarmCondition          >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE    ));
+	this->registerSpecificationType<QUaStateMachine            >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEMACHINETYPE      ));
+	this->registerSpecificationType<QUaFiniteStateMachine      >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEMACHINETYPE), true);
+	this->registerSpecificationType<QUaRefreshStartEvent       >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE ));
+	this->registerSpecificationType<QUaRefreshEndEvent         >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE   ));
 	// register static condition refresh methods
 	// Part 9 - 5.57 and 5.5.8
 	st = UA_Server_setMethodNode_callback(

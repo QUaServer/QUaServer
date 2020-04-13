@@ -194,75 +194,71 @@ void QUaBaseVariable::setValue(
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	auto newType = newTypeConst;
-	if (newType == QMetaType::UnknownType)
-	{
-		newType = (QMetaType::Type)value.type();
-		newType = newType != QMetaType::User ? newType : (QMetaType::Type)value.userType();
-	}
-	// got modifiable copy
-	auto newValue = value;
 	// get types
 	auto oldType = this->dataType();
-	// if variant list we need to adjust newType
-	if (newValue.canConvert<QVariantList>())
+	// get modifiable copies
+	auto newValue = value;
+	auto newType  = newTypeConst;
+	// if new type not forced, then figure out new type from input
+	if (newType == QMetaType::UnknownType)
 	{
-		auto iter = newValue.value<QSequentialIterable>();
-		// TODO : [BUG] what happens if iter size is zero !?
-		auto type = (QMetaType::Type)iter.at(0).type();
-		if (iter.size() > 0)
+		// if array
+		if (newValue.canConvert<QVariantList>())
 		{
-			QVariantList listOldType;
-			if (newType == QMetaType::UnknownType || newType == QMetaType::User)
-			{
-				newType = (QMetaType::Type)iter.at(0).type();
-			}
-			// check uniform type throughout array
-			for (int i = 0; i < iter.size(); i++)
-			{
-				auto tmpType = (QMetaType::Type)iter.at(i).type();
-				Q_ASSERT_X(type == tmpType, "QUaBaseVariable::setValue", "QVariant arrays must have same types in all its items.");
-				if (type != tmpType)
-				{
-					return;
-				}
-				// preserve dataType if possible
-				if (newType != oldType &&
-					iter.at(0).canConvert(oldType))
-				{
-					listOldType.append(iter.at(i));
-					listOldType[i].convert(oldType);
-				}
-			}
-			// preserve dataType if possible
-			if (newType != oldType &&
-				iter.at(0).canConvert(oldType))
-			{
-				// overwrite newValue with converted list of old type
-				newValue = listOldType;
-				newType = oldType;
-			}
+			auto iter = newValue.value<QSequentialIterable>();
+			QVariant innerVar = iter.at(0);
+			newType = (QMetaType::Type)innerVar.type();
+			newType = newType != QMetaType::User ? newType : (QMetaType::Type)innerVar.userType();
 		}
+		// if scalar
 		else
 		{
-			newType = oldType;
+			newType = (QMetaType::Type)value.type();
+			newType = newType != QMetaType::User ? newType : (QMetaType::Type)value.userType();
+		}
+		// if new type different from old type, try to keep old type
+		if (newType != oldType)
+		{
+			// if array
+			if (newValue.canConvert<QVariantList>())
+			{
+				// can convert to old type
+				auto iter = newValue.value<QSequentialIterable>();
+				QVariant innerVar = iter.at(0);
+				if (oldType < QMetaType::User &&
+					innerVar.canConvert(oldType))
+				{
+					// convert to old type
+					QVariantList listOldType;
+					for (int i = 0; i < iter.size(); i++)
+					{
+						listOldType.append(iter.at(i));
+						listOldType[i].convert(oldType);
+					}
+					newValue = listOldType;
+					// preserve old type
+					newType = oldType;
+				}
+			}
+			// if scalar
+			else
+			{
+				// can convert to old type
+				if (oldType < QMetaType::User &&
+					newValue.canConvert(oldType))
+				{
+					// convert to old type
+					newValue.convert(oldType);
+					// preserve old type
+					newType = oldType;
+				}
+			}
 		}
 	}
-	else if (oldType < QMetaType::User && 
-		     newType != oldType && 
-		     newValue.canConvert(oldType)
-		) // scalar
+	// wether new type is forced or could not be converted to old type, we need type convertion
+	if (newType != oldType)
 	{
-		// preserve dataType if possible
-		newValue.convert(oldType);
-		newType = oldType;
-	}	
-	else if (newType != oldType && 
-		    !newValue.canConvert(oldType) && 
-		     newTypeConst != QMetaType::UnknownType)
-	{
-		// if new value dataType does not match the old value dataType
-		// first set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch"
+		// need to set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch" error
 		auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 			m_nodeId,
 			UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
@@ -270,10 +266,10 @@ void QUaBaseVariable::setValue(
 		Q_UNUSED(st);
 	}
 	// convert to UA_Variant and set new value
-	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
+	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
-		tmpVar, 
+		uaVar,
 		statusCode,
 		sourceTimestamp, 
 		serverTimestamp
@@ -281,10 +277,9 @@ void QUaBaseVariable::setValue(
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// clean up
-	UA_Variant_clear(&tmpVar);
-	// set new dataType if necessary
-	if (newType != oldType &&
-		!newValue.canConvert(oldType))
+	UA_Variant_clear(&uaVar);
+	// if type had to be converted we need to set new type
+	if (newType != oldType)
 	{
 		st = UA_Server_writeDataType(m_qUaServer->m_server,
 			m_nodeId,

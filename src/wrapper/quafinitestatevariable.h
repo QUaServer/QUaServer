@@ -25,8 +25,8 @@ public:
 
 	// Id is inherited from the StateVariableType and overridden to reflect the required DataType. 
 	// This value shall be the NodeId of one of the State Objects of the FiniteStateMachineType
-	QString id() const;
-	void setId(const QString &nodeId);
+	QUaNodeId id() const;
+	void setId(const QUaNodeId&nodeId);
 
 	// The Name Property is inherited from StateVariableType.Its Value shall be the BrowseName of
 	// one of the State Objects of the FiniteStateMachineType.

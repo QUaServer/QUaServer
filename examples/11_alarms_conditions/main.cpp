@@ -10,6 +10,8 @@
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
+
+#include <QUaFiniteStateMachine>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 int main(int argc, char *argv[])
@@ -54,6 +56,15 @@ int main(int argc, char *argv[])
 	QUaLocalizedText someLocalizedText("fr", "whatever");
 	var3->setValue(someLocalizedText);
 	Q_ASSERT(var3->value().value<QUaLocalizedText>() == someLocalizedText);
+
+	auto var4 = objsFolder->addBaseDataVariable("var4", { 0, "var4" });
+	var4->setWriteAccess(true);
+	var4->setDataType(QMetaType::QDateTime);
+	QVector<QUaNodeId> vectNodes = QVector<QUaNodeId>()
+		<< var1->nodeId()
+		<< var2->nodeId()
+		<< var3->nodeId();
+	var4->setValue(vectNodes);
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 ////

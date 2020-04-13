@@ -407,9 +407,7 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	}
 	// assume that the type of the first elem of the array is the type of all the array
 	auto iter = var.value<QSequentialIterable>();
-
-	// TODO : handle empty event
-
+	// NOTE : innerVar appears to get correct type even if var is empty array
 	QVariant innerVar = iter.at(0);
 	QMetaType::Type qtType = (QMetaType::Type)innerVar.type();
 	qtType = qtType != QMetaType::User ? qtType : (QMetaType::Type)innerVar.userType();

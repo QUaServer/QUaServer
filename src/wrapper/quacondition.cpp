@@ -141,16 +141,17 @@ void QUaCondition::setConditionClassId(const QUaNodeId& conditionClassId)
 	this->getConditionClassId()->setValue(conditionClassId);
 }
 
-QString QUaCondition::conditionClassName() const
+QUaLocalizedText QUaCondition::conditionClassName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionClassName()->value().toString();
+	return const_cast<QUaCondition*>(this)->getConditionClassName()->value().value<QUaLocalizedText>();
 }
 
-void QUaCondition::setConditionClassName(const QString& conditionClassName)
+void QUaCondition::setConditionClassName(const QUaLocalizedText& conditionClassName)
 {
 	this->getConditionClassName()->setValue(conditionClassName);
 }
 
+/* TODO : arrays!
 QUaNodeId QUaCondition::conditionSubClassId() const
 {
 	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value().value<QUaNodeId>();
@@ -161,15 +162,16 @@ void QUaCondition::setConditionSubClassId(const QUaNodeId& conditionSubClassId)
 	this->getConditionSubClassId()->setValue(conditionSubClassId);
 }
 
-QString QUaCondition::conditionSubClassName() const
+QUaLocalizedText QUaCondition::conditionSubClassName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value().toString();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value().value<QUaLocalizedText>();
 }
 
-void QUaCondition::setConditionSubClassName(const QString& conditionSubClassName)
+void QUaCondition::setConditionSubClassName(const QUaLocalizedText& conditionSubClassName)
 {
 	this->getConditionSubClassName()->setValue(conditionSubClassName);
 }
+*/
 
 QString QUaCondition::conditionName() const
 {
