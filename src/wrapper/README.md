@@ -15,11 +15,18 @@
 | QUaFiniteTransitionVariable    | Part 5 - B.4.7    | `BaseVariableType/BaseDataVariableType/TransitionVariableType/FiniteTransitionVariableType` |
 | QUaBaseObject                  | Part 5 - 6.2      | `BaseObjectType` |
 | QUaFolderObject                | Part 5 - 6.6      | `BaseObjectType/FolderType` |
-| QUaStateMachine               | Part 5 - B.4.2    | `BaseObjectType/StateMachineType` |
-| QUaFiniteStateMachine         | Part 5 - B.4.5    | `BaseObjectType/StateMachineType/FiniteStateMachineType` |
+| QUaStateMachine                | Part 5 - B.4.2    | `BaseObjectType/StateMachineType` |
+| QUaFiniteStateMachine          | Part 5 - B.4.5    | `BaseObjectType/StateMachineType/FiniteStateMachineType` |
+| QUaState                       | Part 5 - B.4.8    | `BaseObjectType/StateType` |
+| QUaTransition                  | Part 5 - B.4.10   | `BaseObjectType/TransitionType` |
 | -QUaExclusiveLimitStateMachine | Part 9 - 5.8.12.2 | `BaseObjectType/StateMachineType/FiniteStateMachineType/ExclusiveLimitStateMachineType` |
-| -QUaTransition                 | Part 5 - B.4.10   | `BaseObjectType/TransitionType` |
 | QUaBaseEvent                   | Part 5 - 6.4.2    | `BaseObjectType/BaseEventType` |
+| QUaBaseModelChangeEvent        | Part 5 - 6.4.31   | `BaseObjectType/BaseEventType/BaseModelChangeEventType` |
+| QUaGeneralModelChangeEvent     | Part 5 - 6.4.32   | `BaseObjectType/BaseEventType/BaseModelChangeEventType/GeneralModelChangeEvent` |
+| QUaSystemEvent                 | Part 5 - 6.4.28   | `BaseObjectType/BaseEventType/SystemEventType` |
+| QUaRefreshStartEvent           | Part 9 - 5.11.2   | `BaseObjectType/BaseEventType/SystemEventType/RefreshStartEventType` |
+| QUaRefreshEndEvent             | Part 9 - 5.11.3   | `BaseObjectType/BaseEventType/SystemEventType/RefreshEndEventType` |
+| -QUaTransitionEvent            | Part 5 - B.4.16   | `BaseObjectType/BaseEventType/TransitionEventType` |
 | QUaCondition                   | Part 9 - 5.5      | `BaseObjectType/BaseEventType/ConditionType` |
 | QUaAcknowledgeableCondition    | Part 9 - 5.7.2    | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType` |
 | QUaAlarmCondition              | Part 9 - 5.8.2    | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType` |
@@ -28,11 +35,7 @@
 | -QUaLimitAlarm                 | Part 9 - 5.8.11   | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType` |
 | -QUaExclusiveLimitAlarm        | Part 9 - 5.8.12.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType` |
 | -QUaExclusiveLevelAlarm        | Part 9 - 5.8.14.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType/ExclusiveLevelAlarmType` |
-| QUaBaseModelChangeEvent        | Part 5 - 6.4.31   | `BaseObjectType/BaseEventType/BaseModelChangeEventType` |
-| QUaGeneralModelChangeEvent     | Part 5 - 6.4.32   | `BaseObjectType/BaseEventType/BaseModelChangeEventType/GeneralModelChangeEvent` |
-| QUaSystemEvent                 | Part 5 - 6.4.28   | `BaseObjectType/BaseEventType/SystemEventType` |
-| QUaRefreshStartEvent           | Part 9 - 5.11.2   | `BaseObjectType/BaseEventType/SystemEventType/RefreshStartEventType` |
-| QUaRefreshEndEvent             | Part 9 - 5.11.3   | `BaseObjectType/BaseEventType/SystemEventType/RefreshEndEventType` |
+
 
 
 

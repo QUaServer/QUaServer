@@ -10,8 +10,7 @@
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
-
-#include <QUaFiniteStateMachine>
+#include <QUaExclusiveLimitStateMachine>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 int main(int argc, char* argv[])
@@ -69,6 +68,9 @@ int main(int argc, char* argv[])
 	{
 		qDebug() << nodeId.toXmlString();
 	}
+
+	auto machine = objsFolder->addChild<QUaExclusiveLimitStateMachine>("machine");
+
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 ////

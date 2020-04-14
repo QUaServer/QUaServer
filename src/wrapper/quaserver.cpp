@@ -18,6 +18,9 @@
 #include <QUaAlarmCondition>
 #include <QUaStateMachine>
 #include <QUaFiniteStateMachine>
+#include <QUaState>
+#include <QUaTransition>
+#include <QUaExclusiveLimitStateMachine>
 #include <QUaRefreshStartEvent>
 #include <QUaRefreshEndEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -1199,19 +1202,22 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaSystemEvent>(UA_NODEID_NUMERIC(0, UA_NS0ID_SYSTEMEVENTTYPE));
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-	this->registerSpecificationType<QUaConditionVariable       >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE  ));
-	this->registerSpecificationType<QUaStateVariable           >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE      ));
-	this->registerSpecificationType<QUaTwoStateVariable        >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE   ));
-	this->registerSpecificationType<QUaFiniteStateVariable     >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEVARIABLETYPE));
-	this->registerSpecificationType<QUaTransitionVariable      >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONVARIABLETYPE ));
-	this->registerSpecificationType<QUaFiniteTransitionVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITETRANSITIONVARIABLETYPE));
-	this->registerSpecificationType<QUaCondition               >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
-	this->registerSpecificationType<QUaAcknowledgeableCondition>(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
-	this->registerSpecificationType<QUaAlarmCondition          >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE    ));
-	this->registerSpecificationType<QUaStateMachine            >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEMACHINETYPE      ));
-	this->registerSpecificationType<QUaFiniteStateMachine      >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEMACHINETYPE), true);
-	this->registerSpecificationType<QUaRefreshStartEvent       >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE ));
-	this->registerSpecificationType<QUaRefreshEndEvent         >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE   ));
+	this->registerSpecificationType<QUaConditionVariable         >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONVARIABLETYPE  ));
+	this->registerSpecificationType<QUaStateVariable             >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEVARIABLETYPE      ));
+	this->registerSpecificationType<QUaTwoStateVariable          >(UA_NODEID_NUMERIC(0, UA_NS0ID_TWOSTATEVARIABLETYPE   ));
+	this->registerSpecificationType<QUaFiniteStateVariable       >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEVARIABLETYPE));
+	this->registerSpecificationType<QUaTransitionVariable        >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONVARIABLETYPE ));
+	this->registerSpecificationType<QUaFiniteTransitionVariable  >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITETRANSITIONVARIABLETYPE));
+	this->registerSpecificationType<QUaCondition                 >(UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE), true);
+	this->registerSpecificationType<QUaAcknowledgeableCondition  >(UA_NODEID_NUMERIC(0, UA_NS0ID_ACKNOWLEDGEABLECONDITIONTYPE));
+	this->registerSpecificationType<QUaAlarmCondition            >(UA_NODEID_NUMERIC(0, UA_NS0ID_ALARMCONDITIONTYPE    ));
+	this->registerSpecificationType<QUaStateMachine              >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATEMACHINETYPE      ));
+	this->registerSpecificationType<QUaFiniteStateMachine        >(UA_NODEID_NUMERIC(0, UA_NS0ID_FINITESTATEMACHINETYPE), true);
+	this->registerSpecificationType<QUaState                     >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATETYPE     ));
+	this->registerSpecificationType<QUaTransition                >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONTYPE));
+	this->registerSpecificationType<QUaExclusiveLimitStateMachine>(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELIMITSTATEMACHINETYPE));
+	this->registerSpecificationType<QUaRefreshStartEvent         >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE ));
+	this->registerSpecificationType<QUaRefreshEndEvent           >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE   ));
 	// register static condition refresh methods
 	// Part 9 - 5.57 and 5.5.8
 	st = UA_Server_setMethodNode_callback(
@@ -1240,7 +1246,12 @@ void QUaServer::setupServer()
 	m_hashHierRefTypes.insert({ "HasTrueSubState" , "IsTrueSubStateOf"  }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASTRUESUBSTATE ));
 	m_hashHierRefTypes.insert({ "HasFalseSubState", "IsFalseSubStateOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASFALSESUBSTATE));
 	// non-hierarchical
-	m_hashRefTypes.insert({ "HasCondition" , "IsConditionOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCONDITION));
+	m_hashRefTypes.insert({ "HasCondition"      , "IsConditionOf"     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCONDITION));
+	m_hashRefTypes.insert({ "FromState"         , "ToTransition"      }, UA_NODEID_NUMERIC(0, UA_NS0ID_FROMSTATE)); // Part 5 - B.4.11
+	m_hashRefTypes.insert({ "ToState"           , "FromTransition"    }, UA_NODEID_NUMERIC(0, UA_NS0ID_TOSTATE)); // Part 5 - B.4.12
+	m_hashRefTypes.insert({ "HasCause"          , "MayBeCausedBy"     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCAUSE)); // Part 5 - B.4.13
+	m_hashRefTypes.insert({ "HasEffect"         , "MayBeEffectedBy"   }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEFFECT)); // Part 5 - B.4.14
+	m_hashRefTypes.insert({ "HasSubStateMachine", "SubStateMachineOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBSTATEMACHINE)); // Part 5 - B.4.15
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	m_hashRefTypes.unite(m_hashHierRefTypes);
 

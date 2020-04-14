@@ -38,8 +38,9 @@ ua_alarms_conditions {
     $$PWD/quafinitetransitionvariable.cpp \
     $$PWD/quastatemachine.cpp \
     $$PWD/quafinitestatemachine.cpp \
-    $$PWD/quaexclusivelimitstatemachine.cpp \
+    $$PWD/quastate.cpp \
     $$PWD/quatransition.cpp \
+    $$PWD/quaexclusivelimitstatemachine.cpp \
     $$PWD/quacondition.cpp \
     $$PWD/quaacknowledgeablecondition.cpp \
     $$PWD/quaalarmcondition.cpp \
@@ -88,8 +89,9 @@ ua_alarms_conditions {
     $$PWD/quafinitetransitionvariable.h \
     $$PWD/quastatemachine.h \
     $$PWD/quafinitestatemachine.h \
-    $$PWD/quaexclusivelimitstatemachine.h \
+    $$PWD/quastate.h \
     $$PWD/quatransition.h \
+    $$PWD/quaexclusivelimitstatemachine.h \
     $$PWD/quacondition.h \
     $$PWD/quaacknowledgeablecondition.h \
     $$PWD/quaalarmcondition.h \
@@ -138,8 +140,9 @@ ua_alarms_conditions {
     $$PWD/QUaFiniteTransitionVariable \
     $$PWD/QUaStateMachine \
     $$PWD/QUaFiniteStateMachine \
-    $$PWD/QUaExclusiveLimitStateMachine \
+    $$PWD/QUaState \
     $$PWD/QUaTransition \
+    $$PWD/QUaExclusiveLimitStateMachine \
     $$PWD/QUaCondition \
     $$PWD/QUaAcknowledgeableCondition \
     $$PWD/QUaAlarmCondition \
