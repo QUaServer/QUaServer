@@ -5,11 +5,7 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-// Part 9 - 5.8.17.2
-/*
-
-
-*/
+class QUaProperty;
 
 class QUaOffNormalAlarm : public QUaDiscreteAlarm
 {
@@ -20,9 +16,14 @@ public:
 		QUaServer* server
 	);
 
+	// Points to a variable which has a value that is considered to be the normal state
+	// of the variable that owns this alarm (see inherited InputNode)
+	QUaNodeId normalState() const;
+	void setNormalState(const QUaNodeId& normalState);
 
 protected:
-
+	// NodeId
+	QUaProperty* getNormalState();
 
 };
 

@@ -5,11 +5,7 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-// Part 9 - 5.8.12.3
-/*
-
-
-*/
+class QUaExclusiveLimitStateMachine;
 
 class QUaExclusiveLimitAlarm : public QUaLimitAlarm
 {
@@ -20,9 +16,16 @@ public:
 		QUaServer* server
 	);
 
+	// NOTE : inherits limits as properties from base type
+	//        but state machine is implemented in the
+	//        LimitState of this type
+
+	// The currentState of the LimitState should reflect the
+	// limit that us violated if the alarm is active, else null
 
 protected:
-
+	// No DataType
+	QUaExclusiveLimitStateMachine* getLimitState();
 
 };
 

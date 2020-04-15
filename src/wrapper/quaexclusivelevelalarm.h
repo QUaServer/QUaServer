@@ -5,12 +5,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-// Part 9 - 5.8.14.3
-/*
-
-
-*/
-
 class QUaExclusiveLevelAlarm : public QUaExclusiveLimitAlarm
 {
     Q_OBJECT

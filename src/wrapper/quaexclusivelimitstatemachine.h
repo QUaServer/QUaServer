@@ -15,6 +15,10 @@ public:
 	);
 
 
+	// NOTE : the states available for this state machine only
+	//        exist on its type. The instance only holds the
+	//        current state and last transtion
+
 protected:
 
 

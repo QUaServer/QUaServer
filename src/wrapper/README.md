@@ -1,7 +1,5 @@
 # Implemented 62541 Types
 
-
-
 | C++ Type                       | Spec              | UA Type Hierarchy  |
 |--------------------------------|-------------------|--------------------|
 | QUaBaseVariable                | Part 5 - 7.2      | `BaseVariableType` |
@@ -19,22 +17,22 @@
 | QUaFiniteStateMachine          | Part 5 - B.4.5    | `BaseObjectType/StateMachineType/FiniteStateMachineType` |
 | QUaState                       | Part 5 - B.4.8    | `BaseObjectType/StateType` |
 | QUaTransition                  | Part 5 - B.4.10   | `BaseObjectType/TransitionType` |
-| -QUaExclusiveLimitStateMachine | Part 9 - 5.8.12.2 | `BaseObjectType/StateMachineType/FiniteStateMachineType/ExclusiveLimitStateMachineType` |
+| QUaExclusiveLimitStateMachine  | Part 9 - 5.8.12.2 | `BaseObjectType/StateMachineType/FiniteStateMachineType/ExclusiveLimitStateMachineType` |
 | QUaBaseEvent                   | Part 5 - 6.4.2    | `BaseObjectType/BaseEventType` |
 | QUaBaseModelChangeEvent        | Part 5 - 6.4.31   | `BaseObjectType/BaseEventType/BaseModelChangeEventType` |
 | QUaGeneralModelChangeEvent     | Part 5 - 6.4.32   | `BaseObjectType/BaseEventType/BaseModelChangeEventType/GeneralModelChangeEvent` |
 | QUaSystemEvent                 | Part 5 - 6.4.28   | `BaseObjectType/BaseEventType/SystemEventType` |
 | QUaRefreshStartEvent           | Part 9 - 5.11.2   | `BaseObjectType/BaseEventType/SystemEventType/RefreshStartEventType` |
 | QUaRefreshEndEvent             | Part 9 - 5.11.3   | `BaseObjectType/BaseEventType/SystemEventType/RefreshEndEventType` |
-| -QUaTransitionEvent            | Part 5 - B.4.16   | `BaseObjectType/BaseEventType/TransitionEventType` |
+| QUaTransitionEvent             | Part 5 - B.4.16   | `BaseObjectType/BaseEventType/TransitionEventType` |
 | QUaCondition                   | Part 9 - 5.5      | `BaseObjectType/BaseEventType/ConditionType` |
 | QUaAcknowledgeableCondition    | Part 9 - 5.7.2    | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType` |
 | QUaAlarmCondition              | Part 9 - 5.8.2    | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType` |
-| -QUaDiscreteAlarm              | Part 9 - 5.8.17.1 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/DiscreteAlarmType` |
-| -QUaOffNormalAlarm             | Part 9 - 5.8.17.2 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/DiscreteAlarmType/OffNormalAlarmType` |
-| -QUaLimitAlarm                 | Part 9 - 5.8.11   | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType` |
-| -QUaExclusiveLimitAlarm        | Part 9 - 5.8.12.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType` |
-| -QUaExclusiveLevelAlarm        | Part 9 - 5.8.14.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType/ExclusiveLevelAlarmType` |
+| QUaDiscreteAlarm               | Part 9 - 5.8.17.1 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/DiscreteAlarmType` |
+| QUaOffNormalAlarm              | Part 9 - 5.8.17.2 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/DiscreteAlarmType/OffNormalAlarmType` |
+| QUaLimitAlarm                  | Part 9 - 5.8.11   | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType` |
+| QUaExclusiveLimitAlarm         | Part 9 - 5.8.12.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType` |
+| QUaExclusiveLevelAlarm         | Part 9 - 5.8.14.3 | `BaseObjectType/BaseEventType/ConditionType/AcknowledgeableConditionType/AlarmConditionType/LimitAlarmType/ExclusiveLimitAlarmType/ExclusiveLevelAlarmType` |
 
 
 

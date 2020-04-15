@@ -50,7 +50,8 @@ ua_alarms_conditions {
     $$PWD/quaexclusivelimitalarm.cpp \
     $$PWD/quaexclusivelevelalarm.cpp \
     $$PWD/quarefreshstartevent.cpp \
-    $$PWD/quarefreshendevent.cpp
+    $$PWD/quarefreshendevent.cpp \
+    $$PWD/quatransitionevent.cpp
 }
 
 ua_historizing {
@@ -101,7 +102,8 @@ ua_alarms_conditions {
     $$PWD/quaexclusivelimitalarm.h \
     $$PWD/quaexclusivelevelalarm.h \
     $$PWD/quarefreshstartevent.h \
-    $$PWD/quarefreshendevent.h
+    $$PWD/quarefreshendevent.h \
+    $$PWD/quatransitionevent.h
 }
 
 ua_historizing {
@@ -152,7 +154,8 @@ ua_alarms_conditions {
     $$PWD/QUaExclusiveLimitAlarm \
     $$PWD/QUaExclusiveLevelAlarm \
     $$PWD/QUaRefreshStartEvent \
-    $$PWD/QUaRefreshEndEvent
+    $$PWD/QUaRefreshEndEvent \
+    $$PWD/QUaTransitionEvent
 }
 
 ua_historizing {

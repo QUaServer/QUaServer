@@ -10,7 +10,7 @@
 #include <QUaCondition>
 #include <QUaAcknowledgeableCondition>
 #include <QUaAlarmCondition>
-#include <QUaExclusiveLimitStateMachine>
+#include <QUaExclusiveLevelAlarm>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 int main(int argc, char* argv[])
@@ -69,7 +69,8 @@ int main(int argc, char* argv[])
 		qDebug() << nodeId.toXmlString();
 	}
 
-	auto machine = objsFolder->addChild<QUaExclusiveLimitStateMachine>("machine");
+	auto level_alarm = objsFolder->addChild<QUaExclusiveLevelAlarm>("level_alarm");
+	level_alarm->setLowLimitAllowed(true);
 
 
 ////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -37,6 +37,7 @@ public:
 	bool      acknowledged() const;
 	void      setAcknowledged(const bool& acknowledged);
 
+	// NOTE: optional, only work if confirmAllowed == true 
 	QString   confirmedStateCurrentStateName() const;
 	void      setConfirmedStateCurrentStateName(const QString& confirmedState);
 	bool      confirmedStateId() const;

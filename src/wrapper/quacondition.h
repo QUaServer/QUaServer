@@ -50,9 +50,9 @@ public:
 	QList<QUaNodeId> conditionSubClassId() const;
 	void      setConditionSubClassId(const QList<QUaNodeId>& conditionSubClassId);
 
-	// NOTE : optional; not created until one of these methods is called
 	// ConditionSubClassName provides the display name[s] of the ConditionClassType[s] listed in
 	// the ConditionSubClassId.
+	// NOTE : optional; not created until one of these methods is called
 	QList<QUaLocalizedText> conditionSubClassName() const;
 	void    setConditionSubClassName(const QList<QUaLocalizedText>& conditionSubClassName);
 
