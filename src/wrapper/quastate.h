@@ -7,14 +7,6 @@
 
 class QUaProperty;
 
-// Part 5 - B.4.8
-/*
-States of a FiniteStateMachine are represented as Objects of the StateType.
-
-HasProperty | Variable | StateNumber | UInt32 | PropertyType | Mandatory
-
-*/
-
 class QUaState : public QUaBaseObject
 {
     Q_OBJECT

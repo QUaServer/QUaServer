@@ -237,10 +237,13 @@ QUaNode::~QUaNode()
 	st = UA_Server_deleteNode(m_qUaServer->m_server, m_nodeId, true);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// update parent browse cache
+	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
+	Q_CHECK_PTR(parent);
+	parent->m_browseCache.remove(this->browseName());
 	// trigger reference deleted, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
-	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
 	// add reference deleted change to buffer
 	m_qUaServer->addChange({
 		parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
@@ -570,6 +573,7 @@ QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 
 QList<QUaNode*> QUaNode::browseChildren() const
 {
+	// TODO : check if faster with open62541 browse API
 	return this->findChildren<QUaNode*>(QString(), Qt::FindDirectChildrenOnly);
 }
 
@@ -577,8 +581,14 @@ QUaNode* QUaNode::browseChild(
 	const QUaQualifiedName&  browseName,
 	const bool& instantiateOptional/* = false*/)
 {
+	// first check cache
+	QUaNode* child = m_browseCache.value(browseName, nullptr);
+	if (child)
+	{
+		return child;
+	}
 	// TODO : check if new open62541 tree-based lookup implementation is faster
-	auto child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
+	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
 	if (child || !instantiateOptional)
 	{
 		return child;

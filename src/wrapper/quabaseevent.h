@@ -7,21 +7,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-// Part 5 - 6.4.2 : BaseEventType
-/*
-This Event concept is introduced in Part 3 (see Part 3 - 4.6 : Event Model). 
-
-HasProperty | Variable | EventId     | ByteString       | PropertyType | Mandatory
-HasProperty | Variable | EventType   | NodeId           | PropertyType | Mandatory
-HasProperty | Variable | SourceNode  | NodeId           | PropertyType | Mandatory
-HasProperty | Variable | SourceName  | String           | PropertyType | Mandatory
-HasProperty | Variable | Time        | UtcTime          | PropertyType | Mandatory
-HasProperty | Variable | ReceiveTime | UtcTime          | PropertyType | Mandatory
-HasProperty | Variable | LocalTime   | TimeZoneDataType | PropertyType | Optional
-HasProperty | Variable | Message     | LocalizedText    | PropertyType | Mandatory
-HasProperty | Variable | Severity    | UInt16           | PropertyType | Mandatory
-*/
-
 #include <QUaProperty>
 
 class QUaBaseEvent : public QUaBaseObject

@@ -5,13 +5,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-// Part 5 - B.4.4
-/*
-The TransitionVariableType is the base VariableType for Variables that store a Transition that
-occurred within a StateMachine as a human readable name.
-
-*/
-
 class QUaTransitionVariable : public QUaBaseDataVariable
 {
     Q_OBJECT
@@ -24,12 +17,12 @@ public:
 	// inherited
 
 	// TODO : override setValue ?
-	// The SourceTimestamp for the value specifies when the Transition occurred.This value may
-	// also be exposed with the TransitionTime Property
+	// The SourceTimestamp for the value specifies when the Transition occurred.
+	// This value may also be exposed with the TransitionTime Property
 
 	// children
-	// Id is a name which uniquely identifies a Transition within the StateMachineType.
-	// A subtype may restrict the DataType (data type is BaseDataType)
+
+	// Uniquely identifies a Transition within the StateMachineType.
 	QVariant id() const;
 	void setId(const QVariant& id);
 
@@ -48,10 +41,7 @@ public:
 	QDateTime transitionTime() const;
 	void setTransitionTime(const QDateTime& transitionTime);
 
-	// EffectiveTransitionTime specifies the time when the current state or one of its substates was
-	// entered.If, for example, a StateA is activeand – while active – switches several times between
-	// its substates SubAand SubB, then the TransitionTime stays at the point in time where StateA
-	// became active whereas the EffectiveTransitionTime changes with each change of a substate.
+	// Time when the current (most specific) (sub-)state  entered
 	// NOTE : optional; not created until one of these methods is called
 	QDateTime effectiveTransitionTime() const;
 	void setEffectiveTransitionTime(const QDateTime& effectiveTransitionTime);

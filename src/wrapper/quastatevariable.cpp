@@ -33,7 +33,7 @@ void QUaStateVariable::setName(const QUaQualifiedName& name)
 
 quint32 QUaStateVariable::number() const
 {
-	return const_cast<QUaStateVariable*>(this)->getNumber()->value().toUInt();
+	return const_cast<QUaStateVariable*>(this)->getNumber()->value<quint32>();
 }
 
 void QUaStateVariable::setNumber(const quint32& number)

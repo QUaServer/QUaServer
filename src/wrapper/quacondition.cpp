@@ -131,51 +131,50 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	}
 }
 
+// TODO : implement condition classes
 QUaNodeId QUaCondition::conditionClassId() const
 {
 	return const_cast<QUaCondition*>(this)->getConditionClassId()->value<QUaNodeId>();
 }
-
+// TODO : implement condition classes
 void QUaCondition::setConditionClassId(const QUaNodeId& conditionClassId)
 {
 	this->getConditionClassId()->setValue(conditionClassId);
 }
-
+// TODO : implement condition classes
 QUaLocalizedText QUaCondition::conditionClassName() const
 {
 	return const_cast<QUaCondition*>(this)->getConditionClassName()->value<QUaLocalizedText>();
 }
-
+// TODO : implement condition classes
 void QUaCondition::setConditionClassName(const QUaLocalizedText& conditionClassName)
 {
 	this->getConditionClassName()->setValue(conditionClassName);
 }
-
-/* TODO : arrays!
-QUaNodeId QUaCondition::conditionSubClassId() const
+// TODO : implement condition classes
+QList<QUaNodeId> QUaCondition::conditionSubClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value<QUaNodeId>();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value<QList<QUaNodeId>>();
 }
-
-void QUaCondition::setConditionSubClassId(const QUaNodeId& conditionSubClassId)
+// TODO : implement condition classes
+void QUaCondition::setConditionSubClassId(const QList<QUaNodeId>& conditionSubClassId)
 {
 	this->getConditionSubClassId()->setValue(conditionSubClassId);
 }
-
-QUaLocalizedText QUaCondition::conditionSubClassName() const
+// TODO : implement condition classes
+QList<QUaLocalizedText> QUaCondition::conditionSubClassName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value<QUaLocalizedText>();
+	return const_cast<QUaCondition*>(this)->getConditionSubClassName()->value<QList<QUaLocalizedText>>();
 }
-
-void QUaCondition::setConditionSubClassName(const QUaLocalizedText& conditionSubClassName)
+// TODO : implement condition classes
+void QUaCondition::setConditionSubClassName(const QList<QUaLocalizedText>& conditionSubClassName)
 {
 	this->getConditionSubClassName()->setValue(conditionSubClassName);
 }
-*/
 
 QString QUaCondition::conditionName() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionName()->value().toString();
+	return const_cast<QUaCondition*>(this)->getConditionName()->value<QString>();
 }
 
 void QUaCondition::setConditionName(const QString& conditionName)
@@ -195,7 +194,7 @@ void QUaCondition::setBranchId(const QUaNodeId& branchId)
 
 bool QUaCondition::retain() const
 {
-	return const_cast<QUaCondition*>(this)->getRetain()->value().toBool();
+	return const_cast<QUaCondition*>(this)->getRetain()->value<bool>();
 }
 
 void QUaCondition::setRetain(const bool& retain)
@@ -338,8 +337,7 @@ void QUaCondition::setQuality(const QUaStatusCode& quality)
 	{
 		return;
 	}
-	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
-	// will cause Event Notifications.
+	// any change to comment, severity and quality will cause event.
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	QUaBaseEvent::setSeverity(100); // NOTE : do not call reimpl method to void double event
@@ -370,8 +368,7 @@ void QUaCondition::setSeverity(const quint16& intSeverity)
 	{
 		return;
 	}
-	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
-	// will cause Event Notifications.
+	// any change to comment, severity and quality will cause event.
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setMessage(tr("Severity changed to %1").arg(intSeverity));
@@ -399,9 +396,8 @@ void QUaCondition::setComment(const QString& comment)
 	{
 		return;
 	}
+	// any change to comment, severity and quality will cause event.
 	// trigger event
-	// Spec : Comment, severity and quality are important elements of Conditions and any change to them
-	// will cause Event Notifications.
 	auto time = QDateTime::currentDateTimeUtc();
 	QUaBaseEvent::setSeverity(0); // NOTE : base method -> do not trigger
 	this->setTime(time);
@@ -498,11 +494,8 @@ QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 	branch->setBranchId(branch->nodeId());
 	branch->QUaNode::setDisplayName(browseName.name());
 	branch->setConditionName(browseName.name());
-	// NOTE : specification
-	// A ConditionBranch is a copy of the Condition instance state that can change independently of
-	// the current Condition instance state.Each Branch has an identifier called a BranchId which is
-	// unique among all active Branches for a Condition instance. Branches are typically not visible in
-	// the Address Spaceand this standard does not define a standard way to make them visible.
+	// A branch is an independent copy of the condition instance state that can change, not typically 
+	// not visible in the Address Space
 	// NOTE : in this implementation I decided to expose to the address space through a non-hierarchical
 	// reference because it is easier for debugging/development puposes. Maybe will change in the future.
 	this->addReference({ "HasBranch", "IsBranchOf" }, branch);

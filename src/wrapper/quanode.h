@@ -312,6 +312,7 @@ protected:
 private:
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
+	QHash<QUaQualifiedName, QUaNode*> m_browseCache;
 
 	// Static Helpers
 

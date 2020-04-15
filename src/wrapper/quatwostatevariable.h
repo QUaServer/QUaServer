@@ -5,47 +5,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-// Part 9 - 5.2 : TwoStateVariableType
-/*
-Most states defined in this standard are simple – i.e. they are either True or False. The
-TwoStateVariableType is introduced specifically for this use case. More complex states are
-modelled by using a StateMachineType defined in Part 5.
-The TwoStateVariableType is derived from the StateVariableType defined in Part 5 and
-formally defined in Table 3(page 14).
-
-HasProperty | Variable | Id                      | Boolean       | PropertyType | Mandatory
-HasProperty | Variable | TransitionTime          | UtcTime       | PropertyType | Optional
-HasProperty | Variable | EffectiveTransitionTime | UtcTime       | PropertyType | Optional
-HasProperty | Variable | TrueState               | LocalizedText | PropertyType | Optional
-HasProperty | Variable | FalseState              | LocalizedText | PropertyType | Optional
-
-HasTrueSubState  | StateMachine or TwoStateVariableType | <StateIdentifier> | Defined in Clause 5.4.2 | Optional
-HasFalseSubState | StateMachine or TwoStateVariableType | <StateIdentifier> | Defined in Clause 5.4.3 | Optional
-
-The Value Attribute of an instance of TwoStateVariableType contains the current state as a
-human readable name. The EnabledState for example, might contain the name “Enabled” when
-True and “Disabled” when False.
-
-The optional Property EffectiveDisplayName from the StateVariableType is used if a state has
-sub states. It contains a human readable name for the current state after taking the state of any
-SubStateMachines in account. As an example, the EffectiveDisplayName of the EnabledState
-could contain “Active/HighHigh” to specify that the Condition is active and has exceeded the
-HighHigh limit.
-
-Other optional Properties of the StateVariableType have no defined meaning for
-TwoStateVariableType.
-
-TrueState and FalseState contain the localized string for the TwoStateVariableType value when
-its Id Property has the value True or False, respectively. Since the two Properties provide metadata for the Type, Servers may not allow these Properties to be selected in the Event filter for
-a MonitoredItem. Clients can use the Read Service to get the information from the specific
-ConditionType.
-
-A HasTrueSubState Reference is used to indicate that the True state has sub states.
-
-A HasFalseSubState Reference is used to indicate that the False state has sub states
-
-*/
-
 class QUaTwoStateVariable : public QUaStateVariable
 {
     Q_OBJECT
@@ -74,24 +33,16 @@ public:
 	QDateTime transitionTime() const;
 	void setTransitionTime(const QDateTime& transitionTime);
 
-	// Specifies the time when the current state or one of its sub states was entered.
-	// If, for example, a LevelAlarm is active and – while active – switches several times
-	// between High and HighHigh, then the TransitionTime stays at the point in time where 
-	// the Alarm became active whereas the EffectiveTransitionTime changes with each 
-	// shift of a sub state.
-	// Used in conjuction with inherited EffectiveDisplayName which  contains a 
-	// human readable name for the current (sub) state, for example "Active/HighHigh"
+	// Companion for inherited EffectiveDisplayName
 	// NOTE : optional; not created until one of these methods is called
 	QDateTime effectiveTransitionTime() const;
 	void setEffectiveTransitionTime(const QDateTime& effectiveTransitionTime);
 
-	// Contain the localized string for the TwoStateVariableType value when
-	// its Id Property has the value True
+	// Name of the state when the Id property is true
 	// NOTE : optional; not created until one of these methods is called
 	QUaLocalizedText trueState() const;
 	void setTrueState(const QUaLocalizedText& trueState);
-	// Contain the localized string for the TwoStateVariableType value when
-	// its Id Property has the value False
+	// Name of the state when the Id property is false
 	// NOTE : optional; not created until one of these methods is called
 	QUaLocalizedText falseState() const;
 	void setFalseState(const QUaLocalizedText& falseState);

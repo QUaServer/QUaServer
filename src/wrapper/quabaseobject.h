@@ -3,15 +3,6 @@
 
 #include <QUaNode>
 
-// Part 5 - 6.2 : BaseObjectType
-/*
-The BaseObjectType is used as type definition whenever there is an Object 
-having no more concrete type definitions available. 
-Servers should avoid using this ObjectType and use a more specific type, if possible. 
-This ObjectType is the base ObjectType and all other ObjectTypes shall either 
-directly or indirectly inherit from it.
-*/
-
 class QUaBaseObject : public QUaNode
 {
     Q_OBJECT

@@ -7,16 +7,8 @@
 
 class QUaProperty;
 
-// Part 9 - 5.3 : ConditionVariableType
-/*
-Various information elements of a Condition are not considered to be states. However, a change
-in their value is considered important and supposed to trigger an Event Notification. These
-information elements are called ConditionVariable.
 
-HasProperty | Variable | SourceTimestamp | UtcTime | PropertyType | Mandatory
-
-*/
-
+// any change in a ConditionVariable of a Condition should trigger an event
 class QUaConditionVariable : public QUaBaseDataVariable
 {
     Q_OBJECT
@@ -39,8 +31,7 @@ public:
 	// children
 
 	// The time of the last change of the Value of this ConditionVariable
-	// It shall be the same time that would be returned from the Read Service inside the DataValue
-	// structure for the ConditionVariable Value Attribute.
+	// Overwrite to sync this variable's source timestamp with the child property
 	void setSourceTimestamp(const QDateTime& sourceTimestamp) override;
 
 private slots:

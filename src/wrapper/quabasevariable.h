@@ -22,12 +22,6 @@ struct container_traits<QVector<T>> : std::true_type
 	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
 };
 
-// Part 5 - 7.2 : BaseVariableType
-/*
-The BaseVariableType is the abstract base type for all other VariableTypes. 
-However, only the PropertyType and the BaseDataVariableType directly inherit from this type.
-*/
-
 class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
@@ -105,31 +99,13 @@ public:
 			newDataType
 		);
 	};
-	// The sourceTimestamp is used to reflect the timestamp that was applied to a Variable 
-	// value by the data source. The sourceTimestamp shall be UTC time and should indicate 
-	// the time of the last change of the value or statusCode.
-	// In the case of a bad or uncertain status sourceTimestamp is used to reflect the time 
-	// that the source recognized the non - good status or the time the Server last tried 
-	// to recover from the bad or uncertain status.
+	// Timestamp of the source 
 	virtual QDateTime sourceTimestamp() const;
 	virtual void      setSourceTimestamp(const QDateTime& sourceTimestamp);
-	// The serverTimestamp is used to reflect the time that the Server received a Variable 
-	// value or knew it to be accurate. In the case of a bad or uncertain status, serverTimestamp 
-	// is used to reflect the time that the Server received the status or that the Server 
-	// last tried to recover from the bad or uncertain status.
+	// Timestamp when the server seceived the value from the source
 	virtual QDateTime serverTimestamp() const;
 	virtual void      setServerTimestamp(const QDateTime& serverTimestamp);
-	// The StatusCode is used to indicate the conditions under which a Variable value was generated,
-	// and thereby can be used as an indicator of the usability of the value.
-	// - A StatusCode with severity Good means that the value is of good quality.
-	// - A StatusCode with severity Uncertain means that the quality of the value is uncertain for
-	//   reasons indicated by the SubCode.
-	// - A StatusCode with severity Bad means that the value is not usable for reasons indicated by
-	//   the SubCode.
-	// A Server, which does not support status information, shall return a severity code of Good. 
-	// It is also acceptable for a Server to simply return a severity and a non - specific(0) SubCode.
-	// If the Server has no known value - in particular when Severity is BAD, it shall return a
-	// NULL value
+	// Reflects the quality of the value
 	QUaStatusCode statusCode() const;
 	void          setStatusCode(const QUaStatusCode& statusCode);
 	// If there is no old value, a default value is assigned with the new dataType
