@@ -18,111 +18,41 @@ int main(int argc, char* argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
-	server.registerEnum<QUaStatus>();
+	server.registerEnum<QUa::ExclusiveLimitState>();
 
 	QObject::connect(&server, &QUaServer::logMessage,
-		[](const QUaLog& log) {
-			qDebug()
-				<< "[" << log.timestamp.toLocalTime().toString("dd.MM.yyyy hh:mm:ss.zzz")
-				<< "][" << log.level
-				<< "][" << log.category
-				<< "] :" << log.message;
-		});
-	QObject::connect(&server, &QUaServer::clientConnected,
-		[](const QUaSession* sessionData)
-		{
-			qDebug() << "Connected" << sessionData->address() << ":" << sessionData->port() << "|" << sessionData->applicationName();
-		});
+	[](const QUaLog& log) {
+		qDebug()
+			<< "[" << log.timestamp.toLocalTime().toString("dd.MM.yyyy hh:mm:ss.zzz")
+			<< "][" << log.level
+			<< "][" << log.category
+			<< "] :" << log.message;
+	});
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
-	// NOTE : invalid namespace when ns > 1 ?
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-	auto var1 = objsFolder->addBaseDataVariable("var1", { 1, "var1" });
-	var1->setWriteAccess(true);
-	QUaQualifiedName someName(1, "whatever");
-	var1->setValue(someName);
-	Q_ASSERT(var1->value<QUaQualifiedName>() == someName);
-
-	auto var2 = objsFolder->addBaseDataVariable("var2", "ns=0;s=var2");
-	var2->setWriteAccess(true);
-	QUaNodeId someNodeId(1, "whatever");
-	var2->setValue(someNodeId);
-	Q_ASSERT(var2->value<QUaNodeId>() == someNodeId);
-
-	auto var3 = objsFolder->addBaseDataVariable("var3", { 1, "var3" });
-	var3->setWriteAccess(true);
-	QUaLocalizedText someLocalizedText("fr", "whatever");
-	var3->setValue(someLocalizedText);
-	Q_ASSERT(var3->value<QUaLocalizedText>() == someLocalizedText);
-
-	auto var4 = objsFolder->addBaseDataVariable("var4", { 0, "var4" });
-	var4->setWriteAccess(true);
-	var4->setDataType(QMetaType::QDateTime);
-	QVector<QUaNodeId> vectNodes = QVector<QUaNodeId>()
-		<< var1->nodeId()
-		<< var2->nodeId()
-		<< var3->nodeId();
-	var4->setValue(vectNodes);
-	for (auto nodeId : var4->value<QVector<QUaNodeId>>())
-	{
-		qDebug() << nodeId.toXmlString();
-	}
-
+	auto level = objsFolder->addBaseDataVariable("level");
+	level->setValue(0.0);
+	level->setDataType(QMetaType::Double);
+	objsFolder->addMethod("setLevel", [level](double levelValue) {
+		level->setValue(levelValue);
+		emit level->valueChanged(levelValue);
+	});
+	
 	auto level_alarm = objsFolder->addChild<QUaExclusiveLevelAlarm>("level_alarm");
+	level_alarm->setHighHighLimitAllowed(true);
+	level_alarm->setHighLimitAllowed(true);
 	level_alarm->setLowLimitAllowed(true);
-
-
-////#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-////
-////	auto srcObj = objsFolder->addChild<QUaBaseObject>("SourceObject", "ns=0;s=source_object");
-////	srcObj->setEventNotifierSubscribeToEvents();
-////	srcObj->addMethod("delete",
-////	[srcObj]() {
-////		delete srcObj;
-////	});
-////
-////	auto condObj = srcObj->addChild<QUaAcknowledgeableCondition>("MyAcknowledgeableCondition");
-////	condObj->setConfirmAllowed(true);
-////	//condObj->addMethod("resetStates",
-////	//[condObj]() {
-////	//	condObj->resetInternals();
-////	//});
-////	condObj->addMethod("setRetain",
-////	[condObj](bool retain) {
-////		condObj->setRetain(retain);
-////	});
-////	condObj->addMethod("setQuality",
-////	[condObj](QUaStatus quality) {
-////		condObj->setQuality(quality);
-////	});
-////	condObj->addMethod("setSeverity",
-////	[condObj](quint16 severity) {
-////		condObj->setSeverity(severity);
-////	});
-////	condObj->addMethod("createBranch",
-////	[condObj]() {
-////		condObj->createBranch();
-////	});
-////	condObj->addMethod("delete",
-////	[condObj]() {
-////		delete condObj;
-////	});
-////
-////	//auto almObj = objsFolder->addChild<QUaAlarmCondition>();
-////	//almObj->setBrowseName("MyAlarmCondition");
-////	//almObj->setDisplayName("MyAlarmCondition");
-////	//almObj->setConfirmAllowed(true);
-////	//almObj->addMethod("setActive",
-////	//[almObj](bool active) {
-////	//	almObj->setActive(active);
-////	//});
-////	//almObj->addMethod("setRetain",
-////	//[almObj](bool retain) {
-////	//	almObj->setRetain(retain);
-////	//});
-////
-////#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	level_alarm->setLowLowLimitAllowed(true);
+	level_alarm->setHighHighLimit(100.0);
+	level_alarm->setHighLimit(10.0);
+	level_alarm->setLowLimit(-10.0);
+	level_alarm->setLowLowLimit(-100.0);
+	level_alarm->setInputNode(level);
+	
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 	server.start();
 

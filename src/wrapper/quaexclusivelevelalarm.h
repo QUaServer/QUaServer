@@ -14,6 +14,7 @@ public:
 		QUaServer* server
 	);
 
+	// nothing to do here
 
 protected:
 

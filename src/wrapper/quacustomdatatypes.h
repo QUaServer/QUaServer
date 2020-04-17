@@ -98,6 +98,26 @@ namespace QUa
 		Application
 	};
 	Q_ENUM_NS(LogCategory)
+
+	enum class ExclusiveLimitState {
+		None     = 0,
+		Normal   = None,
+		HighHigh = 1,
+		High     = 2,
+		Low      = 3,
+		LowLow   = 4
+	};
+	Q_ENUM_NS(ExclusiveLimitState)
+
+	enum class ExclusiveLimitTransition {
+		None           = 0,
+		Null           = None,
+		HighHighToHigh = 1,
+		HighToHighHigh = 2,
+		LowLowToLow    = 3,
+		LowToLowLow    = 4
+	};
+	Q_ENUM_NS(ExclusiveLimitTransition)
 }
 typedef QUa::LogLevel    QUaLogLevel;
 typedef QUa::LogCategory QUaLogCategory;
@@ -476,6 +496,58 @@ inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStr
 
 Q_DECLARE_METATYPE(QUaChangeStructureDataType);
 
+
+class QUaExclusiveLimitState
+{
+public:
+	QUaExclusiveLimitState();
+	QUaExclusiveLimitState(const QUa::ExclusiveLimitState& state);
+	QUaExclusiveLimitState(const QString& strState);
+	QUaExclusiveLimitState(const char* strState);
+
+	void operator=(const QUa::ExclusiveLimitState& state);
+	void operator=(const QString& strState);
+	void operator=(const char* strState);
+	bool operator==(const QUaExclusiveLimitState& other) const;
+	bool operator==(const QUa::ExclusiveLimitState& other) const;
+
+	operator QUa::ExclusiveLimitState() const;
+	operator QString() const;
+
+	QString toString() const;
+
+private:
+	QUa::ExclusiveLimitState m_state;
+	static QMetaEnum m_metaEnum;
+};
+
+Q_DECLARE_METATYPE(QUaExclusiveLimitState);
+
+class QUaExclusiveLimitTransition
+{
+public:
+	QUaExclusiveLimitTransition();
+	QUaExclusiveLimitTransition(const QUa::ExclusiveLimitTransition& transition);
+	QUaExclusiveLimitTransition(const QString& strTransition);
+	QUaExclusiveLimitTransition(const char* strTransition);
+
+	void operator=(const QUa::ExclusiveLimitTransition& transition);
+	void operator=(const QString& strTransition);
+	void operator=(const char* strTransition);
+	bool operator==(const QUaExclusiveLimitTransition& other) const;
+	bool operator==(const QUa::ExclusiveLimitTransition& other) const;
+
+	operator QUa::ExclusiveLimitTransition() const;
+	operator QString() const;
+
+	QString toString() const;
+
+private:
+	QUa::ExclusiveLimitTransition m_transition;
+	static QMetaEnum m_metaEnum;
+};
+
+Q_DECLARE_METATYPE(QUaExclusiveLimitTransition);
 
 // Enum Stuff
 typedef qint64 QUaEnumKey;

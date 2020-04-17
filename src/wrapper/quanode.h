@@ -72,16 +72,6 @@ struct QUaHasMethodDeserializeEnd<T,
 	: std::true_type
 {};
 
-/*
-typedef struct {
-	// Node Attributes
-	UA_UInt32        specifiedAttributes;
-	UA_LocalizedText displayName;
-	UA_LocalizedText description;
-	UA_UInt32        writeMask;
-	UA_UInt32        userWriteMask;
-} UA_NodeAttributes;
-*/
 
 class QUaNode : public QObject
 {

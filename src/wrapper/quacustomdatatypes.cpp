@@ -876,3 +876,137 @@ quint32 QUaNodeId::internalHash() const
 {
 	return UA_NodeId_hash(&m_nodeId);
 }
+
+QMetaEnum QUaExclusiveLimitState::m_metaEnum = QMetaEnum::fromType<QUa::ExclusiveLimitState>();
+
+QUaExclusiveLimitState::QUaExclusiveLimitState()
+{
+	m_state = QUa::ExclusiveLimitState::None;
+}
+
+QUaExclusiveLimitState::QUaExclusiveLimitState(const QUa::ExclusiveLimitState& state)
+{
+	*this = state;
+}
+
+QUaExclusiveLimitState::QUaExclusiveLimitState(const QString& strState)
+{
+	*this = strState;
+}
+
+QUaExclusiveLimitState::QUaExclusiveLimitState(const char* strState)
+{
+	*this = strState;
+}
+
+void QUaExclusiveLimitState::operator=(const QUa::ExclusiveLimitState& state)
+{
+	m_state = state;
+}
+
+void QUaExclusiveLimitState::operator=(const QString& strState)
+{
+	QByteArray ba = strState.toUtf8();
+	*this = ba.constData();
+}
+
+void QUaExclusiveLimitState::operator=(const char* strState)
+{
+	bool ok = false;
+	int val = m_metaEnum.keyToValue(strState, &ok);
+	m_state = ok ? static_cast<QUa::ExclusiveLimitState>(val) : QUa::ExclusiveLimitState::None;
+}
+
+bool QUaExclusiveLimitState::operator==(const QUaExclusiveLimitState& other) const
+{
+	return m_state == other.m_state;
+}
+
+bool QUaExclusiveLimitState::operator==(const QUa::ExclusiveLimitState& other) const
+{
+	return m_state == other;
+}
+
+QUaExclusiveLimitState::operator QUa::ExclusiveLimitState() const
+{
+	return m_state;
+}
+
+QUaExclusiveLimitState::operator QString() const
+{
+	const char* state = m_metaEnum.valueToKey(static_cast<int>(m_state));
+	Q_ASSERT(state);
+	return QString(state);
+}
+
+QString QUaExclusiveLimitState::toString() const
+{
+	return *this;
+}
+
+QMetaEnum QUaExclusiveLimitTransition::m_metaEnum = QMetaEnum::fromType<QUa::ExclusiveLimitTransition>();
+
+QUaExclusiveLimitTransition::QUaExclusiveLimitTransition()
+{
+	m_transition = QUa::ExclusiveLimitTransition::Null;
+}
+
+QUaExclusiveLimitTransition::QUaExclusiveLimitTransition(const QUa::ExclusiveLimitTransition& transition)
+{
+	*this = transition;
+}
+
+QUaExclusiveLimitTransition::QUaExclusiveLimitTransition(const QString& strTransition)
+{
+	*this = strTransition;
+}
+
+QUaExclusiveLimitTransition::QUaExclusiveLimitTransition(const char* strTransition)
+{
+	*this = strTransition;
+}
+
+void QUaExclusiveLimitTransition::operator=(const QUa::ExclusiveLimitTransition& transition)
+{
+	m_transition = transition;
+}
+
+void QUaExclusiveLimitTransition::operator=(const QString& strTransition)
+{
+	QByteArray ba = strTransition.toUtf8();
+	*this = ba.constData();
+}
+
+void QUaExclusiveLimitTransition::operator=(const char* strTransition)
+{
+	bool ok = false;
+	int val = m_metaEnum.keyToValue(strTransition, &ok);
+	m_transition = ok ? static_cast<QUa::ExclusiveLimitTransition>(val) : QUa::ExclusiveLimitTransition::Null;
+}
+
+bool QUaExclusiveLimitTransition::operator==(const QUaExclusiveLimitTransition& other) const
+{
+	return m_transition == other.m_transition;
+}
+
+bool QUaExclusiveLimitTransition::operator==(const QUa::ExclusiveLimitTransition& other) const
+{
+	return m_transition == other;
+}
+
+QUaExclusiveLimitTransition::operator QUa::ExclusiveLimitTransition() const
+{
+	return m_transition;
+}
+
+QUaExclusiveLimitTransition::operator QString() const
+{
+	const char* transition = m_metaEnum.valueToKey(static_cast<int>(m_transition));
+	Q_ASSERT(transition);
+	return QString(transition);
+}
+
+QString QUaExclusiveLimitTransition::toString() const
+{
+	return *this;
+}

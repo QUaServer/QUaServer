@@ -1172,6 +1172,24 @@ void QUaServer::registerCustomTypes()
 	QMetaType::registerConverter<QString, QUaLocalizedText>([](QString strLocalText) {
 		return QUaLocalizedText(strLocalText);
 	});
+	// exclusive limit transition
+	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitState>() >= QMetaType::User);
+	// string convertion for serialization
+	QMetaType::registerConverter<QUaExclusiveLimitState, QString>([](QUaExclusiveLimitState state) {
+		return state.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaExclusiveLimitState>([](QString strState) {
+		return QUaExclusiveLimitState(strState);
+	});
+	// exclusive limit transition
+	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitTransition>() >= QMetaType::User);
+	// string convertion for serialization
+	QMetaType::registerConverter<QUaExclusiveLimitTransition, QString>([](QUaExclusiveLimitTransition transition) {
+		return transition.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaExclusiveLimitTransition>([](QString strTransition) {
+		return QUaExclusiveLimitTransition(strTransition);
+	});
 }
 
 void QUaServer::setupServer()
@@ -2392,7 +2410,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		auto condition = qobject_cast<QUaCondition*>(tmp);
 		Q_CHECK_PTR(condition);
 		// set default originator
-		condition->setSourceNodeByRef(parentNode);
+		condition->QUaBaseEvent::setSourceNode(parentNode);
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

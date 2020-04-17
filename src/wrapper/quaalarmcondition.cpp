@@ -14,6 +14,11 @@ QUaAlarmCondition::QUaAlarmCondition(
 	this->resetInternals();
 }
 
+QUaAlarmCondition::~QUaAlarmCondition()
+{
+	this->cleanConnections();
+}
+
 QString QUaAlarmCondition::activeStateCurrentStateName() const
 {
 	return const_cast<QUaAlarmCondition*>(this)->getActiveState()->currentStateName();
@@ -71,7 +76,33 @@ QUaNodeId QUaAlarmCondition::inputNode() const
 
 void QUaAlarmCondition::setInputNode(const QUaNodeId& inputNodeId)
 {
-	this->getInputNode()->setValue(inputNodeId);
+	QUaNode * node = m_qUaServer->nodeById(inputNodeId);
+	QUaBaseVariable* var = qobject_cast<QUaBaseVariable*>(node);
+	if (node && !var)
+	{
+		Q_ASSERT_X(false, "QUaAlarmCondition::setInputNode", "Input node must be a variable.");
+		// TODO : error log
+	}
+	this->setInputNode(var);
+}
+
+void QUaAlarmCondition::setInputNode(QUaBaseVariable* inputNode)
+{
+	this->cleanConnections();
+	m_inputNode = inputNode;
+	// set nodeId
+	this->getInputNode()->setValue(m_inputNode ? m_inputNode->nodeId() : QUaNodeId());
+	// subscribe to source changes
+	if (!m_inputNode)
+	{
+		return;
+	}
+	m_connections <<
+	QObject::connect(m_inputNode, &QObject::destroyed, this,
+	[this]() {
+		this->cleanConnections();
+		this->setInputNode(nullptr);
+	});
 }
 
 bool QUaAlarmCondition::suppressedOrShelve() const
@@ -154,6 +185,14 @@ void QUaAlarmCondition::setActive(const bool& active)
 	active ?
 		emit this->activated() :
 		emit this->deactivated();
+}
+
+void QUaAlarmCondition::cleanConnections()
+{
+	while (m_connections.count() > 0)
+	{
+		QObject::disconnect(m_connections.takeFirst());
+	}
 }
 
 QUaTwoStateVariable* QUaAlarmCondition::getActiveState()

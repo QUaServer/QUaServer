@@ -15,6 +15,7 @@ public:
 	Q_INVOKABLE explicit QUaAlarmCondition(
 		QUaServer *server
 	);
+	~QUaAlarmCondition();
 
 	// children
 
@@ -37,6 +38,8 @@ public:
 	// Can be null if internal
 	QUaNodeId inputNode() const;
 	void      setInputNode(const QUaNodeId& QUaNodeId);
+	// Helper
+	virtual void setInputNode(QUaBaseVariable* inputNode);
 
 	// TODO : SuppressedState
 	// TODO : OutOfServiceState
@@ -77,8 +80,10 @@ signals:
 	void activated();
 	void deactivated();
 
-
 protected:
+	QUaBaseVariable* m_inputNode;
+	QList<QMetaObject::Connection> m_connections;
+	void cleanConnections();
 	// LocalizedText
 	QUaTwoStateVariable* getActiveState();
 	// NodeId
@@ -116,7 +121,6 @@ protected:
 	virtual bool canDeleteBranch() const;
 	// reimplement to reset type internals (QUaAlarmCondition::Reset)
 	virtual void resetInternals();
-
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

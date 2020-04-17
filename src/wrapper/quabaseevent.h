@@ -40,7 +40,7 @@ public:
 	QString sourceName() const;
 	void    setSourceName(const QString &strSourceName);
 	// Helper that sets sourceNode and sourceName at once
-	virtual void setSourceNodeByRef(const QUaNode* sourceNode);
+	virtual void setSourceNode(const QUaNode* sourceNode);
 	// Time (in UTC) the Event occurred. It comes from the underlying system or device.
 	QDateTime time() const;
 	void      setTime(const QDateTime &dateTime);

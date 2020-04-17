@@ -59,7 +59,7 @@ void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
 	return this->getSourceNode()->setValue(sourceNodeId);
 }
 
-void QUaBaseEvent::setSourceNodeByRef(const QUaNode* sourceNode)
+void QUaBaseEvent::setSourceNode(const QUaNode* sourceNode)
 {
     this->setSourceNode(sourceNode ? sourceNode->nodeId()      : QUaNodeId());
     this->setSourceName(sourceNode ? sourceNode->displayName() : "");
@@ -67,7 +67,7 @@ void QUaBaseEvent::setSourceNodeByRef(const QUaNode* sourceNode)
 
 QString QUaBaseEvent::sourceName() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getSourceName()->value().toString();
+	return const_cast<QUaBaseEvent*>(this)->getSourceName()->value<QString>();
 }
 
 void QUaBaseEvent::setSourceName(const QString & strSourceName)
@@ -77,7 +77,7 @@ void QUaBaseEvent::setSourceName(const QString & strSourceName)
 
 QDateTime QUaBaseEvent::time() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getTime()->value().toDateTime().toUTC();
+	return const_cast<QUaBaseEvent*>(this)->getTime()->value<QDateTime>().toUTC();
 }
 
 void QUaBaseEvent::setTime(const QDateTime & dateTime)
@@ -87,7 +87,7 @@ void QUaBaseEvent::setTime(const QDateTime & dateTime)
 
 QDateTime QUaBaseEvent::receiveTime() const
 {
-	return const_cast<QUaBaseEvent*>(this)->getReceiveTime()->value().toDateTime().toUTC();
+	return const_cast<QUaBaseEvent*>(this)->getReceiveTime()->value<QDateTime>().toUTC();
 }
 
 void QUaBaseEvent::setReceiveTime(const QDateTime& dateTime)
@@ -118,7 +118,7 @@ void QUaBaseEvent::setMessage(const QUaLocalizedText& message)
 
 quint16 QUaBaseEvent::severity() const
 {
-	return (quint16)const_cast<QUaBaseEvent*>(this)->getSeverity()->value().toUInt();
+	return (quint16)const_cast<QUaBaseEvent*>(this)->getSeverity()->value<quint16>();
 }
 
 void QUaBaseEvent::setSeverity(const quint16 & intSeverity)

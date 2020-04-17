@@ -800,6 +800,10 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 	retval = UA_NodeId_copy(&optionalVariableFieldNode->dataType, &vAttr.dataType);
 	CONDITION_ASSERT_RETURN_RETVAL(retval, "Copying NodeId failed", );
 
+	// missing to copy dimenstion size
+	vAttr.arrayDimensionsSize = optionalVariableFieldNode->arrayDimensionsSize;
+	vAttr.arrayDimensions = optionalVariableFieldNode->arrayDimensions;
+
 	/* Get typedefintion */
 	const UA_Node* type = getNodeType(server, (const UA_Node*)optionalVariableFieldNode);
 	if (!type) {
@@ -823,6 +827,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 	retval = UA_Server_addVariableNode(server, optionalVariable, *originNode,
 		referenceToParent, *fieldName, type->nodeId,
 		vAttr, NULL, outOptionalVariable);
+	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	UA_NODESTORE_RELEASE(server, type);
 	UA_VariableAttributes_deleteMembers(&vAttr);
 	return retval;
