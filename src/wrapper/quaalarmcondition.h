@@ -118,7 +118,7 @@ protected:
 	// helpers
 
 	// reimplement to define branch delete conditions
-	virtual bool canDeleteBranch() const;
+	virtual bool requiresAttention() const;
 	// reimplement to reset type internals (QUaAlarmCondition::Reset)
 	virtual void resetInternals();
 };

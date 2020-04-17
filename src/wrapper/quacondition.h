@@ -174,8 +174,8 @@ protected:
 
 	// reimplement to define minimu trigger conditions
 	virtual bool shouldTrigger() const override;
-	// reimplement to define branch delete conditions
-	virtual bool canDeleteBranch() const;
+	// reimplement to define branch creation / deletion conditions
+	virtual bool requiresAttention() const;
 	// reimplement to reset type internals (QUaAlarmCondition::Reset)
 	virtual void resetInternals();
 

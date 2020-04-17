@@ -51,6 +51,9 @@ int main(int argc, char* argv[])
 	level_alarm->setLowLimit(-10.0);
 	level_alarm->setLowLowLimit(-100.0);
 	level_alarm->setInputNode(level);
+	level_alarm->addMethod("setRetain", [level_alarm](bool retain) {
+		level_alarm->setRetain(retain);
+	});
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

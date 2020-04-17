@@ -43,7 +43,8 @@ QUaExclusiveLimitState QUaExclusiveLimitAlarm::exclusiveLimitState() const
 void QUaExclusiveLimitAlarm::setExclusiveLimitState(const QUaExclusiveLimitState& exclusiveLimitState)
 {
 	auto machine = this->getLimitState();
-	if (exclusiveLimitState == machine->exclusiveLimitState())
+	auto oldState = machine->exclusiveLimitState();
+	if (exclusiveLimitState == oldState)
 	{
 		return;
 	}
@@ -54,10 +55,17 @@ void QUaExclusiveLimitAlarm::setExclusiveLimitState(const QUaExclusiveLimitState
 		return;
 	}
 	machine->setExclusiveLimitState(exclusiveLimitState);
-
-	// TODO : trigger and what not
-	
-	
+	// trigger enabled/disabled
+	if (oldState == QUa::ExclusiveLimitState::None &&
+		exclusiveLimitState != QUa::ExclusiveLimitState::None)
+	{
+		this->setActive(true);
+	}
+	else if (oldState != QUa::ExclusiveLimitState::None &&
+		exclusiveLimitState == QUa::ExclusiveLimitState::None)
+	{
+		this->setActive(false);
+	}
 }
 
 bool QUaExclusiveLimitAlarm::isExclusiveLimitStateAllowed(const QUaExclusiveLimitState& exclusiveLimitState)

@@ -537,10 +537,9 @@ bool QUaCondition::shouldTrigger() const
 	return baseTrigger && isEnabled;
 }
 
-bool QUaCondition::canDeleteBranch() const
+bool QUaCondition::requiresAttention() const
 {
-	// check is branch
-	return this->isBranch();
+	return true;
 }
 
 void QUaCondition::resetInternals()

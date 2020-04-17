@@ -169,6 +169,12 @@ void QUaAlarmCondition::setActive(const bool& active)
 		this->activeStateFalseState();
 	this->setActiveStateCurrentStateName(strActiveStateName);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
+	// create branch
+	QUaAlarmCondition* branch = nullptr;
+	if (!active && !this->isBranch() && this->requiresAttention())
+	{
+		branch = this->createBranch<QUaAlarmCondition>();
+	}
 	// check if trigger
 	if (!this->shouldTrigger())
 	{
@@ -176,7 +182,6 @@ void QUaAlarmCondition::setActive(const bool& active)
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
-	this->setSeverity(0);
 	this->setMessage(tr("Alarm %1").arg(strActiveStateName));
 	this->setTime(time);
 	this->setReceiveTime(time);
@@ -185,6 +190,14 @@ void QUaAlarmCondition::setActive(const bool& active)
 	active ?
 		emit this->activated() :
 		emit this->deactivated();
+	// trigger another event if a branch was created
+	if (!branch)
+	{
+		return;
+	}
+	this->setMessage(tr("Previous state requires attention, branch %1 created").arg(branch->branchId()));
+	this->trigger();
+	// TODO : try to reproduce example B.1.3
 }
 
 void QUaAlarmCondition::cleanConnections()
@@ -210,15 +223,13 @@ QUaProperty* QUaAlarmCondition::getSuppressedOrShelve()
 	return this->browseChild<QUaProperty>("SuppressedOrShelve");
 }
 
-bool QUaAlarmCondition::canDeleteBranch() const
+bool QUaAlarmCondition::requiresAttention() const
 {
 	// base implementation
-	bool canDelete = QUaAcknowledgeableCondition::canDeleteBranch();
-
-	// TODO : what other conditions
-
+	bool requiresAttention = QUaAcknowledgeableCondition::requiresAttention();
+	// TODO : are there any conditions?
 	// return result
-	return canDelete;
+	return requiresAttention;
 }
 
 void QUaAlarmCondition::resetInternals()
