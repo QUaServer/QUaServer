@@ -31,7 +31,7 @@ QUaCondition::QUaCondition(
 	// NOTE : ConditionClasses not supported yet
 	this->setConditionClassName("BaseConditionClass");
 	// set default : ConditionType browse name
-	this->setConditionName(this->typeDefinitionBrowseName());
+	this->setConditionName(this->displayName());
 	// set default : retain false
 	this->setRetain(false);
 	// reuse rest of defaults

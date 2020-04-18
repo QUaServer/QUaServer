@@ -55,6 +55,35 @@ void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
 	// set cache
 	UA_NodeId_clear(&m_sourceNodeId);
 	m_sourceNodeId = sourceNodeId;
+    // get node
+    QUaNode* node = m_qUaServer->nodeById(sourceNodeId);
+    QUaBaseObject* obj = qobject_cast<QUaBaseObject*>(node);
+    if (node && !obj)
+    {
+        Q_ASSERT_X(false, "QUaBaseEvent::setSourceNode", "Source node must be a object");
+        return;
+    }
+    if (obj)
+    {
+        // source node must be an event notifier
+        obj->setEventNotifier(true);
+        // there is supposed to be a (non-looping) event generation hierarchy
+        // TODO : implement event hierarchy according to Part 3 - 7.x
+        // for now all source nodes are directly event sources of server object directly
+        auto st = UA_Server_addReference(
+            m_qUaServer->m_server,
+            UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER),
+            UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE /*UA_NS0ID_HASNOTIFIER*/),
+            { obj->m_nodeId, UA_STRING_NULL, 0 },
+            true
+        );
+        Q_ASSERT(st == UA_STATUSCODE_GOOD);
+    }
+    Q_ASSERT(
+          obj ||
+        (!obj && sourceNodeId == UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)) ||
+        (!obj && sourceNodeId.isNull())
+    );
 	// set internally
 	return this->getSourceNode()->setValue(sourceNodeId);
 }
@@ -413,6 +442,9 @@ void QUaBaseEvent::triggerRaw()
     }
 
     // NOTE : do NOT set standard fields
+     /* Set the SourceNode (origin) */
+     /* Set the ReceiveTime */
+     /* Set the EventId */
 
     /* List of nodes that emit the node. Events propagate upwards (bubble up) in
      * the node hierarchy. */
@@ -541,6 +573,8 @@ void QUaBaseEvent::triggerRaw()
         retval = UA_STATUSCODE_GOOD;
 #endif
     }
+
+    /* DO NOT Delete the node representation of the event */
 
 cleanup:
     for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {

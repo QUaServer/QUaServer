@@ -81,7 +81,7 @@ void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 	this->setAckedStateId(acknowledged);
 	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
 	// delete branch if all conditions met
-	if (acknowledged && !this->requiresAttention())
+	if (this->isBranch() && acknowledged && !this->requiresAttention())
 	{
 		this->deleteLater();
 	}
@@ -215,7 +215,7 @@ void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
 	this->setConfirmedStateId(confirmed);
 	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 	// delete branch if all conditions met
-	if (confirmed && !this->requiresAttention())
+	if (this->isBranch() && confirmed && !this->requiresAttention())
 	{
 		this->deleteLater();
 	}

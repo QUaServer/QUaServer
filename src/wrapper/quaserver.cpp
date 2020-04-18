@@ -1271,6 +1271,10 @@ void QUaServer::setupServer()
 	m_hashHierRefTypes.insert({ "HasOrderedComponent", "OrderedComponentOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT));
 	m_hashHierRefTypes.insert({ "HasComponent"       , "ComponentOf"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT       ));
 	m_hashHierRefTypes.insert({ "HasProperty"        , "PropertyOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY        ));	
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_hashHierRefTypes.insert({ "HasEventSource"     , "EventSourceOf"      }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE));
+	m_hashHierRefTypes.insert({ "HasNotifier"        , "NotifierOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASNOTIFIER   ));
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// hierarchical
 	m_hashHierRefTypes.insert({ "HasTrueSubState" , "IsTrueSubStateOf"  }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASTRUESUBSTATE ));
@@ -2902,11 +2906,8 @@ UA_NodeId QUaServer::getReferenceTypeId(const QMetaObject & parentMetaObject, co
 	else if (parentMetaObject.inherits(&QUaBaseObject::staticMetaObject) ||
 		     parentMetaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
-		if (childMetaObject.inherits(&QUaBaseObject::staticMetaObject))
-		{
-			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT);
-		}
-		else if (childMetaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
+		if (childMetaObject.inherits(&QUaBaseObject::staticMetaObject) || 
+			childMetaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 		{
 			referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 		}

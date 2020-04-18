@@ -26,8 +26,14 @@ public:
 	// Helpers
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	void setEventNotifierSubscribeToEvents();
-	void setEventNotifierNone();
+	bool subscribeToEvents() const;
+	void setSubscribeToEvents(const bool& subscribeToEvents);
+
+	bool eventHistoryRead() const;
+	void setEventHistoryRead(const bool& eventHistoryRead);
+
+	bool eventHistoryWrite() const;
+	void setEventHistoryWrite(const bool& eventHistoryWrite);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Instance Creation API

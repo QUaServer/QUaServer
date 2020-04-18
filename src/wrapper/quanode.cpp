@@ -237,14 +237,11 @@ QUaNode::~QUaNode()
 	st = UA_Server_deleteNode(m_qUaServer->m_server, m_nodeId, true);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// update parent browse cache
-	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
-	Q_CHECK_PTR(parent);
-	parent->m_browseCache.remove(this->browseName());
 	// trigger reference deleted, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
 	// add reference deleted change to buffer
+	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
 	m_qUaServer->addChange({
 		parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
 		parent ? parent->typeDefinitionNodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
@@ -591,9 +588,18 @@ QUaNode* QUaNode::browseChild(
 	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
 	if (child || !instantiateOptional)
 	{
+		m_browseCache[browseName] = child;
+		QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
+			m_browseCache.remove(browseName);
+		});	
 		return child;
 	}
-	return this->instantiateOptionalChild(browseName);
+	child = this->instantiateOptionalChild(browseName);
+	m_browseCache[browseName] = child;
+	QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
+		m_browseCache.remove(browseName);
+	});	
+	return child;
 }
 
 bool QUaNode::hasChild(const QUaQualifiedName &browseName)

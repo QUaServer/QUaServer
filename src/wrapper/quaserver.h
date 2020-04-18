@@ -1195,7 +1195,7 @@ inline T * QUaBaseObject::createEvent()
     Q_CHECK_PTR(newEvent);
     // set originator 
     newEvent->setSourceNode(
-        QUaTypesConverter::nodeIdToQString(m_nodeId)
+       this->nodeId()
     );
     newEvent->setSourceName(
         this->displayName()

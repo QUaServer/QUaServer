@@ -64,14 +64,49 @@ void QUaBaseObject::setEventNotifier(const quint8 & eventNotifier)
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-void QUaBaseObject::setEventNotifierSubscribeToEvents()
+bool QUaBaseObject::subscribeToEvents() const
 {
-	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS);
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	return eventNotifier.bits.bSubscribeToEvents;
 }
 
-void QUaBaseObject::setEventNotifierNone()
+void QUaBaseObject::setSubscribeToEvents(const bool& subscribeToEvents)
 {
-	this->setEventNotifier(UA_EVENTNOTIFIERTYPE_NONE);
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	eventNotifier.bits.bSubscribeToEvents = subscribeToEvents;
+	this->setEventNotifier(eventNotifier.intValue);
+}
+
+bool QUaBaseObject::eventHistoryRead() const
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	return eventNotifier.bits.bHistoryRead;
+}
+
+void QUaBaseObject::setEventHistoryRead(const bool& eventHistoryRead)
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	eventNotifier.bits.bHistoryRead = eventHistoryRead;
+	this->setEventNotifier(eventNotifier.intValue);
+}
+
+bool QUaBaseObject::eventHistoryWrite() const
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	return eventNotifier.bits.bHistoryWrite;
+}
+
+void QUaBaseObject::setEventHistoryWrite(const bool& eventHistoryWrite)
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	eventNotifier.bits.bHistoryWrite = eventHistoryWrite;
+	this->setEventNotifier(eventNotifier.intValue);
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

@@ -228,6 +228,30 @@ union QUaAccessLevel
 	};
 };
 
+union QUaEventNotifier
+{
+	struct bit_map {
+		bool bSubscribeToEvents : 1; // UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS
+		bool bUnused            : 1; // N/A
+		bool bHistoryRead       : 1; // UA_EVENTNOTIFIERTYPE_HISTORYREAD
+		bool bHistoryWrite      : 1; // UA_EVENTNOTIFIERTYPE_HISTORYWRITE
+	} bits;
+	quint8 intValue;
+	// constructors
+	QUaEventNotifier()
+	{
+		// read only by default
+		bits.bSubscribeToEvents = false;
+		bits.bUnused            = false;
+		bits.bHistoryRead       = false;
+		bits.bHistoryWrite      = false;
+	};
+	QUaEventNotifier(const quint8& value)
+	{
+		intValue = value;
+	};
+};
+
 #define QMetaType_NodeId                  static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId>())
 #define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode>())
 #define QMetaType_QualifiedName           static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
@@ -330,6 +354,7 @@ public:
 	void operator= (const char* strXmlNodeId);
 	void operator= (const QUaNodeId& other);
 	bool operator==(const QUaNodeId& other) const;
+	bool operator==(const UA_NodeId& other) const;
 
 	quint16 namespaceIndex() const;
 	void    setNamespaceIndex(const quint16& index);
