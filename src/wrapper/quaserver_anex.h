@@ -596,6 +596,26 @@ struct UA_MonitoredItem {
 #endif
 };
 
+typedef struct UA_Notification {
+    TAILQ_ENTRY(UA_Notification) listEntry; /* Notification list for the MonitoredItem */
+    TAILQ_ENTRY(UA_Notification) globalEntry; /* Notification list for the Subscription */
+
+    UA_MonitoredItem* mon;
+
+    /* See the monitoredItemType of the MonitoredItem */
+    union {
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+        UA_EventNotification event;
+#endif
+        UA_DataValue value;
+    } data;
+} UA_Notification;
+
+extern "C"
+void
+UA_Notification_enqueue(UA_Server* server, UA_Subscription* sub,
+    UA_MonitoredItem* mon, UA_Notification* n);
+
 extern "C"
 UA_StatusCode
 UA_Event_generateEventId(UA_ByteString * generatedId);
@@ -612,10 +632,6 @@ browseRecursive(UA_Server* server,
     size_t refTypesSize, const UA_NodeId* refTypes,
     UA_BrowseDirection browseDirection, UA_Boolean includeStartNodes,
     size_t* resultsSize, UA_ExpandedNodeId** results);
-
-extern "C"
-UA_StatusCode
-UA_Event_addEventToMonitoredItem(UA_Server * server, const UA_NodeId * event, UA_MonitoredItem * mon);
 
 extern "C"
 UA_StatusCode
@@ -712,13 +728,18 @@ struct UA_Subscription {
 };
 
 extern "C"
-
 UA_MonitoredItem *
 UA_Subscription_getMonitoredItem(UA_Subscription * sub, UA_UInt32 monitoredItemId);
 
+UA_StatusCode
+UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon);
+
+UA_StatusCode
+UA_Server_filterEvent(UA_Server* server, UA_Session* session,
+    const UA_NodeId* eventNode, UA_EventFilter* filter,
+    UA_EventNotification* notification);
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
-
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

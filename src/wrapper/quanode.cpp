@@ -586,7 +586,7 @@ QUaNode* QUaNode::browseChild(
 	}
 	// TODO : check if new open62541 tree-based lookup implementation is faster
 	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
-	if (child || !instantiateOptional)
+	if (child)
 	{
 		m_browseCache[browseName] = child;
 		QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
@@ -594,11 +594,19 @@ QUaNode* QUaNode::browseChild(
 		});	
 		return child;
 	}
+	if (!instantiateOptional)
+	{
+		return nullptr;
+	}
 	child = this->instantiateOptionalChild(browseName);
-	m_browseCache[browseName] = child;
-	QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
-		m_browseCache.remove(browseName);
-	});	
+	Q_ASSERT_X(child, "QUaNode::browseChild", "TODO : error log");
+	if (child)
+	{
+		m_browseCache[browseName] = child;
+		QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
+			m_browseCache.remove(browseName);
+		});	
+	}
 	return child;
 }
 

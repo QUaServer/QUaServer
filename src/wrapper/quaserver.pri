@@ -12,6 +12,7 @@ PRECOMPILED_HEADER = $$PWD/pch_open62541.h
 
 SOURCES += \
     $$PWD/quaserver.cpp \
+    $$PWD/quaserver_anex.cpp \
     $$PWD/quanode.cpp \
     $$PWD/quabasevariable.cpp \
     $$PWD/quaproperty.cpp \
@@ -51,6 +52,7 @@ ua_alarms_conditions {
     $$PWD/quaexclusivelevelalarm.cpp \
     $$PWD/quarefreshstartevent.cpp \
     $$PWD/quarefreshendevent.cpp \
+    $$PWD/quarefreshrequiredevent.cpp \
     $$PWD/quatransitionevent.cpp
 }
 
@@ -64,6 +66,7 @@ SOURCES += \
 
 HEADERS += \
     $$PWD/quaserver.h \
+    $$PWD/quaserver_anex.h \
     $$PWD/quanode.h \
     $$PWD/quabasevariable.h \
     $$PWD/quaproperty.h \
@@ -103,6 +106,7 @@ ua_alarms_conditions {
     $$PWD/quaexclusivelevelalarm.h \
     $$PWD/quarefreshstartevent.h \
     $$PWD/quarefreshendevent.h \
+    $$PWD/quarefreshrequiredevent.h \
     $$PWD/quatransitionevent.h
 }
 
@@ -155,6 +159,7 @@ ua_alarms_conditions {
     $$PWD/QUaExclusiveLevelAlarm \
     $$PWD/QUaRefreshStartEvent \
     $$PWD/QUaRefreshEndEvent \
+    $$PWD/QUaRefreshRequiredEvent \
     $$PWD/QUaTransitionEvent
 }
 

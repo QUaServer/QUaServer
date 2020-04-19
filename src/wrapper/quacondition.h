@@ -95,8 +95,8 @@ public:
 	void    setLastSeverity(const quint16& lastSeverity);
 	virtual void setSeverity(const quint16& intSeverity) override;
 
-	QString comment() const;
-	void    setComment(const QString& comment);
+	QUaLocalizedText comment() const;
+	void             setComment(const QUaLocalizedText& comment);
 
 	// identity of who put the last comment
 	QString clientUserId() const;
@@ -108,12 +108,14 @@ public:
 
 	Q_INVOKABLE void Disable(); // TODO : audit events
 
-	Q_INVOKABLE void AddComment(QByteArray EventId, QString Comment); // TODO : audit events
+	Q_INVOKABLE void AddComment(QByteArray EventId, QUaLocalizedText Comment); // TODO : audit events
 
 	// branches API
 
 	bool isBranch() const;
 	void setIsBranch(const bool& isBranch);
+
+	QUaCondition* mainBranch() const;
 
 	QUaCondition* createBranch(const QUaNodeId& nodeId = QUaNodeId());
 

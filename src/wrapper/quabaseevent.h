@@ -104,9 +104,6 @@ protected:
 	static QByteArray    generateEventId();
 	static UA_ByteString generateEventIdInternal();
 	
-
-	
-
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

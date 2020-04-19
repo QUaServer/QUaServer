@@ -19,12 +19,12 @@ QUaAlarmCondition::~QUaAlarmCondition()
 	this->cleanConnections();
 }
 
-QString QUaAlarmCondition::activeStateCurrentStateName() const
+QUaLocalizedText QUaAlarmCondition::activeStateCurrentStateName() const
 {
 	return const_cast<QUaAlarmCondition*>(this)->getActiveState()->currentStateName();
 }
 
-void QUaAlarmCondition::setActiveStateCurrentStateName(const QString& activeState)
+void QUaAlarmCondition::setActiveStateCurrentStateName(const QUaLocalizedText& activeState)
 {
 	this->getActiveState()->setCurrentStateName(activeState);
 }
@@ -49,22 +49,22 @@ void QUaAlarmCondition::setActiveStateTransitionTime(const QDateTime& transition
 	this->getActiveState()->setTransitionTime(transitionTime);
 }
 
-QString QUaAlarmCondition::activeStateTrueState() const
+QUaLocalizedText QUaAlarmCondition::activeStateTrueState() const
 {
 	return const_cast<QUaAlarmCondition*>(this)->getActiveState()->trueState();
 }
 
-void QUaAlarmCondition::setActiveStateTrueState(const QString& trueState)
+void QUaAlarmCondition::setActiveStateTrueState(const QUaLocalizedText& trueState)
 {
 	this->getActiveState()->setTrueState(trueState);
 }
 
-QString QUaAlarmCondition::activeStateFalseState() const
+QUaLocalizedText QUaAlarmCondition::activeStateFalseState() const
 {
 	return const_cast<QUaAlarmCondition*>(this)->getActiveState()->falseState();
 }
 
-void QUaAlarmCondition::setActiveStateFalseState(const QString& falseState)
+void QUaAlarmCondition::setActiveStateFalseState(const QUaLocalizedText& falseState)
 {
 	this->getActiveState()->setFalseState(falseState);
 }
@@ -107,7 +107,7 @@ void QUaAlarmCondition::setInputNode(QUaBaseVariable* inputNode)
 
 bool QUaAlarmCondition::suppressedOrShelve() const
 {
-	return const_cast<QUaAlarmCondition*>(this)->getSuppressedOrShelve()->value().toBool();
+	return const_cast<QUaAlarmCondition*>(this)->getSuppressedOrShelve()->value<bool>();
 }
 
 void QUaAlarmCondition::setSuppressedOrShelve(const bool& suppressedOrShelve)
@@ -162,6 +162,12 @@ void QUaAlarmCondition::setActive(const bool& active)
 	{
 		return;
 	}
+	// create branch (BEFORE deactivate)
+	QUaAlarmCondition* branch = nullptr;
+	if (!active && !this->isBranch() && this->requiresAttention())
+	{
+		branch = this->createBranch<QUaAlarmCondition>();
+	}
 	// activate or deactivate
 	this->setActiveStateId(active);
 	QString strActiveStateName = active ?
@@ -169,12 +175,6 @@ void QUaAlarmCondition::setActive(const bool& active)
 		this->activeStateFalseState();
 	this->setActiveStateCurrentStateName(strActiveStateName);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
-	// create branch
-	QUaAlarmCondition* branch = nullptr;
-	if (!active && !this->isBranch() && this->requiresAttention())
-	{
-		branch = this->createBranch<QUaAlarmCondition>();
-	}
 	// check if trigger
 	if (!this->shouldTrigger())
 	{
@@ -195,8 +195,8 @@ void QUaAlarmCondition::setActive(const bool& active)
 	{
 		return;
 	}
-	this->setMessage(tr("Previous state requires attention, branch %1 created").arg(branch->branchId()));
-	this->trigger();
+	branch->setMessage(tr("Previous state requires attention, branch %1 created").arg(branch->branchId()));
+	branch->trigger();
 	// TODO : try to reproduce example B.1.3
 }
 

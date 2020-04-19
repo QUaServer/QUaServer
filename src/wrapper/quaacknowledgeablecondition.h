@@ -20,16 +20,16 @@ public:
 
 	// children
 
-	QString   ackedStateCurrentStateName() const;
-	void      setAckedStateCurrentStateName(const QString& ackedState);
-	bool      ackedStateId() const;
-	void      setAckedStateId(const bool& ackedStateId);
-	QDateTime ackedStateTransitionTime() const;
-	void      setAckedStateTransitionTime(const QDateTime& transitionTime);
-	QString   ackedStateTrueState() const;
-	void      setAckedStateTrueState(const QString& trueState);
-	QString   ackedStateFalseState() const;
-	void      setAckedStateFalseState(const QString& falseState);
+	QUaLocalizedText ackedStateCurrentStateName() const;
+	void             setAckedStateCurrentStateName(const QUaLocalizedText& ackedState);
+	bool             ackedStateId() const;
+	void             setAckedStateId(const bool& ackedStateId);
+	QDateTime        ackedStateTransitionTime() const;
+	void             setAckedStateTransitionTime(const QDateTime& transitionTime);
+	QUaLocalizedText ackedStateTrueState() const;
+	void             setAckedStateTrueState(const QUaLocalizedText& trueState);
+	QUaLocalizedText ackedStateFalseState() const;
+	void             setAckedStateFalseState(const QUaLocalizedText& falseState);
 	// helper sets setAckedStateId, setAckedStateCurrentStateName, setAckedStateTransitionTime 
 	// and triggers event according to specification
 	// NOTE : change of the Acked state must be normally make by the client through
@@ -38,16 +38,16 @@ public:
 	void      setAcknowledged(const bool& acknowledged);
 
 	// NOTE: optional, only work if confirmAllowed == true 
-	QString   confirmedStateCurrentStateName() const;
-	void      setConfirmedStateCurrentStateName(const QString& confirmedState);
-	bool      confirmedStateId() const;
-	void      setConfirmedStateId(const bool& confirmedStateId);
-	QDateTime confirmedStateTransitionTime() const;
-	void      setConfirmedStateTransitionTime(const QDateTime& transitionTime);
-	QString   confirmedStateTrueState() const;
-	void      setConfirmedStateTrueState(const QString& trueState);
-	QString   confirmedStateFalseState() const;
-	void      setConfirmedStateFalseState(const QString& falseState);
+	QUaLocalizedText confirmedStateCurrentStateName() const;
+	void             setConfirmedStateCurrentStateName(const QUaLocalizedText& confirmedState);
+	bool             confirmedStateId() const;
+	void             setConfirmedStateId(const bool& confirmedStateId);
+	QDateTime        confirmedStateTransitionTime() const;
+	void             setConfirmedStateTransitionTime(const QDateTime& transitionTime);
+	QUaLocalizedText confirmedStateTrueState() const;
+	void             setConfirmedStateTrueState(const QUaLocalizedText& trueState);
+	QUaLocalizedText confirmedStateFalseState() const;
+	void             setConfirmedStateFalseState(const QUaLocalizedText& falseState);
 	// helper sets setConfirmedStateId, setConfirmedStateCurrentStateName, setConfirmedStateTransitionTime 
 	// and triggers event according to specification
 	// NOTE : change of the Confirmed state must be normally make by the client through
@@ -57,9 +57,9 @@ public:
 
 	// methods
 
-	Q_INVOKABLE void Acknowledge(QByteArray EventId, QString Comment);
+	Q_INVOKABLE void Acknowledge(QByteArray EventId, QUaLocalizedText Comment);
 
-	Q_INVOKABLE void Confirm(QByteArray EventId, QString Comment);
+	Q_INVOKABLE void Confirm(QByteArray EventId, QUaLocalizedText Comment);
 
 	// helpers
 

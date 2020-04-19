@@ -28,6 +28,7 @@
 #include <QUaExclusiveLevelAlarm>
 #include <QUaRefreshStartEvent>
 #include <QUaRefreshEndEvent>
+#include <QUaRefreshRequiredEvent>
 #include <QUaTransitionEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
@@ -1240,14 +1241,15 @@ void QUaServer::setupServer()
 	this->registerSpecificationType<QUaState                     >(UA_NODEID_NUMERIC(0, UA_NS0ID_STATETYPE     ));
 	this->registerSpecificationType<QUaTransition                >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONTYPE));
 	this->registerSpecificationType<QUaExclusiveLimitStateMachine>(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELIMITSTATEMACHINETYPE));
-	this->registerSpecificationType<QUaDiscreteAlarm             >(UA_NODEID_NUMERIC(0, UA_NS0ID_DISCRETEALARMTYPE     ));
-	this->registerSpecificationType<QUaOffNormalAlarm            >(UA_NODEID_NUMERIC(0, UA_NS0ID_OFFNORMALALARMTYPE    ));
-	this->registerSpecificationType<QUaLimitAlarm                >(UA_NODEID_NUMERIC(0, UA_NS0ID_LIMITALARMTYPE        ));
-	this->registerSpecificationType<QUaExclusiveLimitAlarm       >(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELIMITALARMTYPE));
-	this->registerSpecificationType<QUaExclusiveLevelAlarm       >(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELEVELALARMTYPE));
-	this->registerSpecificationType<QUaRefreshStartEvent         >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE ));
-	this->registerSpecificationType<QUaRefreshEndEvent           >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE   ));
-	this->registerSpecificationType<QUaTransitionEvent           >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONEVENTTYPE   ));
+	this->registerSpecificationType<QUaDiscreteAlarm             >(UA_NODEID_NUMERIC(0, UA_NS0ID_DISCRETEALARMTYPE       ));
+	this->registerSpecificationType<QUaOffNormalAlarm            >(UA_NODEID_NUMERIC(0, UA_NS0ID_OFFNORMALALARMTYPE      ));
+	this->registerSpecificationType<QUaLimitAlarm                >(UA_NODEID_NUMERIC(0, UA_NS0ID_LIMITALARMTYPE          ));
+	this->registerSpecificationType<QUaExclusiveLimitAlarm       >(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELIMITALARMTYPE ));
+	this->registerSpecificationType<QUaExclusiveLevelAlarm       >(UA_NODEID_NUMERIC(0, UA_NS0ID_EXCLUSIVELEVELALARMTYPE ));
+	this->registerSpecificationType<QUaRefreshStartEvent         >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHSTARTEVENTTYPE   ));
+	this->registerSpecificationType<QUaRefreshEndEvent           >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHENDEVENTTYPE     ));
+	this->registerSpecificationType<QUaRefreshRequiredEvent      >(UA_NODEID_NUMERIC(0, UA_NS0ID_REFRESHREQUIREDEVENTTYPE));
+	this->registerSpecificationType<QUaTransitionEvent           >(UA_NODEID_NUMERIC(0, UA_NS0ID_TRANSITIONEVENTTYPE     ));
 	// register static condition refresh methods
 	// Part 9 - 5.57 and 5.5.8
 	st = UA_Server_setMethodNode_callback(
@@ -1357,6 +1359,12 @@ void QUaServer::setupServer()
 	m_refreshEndEvent->setSourceName(tr("Server"));
 	m_refreshEndEvent->setMessage("");
 	m_refreshEndEvent->setSeverity(100);
+	m_refreshRequiredEvent = this->createEvent<QUaRefreshRequiredEvent>();
+	Q_CHECK_PTR(m_refreshRequiredEvent);
+	m_refreshRequiredEvent->setSourceNode(QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
+	m_refreshRequiredEvent->setSourceName(tr("Server"));
+	m_refreshRequiredEvent->setMessage("");
+	m_refreshRequiredEvent->setSeverity(100);
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #ifdef UA_ENABLE_HISTORIZING

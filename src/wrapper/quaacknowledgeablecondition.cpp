@@ -16,12 +16,12 @@ QUaAcknowledgeableCondition::QUaAcknowledgeableCondition(
 	this->resetInternals();
 }
 
-QString QUaAcknowledgeableCondition::ackedStateCurrentStateName() const
+QUaLocalizedText QUaAcknowledgeableCondition::ackedStateCurrentStateName() const
 {
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getAckedState()->currentStateName();
 }
 
-void QUaAcknowledgeableCondition::setAckedStateCurrentStateName(const QString& ackedState)
+void QUaAcknowledgeableCondition::setAckedStateCurrentStateName(const QUaLocalizedText& ackedState)
 {
 	this->getAckedState()->setCurrentStateName(ackedState);
 }
@@ -46,22 +46,22 @@ void QUaAcknowledgeableCondition::setAckedStateTransitionTime(const QDateTime& t
 	this->getAckedState()->setTransitionTime(transitionTime);
 }
 
-QString QUaAcknowledgeableCondition::ackedStateTrueState() const
+QUaLocalizedText QUaAcknowledgeableCondition::ackedStateTrueState() const
 {
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getAckedState()->trueState();
 }
 
-void QUaAcknowledgeableCondition::setAckedStateTrueState(const QString& trueState)
+void QUaAcknowledgeableCondition::setAckedStateTrueState(const QUaLocalizedText& trueState)
 {
 	this->getAckedState()->setTrueState(trueState);
 }
 
-QString QUaAcknowledgeableCondition::ackedStateFalseState() const
+QUaLocalizedText QUaAcknowledgeableCondition::ackedStateFalseState() const
 {
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getAckedState()->falseState();
 }
 
-void QUaAcknowledgeableCondition::setAckedStateFalseState(const QString& falseState)
+void QUaAcknowledgeableCondition::setAckedStateFalseState(const QUaLocalizedText& falseState)
 {
 	this->getAckedState()->setFalseState(falseState);
 }
@@ -100,17 +100,17 @@ void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 	emit this->acknowledged();
 }
 
-QString QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
+QUaLocalizedText QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
 {
 	if (!m_confirmAllowed)
 	{
 		// TODO : log error message
-		return QString();
+		return QUaLocalizedText();
 	}
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getConfirmedState()->currentStateName();
 }
 
-void QUaAcknowledgeableCondition::setConfirmedStateCurrentStateName(const QString& confirmedState)
+void QUaAcknowledgeableCondition::setConfirmedStateCurrentStateName(const QUaLocalizedText& confirmedState)
 {
 	if (!m_confirmAllowed)
 	{
@@ -160,17 +160,17 @@ void QUaAcknowledgeableCondition::setConfirmedStateTransitionTime(const QDateTim
 	this->getConfirmedState()->setTransitionTime(transitionTime);
 }
 
-QString QUaAcknowledgeableCondition::confirmedStateTrueState() const
+QUaLocalizedText QUaAcknowledgeableCondition::confirmedStateTrueState() const
 {
 	if (!m_confirmAllowed)
 	{
 		// TODO : log error message
-		return QString();
+		return QUaLocalizedText();
 	}
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getConfirmedState()->trueState();
 }
 
-void QUaAcknowledgeableCondition::setConfirmedStateTrueState(const QString& trueState)
+void QUaAcknowledgeableCondition::setConfirmedStateTrueState(const QUaLocalizedText& trueState)
 {
 	if (!m_confirmAllowed)
 	{
@@ -180,17 +180,17 @@ void QUaAcknowledgeableCondition::setConfirmedStateTrueState(const QString& true
 	this->getConfirmedState()->setTrueState(trueState);
 }
 
-QString QUaAcknowledgeableCondition::confirmedStateFalseState() const
+QUaLocalizedText QUaAcknowledgeableCondition::confirmedStateFalseState() const
 {
 	if (!m_confirmAllowed)
 	{
 		// TODO : log error message
-		return QString();
+		return QUaLocalizedText();
 	}
 	return const_cast<QUaAcknowledgeableCondition*>(this)->getConfirmedState()->falseState();
 }
 
-void QUaAcknowledgeableCondition::setConfirmedStateFalseState(const QString& falseState)
+void QUaAcknowledgeableCondition::setConfirmedStateFalseState(const QUaLocalizedText& falseState)
 {
 	if (!m_confirmAllowed)
 	{
@@ -234,7 +234,7 @@ void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
 	emit this->confirmed();
 }
 
-void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Comment)
+void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QUaLocalizedText Comment)
 {
 	// check if enabled
 	if (!this->enabledStateId())
@@ -261,7 +261,7 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 		return;
 	}
 	// set comment (no trigger)
-	this->getComment()->setValue(Comment);
+	this->getComment()->QUaBaseVariable::setValue(Comment);
 	// update user id if applicable
 	auto session = this->currentSession();
 	if (session)
@@ -272,7 +272,7 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QString Commen
 	this->setAcknowledged(true);
 }
 
-void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
+void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QUaLocalizedText Comment)
 {
 	// check if need to block progammatic called
 	if (!m_confirmAllowed)
@@ -311,7 +311,7 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QString Comment)
 		return;
 	}
 	// set comment (no trigger)
-	this->getComment()->setValue(Comment);
+	this->getComment()->QUaBaseVariable::setValue(Comment);
 	// update user id if applicable
 	auto session = this->currentSession();
 	if (session)
@@ -354,11 +354,11 @@ bool QUaAcknowledgeableCondition::requiresAttention() const
 	// base implementation
 	bool requiresAttention = QUaCondition::requiresAttention();
 	// check acknowledged
-	requiresAttention = requiresAttention && !this->ackedStateId();
+	requiresAttention = requiresAttention || !this->ackedStateId();
 	// check confirmed
 	if (m_confirmAllowed)
 	{
-		requiresAttention = requiresAttention && !this->confirmedStateId();
+		requiresAttention = requiresAttention || !this->confirmedStateId();
 	}
 	// return result
 	return requiresAttention;

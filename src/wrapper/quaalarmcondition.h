@@ -20,16 +20,16 @@ public:
 	// children
 
 	// If condition currently exists
-	QString   activeStateCurrentStateName() const;
-	void      setActiveStateCurrentStateName(const QString& activeState);
-	bool      activeStateId() const;
-	void      setActiveStateId(const bool& activeStateId);
-	QDateTime activeStateTransitionTime() const;
-	void      setActiveStateTransitionTime(const QDateTime& transitionTime);
-	QString   activeStateTrueState() const;
-	void      setActiveStateTrueState(const QString& trueState);
-	QString   activeStateFalseState() const;
-	void      setActiveStateFalseState(const QString& falseState);
+	QUaLocalizedText activeStateCurrentStateName() const;
+	void             setActiveStateCurrentStateName(const QUaLocalizedText& activeState);
+	bool             activeStateId() const;
+	void             setActiveStateId(const bool& activeStateId);
+	QDateTime        activeStateTransitionTime() const;
+	void             setActiveStateTransitionTime(const QDateTime& transitionTime);
+	QUaLocalizedText activeStateTrueState() const;
+	void             setActiveStateTrueState(const QUaLocalizedText& trueState);
+	QUaLocalizedText activeStateFalseState() const;
+	void             setActiveStateFalseState(const QUaLocalizedText& falseState);
 	// helper
 	bool active() const;
 	void setActive(const bool& active);

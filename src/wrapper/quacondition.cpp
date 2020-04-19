@@ -7,6 +7,7 @@
 #include <QUaConditionVariable>
 #include <QUaRefreshStartEvent>
 #include <QUaRefreshEndEvent>
+#include <QUaRefreshRequiredEvent>
 
 #include "quaserver_anex.h"
 
@@ -43,6 +44,21 @@ QUaCondition::~QUaCondition()
 	// remove destroy connections
 	QObject::disconnect(m_sourceDestroyed);
 	// NOTE : do not disconnect m_retainedDestroyed, else it will not be called
+
+	// TODO : move implementaton to server to avoid multiple events one after another
+	auto srv = m_qUaServer;
+	auto time = QDateTime::currentDateTimeUtc();
+	srv->m_refreshRequiredEvent->setEventId(QUaBaseEvent::generateEventId());
+	srv->m_refreshRequiredEvent->setTime(time);
+	srv->m_refreshRequiredEvent->setReceiveTime(time);
+	srv->m_refreshRequiredEvent->setMessage(tr("%1 deleted").arg(
+		this->isBranch() ? tr("Branch") : tr("Condition")
+	));
+	// exec trigger on next event loop iteration
+	srv->m_changeEventSignaler.execLater([srv]() {
+		// trigger
+		srv->m_refreshRequiredEvent->trigger();
+	});
 }
 
 bool QUaCondition::isBranch() const
@@ -53,6 +69,11 @@ bool QUaCondition::isBranch() const
 void QUaCondition::setIsBranch(const bool& isBranch)
 {
 	m_isBranch = isBranch;
+}
+
+QUaCondition* QUaCondition::mainBranch() const
+{
+	return qobject_cast<QUaCondition*>(this->parent());
 }
 
 void QUaCondition::setDisplayName(const QString& displayName)
@@ -377,14 +398,14 @@ void QUaCondition::setSeverity(const quint16& intSeverity)
 	this->trigger();
 }
 
-QString QUaCondition::comment() const
+QUaLocalizedText QUaCondition::comment() const
 {
-	return const_cast<QUaCondition*>(this)->getComment()->value().toString();
+	return const_cast<QUaCondition*>(this)->getComment()->value<QUaLocalizedText>();
 }
 
-void QUaCondition::setComment(const QString& comment)
+void QUaCondition::setComment(const QUaLocalizedText& comment)
 {
-	this->getComment()->setValue(comment);
+	this->getComment()->QUaBaseVariable::setValue(comment);
 	// update user id if applicable
 	auto session = this->currentSession();
 	if (session)
@@ -443,7 +464,7 @@ void QUaCondition::Disable()
 	emit this->disabled();
 }
 
-void QUaCondition::AddComment(QByteArray EventId, QString Comment)
+void QUaCondition::AddComment(QByteArray EventId, QUaLocalizedText Comment)
 {
 	// check if enabled
 	if (!this->enabledStateId())
@@ -530,16 +551,16 @@ bool QUaCondition::shouldTrigger() const
 	// branch can only trigger if main condition is enabled
 	if (this->isBranch())
 	{
-		auto parentCond = qobject_cast<QUaCondition*>(this->parent());
-		Q_ASSERT(parentCond);
-		isEnabled = parentCond->enabledStateId();;
+		auto mainBranch = this->mainBranch();
+		Q_ASSERT(mainBranch);
+		isEnabled = mainBranch->enabledStateId();;
 	}
 	return baseTrigger && isEnabled;
 }
 
 bool QUaCondition::requiresAttention() const
 {
-	return true;
+	return false;
 }
 
 void QUaCondition::resetInternals()
@@ -555,7 +576,7 @@ void QUaCondition::resetInternals()
 	// set default : 0
 	this->setLastSeverity(0);
 	// set default : empty (do not trigger event for this comment change)
-	this->getComment()->setValue(tr(""));
+	this->getComment()->QUaBaseVariable::setValue<QUaLocalizedText>(tr(""));
 }
 
 QUaProperty* QUaCondition::getConditionClassId()

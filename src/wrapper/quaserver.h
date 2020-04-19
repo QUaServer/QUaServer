@@ -19,6 +19,7 @@ class QUaGeneralModelChangeEvent;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 class QUaRefreshStartEvent;
 class QUaRefreshEndEvent;
+class QUaRefreshRequiredEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #ifdef UA_ENABLE_HISTORIZING
@@ -311,6 +312,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     QUaRefreshStartEvent* m_refreshStartEvent;
     QUaRefreshEndEvent  * m_refreshEndEvent;
+    QUaRefreshRequiredEvent* m_refreshRequiredEvent;
     QHash<QUaNode*, QSet<QUaCondition*>> m_retainedConditions;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
