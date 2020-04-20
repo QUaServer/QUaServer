@@ -518,13 +518,23 @@ QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 	[this, branch]() {
 		m_branches.remove(branch);
 		// update retain flag on main branch is there are no more branches
-		// TODO : specialize message for "requiresAttention"
-		if (this->hasBranches() || this->requiresAttention())
+		if (this->hasBranches())
 		{
 			return;
 		}
-		this->setMessage(tr("Condition no longer of interest."));
-		this->setRetain(false);
+		// TODO : implement better, maybe use inheritance?
+		QString strMessage;
+		if (this->requiresAttention())
+		{
+			strMessage = this->message().text();
+			strMessage.remove(" Has branches.");
+		}
+		else
+		{
+			strMessage = tr("Condition no longer of interest.");
+		}
+		this->setMessage(strMessage);
+		this->setRetain(this->requiresAttention());
 		this->trigger();
 	});
 	// trigger first event so clients can add branch to alarm display 

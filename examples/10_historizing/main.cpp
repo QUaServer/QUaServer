@@ -13,6 +13,10 @@
 #endif // !SQLITE_HISTORIZER
 #endif // UA_ENABLE_HISTORIZING
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#include "./../08_events/myevent.h"
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 int main(int argc, char* argv[])
 {
 	QCoreApplication a(argc, argv);
@@ -26,6 +30,15 @@ int main(int argc, char* argv[])
 			<< "]["  << log.category
 			<< "] :" << log.message;
     });
+
+	// it is also possible to historize events
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// create event with server as originator
+	auto srvEvt = server.createEvent<MyEvent>();
+	srvEvt->setDisplayName("MyServerEvent");
+	srvEvt->setSourceName("Server");
+	srvEvt->setMessage("An event occured in the server");
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_HISTORIZING
 #ifndef SQLITE_HISTORIZER
@@ -49,7 +62,7 @@ int main(int argc, char* argv[])
 	// NOTE : historizer must live at least as long as server
 	server.setHistorizer(historizer);
 	// add test variables
-	QTimer timer;
+	QTimer timerVars;
 	QUaFolderObject* objsFolder = server.objectsFolder();
 	for (int i = 0; i < 10; i++)
 	{
@@ -60,12 +73,27 @@ int main(int argc, char* argv[])
 		varInt->setReadHistoryAccess(true);
 		varInt->setValue(0);
 		// set random value
-		QObject::connect(&timer, &QTimer::timeout, varInt, [varInt]() {
+		QObject::connect(&timerVars, &QTimer::timeout, varInt, [varInt]() {
 			varInt->setValue(QRandomGenerator::global()->generate());
 		});
 	}
 	// update variable every half a second
-	timer.start(500);
+	timerVars.start(500);
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	QTimer timerEvts;
+	QObject::connect(&timerVars, &QTimer::timeout, srvEvt, [srvEvt]() {
+		static quint32 counter = 0;
+		auto time = QDateTime::currentDateTime();
+		srvEvt->setMessage(QObject::tr("An event occured in the server %1").arg(++counter));
+		srvEvt->setTime(time.toUTC());
+		srvEvt->setReceiveTime(time.toUTC());
+		srvEvt->trigger();
+	});	
+	// trigger event every second
+	timerVars.start(1000);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 #endif // UA_ENABLE_HISTORIZING
 
 	// start server

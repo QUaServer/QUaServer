@@ -1001,6 +1001,199 @@ UA_HistoryDataGathering QUaServer::getGathering() const
 {
 	return static_cast<UA_HistoryDatabaseContext_default*>(m_historDatabase.context)->gathering;
 }
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+// based on setValue_gathering_default
+void QUaServer::setEvent(
+    UA_Server*            server,
+    void*                 hdbContext,
+    const UA_NodeId*      originId,
+    const UA_NodeId*      emitterId,
+    const UA_NodeId*      eventId,
+    UA_Boolean            willEventNodeBeDeleted,
+    const UA_EventFilter* historicalEventFilter,
+    UA_EventFieldList*    fieldList)
+{
+	Q_UNUSED(hdbContext);
+	Q_UNUSED(willEventNodeBeDeleted);
+	Q_UNUSED(historicalEventFilter);
+	// ignore multiple entries of same event (there is 1 for each emitter)
+	if (!UA_NodeId_equal(originId, emitterId))
+	{
+		return;
+	}
+	auto srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv);
+	QUaNodeId orgId = *originId;
+	QUaNodeId evtId = *eventId;
+
+	auto node = QUaNode::getNodeContext(*eventId, server);
+	auto evt  = qobject_cast<QUaBaseEvent*>(node);
+	Q_ASSERT(evt);
+	Q_ASSERT(evt->nodeId() == evtId);
+
+	qDebug() << "originId :" << orgId << "| eventId :" << evtId;
+	qDebug() << evt->time() << "|" << evt->message().text();
+
+	if (fieldList)
+	{
+		UA_EventFieldList_delete(fieldList);
+	}
+	return;
+}
+// based on readRaw_service_default
+void QUaServer::readEvent(
+    UA_Server*                    server,
+    void*                         hdbContext,
+    const UA_NodeId*              sessionId,
+    void*                         sessionContext,
+    const UA_RequestHeader*       requestHeader,
+    const UA_ReadEventDetails*    historyReadDetails,
+    UA_TimestampsToReturn         timestampsToReturn,
+    UA_Boolean                    releaseContinuationPoints,
+    size_t                        nodesToReadSize,
+    const UA_HistoryReadValueId*  nodesToRead,
+    UA_HistoryReadResponse*       response,
+    UA_HistoryEvent* const* const historyData)
+{
+	UA_HistoryDatabaseContext_default* ctx = (UA_HistoryDatabaseContext_default*)hdbContext;
+	for (size_t i = 0; i < nodesToReadSize; ++i) {
+		qDebug() << "Node to read" << i << ":" << QUaNodeId(nodesToRead[i].nodeId);
+		response->results[i].statusCode = UA_STATUSCODE_BADHISTORYOPERATIONINVALID;
+		auto startTimestamp = historyReadDetails->startTime;
+		auto endTimestamp   = historyReadDetails->endTime;
+		QDateTime timeStart = startTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&startTimestamp);
+		QDateTime timeEnd   = endTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
+		qDebug() << "From :" << timeStart << "| To :" << timeEnd;
+
+		const UA_HistorizingNodeIdSettings* setting = ctx->gathering.getHistorizingSetting(
+			server,
+			ctx->gathering.context,
+			&nodesToRead[i].nodeId
+		);
+		if (setting) {
+			qDebug() << "maxHistoryDataResponseSize" << setting->maxHistoryDataResponseSize;
+		}
+		
+		qDebug() << "numValuesPerNode" << historyReadDetails->numValuesPerNode;
+		// N/A historyReadDetails->returnBounds,
+		// N/A range;
+
+		// output seems to be (UA_HistoryEvent) historyData
+		// one event seems to be one UA_HistoryEventFieldList
+		// the eventFields and eventFieldsSize given by the 
+		// (UA_ReadEventDetails) historyReadDetails->filter (UA_EventFilter)
+		// take a look at UA_Server_filterEvent
+
+	//	UA_Byte accessLevel = 0;
+	//	UA_Server_readAccessLevel(server,
+	//		nodesToRead[i].nodeId,
+	//		&accessLevel);
+	//	if (!(accessLevel & UA_ACCESSLEVELMASK_HISTORYREAD)) {
+	//		response->results[i].statusCode = UA_STATUSCODE_BADUSERACCESSDENIED;
+	//		continue;
+	//	}
+
+	//	UA_Boolean historizing = false;
+	//	UA_Server_readHistorizing(server,
+	//		nodesToRead[i].nodeId,
+	//		&historizing);
+	//	if (!historizing) {
+	//		response->results[i].statusCode = UA_STATUSCODE_BADHISTORYOPERATIONINVALID;
+	//		continue;
+	//	}
+
+	//	const UA_HistorizingNodeIdSettings* setting = ctx->gathering.getHistorizingSetting(
+	//		server,
+	//		ctx->gathering.context,
+	//		&nodesToRead[i].nodeId);
+
+	//	if (!setting) {
+	//		response->results[i].statusCode = UA_STATUSCODE_BADHISTORYOPERATIONINVALID;
+	//		continue;
+	//	}
+
+	//	//if (historyReadDetails->returnBounds && !setting->historizingBackend.boundSupported(
+	//	//	server,
+	//	//	setting->historizingBackend.context,
+	//	//	sessionId,
+	//	//	sessionContext,
+	//	//	&nodesToRead[i].nodeId)) {
+	//	//	response->results[i].statusCode = UA_STATUSCODE_BADBOUNDNOTSUPPORTED;
+	//	//	continue;
+	//	//}
+	//	// TODO : something with historyReadDetails->filter ?
+
+	//	if (!setting->historizingBackend.timestampsToReturnSupported(
+	//		server,
+	//		setting->historizingBackend.context,
+	//		sessionId,
+	//		sessionContext,
+	//		&nodesToRead[i].nodeId,
+	//		timestampsToReturn)) {
+	//		response->results[i].statusCode = UA_STATUSCODE_BADTIMESTAMPNOTSUPPORTED;
+	//		continue;
+	//	}
+
+	//	UA_NumericRange range;
+	//	range.dimensionsSize = 0;
+	//	range.dimensions = NULL;
+	//	if (nodesToRead[i].indexRange.length > 0) {
+	//		UA_StatusCode rangeParseResult = UA_NumericRange_parse(&range, nodesToRead[i].indexRange);
+	//		if (rangeParseResult != UA_STATUSCODE_GOOD) {
+	//			response->results[i].statusCode = rangeParseResult;
+	//			continue;
+	//		}
+	//	}
+
+	//	UA_StatusCode getHistoryDataStatusCode;
+	//	if (setting->historizingBackend.getHistoryData) {
+	//		getHistoryDataStatusCode = setting->historizingBackend.getHistoryData(
+	//			server,
+	//			sessionId,
+	//			sessionContext,
+	//			&setting->historizingBackend,
+	//			historyReadDetails->startTime,
+	//			historyReadDetails->endTime,
+	//			&nodesToRead[i].nodeId,
+	//			setting->maxHistoryDataResponseSize,
+	//			historyReadDetails->numValuesPerNode,
+	//			historyReadDetails->returnBounds,
+	//			timestampsToReturn,
+	//			range,
+	//			releaseContinuationPoints,
+	//			&nodesToRead[i].continuationPoint,
+	//			&response->results[i].continuationPoint,
+	//			historyData[i]);
+	//	}
+	//	else {
+	//		getHistoryDataStatusCode = getHistoryData_service_default(
+	//			&setting->historizingBackend,
+	//			historyReadDetails->startTime,
+	//			historyReadDetails->endTime,
+	//			server,
+	//			sessionId,
+	//			sessionContext,
+	//			&nodesToRead[i].nodeId,
+	//			setting->maxHistoryDataResponseSize,
+	//			historyReadDetails->numValuesPerNode,
+	//			historyReadDetails->returnBounds,
+	//			timestampsToReturn,
+	//			range,
+	//			releaseContinuationPoints,
+	//			&nodesToRead[i].continuationPoint,
+	//			&response->results[i].continuationPoint,
+	//			&historyData[i]->dataValuesSize,
+	//			&historyData[i]->dataValues);
+	//	}
+	//	if (getHistoryDataStatusCode != UA_STATUSCODE_GOOD) {
+	//		response->results[i].statusCode = getHistoryDataStatusCode;
+	//		continue;
+	//	}
+	}
+	response->responseHeader.serviceResult = UA_STATUSCODE_GOOD;
+	return;
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #endif // UA_ENABLE_HISTORIZING
 
 void QUaServer::resetConfig()
@@ -1399,6 +1592,11 @@ void QUaServer::setupServer()
 #ifdef UA_ENABLE_HISTORIZING
 	UA_HistoryDataGathering gathering = UA_HistoryDataGathering_Default(1000);
 	m_historDatabase = UA_HistoryDatabase_default(gathering);
+	// add historic event handling is supported
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_historDatabase.setEvent  = &QUaServer::setEvent;
+	m_historDatabase.readEvent = &QUaServer::readEvent;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	config->historyDatabase = m_historDatabase;
 #endif // UA_ENABLE_HISTORIZING
 }

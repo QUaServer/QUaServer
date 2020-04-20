@@ -20,5 +20,12 @@ HEADERS += \
 quainmemoryhistorizer.h \
 quasqlitehistorizer.h
 
+ua_events || ua_alarms_conditions {
+	SOURCES += \
+	$$PWD/../08_events/myevent.cpp
+	HEADERS += \
+	$$PWD/../08_events/myevent.h
+}
+
 include($$PWD/../../src/wrapper/quaserver.pri)
 include($$PWD/../../src/helper/add_qt_path_win.pri)

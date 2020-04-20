@@ -368,7 +368,6 @@ void QUaBaseEvent::triggerInternal()
         retval = readObjectProperty(m_qUaServer->m_server, emitNodes[i].nodeId,
             UA_QUALIFIEDNAME(0, (char*)"HistoricalEventFilter"),
             &historicalEventFilterValue);
-        Q_ASSERT(retval == UA_STATUSCODE_GOOD);
         /* check if the property was found and the read was successful */
         if (retval != UA_STATUSCODE_GOOD) {
             /* do not vex users with no match errors */
