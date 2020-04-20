@@ -298,7 +298,8 @@ protected:
 	bool addOptionalMethod(const QUaQualifiedName& methodName);
 	// removes the reference by the method above
 	bool removeOptionalMethod(const QUaQualifiedName& methodName);
-
+	// to check if a node is visible in the address space (reachible in hierarchical refs tree)
+	bool inAddressSpace() const;
 
 
 private:

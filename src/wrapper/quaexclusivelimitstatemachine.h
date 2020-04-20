@@ -30,13 +30,13 @@ public:
 	void setLastExclusiveLimitTransition(const QUaExclusiveLimitTransition& lastExclusiveLimitTransition);
 
 	// adds highhigh to available states
-	void setHighHighLimitAllowed(const bool& highHighLimitAllowed);
+	void setHighHighLimitRequired(const bool& highHighLimitRequired);
 	// adds high to available states
-	void setHighLimitAllowed    (const bool& highLimitAllowed    );
+	void setHighLimitRequired    (const bool& highLimitRequired    );
 	// adds low to available states
-	void setLowLimitAllowed     (const bool& lowLimitAllowed     );
+	void setLowLimitRequired     (const bool& lowLimitRequired     );
 	// adds lowlow to available states
-	void setLowLowLimitAllowed  (const bool& lowLowLimitAllowed  );
+	void setLowLowLimitRequired  (const bool& lowLowLimitRequired  );
 
 signals:
 	void exclusiveLimitStateChanged(const QUaExclusiveLimitState& state);

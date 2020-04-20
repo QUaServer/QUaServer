@@ -1371,7 +1371,7 @@ void QUaServer::setupServer()
 	Q_CHECK_PTR(m_changeEvent);
 	m_changeEvent->setSourceNode(QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)));
 	m_changeEvent->setSourceName(tr("Server"));
-	m_changeEvent->setMessage(tr("Node added or removed"));
+	m_changeEvent->setMessage(tr("Node added or removed."));
 	m_changeEvent->setSeverity(1);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -2457,7 +2457,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 
 	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	if (parentNode)
+	if (parentNode && parentNode->inAddressSpace())
 	{
 		Q_CHECK_PTR(m_changeEvent);
 		// add reference added change to buffer

@@ -81,6 +81,7 @@ void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 	this->setAckedStateId(acknowledged);
 	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
 	// if no further attention needed, set retain to false if branch then delete as well
+	QString strMessage = tr("Condition %1.").arg(strAckedStateName);
 	if (acknowledged && !this->requiresAttention())
 	{
 		if (this->isBranch())
@@ -89,21 +90,26 @@ void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 		}
 		else
 		{
-			this->setRetain(this->hasBranches());
+			bool hasBranches = this->hasBranches();
+			this->setRetain(hasBranches);
+			if (hasBranches)
+			{
+				strMessage += tr(" Has branches.");
+			}
 		}
+	}
+	if (m_confirmRequired && !this->confirmed())
+	{
+		strMessage += tr(" Requires Confirm.");
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
-	this->setMessage(
-		m_confirmRequired ?
-		tr("Condition %1. Requires Confirm.").arg(strAckedStateName) :
-		tr("Condition %1.").arg(strAckedStateName)
-	);
 	this->setTime(time);
 	this->setReceiveTime(time);
+	this->setMessage(strMessage);
 	this->trigger();
 	// emit qt signal
-	emit this->acknowledged();
+	emit this->conditionAcknowledged();
 }
 
 QUaLocalizedText QUaAcknowledgeableCondition::confirmedStateCurrentStateName() const
@@ -221,30 +227,31 @@ void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
 	this->setConfirmedStateId(confirmed);
 	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 	// if no further attention needed, set retain to false if branch then delete as well
+	QString strMessage = tr("Condition %1.").arg(strConfirmedStateName);
 	if (confirmed && !this->requiresAttention())
 	{
 		if (this->isBranch())
 		{
 			this->deleteLater();
-			this->setMessage(tr("Condition %1.").arg(strConfirmedStateName));
 		}
 		else
 		{
-			this->setRetain(this->hasBranches());
-			this->setMessage(tr("Condition %1. Has branches.").arg(strConfirmedStateName));
+			bool hasBranches = this->hasBranches();
+			this->setRetain(hasBranches);
+			if (hasBranches)
+			{
+				strMessage += tr(" Has branches.");
+			}
 		}
-	}
-	else
-	{
-		this->setMessage(tr("Condition %1.").arg(strConfirmedStateName));
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setTime(time);
 	this->setReceiveTime(time);
+	this->setMessage(strMessage);
 	this->trigger();
 	// emit qt signal
-	emit this->confirmed();
+	emit this->conditionConfirmed();
 }
 
 void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QUaLocalizedText Comment)

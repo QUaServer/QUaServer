@@ -32,7 +32,7 @@ public:
 	void             setActiveStateFalseState(const QUaLocalizedText& falseState);
 	// helper
 	bool active() const;
-	void setActive(const bool& active);
+	void setActive(const bool& active, const QString& strMessageAppend = QString());
 
 	// NodeId of the Variable which is used for the calculation of the Alarm state.
 	// Can be null if internal

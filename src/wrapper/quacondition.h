@@ -45,7 +45,6 @@ public:
 	QUaLocalizedText conditionClassName() const;
 	void    setConditionClassName(const QUaLocalizedText& conditionClassName);
 
-
 	// NOTE : optional; not created until one of these methods is called
 	QList<QUaNodeId> conditionSubClassId() const;
 	void      setConditionSubClassId(const QList<QUaNodeId>& conditionSubClassId);
@@ -92,8 +91,8 @@ public:
 
 	// 
 	quint16 lastSeverity() const;
+	void setLastSeverity(const quint16& lastSeverity);
 	// Overwrite to handle lastSeverity automatically
-	void    setLastSeverity(const quint16& lastSeverity);
 	virtual void setSeverity(const quint16& intSeverity) override;
 
 	QUaLocalizedText comment() const;

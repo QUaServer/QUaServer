@@ -29,10 +29,10 @@ public:
 
 	// NOTE : below specializations call base implementation and update
 	//        the available states and transitions of the LimitState machine
-	void setHighHighLimitAllowed(const bool& highHighLimitAllowed) override;
-	void setHighLimitAllowed    (const bool& highLimitAllowed    ) override;
-	void setLowLimitAllowed     (const bool& lowLimitAllowed     ) override;
-	void setLowLowLimitAllowed  (const bool& lowLowLimitAllowed  ) override;
+	void setHighHighLimitRequired(const bool& highHighLimitRequired) override;
+	void setHighLimitRequired    (const bool& highLimitRequired    ) override;
+	void setLowLimitRequired     (const bool& lowLimitRequired     ) override;
+	void setLowLowLimitRequired  (const bool& lowLowLimitRequired  ) override;
 
 signals:
 	void exclusiveLimitStateChanged(const QUaExclusiveLimitState& state);

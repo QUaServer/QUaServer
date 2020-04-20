@@ -15,6 +15,8 @@ QUaExclusiveLimitAlarm::QUaExclusiveLimitAlarm(
 		machine, &QUaExclusiveLimitStateMachine::exclusiveLimitStateChanged,
 		this, &QUaExclusiveLimitAlarm::exclusiveLimitStateChanged
 	);
+	// support optional last transtion
+	machine->lastTransition();
 }
 
 void QUaExclusiveLimitAlarm::setInputNode(QUaBaseVariable* inputNode)
@@ -59,12 +61,33 @@ void QUaExclusiveLimitAlarm::setExclusiveLimitState(const QUaExclusiveLimitState
 	if (oldState == QUa::ExclusiveLimitState::None &&
 		exclusiveLimitState != QUa::ExclusiveLimitState::None)
 	{
-		this->setActive(true);
+		this->setActive(true, tr("%1 limit violated.").arg(exclusiveLimitState.toString()));
 	}
 	else if (oldState != QUa::ExclusiveLimitState::None &&
 		exclusiveLimitState == QUa::ExclusiveLimitState::None)
 	{
 		this->setActive(false);
+	}
+	else
+	{
+		Q_ASSERT(this->active());
+		QString strMessage = tr("Alarm %1.").arg(this->activeStateTrueState());
+		if (!this->acknowledged())
+		{
+			strMessage += tr(" Requires Acknowledge.");
+		}
+		else if (m_confirmRequired && !this->confirmed())
+		{
+			strMessage += tr(" Requires Confirm.");
+		}
+		strMessage += tr(" %2 limit violated.").arg(exclusiveLimitState.toString());
+		this->setMessage(strMessage);
+		// trigger event
+		auto time = QDateTime::currentDateTimeUtc();
+		this->setTime(time);
+		this->setReceiveTime(time);
+		// NOTE : message set according to situation
+		this->trigger();
 	}
 }
 
@@ -72,84 +95,84 @@ bool QUaExclusiveLimitAlarm::isExclusiveLimitStateAllowed(const QUaExclusiveLimi
 {
 	if (exclusiveLimitState == QUa::ExclusiveLimitState::HighHigh)
 	{
-		return this->highHighLimitAllowed();
+		return this->highHighLimitRequired();
 	}
 	if (exclusiveLimitState == QUa::ExclusiveLimitState::High)
 	{
-		return this->highLimitAllowed();
+		return this->highLimitRequired();
 	}
 	if (exclusiveLimitState == QUa::ExclusiveLimitState::Low)
 	{
-		return this->lowLimitAllowed();
+		return this->lowLimitRequired();
 	}
 	if (exclusiveLimitState == QUa::ExclusiveLimitState::LowLow)
 	{
-		return this->lowLowLimitAllowed();
+		return this->lowLowLimitRequired();
 	}
 	return true;
 }
 
 void QUaExclusiveLimitAlarm::processInputNodeValue(const double& value)
 {
-	bool highHighLimitAllowed = this->highHighLimitAllowed();
-	bool highLimitAllowed     = this->highLimitAllowed    ();
-	bool lowLimitAllowed      = this->lowLimitAllowed     ();
-	bool lowLowLimitAllowed   = this->lowLowLimitAllowed  ();
+	bool highHighLimitRequired = this->highHighLimitRequired();
+	bool highLimitRequired     = this->highLimitRequired    ();
+	bool lowLimitRequired      = this->lowLimitRequired     ();
+	bool lowLowLimitRequired   = this->lowLowLimitRequired  ();
 	QUaExclusiveLimitState newState;
-	if (highLimitAllowed && value >= this->highLimit())
+	if (highLimitRequired && value >= this->highLimit())
 	{
 		newState = QUa::ExclusiveLimitState::High;
 	}
-	if (highHighLimitAllowed && value >= this->highHighLimit())
+	if (highHighLimitRequired && value >= this->highHighLimit())
 	{
 		newState = QUa::ExclusiveLimitState::HighHigh;
 	}
-	if (lowLimitAllowed && value <= this->lowLimit())
+	if (lowLimitRequired && value <= this->lowLimit())
 	{
 		newState = QUa::ExclusiveLimitState::Low;
 	}
-	if (lowLowLimitAllowed && value <= this->lowLowLimit())
+	if (lowLowLimitRequired && value <= this->lowLowLimit())
 	{
 		newState = QUa::ExclusiveLimitState::LowLow;
 	}
 	this->setExclusiveLimitState(newState);
 }
 
-void QUaExclusiveLimitAlarm::setHighHighLimitAllowed(const bool& highHighLimitAllowed)
+void QUaExclusiveLimitAlarm::setHighHighLimitRequired(const bool& highHighLimitRequired)
 {
 	// call base class implementation
-	QUaLimitAlarm::setHighHighLimitAllowed(highHighLimitAllowed);
+	QUaLimitAlarm::setHighHighLimitRequired(highHighLimitRequired);
 	// update available states and transations in state machine
 	auto machine = this->getLimitState();
-	machine->setHighHighLimitAllowed(highHighLimitAllowed);
+	machine->setHighHighLimitRequired(highHighLimitRequired);
 }
 
 
-void QUaExclusiveLimitAlarm::setHighLimitAllowed(const bool& highLimitAllowed)
+void QUaExclusiveLimitAlarm::setHighLimitRequired(const bool& highLimitRequired)
 {
 	// call base class implementation
-	QUaLimitAlarm::setHighLimitAllowed(highLimitAllowed);
+	QUaLimitAlarm::setHighLimitRequired(highLimitRequired);
 	// update available states and transations in state machine
 	auto machine = this->getLimitState();
-	machine->setHighLimitAllowed(highLimitAllowed);
+	machine->setHighLimitRequired(highLimitRequired);
 }
 
-void QUaExclusiveLimitAlarm::setLowLimitAllowed(const bool& lowLimitAllowed)
+void QUaExclusiveLimitAlarm::setLowLimitRequired(const bool& lowLimitRequired)
 {
 	// call base class implementation
-	QUaLimitAlarm::setLowLimitAllowed(lowLimitAllowed);
+	QUaLimitAlarm::setLowLimitRequired(lowLimitRequired);
 	// update available states and transations in state machine
 	auto machine = this->getLimitState();
-	machine->setLowLimitAllowed(lowLimitAllowed);
+	machine->setLowLimitRequired(lowLimitRequired);
 }
 
-void QUaExclusiveLimitAlarm::setLowLowLimitAllowed(const bool& lowLowLimitAllowed)
+void QUaExclusiveLimitAlarm::setLowLowLimitRequired(const bool& lowLowLimitRequired)
 {
 	// call base class implementation
-	QUaLimitAlarm::setLowLowLimitAllowed(lowLowLimitAllowed);
+	QUaLimitAlarm::setLowLowLimitRequired(lowLowLimitRequired);
 	// update available states and transations in state machine
 	auto machine = this->getLimitState();
-	machine->setLowLowLimitAllowed(lowLowLimitAllowed);
+	machine->setLowLowLimitRequired(lowLowLimitRequired);
 }
 
 

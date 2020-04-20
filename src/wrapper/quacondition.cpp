@@ -44,14 +44,21 @@ QUaCondition::~QUaCondition()
 	// remove destroy connections
 	QObject::disconnect(m_sourceDestroyed);
 	// NOTE : do not disconnect m_retainedDestroyed, else it will not be called
-
+	
 	// trigger last event so clients can remove branch from alarm display 
 	this->setRetain(false);
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setTime(time);
 	this->setReceiveTime(time);
-	this->setMessage(tr("Branch %1 deleted.").arg(this->displayName().text()));
+	this->setMessage(tr("%1 %2 deleted.")
+		.arg(this->isBranch() ? tr("Branch") : tr("Condition"))
+		.arg(this->displayName().text()));
 	this->trigger();
+	// if branch remove qt parent so marked as not in browse tree, no model change event
+	if (this->isBranch())
+	{
+		this->setParent(nullptr);
+	}
 }
 
 bool QUaCondition::isBranch() const
@@ -511,10 +518,12 @@ QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 	[this, branch]() {
 		m_branches.remove(branch);
 		// update retain flag on main branch is there are no more branches
+		// TODO : specialize message for "requiresAttention"
 		if (this->hasBranches() || this->requiresAttention())
 		{
 			return;
 		}
+		this->setMessage(tr("Condition no longer of interest."));
 		this->setRetain(false);
 		this->trigger();
 	});

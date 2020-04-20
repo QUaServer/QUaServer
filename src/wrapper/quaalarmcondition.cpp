@@ -150,7 +150,7 @@ bool QUaAlarmCondition::active() const
 	return this->activeStateId();
 }
 
-void QUaAlarmCondition::setActive(const bool& active)
+void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageAppend/* = QString()*/)
 {
 	// nothing to do if same
 	if (active == this->active())
@@ -182,26 +182,53 @@ void QUaAlarmCondition::setActive(const bool& active)
 				this->setConfirmedStateId(false);
 				this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 			}
-			this->setMessage(tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName));
+			this->setMessage(
+				strMessageAppend.isEmpty() ?
+				tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName) :
+				tr("Alarm %1. Requires Acknowledge. %2").arg(strActiveStateName).arg(strMessageAppend)
+			);
 		}
 		else
 		{
+			QString strMessage = tr("Alarm %1.").arg(strActiveStateName);
 			if (this->requiresAttention())
 			{
 				// create branch
 				this->createBranch<QUaAlarmCondition>();
 				this->setRetain(true);
+				if (!this->acknowledged())
+				{
+					strMessage += tr(" Requires Acknowledge.");
+				}
+				else if (m_confirmRequired && !this->confirmed())
+				{
+					strMessage += tr(" Requires Confirm.");
+				}
+				strMessage += tr(" Has branches.");
 			}
 			else
 			{
-				this->setRetain(this->hasBranches());
+				bool hasBranches = this->hasBranches();
+				this->setRetain(hasBranches);
+				if (hasBranches)
+				{
+					strMessage += tr(" Has branches.");
+				}
 			}
-			this->setMessage(tr("Alarm %1. Has branches.").arg(strActiveStateName));
+			if (!strMessageAppend.isEmpty())
+			{
+				strMessage += tr(" %1").arg(strMessageAppend);
+			}
+			this->setMessage(strMessage);
 		}
 	}
 	else
 	{
-		this->setMessage(tr("Alarm %1.").arg(strActiveStateName));
+		this->setMessage(
+			strMessageAppend.isEmpty() ?
+			tr("Alarm %1.").arg(strActiveStateName) :
+			tr("Alarm %1. %2").arg(strActiveStateName).arg(strMessageAppend)
+		);
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();

@@ -242,11 +242,14 @@ QUaNode::~QUaNode()
 	Q_CHECK_PTR(m_qUaServer->m_changeEvent);
 	// add reference deleted change to buffer
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
-	m_qUaServer->addChange({
-		parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
-		parent ? parent->typeDefinitionNodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
-		QUaChangeVerb::ReferenceDeleted // UaExpert does not recognize QUaChangeVerb::NodeAdded
-	});	
+	if (parent && parent->inAddressSpace())
+	{
+		m_qUaServer->addChange({
+			parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
+			parent ? parent->typeDefinitionNodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
+			QUaChangeVerb::ReferenceDeleted // UaExpert does not recognize QUaChangeVerb::NodeAdded
+		});	
+	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
@@ -1093,12 +1096,15 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 		)
 	{
-		// add reference added change to buffer
-		m_qUaServer->addChange({
-			this->nodeId(),
-			this->typeDefinitionNodeId(),
-			QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-		});
+		if (this->inAddressSpace())
+		{
+			// add reference added change to buffer
+			m_qUaServer->addChange({
+				this->nodeId(),
+				this->typeDefinitionNodeId(),
+				QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
+			});
+		}
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// if we reached here, the optional field has been instantiated
@@ -1384,6 +1390,12 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 		return false;
 	}
 	return true;
+}
+
+bool QUaNode::inAddressSpace() const
+{
+	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
+	return parent && (parent == m_qUaServer->m_pobjectsFolder || parent->inAddressSpace());
 }
 
 const QMap<QString, QVariant> QUaNode::serializeAttrs() const

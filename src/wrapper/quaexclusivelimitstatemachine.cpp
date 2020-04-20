@@ -78,12 +78,12 @@ void QUaExclusiveLimitStateMachine::setLastExclusiveLimitTransition(const QUaExc
 	this->setLastTransition(lastExclusiveLimitTransition.toString());
 }
 
-void QUaExclusiveLimitStateMachine::setHighHighLimitAllowed(const bool& highHighLimitAllowed)
+void QUaExclusiveLimitStateMachine::setHighHighLimitRequired(const bool& highHighLimitRequired)
 {
 	// update available states and transations in state machine
 	auto states = this->availableStates();
 	auto transitions = this->availableTransitions();
-	if (highHighLimitAllowed)
+	if (highHighLimitRequired)
 	{
 		Q_ASSERT(!states.contains(QUaExclusiveLimitStateMachine::stateHighHighNodeId()));
 		states.append(QUaExclusiveLimitStateMachine::stateHighHighNodeId());
@@ -112,12 +112,12 @@ void QUaExclusiveLimitStateMachine::setHighHighLimitAllowed(const bool& highHigh
 }
 
 
-void QUaExclusiveLimitStateMachine::setHighLimitAllowed(const bool& highLimitAllowed)
+void QUaExclusiveLimitStateMachine::setHighLimitRequired(const bool& highLimitRequired)
 {
 	// update available states and transations in state machine
 	auto states = this->availableStates();
 	auto transitions = this->availableTransitions();
-	if (highLimitAllowed)
+	if (highLimitRequired)
 	{
 		Q_ASSERT(!states.contains(QUaExclusiveLimitStateMachine::stateHighNodeId()));
 		states.append(QUaExclusiveLimitStateMachine::stateHighNodeId());
@@ -145,12 +145,12 @@ void QUaExclusiveLimitStateMachine::setHighLimitAllowed(const bool& highLimitAll
 	this->setAvailableTransitions(transitions);
 }
 
-void QUaExclusiveLimitStateMachine::setLowLimitAllowed(const bool& lowLimitAllowed)
+void QUaExclusiveLimitStateMachine::setLowLimitRequired(const bool& lowLimitRequired)
 {
 	// update available states and transations in state machine
 	auto states = this->availableStates();
 	auto transitions = this->availableTransitions();
-	if (lowLimitAllowed)
+	if (lowLimitRequired)
 	{
 		Q_ASSERT(!states.contains(QUaExclusiveLimitStateMachine::stateLowNodeId()));
 		states.append(QUaExclusiveLimitStateMachine::stateLowNodeId());
@@ -178,12 +178,12 @@ void QUaExclusiveLimitStateMachine::setLowLimitAllowed(const bool& lowLimitAllow
 	this->setAvailableTransitions(transitions);
 }
 
-void QUaExclusiveLimitStateMachine::setLowLowLimitAllowed(const bool& lowLowLimitAllowed)
+void QUaExclusiveLimitStateMachine::setLowLowLimitRequired(const bool& lowLowLimitRequired)
 {
 	// update available states and transations in state machine
 	auto states = this->availableStates();
 	auto transitions = this->availableTransitions();
-	if (lowLowLimitAllowed)
+	if (lowLowLimitRequired)
 	{
 		Q_ASSERT(!states.contains(QUaExclusiveLimitStateMachine::stateLowLowNodeId()));
 		states.append(QUaExclusiveLimitStateMachine::stateLowLowNodeId());

@@ -18,34 +18,34 @@ public:
 	//        "Base" limits are used for servers supporting "AdaptiveAlarming"
 
 	// if this alarm supports highhigh limit
-	bool highHighLimitAllowed() const;
+	bool highHighLimitRequired() const;
 	virtual
-	void setHighHighLimitAllowed(const bool& highHighLimitAllowed);
-	// NOTE: optional, only work if highHighLimitAllowed == true 
+	void setHighHighLimitRequired(const bool& highHighLimitRequired);
+	// NOTE: optional, only work if highHighLimitRequired == true 
 	double highHighLimit() const;
 	void setHighHighLimit(const double& highHighLimit);
 
 	// if this alarm supports high limit
-	bool highLimitAllowed() const;
+	bool highLimitRequired() const;
 	virtual
-	void setHighLimitAllowed(const bool& highLimitAllowed);
-	// NOTE: optional, only work if highLimitAllowed == true 
+	void setHighLimitRequired(const bool& highLimitRequired);
+	// NOTE: optional, only work if highLimitRequired == true 
 	double highLimit() const;
 	void setHighLimit(const double& highLimit);
 
 	// if this alarm supports low limit
-	bool lowLimitAllowed() const;
+	bool lowLimitRequired() const;
 	virtual
-	void setLowLimitAllowed(const bool& lowLimitAllowed);
-	// NOTE: optional, only work if lowLimitAllowed == true 
+	void setLowLimitRequired(const bool& lowLimitRequired);
+	// NOTE: optional, only work if lowLimitRequired == true 
 	double lowLimit() const;
 	void setLowLimit(const double& lowLimit);
 
 	// if this alarm supports lowlow limit
-	bool lowLowLimitAllowed() const;
+	bool lowLowLimitRequired() const;
 	virtual
-	void setLowLowLimitAllowed(const bool& lowLowLimitAllowed);
-	// NOTE: optional, only work if lowLowLimitAllowed == true 
+	void setLowLowLimitRequired(const bool& lowLowLimitRequired);
+	// NOTE: optional, only work if lowLowLimitRequired == true 
 	double lowLowLimit() const;
 	void setLowLowLimit(const double& lowLowLimit);
 
@@ -53,46 +53,46 @@ public:
 	bool adaptiveAlarmingSupported() const;
 	void setAdaptiveAlarmingSupported(const bool& adaptiveAlarmingSupported);
 
-	// NOTE: optional, only work if baseHighHighLimitAllowed == true 
+	// NOTE: optional, only work if baseHighHighLimitRequired == true 
 	//       and adaptiveAlarmingSupported == true
 	double baseHighHighLimit() const;
 	void setBaseHighHighLimit(const double& baseHighHighLimit);
 
-	// NOTE: optional, only work if baseHighLimitAllowed == true 
+	// NOTE: optional, only work if baseHighLimitRequired == true 
 	//       and adaptiveAlarmingSupported == true
 	double baseHighLimit() const;
 	void setBaseHighLimit(const double& baseHighLimit);
 
-	// NOTE: optional, only work if baseLowLimitAllowed == true 
+	// NOTE: optional, only work if baseLowLimitRequired == true 
 	//       and adaptiveAlarmingSupported == true
 	double baseLowLimit() const;
 	void setBaseLowLimit(const double& baseLowLimit);
 
-	// NOTE: optional, only work if baseLowLowLimitAllowed == true 
+	// NOTE: optional, only work if baseLowLowLimitRequired == true 
 	//       and adaptiveAlarmingSupported == true
 	double baseLowLowLimit() const;
 	void setBaseLowLowLimit(const double& baseLowLowLimit);
 
 protected:
 	// helpers
-	bool baseHighHighLimitAllowed() const;
+	bool baseHighHighLimitRequired() const;
 	virtual
-	void setBaseHighHighLimitAllowed(const bool& baseHighHighLimitAllowed);
+	void setBaseHighHighLimitRequired(const bool& baseHighHighLimitRequired);
 
 	// helpers
-	bool baseHighLimitAllowed() const;
+	bool baseHighLimitRequired() const;
 	virtual
-	void setBaseHighLimitAllowed(const bool& baseHighLimitAllowed);
+	void setBaseHighLimitRequired(const bool& baseHighLimitRequired);
 
 	// helpers
-	bool baseLowLimitAllowed() const;
+	bool baseLowLimitRequired() const;
 	virtual
-	void setBaseLowLimitAllowed(const bool& baseLowLimitAllowed);
+	void setBaseLowLimitRequired(const bool& baseLowLimitRequired);
 
 	// helpers
-	bool baseLowLowLimitAllowed() const;
+	bool baseLowLowLimitRequired() const;
 	virtual
-	void setBaseLowLowLimitAllowed(const bool& baseLowLowLimitAllowed);
+	void setBaseLowLowLimitRequired(const bool& baseLowLowLimitRequired);
 
 	// Double
 	QUaProperty* getHighHighLimit();
@@ -112,16 +112,17 @@ protected:
 	QUaProperty* getBaseLowLowLimit();
 
 private:
-	bool m_highHighLimitAllowed;
-	bool m_highLimitAllowed;
-	bool m_lowLimitAllowed;
-	bool m_lowLowLimitAllowed;
+	bool m_highHighLimitRequired;
+	bool m_highLimitRequired;
+	bool m_lowLimitRequired;
+	bool m_lowLowLimitRequired;
 
 	bool m_adaptiveAlarmingSupported;
-	bool m_baseHighHighLimitAllowed;
-	bool m_baseHighLimitAllowed;
-	bool m_baseLowLimitAllowed;
-	bool m_baseLowLowLimitAllowed;
+
+	bool m_baseHighHighLimitRequired;
+	bool m_baseHighLimitRequired;
+	bool m_baseLowLimitRequired;
+	bool m_baseLowLowLimitRequired;
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

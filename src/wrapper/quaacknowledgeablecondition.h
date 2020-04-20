@@ -34,8 +34,8 @@ public:
 	// and triggers event according to specification
 	// NOTE : change of the Acked state must be normally make by the client through
 	//        the use of the Acknowledge() and QUaAlarmCondition::Reset() methods
-	bool      acknowledged() const;
-	void      setAcknowledged(const bool& acknowledged);
+	bool acknowledged() const;
+	void setAcknowledged(const bool& acknowledged);
 
 	// NOTE: optional, only work if confirmRequired == true 
 	QUaLocalizedText confirmedStateCurrentStateName() const;
@@ -67,9 +67,9 @@ public:
 	void setConfirmRequired(const bool & confirmRequired);
 
 signals:
-	void acknowledged();
+	void conditionAcknowledged();
 
-	void confirmed();
+	void conditionConfirmed();
 
 protected:
 	bool m_confirmRequired;

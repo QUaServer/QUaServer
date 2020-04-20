@@ -36,25 +36,25 @@ int main(int argc, char* argv[])
 		offnormal_alarm->setActive(active);
 	});
 
-	//auto level = source->addBaseDataVariable("level");
-	//level->setValue(0.0);
-	//level->setDataType(QMetaType::Double);
-	//source->addMethod("setLevel", [level](double levelValue) {
-	//	level->setValue(levelValue);
-	//	emit level->valueChanged(levelValue);
-	//});
-	//
-	//auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>("level_alarm");
-	//level_alarm->Enable();
-	//level_alarm->setHighHighLimitAllowed(true);
-	//level_alarm->setHighLimitAllowed(true);
-	//level_alarm->setLowLimitAllowed(true);
-	//level_alarm->setLowLowLimitAllowed(true);
-	//level_alarm->setHighHighLimit(100.0);
-	//level_alarm->setHighLimit(10.0);
-	//level_alarm->setLowLimit(-10.0);
-	//level_alarm->setLowLowLimit(-100.0);
-	//level_alarm->setInputNode(level);
+	auto level = source->addBaseDataVariable("level");
+	level->setValue(0.0);
+	level->setDataType(QMetaType::Double);
+	source->addMethod("setLevel", [level](double levelValue) {
+		level->setValue(levelValue);
+		emit level->valueChanged(levelValue);
+	});
+	
+	auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>("level_alarm");
+	level_alarm->Enable();
+	level_alarm->setHighHighLimitRequired(true);
+	level_alarm->setHighLimitRequired(true);
+	level_alarm->setLowLimitRequired(true);
+	level_alarm->setLowLowLimitRequired(true);
+	level_alarm->setHighHighLimit(100.0);
+	level_alarm->setHighLimit(10.0);
+	level_alarm->setLowLimit(-10.0);
+	level_alarm->setLowLowLimit(-100.0);
+	level_alarm->setInputNode(level);
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
