@@ -930,6 +930,9 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_bytePrivateKeyInternal = QByteArray();
 #endif
 	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+	m_conditionsRefreshRequired = false;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// register custom types to be used with Qt (QVariant and stuff)
@@ -966,6 +969,32 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 	});
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+void QUaServer::requireConditionsRefresh(const QUaLocalizedText& message/* = QUaLocalizedText()*/)
+{
+	// do net send multiple refresh required events in a single Qt event loop iteration
+	if (m_conditionsRefreshRequired)
+	{
+		return;
+	}
+	// set flag
+	m_conditionsRefreshRequired = true;
+	// schedule refresh required event
+	auto time = QDateTime::currentDateTimeUtc();
+	m_refreshRequiredEvent->setEventId(QUaBaseEvent::generateEventId());
+	m_refreshRequiredEvent->setTime(time);
+	m_refreshRequiredEvent->setReceiveTime(time);
+	m_refreshRequiredEvent->setMessage(message);
+	// exec trigger on next event loop iteration
+	m_changeEventSignaler.execLater([this]() {
+		// trigger
+		m_refreshRequiredEvent->trigger();
+		// reset flag
+		m_conditionsRefreshRequired = false;
+	});
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #ifdef UA_ENABLE_HISTORIZING
 UA_HistoryDataGathering QUaServer::getGathering() const
@@ -2418,8 +2447,8 @@ UA_NodeId QUaServer::createInstanceInternal(
 	if (parentNode && metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
 		// add HasCondition reference
-		auto tmp = QUaNode::getNodeContext(nodeIdNewInstance, this);
-		auto condition = qobject_cast<QUaCondition*>(tmp);
+		auto node = QUaNode::getNodeContext(nodeIdNewInstance, this);
+		auto condition = qobject_cast<QUaCondition*>(node);
 		Q_CHECK_PTR(condition);
 		// set default originator
 		condition->QUaBaseEvent::setSourceNode(parentNode);
@@ -2436,7 +2465,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 			parentNode->nodeId(),
 			parentNode->typeDefinitionNodeId(),
 			QUaChangeVerb::ReferenceAdded // UaExpert does not recognize QUaChangeVerb::NodeAdded
-			});
+		});
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

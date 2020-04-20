@@ -30,7 +30,7 @@ public:
 	// inherited
 
 	// Overwrite QUaNode::setDisplayName to update conditionName
-	virtual void setDisplayName(const QString& displayName) override;
+	virtual void setDisplayName(const QUaLocalizedText& displayName) override;
 
 	// Overwrite QUaBaseEvent::setSourceNode to update retained conditions cache
 	virtual void setSourceNode(const QUaNodeId& sourceNodeId) override;
@@ -64,7 +64,8 @@ public:
 	QUaNodeId branchId() const;
 	void      setBranchId(const QUaNodeId& branchId);
 
-	// retain is used for for condition sync
+	// retain is used to let know client that a condition if of interest at
+	// the current time, and for condition sync
 	bool    retain() const;
 	void    setRetain(const bool& retain);
 
@@ -79,7 +80,7 @@ public:
 	QUaLocalizedText enabledStateFalseState() const;
 	void             setEnabledStateFalseState(const QUaLocalizedText& falseState);
 	// helper sets EnabledStateId, EnabledStateCurrentStateName, EnabledStateTransitionTime 
-	// and triggers event according to specification
+	// and triggers event, also handles retain and branches according to specification
 	// NOTE : change of the Enabled state must be normally make by the client through
 	//        the use of the Enable() and Disable() methods
 	bool      enabled() const;
@@ -128,6 +129,8 @@ public:
 	template<typename T>
 	QList<T*> branches() const;
 
+	bool hasBranches() const;
+
 	// get branch by EventId (OPC UA Methods can be called by EventId)
 	QUaCondition* branchByEventId(const QByteArray& EventId) const;
 
@@ -135,9 +138,9 @@ public:
 	T* branchByEventId(const QByteArray& EventId) const;
 
 signals:
-	void enabled();
+	void conditionEnabled();
 
-	void disabled();
+	void conditionDisabled();
 
 	void addedComment(const QString& comment);
 

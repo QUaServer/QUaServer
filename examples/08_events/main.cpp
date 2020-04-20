@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	});
 
 	// Enable object for events
-	obj->setEventNotifierSubscribeToEvents();
+	obj->setSubscribeToEvents(true);
 	// Create event with object as originator
 	auto obj_event = obj->createEvent<MyEvent>();
 	obj_event->setDisplayName("MyObjectEvent");

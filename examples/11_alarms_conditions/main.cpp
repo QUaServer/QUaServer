@@ -30,8 +30,7 @@ int main(int argc, char* argv[])
 	auto source = objsFolder->addChild<QUaBaseObject>("source");
 
 	auto offnormal_alarm = source->addChild<QUaOffNormalAlarm>("offnormal_alarm");
-	offnormal_alarm->setRetain(true);
-	offnormal_alarm->setConfirmAllowed(true);
+	offnormal_alarm->setConfirmRequired(true);
 	offnormal_alarm->Enable();
 	offnormal_alarm->addMethod("setActive", [offnormal_alarm](bool active) {
 		offnormal_alarm->setActive(active);
@@ -56,9 +55,6 @@ int main(int argc, char* argv[])
 	//level_alarm->setLowLimit(-10.0);
 	//level_alarm->setLowLowLimit(-100.0);
 	//level_alarm->setInputNode(level);
-	//level_alarm->addMethod("setRetain", [level_alarm](bool retain) {
-	//	level_alarm->setRetain(retain);
-	//});
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

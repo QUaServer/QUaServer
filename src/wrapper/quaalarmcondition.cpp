@@ -157,47 +157,62 @@ void QUaAlarmCondition::setActive(const bool& active)
 	{
 		return;
 	}
-	// check if enabled
-	if (!this->enabledStateId())
-	{
-		return;
-	}
-	// create branch (BEFORE deactivate)
-	QUaAlarmCondition* branch = nullptr;
-	if (!active && !this->isBranch() && this->requiresAttention())
-	{
-		branch = this->createBranch<QUaAlarmCondition>();
-	}
 	// activate or deactivate
 	this->setActiveStateId(active);
-	QString strActiveStateName = active ?
+	auto strActiveStateName = active ?
 		this->activeStateTrueState() :
 		this->activeStateFalseState();
 	this->setActiveStateCurrentStateName(strActiveStateName);
-	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
-	// check if trigger
-	if (!this->shouldTrigger())
+	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());	
+	// special logic for main branch
+	if (!this->isBranch())
 	{
-		return;
+		// if active have to retain and reset acknowledged and confirmed
+		if (active)
+		{
+			this->setRetain(true);
+			// reset aknowledged
+			this->setAckedStateCurrentStateName(this->ackedStateFalseState());
+			this->setAckedStateId(false);
+			this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
+			// reset confirmed
+			if (this->confirmRequired())
+			{
+				this->setConfirmedStateCurrentStateName(this->confirmedStateFalseState());
+				this->setConfirmedStateId(false);
+				this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
+			}
+			this->setMessage(tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName));
+		}
+		else
+		{
+			if (this->requiresAttention())
+			{
+				// create branch
+				this->createBranch<QUaAlarmCondition>();
+				this->setRetain(true);
+			}
+			else
+			{
+				this->setRetain(this->hasBranches());
+			}
+			this->setMessage(tr("Alarm %1. Has branches.").arg(strActiveStateName));
+		}
+	}
+	else
+	{
+		this->setMessage(tr("Alarm %1.").arg(strActiveStateName));
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
-	this->setMessage(tr("Alarm %1").arg(strActiveStateName));
 	this->setTime(time);
 	this->setReceiveTime(time);
+	// NOTE : message set according to situation
 	this->trigger();
 	// emit qt signal
 	active ?
 		emit this->activated() :
 		emit this->deactivated();
-	// trigger another event if a branch was created
-	if (!branch)
-	{
-		return;
-	}
-	branch->setMessage(tr("Previous state requires attention, branch %1 created").arg(branch->branchId()));
-	branch->trigger();
-	// TODO : try to reproduce example B.1.3
 }
 
 void QUaAlarmCondition::cleanConnections()
@@ -227,7 +242,8 @@ bool QUaAlarmCondition::requiresAttention() const
 {
 	// base implementation
 	bool requiresAttention = QUaAcknowledgeableCondition::requiresAttention();
-	// TODO : are there any conditions?
+	// if active
+	requiresAttention = requiresAttention || this->active();
 	// return result
 	return requiresAttention;
 }

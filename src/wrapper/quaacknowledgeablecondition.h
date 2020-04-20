@@ -9,7 +9,7 @@ class QUaAcknowledgeableCondition : public QUaCondition
 {
     Q_OBJECT
 
-	Q_PROPERTY(bool confirmAllowed READ confirmAllowed WRITE setConfirmAllowed)
+	Q_PROPERTY(bool confirmRequired READ confirmRequired WRITE setConfirmRequired)
 
 friend class QUaServer;
 
@@ -37,7 +37,7 @@ public:
 	bool      acknowledged() const;
 	void      setAcknowledged(const bool& acknowledged);
 
-	// NOTE: optional, only work if confirmAllowed == true 
+	// NOTE: optional, only work if confirmRequired == true 
 	QUaLocalizedText confirmedStateCurrentStateName() const;
 	void             setConfirmedStateCurrentStateName(const QUaLocalizedText& confirmedState);
 	bool             confirmedStateId() const;
@@ -63,8 +63,8 @@ public:
 
 	// helpers
 
-	bool confirmAllowed() const;
-	void setConfirmAllowed(const bool & confirmAllowed);
+	bool confirmRequired() const;
+	void setConfirmRequired(const bool & confirmRequired);
 
 signals:
 	void acknowledged();
@@ -72,7 +72,7 @@ signals:
 	void confirmed();
 
 protected:
-	bool m_confirmAllowed;
+	bool m_confirmRequired;
 	// LocalizedText
 	QUaTwoStateVariable* getAckedState();
 	// LocalizedText

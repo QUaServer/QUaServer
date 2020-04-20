@@ -451,7 +451,7 @@ public:
 	void setNamespaceIndex(const quint16& index);
 
 	QString name() const;
-	void seName(const QString& name);
+	void setName(const QString& name);
 
 	QString toXmlString() const;
 	UA_QualifiedName toUaQualifiedName() const; // needs cleanup with UA_QualifiedName_clear after use

@@ -314,6 +314,8 @@ private:
     QUaRefreshEndEvent  * m_refreshEndEvent;
     QUaRefreshRequiredEvent* m_refreshRequiredEvent;
     QHash<QUaNode*, QSet<QUaCondition*>> m_retainedConditions;
+    bool m_conditionsRefreshRequired;
+    void requireConditionsRefresh(const QUaLocalizedText &message = QUaLocalizedText());
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #ifdef UA_ENABLE_HISTORIZING

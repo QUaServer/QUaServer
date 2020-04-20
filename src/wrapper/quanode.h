@@ -89,8 +89,8 @@ class QUaNode : public QObject
 		// N/A : not an OPC UA node attribute, is it a library helper?
 		//Q_PROPERTY(quint32 specifiedAttributes READ get_specifiedAttributes)
 
-		Q_PROPERTY(QString displayName READ displayName WRITE setDisplayName NOTIFY displayNameChanged)
-		Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+		Q_PROPERTY(QUaLocalizedText displayName READ displayName WRITE setDisplayName NOTIFY displayNameChanged)
+		Q_PROPERTY(QUaLocalizedText description READ description WRITE setDescription NOTIFY descriptionChanged)
 		// Exposes the possibilities of a client to write the Attributes of the Node.
 		Q_PROPERTY(quint32 writeMask   READ writeMask   WRITE setWriteMask   NOTIFY writeMaskChanged)
 
@@ -102,12 +102,12 @@ class QUaNode : public QObject
 		// Node Specifics
 
 		// Cannot be changed once a node has been created.
-		Q_PROPERTY(QString nodeId     READ nodeId)
-		Q_PROPERTY(QString nodeClass  READ nodeClass)
+		Q_PROPERTY(QUaNodeId nodeId     READ nodeId)
+		Q_PROPERTY(QString   nodeClass  READ nodeClass)
 
 		// Other Properties
 
-		Q_PROPERTY(QString browseName READ browseName)
+		Q_PROPERTY(QUaQualifiedName browseName READ browseName)
 
 public:
 	explicit QUaNode(
@@ -128,12 +128,14 @@ public:
 
 	// Attributes API
 
-	virtual QString displayName() const;
-	virtual void    setDisplayName(const QString& displayName);
-	QString description() const;
-	void    setDescription(const QString& description);
+	virtual QUaLocalizedText displayName() const;
+	virtual void setDisplayName(const QUaLocalizedText& displayName);
+
+	QUaLocalizedText description() const;
+	void setDescription(const QUaLocalizedText& description);
+
 	quint32 writeMask() const;
-	void    setWriteMask(const quint32& writeMask);
+	void setWriteMask(const quint32& writeMask);
 
 	QUaNodeId nodeId() const;
 	QString nodeClass() const;
@@ -275,8 +277,8 @@ public:
 
 signals:
 
-	void displayNameChanged(const QString& displayName);
-	void descriptionChanged(const QString& description);
+	void displayNameChanged(const QUaLocalizedText& displayName);
+	void descriptionChanged(const QUaLocalizedText& description);
 	void writeMaskChanged(const quint32& writeMask);
 
 	void childAdded(QUaNode* childNode);

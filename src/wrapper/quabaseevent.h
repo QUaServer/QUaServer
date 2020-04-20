@@ -65,9 +65,6 @@ public:
 
 	// Updates EventId and triggers the event and 
 	void trigger();
-	// Triggers the events (with last set EventId)
-	void triggerRaw();
-
 
 protected:
 	// ByteString : 
@@ -99,6 +96,9 @@ protected:
 
 	// helpers
 
+	// Triggers the events (with last set EventId)
+	void triggerInternal();
+	// Overwrite if for some reason at application level, triggering should be disabled
 	virtual bool shouldTrigger() const;
 
 	static QByteArray    generateEventId();

@@ -260,7 +260,7 @@ QUaServer * QUaNode::server() const
 	return m_qUaServer;
 }
 
-QString QUaNode::displayName() const
+QUaLocalizedText QUaNode::displayName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
@@ -273,56 +273,57 @@ QString QUaNode::displayName() const
 	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, m_nodeId, &outDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	QString displayName = QUaTypesConverter::uaStringToQString(outDisplayName.text);
+	QUaLocalizedText displayName = outDisplayName;
 	// cleanup
 	UA_LocalizedText_clear(&outDisplayName);
 	// return
 	return displayName;
 }
 
-void QUaNode::setDisplayName(const QString & displayName)
+void QUaNode::setDisplayName(const QUaLocalizedText& displayName)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert to UA_LocalizedText
-	QByteArray byteDisplayName = displayName.toUtf8(); // NOTE : QByteArray must exist in stack
-    UA_LocalizedText uaDisplayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
+    UA_LocalizedText uaDisplayName = displayName;
 	// set value
 	auto st = UA_Server_writeDisplayName(m_qUaServer->m_server, m_nodeId, uaDisplayName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	// cleanup
+	UA_LocalizedText_clear(&uaDisplayName);
 	// emit displayName changed
 	emit this->displayNameChanged(displayName);
 }
 
-QString QUaNode::description() const
+QUaLocalizedText QUaNode::description() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	if (UA_NodeId_isNull(&m_nodeId))
 	{
-		return QString();
+		return QUaLocalizedText();
 	}
 	// read description
 	UA_LocalizedText outDescription;
 	auto st = UA_Server_readDescription(m_qUaServer->m_server, m_nodeId, &outDescription);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	QUaLocalizedText description = outDescription;
+	UA_LocalizedText_clear(&outDescription);
 	// return
-	return QUaTypesConverter::uaStringToQString(outDescription.text);
+	return description;
 }
 
-void QUaNode::setDescription(const QString & description)
+void QUaNode::setDescription(const QUaLocalizedText& description)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	// convert to UA_LocalizedText
-	QByteArray byteDescription = description.toUtf8(); // NOTE : QByteArray must exist in stack
-	UA_LocalizedText uaDescription = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
+	UA_LocalizedText uaDescription = description;
 	// set value
 	auto st = UA_Server_writeDescription(m_qUaServer->m_server, m_nodeId, uaDescription);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	UA_LocalizedText_clear(&uaDescription);
 	// emit description changed
 	emit this->descriptionChanged(description);
 }

@@ -13,6 +13,7 @@ QUaBaseEvent::QUaBaseEvent(
 	m_sourceNodeId = UA_NODEID_NULL;
 	// set event type definition
 	this->setEventType(this->typeDefinitionNodeId());
+    this->setSeverity(0);
 	// set a default parent to this is not dangling
 	if (!this->parent())
 	{
@@ -158,7 +159,7 @@ void QUaBaseEvent::setSeverity(const quint16 & intSeverity)
 void QUaBaseEvent::trigger()
 {
     this->setEventId(QUaBaseEvent::generateEventId());
-    this->triggerRaw();
+    this->triggerInternal();
 }
 
 QUaProperty * QUaBaseEvent::getEventId() 
@@ -232,7 +233,7 @@ static const UA_NodeId emitReferencesRoots[EMIT_REFS_ROOT_COUNT] ={
     {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASNOTIFIER   }} 
 };
 
-void QUaBaseEvent::triggerRaw()
+void QUaBaseEvent::triggerInternal()
 {
     if (!this->shouldTrigger())
     {
