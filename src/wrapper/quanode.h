@@ -78,7 +78,12 @@ class QUaNode : public QObject
 	friend class QUaServer;
 	friend class QUaBaseObject;
 	friend class QUaBaseVariable;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	friend class QUaBaseEvent;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_HISTORIZING
+	friend class QUaHistoryBackend;
+#endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	friend class QUaCondition;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

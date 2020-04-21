@@ -1,6 +1,6 @@
 #include "quahistorybackend.h"
 
-#include <QUaServer>
+#include "quaserver_anex.h"
 
 #ifdef UA_ENABLE_HISTORIZING
 
@@ -717,5 +717,161 @@ QUaHistoryBackend::readHistoryData(
 		logOut
 	);
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#include <QUaBaseEvent>
+// [IN_MEMORY]
+typedef QHash    <QUaQualifiedName, QVariant>       QUaEventHistoryRow;
+typedef QMultiMap<QDateTime, QUaEventHistoryRow>    QUaEventHistoryTable;
+typedef QHash    <QUaNodeId, QUaEventHistoryTable>  QUaEventHistoryDatabase;
+QUaEventHistoryDatabase m_eventDatabase;
+// based on setValue_gathering_default
+void QUaHistoryBackend::setEvent(
+    UA_Server*            server,
+    void*                 hdbContext,
+    const UA_NodeId*      originId,
+    const UA_NodeId*      emitterId,
+    const UA_NodeId*      eventId,
+    UA_Boolean            willEventNodeBeDeleted,
+    const UA_EventFilter* historicalEventFilter,
+    UA_EventFieldList*    fieldList)
+{
+	Q_UNUSED(hdbContext);
+	Q_UNUSED(willEventNodeBeDeleted);
+	Q_UNUSED(historicalEventFilter);
+	// ignore multiple entries of same event (there is 1 for each emitter)
+	if (!UA_NodeId_equal(originId, emitterId))
+	{
+		return;
+	}
+	auto srv = QUaServer::getServerNodeContext(server);
+	Q_ASSERT(srv);
+	QUaNodeId orgId = *originId;
+	QUaNodeId evtId = *eventId;
+	// get event instance from context
+	auto node = QUaNode::getNodeContext(*eventId, server);
+	auto evt  = qobject_cast<QUaBaseEvent*>(node);
+	Q_ASSERT(evt);
+	Q_ASSERT(evt->nodeId() == evtId);
+	// get time
+	QDateTime time = evt->time();
+	// store event nodeId in originator table
+	QUaEventHistoryRow historyEvent;
+	historyEvent["EventNodeId"] = QVariant::fromValue(evtId);
+	Q_ASSERT(!historicalEventFilter);
+	for (auto var : evt->browseChildren<QUaBaseVariable>())
+	{
+		QUaQualifiedName component = var->browseName();
+		historyEvent[component] = var->value();
+	}
+	//// get browse names of components to read
+	//for (size_t k = 0; k < historicalEventFilter->selectClausesSize; ++k)
+	//{
+	//	auto sao = &historicalEventFilter->selectClauses[k];
+	//	if (sao->browsePathSize == 0)
+	//	{
+	//		continue;
+	//	}
+	//	QUaQualifiedName component = *sao->browsePath;
+	//	auto child = evt->browseChild(component);
+	//	auto var   = qobject_cast<QUaBaseVariable*>(child);
+	//	if (!var)
+	//	{
+	//		continue;
+	//	}
+	//	historyEvent[component] = var->value();
+	//}
+	// insert
+	m_eventDatabase[orgId].insert(time, historyEvent);
+	//
+	if (fieldList)
+	{
+		UA_EventFieldList_delete(fieldList);
+	}
+	return;
+}
+
+// based on readRaw_service_default
+void QUaHistoryBackend::readEvent(
+    UA_Server*                    server,
+    void*                         hdbContext,
+    const UA_NodeId*              sessionId,
+    void*                         sessionContext,
+    const UA_RequestHeader*       requestHeader,
+    const UA_ReadEventDetails*    historyReadDetails,
+    UA_TimestampsToReturn         timestampsToReturn,
+    UA_Boolean                    releaseContinuationPoints,
+    size_t                        nodesToReadSize,
+    const UA_HistoryReadValueId*  nodesToRead,
+    UA_HistoryReadResponse*       response,
+    UA_HistoryEvent* const* const historyData)
+{
+	UA_HistoryDatabaseContext_default* ctx = (UA_HistoryDatabaseContext_default*)hdbContext;
+	// max number of events to read for given originator
+	qDebug() << "Max Num of Entires to Read per Originator :" << historyReadDetails->numValuesPerNode;
+	// get time range to read for given originator
+	auto startTimestamp = historyReadDetails->startTime;
+	auto endTimestamp   = historyReadDetails->endTime;
+	QDateTime timeStart = startTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&startTimestamp);
+	QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
+	qDebug() << "From Time :" << timeStart;
+	qDebug() << "To   Time :" << timeEnd;
+	// get qualnames for columns in advance
+	size_t numCols = historyReadDetails->filter.selectClausesSize;
+	QVector<QUaQualifiedName> colNames;
+	colNames.resize(numCols);
+	for (size_t col = 0; col < numCols; ++col)
+	{
+		auto sao = &historyReadDetails->filter.selectClauses[col];
+		if (sao->browsePathSize == 0)
+		{
+			colNames[col] = "EventNodeId";
+			continue;
+		}
+		colNames[col] = *sao->browsePath;
+	}
+	// loop all nodes for which event history (as originator) was requested
+	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) {
+		// events are queried for given originator
+		QUaNodeId orgId = QUaNodeId(nodesToRead[ithNode].nodeId);
+		if (!m_eventDatabase.contains(orgId))
+		{
+			continue;
+		}
+		qDebug() << "Originator :" << orgId;
+		size_t numRows = m_eventDatabase[orgId].size();
+		// alloc output all rows
+		historyData[ithNode]->eventsSize = numRows;
+		historyData[ithNode]->events = (UA_HistoryEventFieldList*)
+			UA_Array_new(numRows, &UA_TYPES[UA_TYPES_HISTORYEVENTFIELDLIST]);
+		// loop all rows
+		auto iterRow = m_eventDatabase[orgId].begin();
+		for (size_t row = 0; row < numRows; row++)
+		{
+			// alloc output one row, all cols
+			historyData[ithNode]->events[row].eventFieldsSize = numCols;
+			historyData[ithNode]->events[row].eventFields = (UA_Variant*)
+				UA_Array_new(numCols, &UA_TYPES[UA_TYPES_VARIANT]);
+			auto &rowData = iterRow.value();
+			for (size_t col = 0; col < numCols; ++col)
+			{
+				QUaQualifiedName& colName = colNames[col];
+				if (rowData.contains(colName))
+				{
+					historyData[ithNode]->events[row].eventFields[col] = 
+						QUaTypesConverter::uaVariantFromQVariant(rowData[colName]);
+				}
+				else
+				{
+					UA_Variant_init(&historyData[ithNode]->events[row].eventFields[col]);
+				}
+			}
+			// inc row
+			iterRow++;
+		}
+	}
+	response->responseHeader.serviceResult = UA_STATUSCODE_GOOD;
+}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // UA_ENABLE_HISTORIZING

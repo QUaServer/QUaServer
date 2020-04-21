@@ -322,32 +322,6 @@ private:
     UA_HistoryDatabase m_historDatabase;
     QUaHistoryBackend  m_historBackend;
     UA_HistoryDataGathering getGathering() const;
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    static void setEvent(
-        UA_Server*            server,
-        void*                 hdbContext,
-        const UA_NodeId*      originId,
-        const UA_NodeId*      emitterId,
-        const UA_NodeId*      eventId,
-        UA_Boolean            willEventNodeBeDeleted,
-        const UA_EventFilter* historicalEventFilter,
-        UA_EventFieldList*    fieldList
-    );
-    static void readEvent(
-        UA_Server*                    server,
-        void*                         hdbContext,
-        const UA_NodeId*              sessionId,
-        void*                         sessionContext,
-        const UA_RequestHeader*       requestHeader,
-        const UA_ReadEventDetails*    historyReadDetails,
-        UA_TimestampsToReturn         timestampsToReturn,
-        UA_Boolean                    releaseContinuationPoints,
-        size_t                        nodesToReadSize,
-        const UA_HistoryReadValueId*  nodesToRead,
-        UA_HistoryReadResponse*       response,
-        UA_HistoryEvent* const* const historyData
-    );
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #endif // UA_ENABLE_HISTORIZING
 
 	// reset open62541 config

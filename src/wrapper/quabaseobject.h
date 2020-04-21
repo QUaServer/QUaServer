@@ -29,11 +29,15 @@ public:
 	bool subscribeToEvents() const;
 	void setSubscribeToEvents(const bool& subscribeToEvents);
 
-	bool eventHistoryRead() const;
-	void setEventHistoryRead(const bool& eventHistoryRead);
+	// TODO : how to set values below? 
+	//        are they bits or mutually exclusive?
+	//        no matter what I write, UaExpert always shows SubscribeToEvents
 
-	bool eventHistoryWrite() const;
-	void setEventHistoryWrite(const bool& eventHistoryWrite);
+	//bool eventHistoryRead() const;
+	//void setEventHistoryRead(const bool& eventHistoryRead);
+
+	//bool eventHistoryWrite() const;
+	//void setEventHistoryWrite(const bool& eventHistoryWrite);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Instance Creation API

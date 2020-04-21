@@ -739,6 +739,11 @@ UA_Server_filterEvent(UA_Server* server, UA_Session* session,
     const UA_NodeId* eventNode, UA_EventFilter* filter,
     UA_EventNotification* notification);
 
+UA_StatusCode
+UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
+    const UA_NodeId origin, UA_ByteString* outEventId,
+    const UA_Boolean deleteEventNode);
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -31,13 +31,20 @@ int main(int argc, char* argv[])
 			<< "] :" << log.message;
     });
 
+	QUaFolderObject* objsFolder = server.objectsFolder();
+
 	// it is also possible to historize events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// create event with server as originator
 	auto srvEvt = server.createEvent<MyEvent>();
 	srvEvt->setDisplayName("MyServerEvent");
 	srvEvt->setSourceName("Server");
-	srvEvt->setMessage("An event occured in the server");
+	// Create event with object as originator
+	auto obj = objsFolder->addBaseObject("MyObject");
+	obj->setSubscribeToEvents(true);
+	auto objEvt = obj->createEvent<MyEvent>();
+	objEvt->setDisplayName("MyObjectEvent");
+	objEvt->setSourceName("MyObject");
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_HISTORIZING
@@ -63,7 +70,6 @@ int main(int argc, char* argv[])
 	server.setHistorizer(historizer);
 	// add test variables
 	QTimer timerVars;
-	QUaFolderObject* objsFolder = server.objectsFolder();
 	for (int i = 0; i < 10; i++)
 	{
 		// create int variable
@@ -82,13 +88,21 @@ int main(int argc, char* argv[])
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	QTimer timerEvts;
-	QObject::connect(&timerVars, &QTimer::timeout, srvEvt, [srvEvt]() {
+	QObject::connect(&timerVars, &QTimer::timeout, srvEvt, 
+	[srvEvt, objEvt]() {
 		static quint32 counter = 0;
-		auto time = QDateTime::currentDateTime();
-		srvEvt->setMessage(QObject::tr("An event occured in the server %1").arg(++counter));
-		srvEvt->setTime(time.toUTC());
-		srvEvt->setReceiveTime(time.toUTC());
+		counter++;
+		auto time = QDateTime::currentDateTime().toUTC();
+		// trigger server event
+		srvEvt->setMessage(QObject::tr("An event occured in the server %1").arg(counter));
+		srvEvt->setTime(time);
+		srvEvt->setReceiveTime(time);
 		srvEvt->trigger();
+		// trigger object event
+		objEvt->setMessage(QObject::tr("An event occured in the object %1").arg(counter));
+		objEvt->setTime(time);
+		objEvt->setReceiveTime(time);
+		objEvt->trigger();
 	});	
 	// trigger event every second
 	timerVars.start(1000);

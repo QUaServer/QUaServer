@@ -73,14 +73,8 @@ resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_N
         UA_NodeId conditionTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_CONDITIONTYPE);
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-        //TODO check for Branches! One Condition could have multiple Branches
         // Set ConditionId
         if (UA_NodeId_equal(&sao->typeDefinitionId, &conditionTypeId)) {
-            //UA_NodeId conditionId;
-            //UA_StatusCode retval = UA_getConditionId(server, origin, &conditionId);
-            //if (retval != UA_STATUSCODE_GOOD)
-            //    return retval;
-
             // get condition object from node context
             void* context;
             auto st = UA_Server_getNodeContext(server, *origin, &context);
@@ -229,6 +223,223 @@ UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_M
     notification->mon = mon;
     UA_Notification_enqueue(server, mon->subscription, mon, notification);
     return UA_STATUSCODE_GOOD;
+}
+
+static const UA_NodeId objectsFolderId = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_OBJECTSFOLDER}};
+#define EMIT_REFS_ROOT_COUNT 4
+static const UA_NodeId emitReferencesRoots[EMIT_REFS_ROOT_COUNT] =
+    {{0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_ORGANIZES}},
+     {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASCOMPONENT}},
+     {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASEVENTSOURCE}},
+     {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASNOTIFIER}}};
+
+UA_StatusCode
+UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
+    const UA_NodeId origin, UA_ByteString* outEventId,
+    const UA_Boolean deleteEventNode) {
+    Q_UNUSED(outEventId);
+    UA_LOCK(server->serviceMutex);
+
+#if UA_LOGLEVEL <= 200
+    UA_LOG_NODEID_WRAP(&origin,
+        UA_LOG_DEBUG(&server->config.logger, UA_LOGCATEGORY_SERVER,
+            "Events: An event is triggered on node %.*s",
+            (int)nodeIdStr.length, nodeIdStr.data));
+#endif
+
+    // [MODIFIED] : do not check if condition or branch
+//#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+//    UA_Boolean isCallerAC = false;
+//    if (isConditionOrBranch(server, &eventNodeId, &origin, &isCallerAC)) {
+//        if (!isCallerAC) {
+//            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+//                "Condition Events: Please use A&C API to trigger Condition Events 0x%08X",
+//                UA_STATUSCODE_BADINVALIDARGUMENT);
+//            UA_UNLOCK(server->serviceMutex);
+//            return UA_STATUSCODE_BADINVALIDARGUMENT;
+//        }
+//    }
+//#endif /*UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS*/
+
+    /* Check that the origin node exists */
+    const UA_Node* originNode = UA_NODESTORE_GET(server, &origin);
+    if (!originNode) {
+        UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+            "Origin node for event does not exist.");
+        UA_UNLOCK(server->serviceMutex);
+        return UA_STATUSCODE_BADNOTFOUND;
+    }
+    UA_NODESTORE_RELEASE(server, originNode);
+
+    /* Make sure the origin is in the ObjectsFolder (TODO: or in the ViewsFolder) */
+    if (!isNodeInTree(server, &origin, &objectsFolderId,
+        emitReferencesRoots, 2)) { /* Only use Organizes and
+                                    * HasComponent to check if we
+                                    * are below the ObjectsFolder */
+        UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+            "Node for event must be in ObjectsFolder!");
+        UA_UNLOCK(server->serviceMutex);
+        return UA_STATUSCODE_BADINVALIDARGUMENT;
+    }
+
+    // [MODIFIED] : do not set standard fields
+    ///* Update the standard fields of the event */
+    //UA_StatusCode retval = eventSetStandardFields(server, &eventNodeId, &origin, outEventId);
+    //if (retval != UA_STATUSCODE_GOOD) {
+    //    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+    //        "Events: Could not set the standard event fields with StatusCode %s",
+    //        UA_StatusCode_name(retval));
+    //    UA_UNLOCK(server->serviceMutex);
+    //    return retval;
+    //}
+
+    /* List of nodes that emit the node. Events propagate upwards (bubble up) in
+     * the node hierarchy. */
+    UA_ExpandedNodeId* emitNodes = NULL;
+    size_t emitNodesSize = 0;
+
+    /* Add the server node to the list of nodes from which the event is emitted.
+     * The server node emits all events.
+     *
+     * Part 3, 7.17: In particular, the root notifier of a Server, the Server
+     * Object defined in Part 5, is always capable of supplying all Events from
+     * a Server and as such has implied HasEventSource References to every event
+     * source in a Server. */
+    UA_NodeId emitStartNodes[2];
+    emitStartNodes[0] = origin;
+    emitStartNodes[1] = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+
+    // [MODIFIED] : added missing retval
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+
+    /* Get all ReferenceTypes over which the events propagate */
+    UA_NodeId* emitRefTypes[EMIT_REFS_ROOT_COUNT] = { NULL, NULL, NULL };
+    size_t emitRefTypesSize[EMIT_REFS_ROOT_COUNT] = { 0, 0, 0, 0 };
+    size_t totalEmitRefTypesSize = 0;
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
+        retval |= referenceSubtypes(server, &emitReferencesRoots[i],
+            &emitRefTypesSize[i], &emitRefTypes[i]);
+        totalEmitRefTypesSize += emitRefTypesSize[i];
+    }
+    UA_STACKARRAY(UA_NodeId, totalEmitRefTypes, totalEmitRefTypesSize);
+    if (retval != UA_STATUSCODE_GOOD) {
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+            "Events: Could not create the list of references for event "
+            "propagation with StatusCode %s", UA_StatusCode_name(retval));
+        goto cleanup;
+    }
+
+    size_t currIndex = 0;
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
+        memcpy(&totalEmitRefTypes[currIndex], emitRefTypes[i],
+            emitRefTypesSize[i] * sizeof(UA_NodeId));
+        currIndex += emitRefTypesSize[i];
+    }
+
+
+    /* Get the list of nodes in the hierarchy that emits the event. */
+    retval = browseRecursive(server, 2, emitStartNodes,
+        totalEmitRefTypesSize, totalEmitRefTypes,
+        UA_BROWSEDIRECTION_INVERSE, true,
+        &emitNodesSize, &emitNodes);
+    if (retval != UA_STATUSCODE_GOOD) {
+        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+            "Events: Could not create the list of nodes listening on the "
+            "event with StatusCode %s", UA_StatusCode_name(retval));
+        goto cleanup;
+    }
+
+    /* Add the event to the listening MonitoredItems at each relevant node */
+    for (size_t i = 0; i < emitNodesSize; i++) {
+        const UA_ObjectNode* node = (const UA_ObjectNode*)
+            UA_NODESTORE_GET(server, &emitNodes[i].nodeId);
+        if (!node)
+            continue;
+        if (node->nodeClass != UA_NODECLASS_OBJECT) {
+            UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
+            continue;
+        }
+        for (UA_MonitoredItem* mi = node->monitoredItemQueue; mi != NULL; mi = mi->next) {
+            retval = UA_Event_addEventToMonitoredItem(server, &eventNodeId, mi);
+            if (retval != UA_STATUSCODE_GOOD) {
+                UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                    "Events: Could not add the event to a listening node with StatusCode %s",
+                    UA_StatusCode_name(retval));
+                retval = UA_STATUSCODE_GOOD; /* Only log problems with individual emit nodes */
+            }
+        }
+        UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
+#ifdef UA_ENABLE_HISTORIZING
+        if (!server->config.historyDatabase.setEvent)
+            continue;
+        UA_EventFilter* filter = NULL;
+        UA_EventFieldList* fieldList = NULL;
+        UA_Variant historicalEventFilterValue;
+        UA_Variant_init(&historicalEventFilterValue);
+        /* a HistoricalEventNode that has event history available will provide this property */
+        retval = readObjectProperty(server, emitNodes[i].nodeId,
+            UA_QUALIFIEDNAME(0, (char*)"HistoricalEventFilter"),
+            &historicalEventFilterValue);
+        /* check if the property was found and the read was successful */
+        if (retval != UA_STATUSCODE_GOOD) {
+            /* do not vex users with no match errors */
+            if (retval != UA_STATUSCODE_BADNOMATCH)
+                UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                    "Cannot read the HistoricalEventFilter property of a "
+                    "listening node. StatusCode %s",
+                    UA_StatusCode_name(retval));
+        }
+        /* if found then check if HistoricalEventFilter property has a valid value */
+        else if (UA_Variant_isEmpty(&historicalEventFilterValue) ||
+            !UA_Variant_isScalar(&historicalEventFilterValue) ||
+            historicalEventFilterValue.type->typeIndex != UA_TYPES_EVENTFILTER) {
+            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+                "HistoricalEventFilter property of a listening node "
+                "does not have a valid value");
+        }
+        /* finally, if found and valid then filter */
+        else {
+            filter = (UA_EventFilter*)historicalEventFilterValue.data;
+            UA_EventNotification eventNotification;
+            retval = UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
+                filter, &eventNotification);
+            if (retval == UA_STATUSCODE_GOOD) {
+                fieldList = UA_EventFieldList_new();
+                *fieldList = eventNotification.fields;
+            }
+            /* eventNotification structure is not cleared so that users can
+             * avoid copying the field list if they want to store it */
+             /* EventFilterResult isn't being used currently
+             UA_EventFilterResult_clear(&notification->result); */
+        }
+        server->config.historyDatabase.setEvent(server, server->config.historyDatabase.context,
+            &origin, &emitNodes[i].nodeId,
+            &eventNodeId, deleteEventNode,
+            filter,
+            fieldList);
+        UA_Variant_clear(&historicalEventFilterValue);
+        retval = UA_STATUSCODE_GOOD;
+#endif
+    }
+
+    // [MODIFIED] : do not delete node
+    ///* Delete the node representation of the event */
+    //if (deleteEventNode) {
+    //    retval = deleteNode(server, eventNodeId, true);
+    //    if (retval != UA_STATUSCODE_GOOD) {
+    //        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+    //            "Attempt to remove event using deleteNode failed. StatusCode %s",
+    //            UA_StatusCode_name(retval));
+    //    }
+    //}
+
+cleanup:
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
+        UA_Array_delete(emitRefTypes[i], emitRefTypesSize[i], &UA_TYPES[UA_TYPES_NODEID]);
+    }
+    UA_Array_delete(emitNodes, emitNodesSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
+    UA_UNLOCK(server->serviceMutex);
+    return retval;
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
