@@ -721,10 +721,19 @@ QUaHistoryBackend::readHistoryData(
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #include <QUaBaseEvent>
 // [IN_MEMORY]
-typedef QHash    <QUaQualifiedName, QVariant>       QUaEventHistoryRow;
-typedef QMultiMap<QDateTime, QUaEventHistoryRow>    QUaEventHistoryTable;
-typedef QHash    <QUaNodeId, QUaEventHistoryTable>  QUaEventHistoryDatabase;
-QUaEventHistoryDatabase m_eventDatabase;
+// TODO : make QMap<QUaQualifiedName, faster by providing custom comparison operator
+//        now have to use QHash becasue QMap is using QString() operator for
+//        comparison and is very expensive
+typedef QHash<QUaQualifiedName   /*Names*/, QVariant/*EvtData*/> QUaEventTypeRow;
+typedef QHash<QByteArray       /*EventId*/, QUaEventTypeRow    > QUaEventTypeTable;
+typedef QHash<QUaQualifiedName/*TypeName*/, QUaEventTypeTable  > QUaEventTypeDatabase;
+QUaEventTypeDatabase m_eventTypeDatabase;
+
+typedef QMultiMap <QDateTime                   , QByteArray/*EventId*/> QUaEventEmitterTable;
+typedef QHash     <QUaQualifiedName/*TypeName*/, QUaEventEmitterTable > QUaEventTypeIndex;
+typedef QHash     <QUaNodeId      /*EmitterId*/, QUaEventTypeIndex    > QUaEventEmitterDatabase;
+QUaEventEmitterDatabase m_eventEmitterDatabase;
+
 // based on setValue_gathering_default
 void QUaHistoryBackend::setEvent(
     UA_Server*            server,
@@ -737,59 +746,172 @@ void QUaHistoryBackend::setEvent(
     UA_EventFieldList*    fieldList)
 {
 	Q_UNUSED(hdbContext);
+	Q_UNUSED(originId);
 	Q_UNUSED(willEventNodeBeDeleted);
 	Q_UNUSED(historicalEventFilter);
-	// ignore multiple entries of same event (there is 1 for each emitter)
-	if (!UA_NodeId_equal(originId, emitterId))
-	{
-		return;
-	}
 	auto srv = QUaServer::getServerNodeContext(server);
 	Q_ASSERT(srv);
-	QUaNodeId orgId = *originId;
-	QUaNodeId evtId = *eventId;
+	//QUaNodeId orgNodeId = *originId;
+	QUaNodeId evtNodeId = *eventId;
+	QUaNodeId emtNodeId = *emitterId;
 	// get event instance from context
 	auto node = QUaNode::getNodeContext(*eventId, server);
 	auto evt  = qobject_cast<QUaBaseEvent*>(node);
 	Q_ASSERT(evt);
-	Q_ASSERT(evt->nodeId() == evtId);
-	// get time
-	QDateTime time = evt->time();
-	// store event nodeId in originator table
-	QUaEventHistoryRow historyEvent;
-	historyEvent["EventNodeId"] = QVariant::fromValue(evtId);
-	Q_ASSERT(!historicalEventFilter);
-	for (auto var : evt->browseChildren<QUaBaseVariable>())
+	Q_ASSERT(evt->nodeId() == evtNodeId);
+	// get event props used as keys
+	QDateTime  time  = evt->time();
+	QByteArray evtId = evt->eventId();
+	QUaQualifiedName evtTypeName = evt->typeDefinitionBrowseName();
+	// first check if event already exists by TypeName and EventId
+	// if not there then add it
+	if (!m_eventTypeDatabase[evtTypeName].contains(evtId))
 	{
-		QUaQualifiedName component = var->browseName();
-		historyEvent[component] = var->value();
+		// add each component
+		QUaEventTypeRow &evtEntry = m_eventTypeDatabase[evtTypeName][evtId];
+		for (auto var : evt->browseChildren<QUaBaseVariable>())
+		{
+			QUaQualifiedName component = var->browseName();
+			evtEntry[component] = var->value();
+		}
+		// add event node id
+		evtEntry["EventNodeId"] = QVariant::fromValue(evtNodeId);
 	}
-	//// get browse names of components to read
-	//for (size_t k = 0; k < historicalEventFilter->selectClausesSize; ++k)
-	//{
-	//	auto sao = &historicalEventFilter->selectClauses[k];
-	//	if (sao->browsePathSize == 0)
-	//	{
-	//		continue;
-	//	}
-	//	QUaQualifiedName component = *sao->browsePath;
-	//	auto child = evt->browseChild(component);
-	//	auto var   = qobject_cast<QUaBaseVariable*>(child);
-	//	if (!var)
-	//	{
-	//		continue;
-	//	}
-	//	historyEvent[component] = var->value();
-	//}
-	// insert
-	m_eventDatabase[orgId].insert(time, historyEvent);
-	//
+	// then add reference to emitter
+	m_eventEmitterDatabase[emtNodeId][evtTypeName].insert(time, evtId);
+	// the method description says we should free this
 	if (fieldList)
 	{
 		UA_EventFieldList_delete(fieldList);
 	}
 	return;
 }
+
+
+
+QDateTime findTimestampEventOfType(
+	const QUaNodeId& emtNodeId,
+	const QUaQualifiedName& evtTypeName,
+	const QDateTime& timestamp,
+	const QUaHistoryBackend::TimeMatch& match/*,
+	QQueue<QUaLog>& logOut*/
+)
+{
+	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
+	// NOTE : the database might or might not contain the input timestamp
+	QDateTime time;
+	auto& table = m_eventEmitterDatabase[emtNodeId][evtTypeName];
+	switch (match)
+	{
+	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+	{
+		if (table.contains(timestamp) &&
+			table.constFind(timestamp) + 1 != table.end())
+		{
+			// return next key if available
+			auto iter = table.find(timestamp) + 1;
+			time = iter.key();
+		}
+		else
+		{
+			// return closest key from above or last one if out of range
+			auto iter = std::upper_bound(table.keyBegin(), table.keyEnd(), timestamp);
+			time = iter == table.keyEnd() ? table.lastKey() : *iter;
+		}
+	}
+	break;
+	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+	{
+		if (table.contains(timestamp) &&
+			table.constFind(timestamp) != table.begin())
+		{
+			// return previous key if available
+			auto iter = table.find(timestamp) - 1;
+			time = iter.key();
+		}
+		else
+		{
+			// return closest key from below or last one if out of range
+			//Q_ASSERT(timestamp <= *table.keyBegin());
+			auto iter = std::lower_bound(table.keyBegin(), table.keyEnd(), timestamp);
+			time = iter == table.keyEnd() ? table.lastKey() : *iter;
+		}
+	}
+	break;
+	default:
+		break;
+	}
+	return time;
+}
+
+// get the number for data points within a time range for the given node
+quint64 numEventsOfTypeInRange(
+	const QUaNodeId& emtNodeId,
+	const QUaQualifiedName& evtTypeName,
+	const QDateTime& timeStart,
+	const QDateTime& timeEnd/*,
+	QQueue<QUaLog>& logOut*/
+)
+{
+	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
+	auto& table = m_eventEmitterDatabase[emtNodeId][evtTypeName];
+	// the database must contain the start timestamp
+	Q_ASSERT(table.contains(timeStart));
+	// if the end timestamp is valid, then it must be contained in the database
+	// else it means the API is requesting up to the most recent timestamp (end)
+	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
+	return static_cast<quint64>(std::distance(
+		table.find(timeStart),
+		timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end()
+	));
+}
+
+// TODO : pass pre-allocated vector and user should just populate it
+QVector<QUaEventTypeRow> readHistoryEventsOfType(
+	const QUaNodeId& emtNodeId,
+	const QUaQualifiedName& evtTypeName,
+	const QDateTime& timeStart,
+	const quint64& numPointsToRead/*,
+	QQueue<QUaLog>& logOut*/
+)
+{
+	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
+	Q_ASSERT(m_eventTypeDatabase.contains(evtTypeName));
+	auto& table  = m_eventEmitterDatabase[emtNodeId][evtTypeName];
+	auto& source = m_eventTypeDatabase[evtTypeName];
+	Q_ASSERT(table.contains(timeStart));
+	auto points = QVector<QUaEventTypeRow>();
+	// get total range to read
+	auto iterIni = table.find(timeStart);
+	// resize return value accordingly
+	points.resize(numPointsToRead);
+	// copy return data points
+	std::generate(points.begin(), points.end(),
+		[&iterIni, &table, &source]() {
+			QUaEventTypeRow retVal;
+			if (iterIni == table.end())
+			{
+				// NOTE : return an invalid value if API requests more values than available
+				return retVal;
+			}
+			QByteArray& EventId = iterIni.value();
+			Q_ASSERT(source.contains(EventId));
+			retVal = source[EventId];
+			iterIni++;
+			return retVal;
+		});
+	return points;
+}
+
+struct QUaEventQueryData
+{
+	QDateTime timeStartExisting;
+	QDateTime timeEndExisting;
+	quint64   numEventsToRead;
+};
 
 // based on readRaw_service_default
 void QUaHistoryBackend::readEvent(
@@ -807,9 +929,9 @@ void QUaHistoryBackend::readEvent(
     UA_HistoryEvent* const* const historyData)
 {
 	UA_HistoryDatabaseContext_default* ctx = (UA_HistoryDatabaseContext_default*)hdbContext;
-	// max number of events to read for given originator
-	qDebug() << "Max Num of Entires to Read per Originator :" << historyReadDetails->numValuesPerNode;
-	// get time range to read for given originator
+	// max number of events to read for each emitter
+	qDebug() << "Max Num of Entires to Read per Emitter :" << historyReadDetails->numValuesPerNode;
+	// get time range to read for each emitter
 	auto startTimestamp = historyReadDetails->startTime;
 	auto endTimestamp   = historyReadDetails->endTime;
 	QDateTime timeStart = startTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&startTimestamp);
@@ -830,36 +952,85 @@ void QUaHistoryBackend::readEvent(
 		}
 		colNames[col] = *sao->browsePath;
 	}
-	// loop all nodes for which event history (as originator) was requested
+	// loop all emitter nodes for which event history was requested
 	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) {
-		// events are queried for given originator
-		QUaNodeId orgId = QUaNodeId(nodesToRead[ithNode].nodeId);
-		if (!m_eventDatabase.contains(orgId))
+		// check if any events for given emitter
+		QUaNodeId emtNodeId = QUaNodeId(nodesToRead[ithNode].nodeId);
+		if (!m_eventEmitterDatabase.contains(emtNodeId))
 		{
+			historyData[ithNode]->eventsSize = 0;
 			continue;
 		}
-		qDebug() << "Originator :" << orgId;
-		size_t numRows = m_eventDatabase[orgId].size();
+		qDebug() << "Emitter :" << emtNodeId;
+		// loop event types and populate
+		QList<QUaEventTypeRow> listAllEvents;
+		QList<QUaQualifiedName> evtTypeNames = m_eventEmitterDatabase[emtNodeId].keys();
+		QHash<QUaQualifiedName, QUaEventQueryData> queryData;
+		quint64 numEventsToReadTotal = 0;
+		for (auto evtTypeName : evtTypeNames)
+		{
+			QDateTime timeStartExisting = findTimestampEventOfType(
+				emtNodeId,
+				evtTypeName,
+				timeStart,
+				TimeMatch::ClosestFromAbove
+			);
+			QDateTime timeEndExisting = findTimestampEventOfType(
+				emtNodeId,
+				evtTypeName,
+				timeEnd,
+				TimeMatch::ClosestFromBelow
+			);
+			quint64 numEventsToRead = numEventsOfTypeInRange(
+				emtNodeId,
+				evtTypeName,
+				timeStartExisting,
+				timeEndExisting
+			);
+			numEventsToReadTotal += numEventsToRead;
+			queryData[evtTypeName] = {
+				timeStartExisting,
+				timeEndExisting,
+				numEventsToRead
+			};
+		}
+		// alloc output in qt format
+		QVector<QUaEventTypeRow> allEvents;
+		allEvents.resize(numEventsToReadTotal);
+		quint64 copyOffset = 0;
+		for (auto evtTypeName : evtTypeNames)
+		{
+			// read output for current event type
+			auto eventsOfType = readHistoryEventsOfType(
+				emtNodeId,
+				evtTypeName,
+				queryData[evtTypeName].timeStartExisting,
+				queryData[evtTypeName].numEventsToRead
+			);
+			Q_ASSERT(eventsOfType.size() == queryData[evtTypeName].numEventsToRead);
+			std::copy(eventsOfType.begin(), eventsOfType.end(), allEvents.begin() + copyOffset);
+			copyOffset += queryData[evtTypeName].numEventsToRead;
+		}
+		size_t numRows = allEvents.size();
+		auto   iterRow = allEvents.begin();
 		// alloc output all rows
 		historyData[ithNode]->eventsSize = numRows;
 		historyData[ithNode]->events = (UA_HistoryEventFieldList*)
 			UA_Array_new(numRows, &UA_TYPES[UA_TYPES_HISTORYEVENTFIELDLIST]);
 		// loop all rows
-		auto iterRow = m_eventDatabase[orgId].begin();
 		for (size_t row = 0; row < numRows; row++)
 		{
 			// alloc output one row, all cols
 			historyData[ithNode]->events[row].eventFieldsSize = numCols;
 			historyData[ithNode]->events[row].eventFields = (UA_Variant*)
 				UA_Array_new(numCols, &UA_TYPES[UA_TYPES_VARIANT]);
-			auto &rowData = iterRow.value();
 			for (size_t col = 0; col < numCols; ++col)
 			{
 				QUaQualifiedName& colName = colNames[col];
-				if (rowData.contains(colName))
+				if (iterRow->contains(colName))
 				{
 					historyData[ithNode]->events[row].eventFields[col] = 
-						QUaTypesConverter::uaVariantFromQVariant(rowData[colName]);
+						QUaTypesConverter::uaVariantFromQVariant(iterRow->value(colName));
 				}
 				else
 				{

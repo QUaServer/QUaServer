@@ -86,6 +86,7 @@ public:
 		QQueue<QUaLog>  &logOut
 	) const;
 	// return the numPointsToRead data points for the given node from the given start time
+	// TODO : pass pre-allocated vector and user should just populate it
 	QVector<QUaHistoryDataPoint> readHistoryData(
 		const QUaNodeId &nodeId,
 		const QDateTime &timeStart,
