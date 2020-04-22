@@ -782,7 +782,7 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
 	srv->m_refreshStartEvent->setMessage(tr("Start refresh for source %1 [%2].").arg(sourceDisplayName).arg(sourceNodeId));
-	retval = UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshStartEvent->m_nodeId, monitoredItem);
+	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshStartEvent->m_nodeId, monitoredItem);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	/* 2. refresh (see 5.5.7)*/
 	for (auto condition : conditions)
@@ -792,14 +792,14 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 		{
 			continue;
 		}
-		retval = UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
+		retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
 		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	}
 	/* 3. trigger RefreshEndEvent*/
 	srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
 	srv->m_refreshEndEvent->setMessage(tr("End refresh for source %1 [%2].").arg(sourceDisplayName).arg(sourceNodeId));
-	retval = UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshEndEvent->m_nodeId, monitoredItem);
+	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshEndEvent->m_nodeId, monitoredItem);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 }
 

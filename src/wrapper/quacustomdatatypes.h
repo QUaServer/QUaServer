@@ -355,6 +355,7 @@ public:
 	void operator= (const QUaNodeId& other);
 	bool operator==(const QUaNodeId& other) const;
 	bool operator==(const UA_NodeId& other) const;
+	bool operator< (const QUaNodeId& other) const;
 
 	quint16 namespaceIndex() const;
 	void    setNamespaceIndex(const quint16& index);
@@ -414,6 +415,7 @@ public:
 	void operator= (const char* strXmlLocalizedText);
 	void operator= (const QUaLocalizedText& other);
 	bool operator==(const QUaLocalizedText& other) const;
+	bool operator< (const QUaLocalizedText& other) const;
 
 	QString locale() const;
 	void    setLocale(const QString& locale);
@@ -444,8 +446,9 @@ public:
 	void operator=(const UA_QualifiedName& uaQualName);
 	void operator=(const QString& strXmlQualName);
 	void operator=(const char * strXmlQualName);
-	bool operator==(const QUaQualifiedName &other) const;
-	bool operator!=(const QUaQualifiedName &other) const;
+	bool operator==(const QUaQualifiedName& other) const;
+	bool operator!=(const QUaQualifiedName& other) const;
+	bool operator< (const QUaQualifiedName& other) const;
 
 	quint16 namespaceIndex() const;
 	void setNamespaceIndex(const quint16& index);

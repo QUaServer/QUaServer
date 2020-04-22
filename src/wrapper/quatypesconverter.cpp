@@ -167,6 +167,7 @@ QString uaStringToQString(const UA_String & string)
 
 UA_String uaStringFromQString(const QString & uaString)
 {
+	// NODE : avoid over-use because this is expensive
 	return UA_STRING_ALLOC(uaString.toUtf8().constData());
 }
 

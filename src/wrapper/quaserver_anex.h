@@ -731,21 +731,35 @@ extern "C"
 UA_MonitoredItem *
 UA_Subscription_getMonitoredItem(UA_Subscription * sub, UA_UInt32 monitoredItemId);
 
-UA_StatusCode
-UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon);
+class QUaServer_Anex
+{
+    friend class QUaServer;
+    friend class QUaBaseEvent;
+#ifdef UA_ENABLE_HISTORIZING
+    friend class QUaHistoryBackend;
+#endif // UA_ENABLE_HISTORIZING
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    friend class QUaCondition;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-UA_StatusCode
-UA_Server_filterEvent(UA_Server* server, UA_Session* session,
-    const UA_NodeId* eventNode, UA_EventFilter* filter,
-    UA_EventNotification* notification);
+    static UA_StatusCode
+        resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_NodeId* origin,
+            const UA_SimpleAttributeOperand* sao, UA_Variant* value);
 
-UA_StatusCode
-UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
-    const UA_NodeId origin, UA_ByteString* outEventId,
-    const UA_Boolean deleteEventNode);
+    static UA_StatusCode
+    UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon);
+
+    static UA_StatusCode
+    UA_Server_filterEvent(UA_Server* server, UA_Session* session,
+        const UA_NodeId* eventNode, UA_EventFilter* filter,
+        UA_EventNotification* notification);
+
+    static UA_StatusCode
+    UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
+        const UA_NodeId origin, UA_ByteString* outEventId,
+        const UA_Boolean deleteEventNode);
+};
+
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-
-#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

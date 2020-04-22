@@ -103,6 +103,12 @@ int main(int argc, char* argv[])
 		objEvt->setTime(time);
 		objEvt->setReceiveTime(time);
 		objEvt->trigger();
+		// 
+		objEvt->setMessage(QObject::tr("An event occured in the object %1 XXX").arg(counter));
+		objEvt->trigger();
+		// 
+		objEvt->setMessage(QObject::tr("An event occured in the object %1 YYY").arg(counter));
+		objEvt->trigger();
 	});	
 	// trigger event every second
 	timerVars.start(1000);

@@ -396,16 +396,21 @@ QUaQualifiedName QUaNode::browseName() const
 	{
 		return QString();
 	}
+	// check cache
+	if (!m_browseName.isEmpty())
+	{
+		return m_browseName;
+	}
 	// read browse name
 	UA_QualifiedName outBrowseName;
 	auto st = UA_Server_readBrowseName(m_qUaServer->m_server, m_nodeId, &outBrowseName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
-	// populate return value
-	QUaQualifiedName browseName = outBrowseName;
+	// update cache
+	const_cast<QUaNode*>(this)->m_browseName = outBrowseName;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
-	return browseName;
+	return m_browseName;
 }
 
 QUaProperty * QUaNode::addProperty(
@@ -448,11 +453,15 @@ QUaNodeId QUaNode::typeDefinitionNodeId() const
 	{
 		return QUaNodeId();
 	}
+	if (!m_typeDefinitionNodeId.isNull())
+	{
+		return m_typeDefinitionNodeId;
+	}
 	UA_NodeId retTypeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
 	// return in string form
-	QUaNodeId retNodeId = retTypeId;
+	const_cast<QUaNode*>(this)->m_typeDefinitionNodeId = retTypeId;
 	UA_NodeId_clear(&retTypeId);
-	return retNodeId;
+	return m_typeDefinitionNodeId;
 }
 
 UA_NodeId QUaNode::typeDefinitionNodeId(
@@ -546,6 +555,8 @@ QString QUaNode::typeDefinitionDisplayName() const
 	return displayName;
 }
 
+QHash<QUaNodeId, QUaQualifiedName> QUaNode::m_hashTypeBrowseNames;
+
 QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
@@ -554,11 +565,16 @@ QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 	{
 		return QUaQualifiedName();
 	}
-	UA_NodeId typeId = this->typeDefinitionNodeId();
-	Q_ASSERT(!UA_NodeId_isNull(&typeId));
-	if (UA_NodeId_isNull(&typeId))
+	QUaNodeId typeId = this->typeDefinitionNodeId();
+	Q_ASSERT(!typeId.isNull());
+	if (typeId.isNull())
 	{
 		return QUaQualifiedName();
+	}
+	// check cache
+	if (QUaNode::m_hashTypeBrowseNames.contains(typeId))
+	{
+		return QUaNode::m_hashTypeBrowseNames[typeId];
 	}
 	// read browse name
 	UA_QualifiedName outBrowseName;
@@ -569,6 +585,8 @@ QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 	QUaQualifiedName  browseName = outBrowseName;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
+	// update cache
+	QUaNode::m_hashTypeBrowseNames[typeId] = browseName;
 	return  browseName;
 }
 

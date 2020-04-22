@@ -58,8 +58,8 @@ isValidEvent(UA_Server* server, const UA_NodeId* validEventParent,
 /* Part 4: 7.4.4.5 SimpleAttributeOperand
  * The clause can point to any attribute of nodes. Either a child of the event
  * node and also the event type. */
-static UA_StatusCode
-resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_NodeId* origin,
+UA_StatusCode
+QUaServer_Anex::resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_NodeId* origin,
     const UA_SimpleAttributeOperand* sao, UA_Variant* value) {
     /* Prepare the ReadValueId */
     UA_ReadValueId rvi;
@@ -144,7 +144,7 @@ resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_N
 /* Filters the given event with the given filter and writes the results into a
  * notification */
 UA_StatusCode
-UA_Server_filterEvent(UA_Server* server, UA_Session* session,
+QUaServer_Anex::UA_Server_filterEvent(UA_Server* server, UA_Session* session,
     const UA_NodeId* eventNode, UA_EventFilter* filter,
     UA_EventNotification* notification) {
     if (filter->selectClausesSize == 0)
@@ -189,7 +189,7 @@ UA_Server_filterEvent(UA_Server* server, UA_Session* session,
         }
 
         /* TODO: Put the result into the selectClausResults */
-        resolveSimpleAttributeOperand(server, session, eventNode,
+        QUaServer_Anex::resolveSimpleAttributeOperand(server, session, eventNode,
             &filter->selectClauses[i],
             &notification->fields.eventFields[i]);
     }
@@ -200,7 +200,7 @@ UA_Server_filterEvent(UA_Server* server, UA_Session* session,
 /* Filters an event according to the filter specified by mon and then adds it to
  * mons notification queue */
 UA_StatusCode
-UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon) {
+QUaServer_Anex::UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon) {
     UA_Notification* notification = (UA_Notification*)UA_malloc(sizeof(UA_Notification));
     if (!notification)
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -212,7 +212,7 @@ UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_M
 
     /* Apply the filter */
     UA_StatusCode retval =
-        UA_Server_filterEvent(server, session, event, &mon->filter.eventFilter,
+        QUaServer_Anex::UA_Server_filterEvent(server, session, event, &mon->filter.eventFilter,
             &notification->data.event);
     if (retval != UA_STATUSCODE_GOOD) {
         UA_free(notification);
@@ -234,10 +234,11 @@ static const UA_NodeId emitReferencesRoots[EMIT_REFS_ROOT_COUNT] =
      {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASNOTIFIER}}};
 
 UA_StatusCode
-UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
+QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
     const UA_NodeId origin, UA_ByteString* outEventId,
     const UA_Boolean deleteEventNode) {
     Q_UNUSED(outEventId);
+    Q_UNUSED(deleteEventNode);
     UA_LOCK(server->serviceMutex);
 
 #if UA_LOGLEVEL <= 200
@@ -312,6 +313,19 @@ UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
     // [MODIFIED] : added missing retval
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
+ #ifdef UA_ENABLE_HISTORIZING
+    // [MODIFIED] : optimize avoid converting 
+    void* context;
+    retval = UA_Server_getNodeContext(server, eventNodeId, &context);
+    Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+    auto event = qobject_cast<QUaBaseEvent*>(static_cast<QObject*>(context));
+    Q_ASSERT(event);
+    QUaNodeId        originNodeId  = origin;
+    QDateTime        eventTime     = event->time();
+    QByteArray       eventId       = event->eventId();
+    QUaQualifiedName eventTypeName = event->typeDefinitionBrowseName();
+#endif // UA_ENABLE_HISTORIZING
+
     /* Get all ReferenceTypes over which the events propagate */
     UA_NodeId* emitRefTypes[EMIT_REFS_ROOT_COUNT] = { NULL, NULL, NULL };
     size_t emitRefTypesSize[EMIT_REFS_ROOT_COUNT] = { 0, 0, 0, 0 };
@@ -360,7 +374,7 @@ UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
             continue;
         }
         for (UA_MonitoredItem* mi = node->monitoredItemQueue; mi != NULL; mi = mi->next) {
-            retval = UA_Event_addEventToMonitoredItem(server, &eventNodeId, mi);
+            retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(server, &eventNodeId, mi);
             if (retval != UA_STATUSCODE_GOOD) {
                 UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
                     "Events: Could not add the event to a listening node with StatusCode %s",
@@ -370,8 +384,9 @@ UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
         }
         UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
 #ifdef UA_ENABLE_HISTORIZING
-        if (!server->config.historyDatabase.setEvent)
-            continue;
+        // [MODIFIED] : optimized version QUaHistoryBackend::setEvent below
+        //if (!server->config.historyDatabase.setEvent)
+        //    continue;
         UA_EventFilter* filter = NULL;
         UA_EventFieldList* fieldList = NULL;
         UA_Variant historicalEventFilterValue;
@@ -401,7 +416,7 @@ UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
         else {
             filter = (UA_EventFilter*)historicalEventFilterValue.data;
             UA_EventNotification eventNotification;
-            retval = UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
+            retval = QUaServer_Anex::UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
                 filter, &eventNotification);
             if (retval == UA_STATUSCODE_GOOD) {
                 fieldList = UA_EventFieldList_new();
@@ -412,14 +427,26 @@ UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
              /* EventFilterResult isn't being used currently
              UA_EventFilterResult_clear(&notification->result); */
         }
-        server->config.historyDatabase.setEvent(server, server->config.historyDatabase.context,
-            &origin, &emitNodes[i].nodeId,
-            &eventNodeId, deleteEventNode,
+        // [MODIFIED] : optimized to avoid multiple conversions
+        //server->config.historyDatabase.setEvent(server, server->config.historyDatabase.context,
+        //    &origin, &emitNodes[i].nodeId,
+        //    &eventNodeId, deleteEventNode,
+        //    filter,
+        //    fieldList);
+        QUaHistoryBackend::setEvent(
+            event,
+            originNodeId,
+            emitNodes[i].nodeId,
+            eventTime,
+            eventId,
+            eventTypeName,
             filter,
-            fieldList);
+            fieldList
+        );
+
         UA_Variant_clear(&historicalEventFilterValue);
         retval = UA_STATUSCODE_GOOD;
-#endif
+#endif // UA_ENABLE_HISTORIZING
     }
 
     // [MODIFIED] : do not delete node

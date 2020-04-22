@@ -1401,7 +1401,8 @@ void QUaServer::setupServer()
 	m_historDatabase = UA_HistoryDatabase_default(gathering);
 	// add historic event handling is supported
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_historDatabase.setEvent  = &QUaHistoryBackend::setEvent;
+	// NOTE : changed setEvent for optimized call in QUaServer_Anex::UA_Server_triggerEvent_Modified
+	m_historDatabase.setEvent  = nullptr; 
 	m_historDatabase.readEvent = &QUaHistoryBackend::readEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	config->historyDatabase = m_historDatabase;

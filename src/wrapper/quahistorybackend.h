@@ -23,6 +23,9 @@ class QUaHistoryBackend
 {
 	friend class QUaServer;
 	friend class QUaBaseVariable;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	friend class QUaServer_Anex;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 public:
 	QUaHistoryBackend();
 
@@ -118,16 +121,26 @@ private:
 
 	// event history support
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    static void setEvent(
-        UA_Server*            server,
-        void*                 hdbContext,
-        const UA_NodeId*      originId,
-        const UA_NodeId*      emitterId,
-        const UA_NodeId*      eventId,
-        UA_Boolean            willEventNodeBeDeleted,
-        const UA_EventFilter* historicalEventFilter,
-        UA_EventFieldList*    fieldList
-    );
+    //static void setEvent(
+    //    UA_Server*            server,
+    //    void*                 hdbContext,
+    //    const UA_NodeId*      originId,
+    //    const UA_NodeId*      emitterId,
+    //    const UA_NodeId*      eventId,
+    //    UA_Boolean            willEventNodeBeDeleted,
+    //    const UA_EventFilter* historicalEventFilter,
+    //    UA_EventFieldList*    fieldList
+    //);
+	static void QUaHistoryBackend::setEvent(
+		QUaBaseEvent*           event,
+		const QUaNodeId&        originNodeId,
+		const QUaNodeId&        emitterNodeId,
+		const QDateTime&        eventTime,
+		const QByteArray&       eventId,
+		const QUaQualifiedName& eventTypeName,
+		const UA_EventFilter*   historicalEventFilter,
+		UA_EventFieldList*      fieldList
+	);
     static void readEvent(
         UA_Server*                    server,
         void*                         hdbContext,

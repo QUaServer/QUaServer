@@ -240,7 +240,7 @@ void QUaBaseEvent::triggerInternal()
         return;
     }
     // NOTE : call modified version
-    auto st = UA_Server_triggerEvent_Modified(
+    auto st = QUaServer_Anex::UA_Server_triggerEvent_Modified(
         m_qUaServer->m_server,
         m_nodeId,
         m_sourceNodeId,

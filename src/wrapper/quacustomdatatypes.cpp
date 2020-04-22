@@ -420,6 +420,15 @@ bool QUaQualifiedName::operator!=(const QUaQualifiedName& other) const
 		m_name.compare(other.m_name, Qt::CaseSensitive) != 0;
 }
 
+bool QUaQualifiedName::operator<(const QUaQualifiedName& other) const
+{
+	if (m_namespace != other.m_namespace)
+	{
+		return m_namespace < other.m_namespace;
+	}
+	return m_name < other.m_name;
+}
+
 quint16 QUaQualifiedName::namespaceIndex() const
 {
 	return m_namespace;
@@ -631,6 +640,15 @@ bool QUaLocalizedText::operator==(const QUaLocalizedText& other) const
 		this->m_text.compare(other.m_text, Qt::CaseSensitive) == 0;
 }
 
+bool QUaLocalizedText::operator<(const QUaLocalizedText& other) const
+{
+	if (m_locale != other.m_locale)
+	{
+		return m_locale < other.m_locale;
+	}
+	return m_text < other.m_text;
+}
+
 QString QUaLocalizedText::locale() const
 {
 	return m_locale;
@@ -769,6 +787,27 @@ bool QUaNodeId::operator==(const QUaNodeId& other) const
 bool QUaNodeId::operator==(const UA_NodeId& other) const
 {
 	return UA_NodeId_equal(&this->m_nodeId, &other);
+}
+
+bool QUaNodeId::operator<(const QUaNodeId& other) const
+{
+	if (m_nodeId.namespaceIndex != other.m_nodeId.namespaceIndex)
+	{
+		return m_nodeId.namespaceIndex < other.m_nodeId.namespaceIndex;
+	}
+	switch (this->type())
+	{
+	case QUaNodeIdType::Numeric:
+		return this->numericId() < other.numericId();
+	case QUaNodeIdType::String:
+		return this->stringId() < other.stringId();
+	case QUaNodeIdType::Guid:
+		return this->uuId() < other.uuId();
+	case QUaNodeIdType::ByteString:
+		return this->byteArrayId() < other.byteArrayId();
+	default:
+		return true;
+	}
 }
 
 quint16 QUaNodeId::namespaceIndex() const

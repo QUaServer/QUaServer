@@ -97,7 +97,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// call internal backend method
 		if (!srv->m_historBackend.writeHistoryData(
-			QUaTypesConverter::nodeIdToQString(*nodeId),
+			*nodeId,
 			dataValueToPoint(value),
 			logOut
 		))
@@ -175,7 +175,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// simplify API by considering that the timestamp is the index
 		QDateTime time = srv->m_historBackend.firstTimestamp(
-			QUaTypesConverter::nodeIdToQString(*nodeId),
+			*nodeId,
 			logOut
 		);
 		QUaHistoryBackend::processServerLog(srv, logOut);
@@ -203,7 +203,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
 		// simplify API by considering that the timestamp is the index
 		QDateTime time = srv->m_historBackend.lastTimestamp(
-			QUaTypesConverter::nodeIdToQString(*nodeId),
+			*nodeId,
 			logOut
 		);
 		QUaHistoryBackend::processServerLog(srv, logOut);
@@ -724,7 +724,7 @@ QUaHistoryBackend::readHistoryData(
 // TODO : make QMap<QUaQualifiedName, faster by providing custom comparison operator
 //        now have to use QHash becasue QMap is using QString() operator for
 //        comparison and is very expensive
-typedef QHash<QUaQualifiedName   /*Names*/, QVariant/*EvtData*/> QUaEventTypeRow;
+typedef QMap <QUaQualifiedName   /*Names*/, QVariant/*EvtData*/> QUaEventTypeRow;
 typedef QHash<QByteArray       /*EventId*/, QUaEventTypeRow    > QUaEventTypeTable;
 typedef QHash<QUaQualifiedName/*TypeName*/, QUaEventTypeTable  > QUaEventTypeDatabase;
 QUaEventTypeDatabase m_eventTypeDatabase;
@@ -735,50 +735,46 @@ typedef QHash     <QUaNodeId      /*EmitterId*/, QUaEventTypeIndex    > QUaEvent
 QUaEventEmitterDatabase m_eventEmitterDatabase;
 
 // based on setValue_gathering_default
+//void QUaHistoryBackend::setEvent(
+//    UA_Server*            server,
+//    void*                 hdbContext,
+//    const UA_NodeId*      originId,
+//    const UA_NodeId*      emitterId,
+//    const UA_NodeId*      eventId,
+//    UA_Boolean            willEventNodeBeDeleted,
+//    const UA_EventFilter* historicalEventFilter,
+//    UA_EventFieldList*    fieldList)
 void QUaHistoryBackend::setEvent(
-    UA_Server*            server,
-    void*                 hdbContext,
-    const UA_NodeId*      originId,
-    const UA_NodeId*      emitterId,
-    const UA_NodeId*      eventId,
-    UA_Boolean            willEventNodeBeDeleted,
-    const UA_EventFilter* historicalEventFilter,
-    UA_EventFieldList*    fieldList)
+	QUaBaseEvent*           event,
+	const QUaNodeId&        originNodeId,
+	const QUaNodeId&        emitterNodeId,
+	const QDateTime&        eventTime,
+	const QByteArray&       eventId,
+	const QUaQualifiedName& eventTypeName,
+    const UA_EventFilter*   historicalEventFilter,
+    UA_EventFieldList*      fieldList)
 {
-	Q_UNUSED(hdbContext);
-	Q_UNUSED(originId);
-	Q_UNUSED(willEventNodeBeDeleted);
+	// TODO : implement filter ?
 	Q_UNUSED(historicalEventFilter);
-	auto srv = QUaServer::getServerNodeContext(server);
-	Q_ASSERT(srv);
-	//QUaNodeId orgNodeId = *originId;
-	QUaNodeId evtNodeId = *eventId;
-	QUaNodeId emtNodeId = *emitterId;
-	// get event instance from context
-	auto node = QUaNode::getNodeContext(*eventId, server);
-	auto evt  = qobject_cast<QUaBaseEvent*>(node);
-	Q_ASSERT(evt);
-	Q_ASSERT(evt->nodeId() == evtNodeId);
-	// get event props used as keys
-	QDateTime  time  = evt->time();
-	QByteArray evtId = evt->eventId();
-	QUaQualifiedName evtTypeName = evt->typeDefinitionBrowseName();
+	QUaNodeId evtNodeId = event->nodeId();
+	Q_ASSERT(event->nodeId() == evtNodeId);
 	// first check if event already exists by TypeName and EventId
 	// if not there then add it
-	if (!m_eventTypeDatabase[evtTypeName].contains(evtId))
+	if (!m_eventTypeDatabase[eventTypeName].contains(eventId))
 	{
 		// add each component
-		QUaEventTypeRow &evtEntry = m_eventTypeDatabase[evtTypeName][evtId];
-		for (auto var : evt->browseChildren<QUaBaseVariable>())
+		QUaEventTypeRow &evtEntry = m_eventTypeDatabase[eventTypeName][eventId];
+		for (auto var : event->browseChildren<QUaBaseVariable>())
 		{
 			QUaQualifiedName component = var->browseName();
 			evtEntry[component] = var->value();
 		}
-		// add event node id
-		evtEntry["EventNodeId"] = QVariant::fromValue(evtNodeId);
+		// add event node id and origin node id
+		evtEntry["EventNodeId" ] = QVariant::fromValue(evtNodeId);
+		evtEntry["OriginNodeId"] = QVariant::fromValue(originNodeId);
 	}
 	// then add reference to emitter
-	m_eventEmitterDatabase[emtNodeId][evtTypeName].insert(time, evtId);
+	m_eventEmitterDatabase[emitterNodeId][eventTypeName].insert(eventTime, eventId);
 	// the method description says we should free this
 	if (fieldList)
 	{

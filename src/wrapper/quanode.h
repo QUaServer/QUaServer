@@ -306,10 +306,16 @@ protected:
 	// to check if a node is visible in the address space (reachible in hierarchical refs tree)
 	bool inAddressSpace() const;
 
-
 private:
 	// INSTANCE NodeId
 	UA_NodeId m_nodeId;
+	// keep a cache since it does not change much
+	QUaNodeId m_typeDefinitionNodeId;
+	static QHash<QUaNodeId, QUaQualifiedName> m_hashTypeBrowseNames;
+	// with new open62541, browseName is inmutable and reading it is kind of expensive
+	QUaQualifiedName m_browseName;
+	// browse hierarchical children cache
+	// TODO : consider removing after testing new open62541 tree implementation
 	QHash<QUaQualifiedName, QUaNode*> m_browseCache;
 
 	// Static Helpers
