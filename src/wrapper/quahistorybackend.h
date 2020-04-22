@@ -19,6 +19,12 @@ struct QUaHistoryDataPoint
 	quint32   status;
 };
 
+struct QUaHistoryEventPoint
+{
+	QDateTime timestamp;
+	QMap<QUaQualifiedName, QVariant> fields;
+};
+
 class QUaHistoryBackend
 {
 	friend class QUaServer;

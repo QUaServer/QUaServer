@@ -1060,9 +1060,7 @@ bool QUaEventHistoryQueryData::operator==(const QUaEventHistoryQueryData& other)
 {
 	return 
 		m_timeStartExisting == other.m_timeStartExisting &&
-		m_timeEndExisting   == other.m_timeEndExisting &&
-		m_numEventsToRead   == other.m_numEventsToRead &&
-		m_numEventsAlreadyRead == other.m_numEventsAlreadyRead;
+		m_numEventsToRead   == other.m_numEventsToRead;
 }
 
 bool QUaEventHistoryQueryData::isValid() const
@@ -1134,14 +1132,3 @@ QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromUaByt
 		QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&uaByteArray)
 	);
 }
-
-
-//inline UA_ByteString toUaByteArray() const
-//{
-
-//};
-
-//inline static QUaEventHistoryQueryData fromUaByteArray(const UA_ByteString& uaByteArray)
-//{
-
-//};
