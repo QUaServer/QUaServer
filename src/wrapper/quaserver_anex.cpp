@@ -322,7 +322,6 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     Q_ASSERT(event);
     QUaNodeId        originNodeId  = origin;
     QDateTime        eventTime     = event->time();
-    QByteArray       eventId       = event->eventId();
     QUaQualifiedName eventTypeName = event->typeDefinitionBrowseName();
 #endif // UA_ENABLE_HISTORIZING
 
@@ -435,11 +434,10 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         //    fieldList);
         QUaHistoryBackend::setEvent(
             event,
+            eventTypeName,
+            eventTime,
             originNodeId,
             emitNodes[i].nodeId,
-            eventTime,
-            eventId,
-            eventTypeName,
             filter,
             fieldList
         );

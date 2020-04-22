@@ -1054,3 +1054,94 @@ QString QUaExclusiveLimitTransition::toString() const
 {
 	return *this;
 }
+
+
+bool QUaEventHistoryQueryData::operator==(const QUaEventHistoryQueryData& other) const
+{
+	return 
+		m_timeStartExisting == other.m_timeStartExisting &&
+		m_timeEndExisting   == other.m_timeEndExisting &&
+		m_numEventsToRead   == other.m_numEventsToRead &&
+		m_numEventsAlreadyRead == other.m_numEventsAlreadyRead;
+}
+
+bool QUaEventHistoryQueryData::isValid() const
+{
+	return m_timeStartExisting.isValid();
+}
+
+QByteArray QUaEventHistoryQueryData::toByteArray(const QUaEventHistoryQueryData& inQueryData)
+{
+	QByteArray byteArray;
+	QDataStream outStream(&byteArray, QIODevice::WriteOnly | QIODevice::Truncate);
+	outStream.setVersion(QDataStream::Qt_5_6);
+	outStream.setByteOrder(QDataStream::BigEndian);
+	outStream << inQueryData;
+	return byteArray;
+};
+
+QUaEventHistoryQueryData QUaEventHistoryQueryData::fromByteArray(const QByteArray& byteArray)
+{
+	QUaEventHistoryQueryData outQueryData;
+	if (byteArray.isEmpty())
+	{
+		return outQueryData;
+	}
+	QDataStream inStream(byteArray);
+	inStream.setVersion(QDataStream::Qt_5_6);
+	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream >> outQueryData;
+	return outQueryData;
+}
+
+QByteArray QUaEventHistoryQueryData::ContinuationToByteArray(const QUaEventHistoryContinuationPoint& inContinuation)
+{
+	QByteArray byteArray;
+	QDataStream outStream(&byteArray, QIODevice::WriteOnly | QIODevice::Truncate);
+	outStream.setVersion(QDataStream::Qt_5_6);
+	outStream.setByteOrder(QDataStream::BigEndian);
+	outStream << inContinuation;
+	return byteArray;
+}
+
+QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromByteArray(const QByteArray& byteArray)
+{
+	QUaEventHistoryContinuationPoint outContinuation;
+	if (byteArray.isEmpty())
+	{
+		return outContinuation;
+	}
+	QDataStream inStream(byteArray);
+	inStream.setVersion(QDataStream::Qt_5_6);
+	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream >> outContinuation;
+	return outContinuation;
+}
+
+UA_ByteString QUaEventHistoryQueryData::ContinuationToUaByteString(const QUaEventHistoryContinuationPoint& inContinuation)
+{
+	UA_ByteString byteString;
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(
+		QUaEventHistoryQueryData::ContinuationToByteArray(inContinuation),
+		&byteString
+		);
+	return byteString;
+}
+
+QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromUaByteString(const UA_ByteString& uaByteArray)
+{
+	return QUaEventHistoryQueryData::ContinuationFromByteArray(
+		QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&uaByteArray)
+	);
+}
+
+
+//inline UA_ByteString toUaByteArray() const
+//{
+
+//};
+
+//inline static QUaEventHistoryQueryData fromUaByteArray(const UA_ByteString& uaByteArray)
+//{
+
+//};

@@ -725,32 +725,21 @@ QUaHistoryBackend::readHistoryData(
 //        now have to use QHash becasue QMap is using QString() operator for
 //        comparison and is very expensive
 typedef QMap <QUaQualifiedName   /*Names*/, QVariant/*EvtData*/> QUaEventTypeRow;
-typedef QHash<QByteArray       /*EventId*/, QUaEventTypeRow    > QUaEventTypeTable;
+typedef QHash<uint            /*EventKey*/, QUaEventTypeRow    > QUaEventTypeTable;
 typedef QHash<QUaQualifiedName/*TypeName*/, QUaEventTypeTable  > QUaEventTypeDatabase;
 QUaEventTypeDatabase m_eventTypeDatabase;
 
-typedef QMultiMap <QDateTime                   , QByteArray/*EventId*/> QUaEventEmitterTable;
+typedef QMultiMap <QDateTime                   , uint     /*EventKey*/> QUaEventEmitterTable;
 typedef QHash     <QUaQualifiedName/*TypeName*/, QUaEventEmitterTable > QUaEventTypeIndex;
 typedef QHash     <QUaNodeId      /*EmitterId*/, QUaEventTypeIndex    > QUaEventEmitterDatabase;
 QUaEventEmitterDatabase m_eventEmitterDatabase;
 
-// based on setValue_gathering_default
-//void QUaHistoryBackend::setEvent(
-//    UA_Server*            server,
-//    void*                 hdbContext,
-//    const UA_NodeId*      originId,
-//    const UA_NodeId*      emitterId,
-//    const UA_NodeId*      eventId,
-//    UA_Boolean            willEventNodeBeDeleted,
-//    const UA_EventFilter* historicalEventFilter,
-//    UA_EventFieldList*    fieldList)
 void QUaHistoryBackend::setEvent(
 	QUaBaseEvent*           event,
+	const QUaQualifiedName& eventTypeName,
+	const QDateTime&        eventTime,
 	const QUaNodeId&        originNodeId,
 	const QUaNodeId&        emitterNodeId,
-	const QDateTime&        eventTime,
-	const QByteArray&       eventId,
-	const QUaQualifiedName& eventTypeName,
     const UA_EventFilter*   historicalEventFilter,
     UA_EventFieldList*      fieldList)
 {
@@ -759,11 +748,13 @@ void QUaHistoryBackend::setEvent(
 	QUaNodeId evtNodeId = event->nodeId();
 	Q_ASSERT(event->nodeId() == evtNodeId);
 	// first check if event already exists by TypeName and EventId
+	QByteArray byteEventId = event->eventId();
+	uint intEventKey       = qHash(byteEventId);
 	// if not there then add it
-	if (!m_eventTypeDatabase[eventTypeName].contains(eventId))
+	if (!m_eventTypeDatabase[eventTypeName].contains(intEventKey))
 	{
 		// add each component
-		QUaEventTypeRow &evtEntry = m_eventTypeDatabase[eventTypeName][eventId];
+		QUaEventTypeRow &evtEntry = m_eventTypeDatabase[eventTypeName][intEventKey];
 		for (auto var : event->browseChildren<QUaBaseVariable>())
 		{
 			QUaQualifiedName component = var->browseName();
@@ -774,7 +765,7 @@ void QUaHistoryBackend::setEvent(
 		evtEntry["OriginNodeId"] = QVariant::fromValue(originNodeId);
 	}
 	// then add reference to emitter
-	m_eventEmitterDatabase[emitterNodeId][eventTypeName].insert(eventTime, eventId);
+	m_eventEmitterDatabase[emitterNodeId][eventTypeName].insert(eventTime, intEventKey);
 	// the method description says we should free this
 	if (fieldList)
 	{
@@ -782,8 +773,6 @@ void QUaHistoryBackend::setEvent(
 	}
 	return;
 }
-
-
 
 QDateTime findTimestampEventOfType(
 	const QUaNodeId& emtNodeId,
@@ -858,10 +847,18 @@ quint64 numEventsOfTypeInRange(
 	// if the end timestamp is valid, then it must be contained in the database
 	// else it means the API is requesting up to the most recent timestamp (end)
 	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
-	return static_cast<quint64>(std::distance(
-		table.find(timeStart),
+	auto iterStart = table.find(timeStart);
+	quint64 distance = static_cast<quint64>(std::distance(
+		iterStart,
 		timeEnd.isValid() ? table.find(timeEnd) + 1 : table.end()
 	));
+	auto iterEnd = iterStart + distance;
+	while (timeEnd.isValid() && iterEnd != table.end() && iterEnd.key() == timeEnd) {
+		distance++;
+		iterEnd++;
+	}
+	// multimap can have multiple values
+	return distance;
 }
 
 // TODO : pass pre-allocated vector and user should just populate it
@@ -886,28 +883,21 @@ QVector<QUaEventTypeRow> readHistoryEventsOfType(
 	points.resize(numPointsToRead);
 	// copy return data points
 	std::generate(points.begin(), points.end(),
-		[&iterIni, &table, &source]() {
-			QUaEventTypeRow retVal;
-			if (iterIni == table.end())
-			{
-				// NOTE : return an invalid value if API requests more values than available
-				return retVal;
-			}
-			QByteArray& EventId = iterIni.value();
-			Q_ASSERT(source.contains(EventId));
-			retVal = source[EventId];
-			iterIni++;
+	[&iterIni, &table, &source]() {
+		QUaEventTypeRow retVal;
+		if (iterIni == table.end())
+		{
+			// NOTE : return an invalid value if API requests more values than available
 			return retVal;
-		});
+		}
+		uint& intEventKey = iterIni.value();
+		Q_ASSERT(source.contains(intEventKey));
+		retVal = source[intEventKey];
+		iterIni++;
+		return retVal;
+	});
 	return points;
 }
-
-struct QUaEventQueryData
-{
-	QDateTime timeStartExisting;
-	QDateTime timeEndExisting;
-	quint64   numEventsToRead;
-};
 
 // based on readRaw_service_default
 void QUaHistoryBackend::readEvent(
@@ -924,29 +914,33 @@ void QUaHistoryBackend::readEvent(
     UA_HistoryReadResponse*       response,
     UA_HistoryEvent* const* const historyData)
 {
-	UA_HistoryDatabaseContext_default* ctx = (UA_HistoryDatabaseContext_default*)hdbContext;
+	Q_UNUSED(server);
+	Q_UNUSED(hdbContext);
+	Q_UNUSED(sessionId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(requestHeader);
+	Q_UNUSED(timestampsToReturn);
+	Q_UNUSED(releaseContinuationPoints);
 	// max number of events to read for each emitter
-	qDebug() << "Max Num of Entires to Read per Emitter :" << historyReadDetails->numValuesPerNode;
+	// TODO : historyReadDetails->numValuesPerNode;
 	// get time range to read for each emitter
 	auto startTimestamp = historyReadDetails->startTime;
 	auto endTimestamp   = historyReadDetails->endTime;
 	QDateTime timeStart = startTimestamp == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&startTimestamp);
 	QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
-	qDebug() << "From Time :" << timeStart;
-	qDebug() << "To   Time :" << timeEnd;
 	// get qualnames for columns in advance
 	size_t numCols = historyReadDetails->filter.selectClausesSize;
 	QVector<QUaQualifiedName> colNames;
-	colNames.resize(numCols);
+	colNames.resize(static_cast<int>(numCols));
 	for (size_t col = 0; col < numCols; ++col)
 	{
 		auto sao = &historyReadDetails->filter.selectClauses[col];
 		if (sao->browsePathSize == 0)
 		{
-			colNames[col] = "EventNodeId";
+			colNames[static_cast<int>(col)] = "EventNodeId";
 			continue;
 		}
-		colNames[col] = *sao->browsePath;
+		colNames[static_cast<int>(col)] = *sao->browsePath;
 	}
 	// loop all emitter nodes for which event history was requested
 	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) {
@@ -957,11 +951,13 @@ void QUaHistoryBackend::readEvent(
 			historyData[ithNode]->eventsSize = 0;
 			continue;
 		}
-		qDebug() << "Emitter :" << emtNodeId;
 		// loop event types and populate
 		QList<QUaEventTypeRow> listAllEvents;
 		QList<QUaQualifiedName> evtTypeNames = m_eventEmitterDatabase[emtNodeId].keys();
-		QHash<QUaQualifiedName, QUaEventQueryData> queryData;
+		QUaEventHistoryContinuationPoint queryData;
+		// check if continuation point for given emitter is valid
+		
+		// if no valid continuation point, then compute it
 		quint64 numEventsToReadTotal = 0;
 		for (auto evtTypeName : evtTypeNames)
 		{
@@ -989,7 +985,13 @@ void QUaHistoryBackend::readEvent(
 				timeEndExisting,
 				numEventsToRead
 			};
+			auto test = QUaEventHistoryQueryData::toByteArray(queryData[evtTypeName]);
+			auto copy = QUaEventHistoryQueryData::fromByteArray(test);
+			Q_ASSERT(copy == queryData[evtTypeName]);
 		}
+		auto test = QUaEventHistoryQueryData::ContinuationToByteArray(queryData);
+		auto copy = QUaEventHistoryQueryData::ContinuationFromByteArray(test);
+		Q_ASSERT(copy == queryData);
 		// alloc output in qt format
 		QVector<QUaEventTypeRow> allEvents;
 		allEvents.resize(numEventsToReadTotal);
@@ -1000,12 +1002,12 @@ void QUaHistoryBackend::readEvent(
 			auto eventsOfType = readHistoryEventsOfType(
 				emtNodeId,
 				evtTypeName,
-				queryData[evtTypeName].timeStartExisting,
-				queryData[evtTypeName].numEventsToRead
+				queryData[evtTypeName].m_timeStartExisting,
+				queryData[evtTypeName].m_numEventsToRead
 			);
-			Q_ASSERT(eventsOfType.size() == queryData[evtTypeName].numEventsToRead);
+			Q_ASSERT(eventsOfType.size() == queryData[evtTypeName].m_numEventsToRead);
 			std::copy(eventsOfType.begin(), eventsOfType.end(), allEvents.begin() + copyOffset);
-			copyOffset += queryData[evtTypeName].numEventsToRead;
+			copyOffset += queryData[evtTypeName].m_numEventsToRead;
 		}
 		size_t numRows = allEvents.size();
 		auto   iterRow = allEvents.begin();
@@ -1022,7 +1024,7 @@ void QUaHistoryBackend::readEvent(
 				UA_Array_new(numCols, &UA_TYPES[UA_TYPES_VARIANT]);
 			for (size_t col = 0; col < numCols; ++col)
 			{
-				QUaQualifiedName& colName = colNames[col];
+				QUaQualifiedName& colName = colNames[static_cast<int>(col)];
 				if (iterRow->contains(colName))
 				{
 					historyData[ithNode]->events[row].eventFields[col] = 
@@ -1042,3 +1044,5 @@ void QUaHistoryBackend::readEvent(
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // UA_ENABLE_HISTORIZING
+
+

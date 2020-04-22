@@ -167,7 +167,7 @@ QString uaStringToQString(const UA_String & string)
 
 UA_String uaStringFromQString(const QString & uaString)
 {
-	// NODE : avoid over-use because this is expensive
+	// NOTE : avoid over-use because this is expensive
 	return UA_STRING_ALLOC(uaString.toUtf8().constData());
 }
 
@@ -339,6 +339,7 @@ void uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(const QDateTime &value,
 template<>
 void uaVariantFromQVariantScalar<UA_String, QString>(const QString &value, UA_String *ptr)
 {
+	// NOTE : avoid over-use because this is expensive
 	*ptr = UA_STRING_ALLOC(value.toUtf8().constData());
 }
 // specialization (QByteArray)

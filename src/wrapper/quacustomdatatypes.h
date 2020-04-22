@@ -8,6 +8,7 @@
 #include <QDate>
 #include <QTimeZone>
 #include <QQueue>
+#include <QDataStream>
 #include <QDebug>
 
 #include <open62541.h>
@@ -480,6 +481,9 @@ public:
 private:
 	quint16 m_namespace;
 	QString m_name;
+
+	friend QDataStream& operator<<(QDataStream& outStream, const QUaQualifiedName& inQualName);
+	friend QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualName);
 };
 
 Q_DECLARE_METATYPE(QUaQualifiedName);
@@ -489,6 +493,20 @@ typedef QList<QUaQualifiedName> QUaQualifiedNameList;
 inline uint qHash(const QUaQualifiedName& key, uint seed)
 {
 	return qHash(key.name(), seed) ^ key.namespaceIndex();
+}
+
+inline QDataStream& operator<<(QDataStream& outStream, const QUaQualifiedName& inQualName)
+{
+	outStream << inQualName.m_namespace;
+	outStream << inQualName.m_name;
+	return outStream;
+}
+
+inline QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualName)
+{
+	inStream >> outQualName.m_namespace;
+	inStream >> outQualName.m_name;
+	return inStream;
 }
 
 struct QUaChangeStructureDataType
@@ -726,5 +744,69 @@ inline bool operator==(const QUaForwardReference& e1, const QUaForwardReference&
 		&& e1.targetType.compare(e2.targetType, Qt::CaseSensitive) == 0
 		&& e1.refType == e2.refType;
 }
+
+class QUaEventHistoryQueryData
+{
+	friend class QUaHistoryBackend;
+public:
+	QUaEventHistoryQueryData(
+		const QDateTime &timeStartExisting    = QDateTime(),
+		const QDateTime &timeEndExisting      = QDateTime(),
+		const quint64   &numEventsToRead      = 0,
+		const quint64   &numEventsAlreadyRead = 0
+	) :
+	m_timeStartExisting   (timeStartExisting),
+	m_timeEndExisting     (timeEndExisting),
+	m_numEventsToRead     (numEventsToRead),
+	m_numEventsAlreadyRead(numEventsAlreadyRead)
+	{};
+
+	bool operator==(const QUaEventHistoryQueryData& other) const;
+	bool isValid() const;
+
+	static QByteArray toByteArray(const QUaEventHistoryQueryData& inQueryData);
+	static QUaEventHistoryQueryData fromByteArray(const QByteArray& byteArray);
+
+	typedef QHash<QUaQualifiedName, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
+
+	static QByteArray ContinuationToByteArray(const QUaEventHistoryContinuationPoint& inContinuation);
+	static QUaEventHistoryContinuationPoint ContinuationFromByteArray(const QByteArray& byteArray);
+
+	static UA_ByteString ContinuationToUaByteString(const QUaEventHistoryContinuationPoint& inContinuation);
+	static QUaEventHistoryContinuationPoint ContinuationFromUaByteString(const UA_ByteString& uaByteArray);
+
+private:
+	QDateTime m_timeStartExisting;
+	QDateTime m_timeEndExisting;
+	quint64   m_numEventsToRead;
+	quint64   m_numEventsAlreadyRead;
+	friend QDataStream& operator<<(QDataStream& outStream, const QUaEventHistoryQueryData& inQueryData);
+	friend QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& outQueryData);
+};
+
+typedef QHash<QUaQualifiedName, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
+
+inline QDataStream& operator<<(QDataStream& outStream, const QUaEventHistoryQueryData& inQueryData)
+{
+	outStream << inQueryData.m_timeStartExisting.toMSecsSinceEpoch();
+	outStream << inQueryData.m_timeEndExisting.toMSecsSinceEpoch();
+	outStream << inQueryData.m_numEventsToRead;
+	outStream << inQueryData.m_numEventsAlreadyRead;
+	return outStream;
+}
+
+inline QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& outQueryData)
+{
+	qint64 timeStartExisting;
+	qint64 timeEndExisting;
+	inStream >> timeStartExisting;
+	inStream >> timeEndExisting;
+	outQueryData.m_timeStartExisting = QDateTime::fromMSecsSinceEpoch(timeStartExisting);
+	outQueryData.m_timeEndExisting = QDateTime::fromMSecsSinceEpoch(timeEndExisting);
+	inStream >> outQueryData.m_numEventsToRead;
+	inStream >> outQueryData.m_numEventsAlreadyRead;
+	return inStream;
+}
+
 
 #endif // QUACUSTOMDATATYPES_H

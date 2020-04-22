@@ -133,11 +133,10 @@ private:
     //);
 	static void QUaHistoryBackend::setEvent(
 		QUaBaseEvent*           event,
+		const QUaQualifiedName& eventTypeName,
+		const QDateTime&        eventTime,
 		const QUaNodeId&        originNodeId,
 		const QUaNodeId&        emitterNodeId,
-		const QDateTime&        eventTime,
-		const QByteArray&       eventId,
-		const QUaQualifiedName& eventTypeName,
 		const UA_EventFilter*   historicalEventFilter,
 		UA_EventFieldList*      fieldList
 	);
