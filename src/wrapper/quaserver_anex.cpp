@@ -313,16 +313,11 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     // [MODIFIED] : added missing retval
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
+    // [MODIFIED] : added event history decarations
+    // NOTE : declaration must be here, because "goto cleanup" statements
+    //        below could bypass them and compiler does not like it
  #ifdef UA_ENABLE_HISTORIZING
-    // [MODIFIED] : optimize avoid converting 
-    void* context;
-    retval = UA_Server_getNodeContext(server, eventNodeId, &context);
-    Q_ASSERT(retval == UA_STATUSCODE_GOOD);
-    auto event = qobject_cast<QUaBaseEvent*>(static_cast<QObject*>(context));
-    Q_ASSERT(event);
-    QUaNodeId        originNodeId  = origin;
-    QDateTime        eventTime     = event->time();
-    QUaQualifiedName eventTypeName = event->typeDefinitionBrowseName();
+    QVector<QUaNodeId> emittersNodeIds;
 #endif // UA_ENABLE_HISTORIZING
 
     /* Get all ReferenceTypes over which the events propagate */
@@ -362,6 +357,9 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         goto cleanup;
     }
 
+#ifdef UA_ENABLE_HISTORIZING
+    emittersNodeIds.resize(static_cast<int>(emitNodesSize));
+#endif // UA_ENABLE_HISTORIZING
     /* Add the event to the listening MonitoredItems at each relevant node */
     for (size_t i = 0; i < emitNodesSize; i++) {
         const UA_ObjectNode* node = (const UA_ObjectNode*)
@@ -383,69 +381,91 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         }
         UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
 #ifdef UA_ENABLE_HISTORIZING
-        // [MODIFIED] : optimized version QUaHistoryBackend::setEvent below
+        // [MODIFIED] : do not support filter "HistoricalEventFilter" 
+        emittersNodeIds[static_cast<int>(i)] = emitNodes[i].nodeId;
         //if (!server->config.historyDatabase.setEvent)
         //    continue;
-        UA_EventFilter* filter = NULL;
-        UA_EventFieldList* fieldList = NULL;
-        UA_Variant historicalEventFilterValue;
-        UA_Variant_init(&historicalEventFilterValue);
-        /* a HistoricalEventNode that has event history available will provide this property */
-        retval = readObjectProperty(server, emitNodes[i].nodeId,
-            UA_QUALIFIEDNAME(0, (char*)"HistoricalEventFilter"),
-            &historicalEventFilterValue);
-        /* check if the property was found and the read was successful */
-        if (retval != UA_STATUSCODE_GOOD) {
-            /* do not vex users with no match errors */
-            if (retval != UA_STATUSCODE_BADNOMATCH)
-                UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                    "Cannot read the HistoricalEventFilter property of a "
-                    "listening node. StatusCode %s",
-                    UA_StatusCode_name(retval));
-        }
-        /* if found then check if HistoricalEventFilter property has a valid value */
-        else if (UA_Variant_isEmpty(&historicalEventFilterValue) ||
-            !UA_Variant_isScalar(&historicalEventFilterValue) ||
-            historicalEventFilterValue.type->typeIndex != UA_TYPES_EVENTFILTER) {
-            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-                "HistoricalEventFilter property of a listening node "
-                "does not have a valid value");
-        }
-        /* finally, if found and valid then filter */
-        else {
-            filter = (UA_EventFilter*)historicalEventFilterValue.data;
-            UA_EventNotification eventNotification;
-            retval = QUaServer_Anex::UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
-                filter, &eventNotification);
-            if (retval == UA_STATUSCODE_GOOD) {
-                fieldList = UA_EventFieldList_new();
-                *fieldList = eventNotification.fields;
-            }
-            /* eventNotification structure is not cleared so that users can
-             * avoid copying the field list if they want to store it */
-             /* EventFilterResult isn't being used currently
-             UA_EventFilterResult_clear(&notification->result); */
-        }
+        //UA_EventFilter* filter = NULL;
+        //UA_EventFieldList* fieldList = NULL;
+        //UA_Variant historicalEventFilterValue;
+        //UA_Variant_init(&historicalEventFilterValue);
+        ///* a HistoricalEventNode that has event history available will provide this property */
+        //retval = readObjectProperty(server, emitNodes[i].nodeId,
+        //    UA_QUALIFIEDNAME(0, (char*)"HistoricalEventFilter"),
+        //    &historicalEventFilterValue);
+        ///* check if the property was found and the read was successful */
+        //if (retval != UA_STATUSCODE_GOOD) {
+        //    /* do not vex users with no match errors */
+        //    if (retval != UA_STATUSCODE_BADNOMATCH)
+        //        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+        //            "Cannot read the HistoricalEventFilter property of a "
+        //            "listening node. StatusCode %s",
+        //            UA_StatusCode_name(retval));
+        //}
+        ///* if found then check if HistoricalEventFilter property has a valid value */
+        //else if (UA_Variant_isEmpty(&historicalEventFilterValue) ||
+        //    !UA_Variant_isScalar(&historicalEventFilterValue) ||
+        //    historicalEventFilterValue.type->typeIndex != UA_TYPES_EVENTFILTER) {
+        //    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
+        //        "HistoricalEventFilter property of a listening node "
+        //        "does not have a valid value");
+        //}
+        ///* finally, if found and valid then filter */
+        //else {
+        //    filter = (UA_EventFilter*)historicalEventFilterValue.data;
+        //    UA_EventNotification eventNotification;
+        //    retval = QUaServer_Anex::UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
+        //        filter, &eventNotification);
+        //    if (retval == UA_STATUSCODE_GOOD) {
+        //        fieldList = UA_EventFieldList_new();
+        //        *fieldList = eventNotification.fields;
+        //    }
+        //    /* eventNotification structure is not cleared so that users can
+        //     * avoid copying the field list if they want to store it */
+        //     /* EventFilterResult isn't being used currently
+        //     UA_EventFilterResult_clear(&notification->result); */
+        //}
         // [MODIFIED] : optimized to avoid multiple conversions
         //server->config.historyDatabase.setEvent(server, server->config.historyDatabase.context,
         //    &origin, &emitNodes[i].nodeId,
         //    &eventNodeId, deleteEventNode,
         //    filter,
         //    fieldList);
-        QUaHistoryBackend::setEvent(
-            event,
-            eventTypeName,
-            eventTime,
-            originNodeId,
-            emitNodes[i].nodeId,
-            filter,
-            fieldList
-        );
-
-        UA_Variant_clear(&historicalEventFilterValue);
-        retval = UA_STATUSCODE_GOOD;
+        //UA_Variant_clear(&historicalEventFilterValue);
+        //retval = UA_STATUSCODE_GOOD;
 #endif // UA_ENABLE_HISTORIZING
     }
+#ifdef UA_ENABLE_HISTORIZING
+    if (emitNodesSize > 0)
+    {
+        // get event instance
+        auto node  = QUaNode::getNodeContext(eventNodeId, server);
+        auto event = qobject_cast<QUaBaseEvent*>(node);
+        Q_ASSERT(event);
+        // populate history point
+        QUaHistoryEventPoint eventPoint;
+        for (auto var : event->browseChildren<QUaBaseVariable>())
+        {
+            QUaQualifiedName component   = var->browseName();
+            eventPoint.fields[component] = var->value();
+        }
+        Q_ASSERT(!eventPoint.fields.contains("EventNodeId"));
+        Q_ASSERT(!eventPoint.fields.contains("OriginNodeId"));
+        // add event node id and origin node id
+        eventPoint.fields["EventNodeId" ] = QVariant::fromValue(QUaNodeId(eventNodeId));
+        eventPoint.fields["OriginNodeId"] = QVariant::fromValue(QUaNodeId(origin));
+        // add timestamp
+        eventPoint.timestamp = event->time();
+        // store
+        bool ok = QUaHistoryBackend::setEvent(
+            event->typeDefinitionBrowseName(),
+            emittersNodeIds,
+            eventPoint
+        );
+        Q_ASSERT(ok);
+    }
+#endif // UA_ENABLE_HISTORIZING
+
 
     // [MODIFIED] : do not delete node
     ///* Delete the node representation of the event */

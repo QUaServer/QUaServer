@@ -137,14 +137,10 @@ private:
     //    const UA_EventFilter* historicalEventFilter,
     //    UA_EventFieldList*    fieldList
     //);
-	static void QUaHistoryBackend::setEvent(
-		QUaBaseEvent*           event,
-		const QUaQualifiedName& eventTypeName,
-		const QDateTime&        eventTime,
-		const QUaNodeId&        originNodeId,
-		const QUaNodeId&        emitterNodeId,
-		const UA_EventFilter*   historicalEventFilter,
-		UA_EventFieldList*      fieldList
+	static bool QUaHistoryBackend::setEvent(
+		const QUaQualifiedName&     eventTypeName,
+		const QVector<QUaNodeId>&   emittersNodeIds,
+		const QUaHistoryEventPoint& eventPoint
 	);
     static void readEvent(
         UA_Server*                    server,

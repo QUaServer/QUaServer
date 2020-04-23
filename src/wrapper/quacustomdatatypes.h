@@ -750,11 +750,13 @@ class QUaEventHistoryQueryData
 	friend class QUaHistoryBackend;
 public:
 	QUaEventHistoryQueryData(
-		const QDateTime &timeStartExisting    = QDateTime(),
-		const quint64   &numEventsToRead      = 0
+		const QDateTime &timeStartExisting     = QDateTime(),
+		const quint64   &numEventsToRead       = 0,
+		const quint64   & numEventsAlreadyRead = 0
 	) :
 	m_timeStartExisting   (timeStartExisting),
-	m_numEventsToRead     (numEventsToRead)
+	m_numEventsToRead     (numEventsToRead),
+	m_numEventsAlreadyRead(numEventsAlreadyRead)
 	{};
 
 	bool operator==(const QUaEventHistoryQueryData& other) const;
@@ -774,6 +776,7 @@ public:
 private:
 	QDateTime m_timeStartExisting;
 	quint64   m_numEventsToRead;
+	quint64   m_numEventsAlreadyRead;
 	friend QDataStream& operator<<(QDataStream& outStream, const QUaEventHistoryQueryData& inQueryData);
 	friend QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& outQueryData);
 };
@@ -784,6 +787,7 @@ inline QDataStream& operator<<(QDataStream& outStream, const QUaEventHistoryQuer
 {
 	outStream << inQueryData.m_timeStartExisting.toMSecsSinceEpoch();
 	outStream << inQueryData.m_numEventsToRead;
+	outStream << inQueryData.m_numEventsAlreadyRead;
 	return outStream;
 }
 
@@ -793,6 +797,7 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& 
 	inStream >> timeStartExisting;
 	outQueryData.m_timeStartExisting = QDateTime::fromMSecsSinceEpoch(timeStartExisting);
 	inStream >> outQueryData.m_numEventsToRead;
+	inStream >> outQueryData.m_numEventsAlreadyRead;
 	return inStream;
 }
 

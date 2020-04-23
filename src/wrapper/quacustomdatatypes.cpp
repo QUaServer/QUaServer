@@ -1059,8 +1059,9 @@ QString QUaExclusiveLimitTransition::toString() const
 bool QUaEventHistoryQueryData::operator==(const QUaEventHistoryQueryData& other) const
 {
 	return 
-		m_timeStartExisting == other.m_timeStartExisting &&
-		m_numEventsToRead   == other.m_numEventsToRead;
+		m_timeStartExisting    == other.m_timeStartExisting &&
+		m_numEventsToRead      == other.m_numEventsToRead   &&
+		m_numEventsAlreadyRead == other.m_numEventsAlreadyRead;
 }
 
 bool QUaEventHistoryQueryData::isValid() const
