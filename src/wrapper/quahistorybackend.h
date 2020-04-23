@@ -96,13 +96,55 @@ public:
 		QQueue<QUaLog>  &logOut
 	) const;
 	// return the numPointsToRead data points for the given node from the given start time
-	// TODO : pass pre-allocated vector and user should just populate it
 	QVector<QUaHistoryDataPoint> readHistoryData(
 		const QUaNodeId &nodeId,
 		const QDateTime &timeStart,
 		const quint64   &numPointsToRead,
 		QQueue<QUaLog>  &logOut
 	) const;
+
+	// event history support
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// write a event's data to backend
+	bool writeHistoryEventsOfType(
+		const QUaNodeId            &eventTypeNodeId,
+		const QVector<QUaNodeId>   &emittersNodeIds,
+		const QUaHistoryEventPoint &eventPoint,
+		QQueue<QUaLog>             &logOut
+	);
+	// get event types (node ids) for which there are events stored for the
+	// given emitter
+	QVector<QUaNodeId> eventTypesOfEmitter(
+		const QUaNodeId &emitterNodeId,
+		QQueue<QUaLog>  &logOut
+	);
+	// find a timestamp matching the criteria for the emitter and event type
+	QDateTime findTimestampEventOfType(
+		const QUaNodeId                    &emitterNodeId,
+		const QUaNodeId                    &eventTypeNodeId,
+		const QDateTime                    &timestamp,
+		const QUaHistoryBackend::TimeMatch &match,
+		QQueue<QUaLog>                     &logOut
+	);
+	// get the number for events within a time range for the given emitter and event type
+	quint64 numEventsOfTypeInRange(
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
+	);
+	// return the numPointsToRead events for the given emitter and event type,
+	// starting from the numPointsOffset offset after given start time (pagination)
+	QVector<QUaHistoryEventPoint> readHistoryEventsOfType(
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const quint64   &numPointsOffset,
+		const quint64   &numPointsToRead,
+		QQueue<QUaLog>  &logOut
+	);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 private:
 
@@ -128,7 +170,41 @@ private:
 
 	// event history support
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	std::function<bool(
+		const QUaNodeId            &,
+		const QVector<QUaNodeId>   &,
+		const QUaHistoryEventPoint &,
+		QQueue<QUaLog>             &
+	)> m_writeHistoryEventsOfType;
+	std::function<QVector<QUaNodeId>(
+		const QUaNodeId &,
+		QQueue<QUaLog>  &
+	)> m_eventTypesOfEmitter;
+	std::function<QDateTime(
+		const QUaNodeId                    &,
+		const QUaNodeId                    &,
+		const QDateTime                    &,
+		const QUaHistoryBackend::TimeMatch &,
+		QQueue<QUaLog>                     &
+	)> m_findTimestampEventOfType;
+	std::function<quint64(
+		const QUaNodeId &,
+		const QUaNodeId &,
+		const QDateTime &,
+		const QDateTime &,
+		QQueue<QUaLog>  &
+	)> m_numEventsOfTypeInRange;
+	std::function<QVector<QUaHistoryEventPoint>(
+		const QUaNodeId &,
+		const QUaNodeId &,
+		const QDateTime &,
+		const quint64   &,
+		const quint64   &,
+		QQueue<QUaLog>  &
+	)> m_readHistoryEventsOfType;
+
 	static bool QUaHistoryBackend::setEvent(
+		QUaServer*                  server,
 		const QUaNodeId&            eventTypeNodeId,
 		const QVector<QUaNodeId>&   emittersNodeIds,
 		const QUaHistoryEventPoint& eventPoint
@@ -266,6 +342,87 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 				logOut
 			);
 	};
+
+	// event history support
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// writeHistoryEventsOfType
+	m_writeHistoryEventsOfType = [&historizer](
+		const QUaNodeId            &eventTypeNodeId,
+		const QVector<QUaNodeId>   &emittersNodeIds,
+		const QUaHistoryEventPoint &eventPoint,
+		QQueue<QUaLog>             &logOut
+	) -> bool{
+			return historizer.writeHistoryEventsOfType(
+				eventTypeNodeId,
+				emittersNodeIds,
+				eventPoint,
+				logOut
+			);
+	};
+	// findTimestampEventOfType
+	m_findTimestampEventOfType = [&historizer](
+		const QUaNodeId                    &emitterNodeId,
+		const QUaNodeId                    &eventTypeNodeId,
+		const QDateTime                    &timestamp,
+		const QUaHistoryBackend::TimeMatch &match,
+		QQueue<QUaLog>                     &logOut
+	) ->QDateTime{
+			return historizer.findTimestampEventOfType(
+				emitterNodeId,
+				eventTypeNodeId,
+				timestamp,
+				match,
+				logOut
+			);
+	};
+	// eventTypesOfEmitter
+	m_eventTypesOfEmitter = [&historizer](
+		const QUaNodeId &emitterNodeId,
+		QQueue<QUaLog>  &logOut
+	) -> QVector<QUaNodeId> {
+			return historizer.eventTypesOfEmitter(
+				emitterNodeId,
+				logOut
+			);
+	};
+	// numEventsOfTypeInRange
+	m_numEventsOfTypeInRange = [&historizer](
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
+		) -> quint64
+	{
+		return historizer.numEventsOfTypeInRange(
+			emitterNodeId,
+			eventTypeNodeId,
+			timeStart,
+			timeEnd,
+			logOut
+		);
+	};
+	// readHistoryEventsOfType
+	m_readHistoryEventsOfType = [&historizer](
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const quint64   &numPointsOffset,
+		const quint64   &numPointsToRead,
+		QQueue<QUaLog>  &logOut
+	) -> QVector<QUaHistoryEventPoint>
+	{
+		return historizer.readHistoryEventsOfType(
+			emitterNodeId,
+			eventTypeNodeId,
+			timeStart,
+			numPointsOffset,
+			numPointsToRead,
+			logOut
+		);
+	};
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 }
 
 #endif // UA_ENABLE_HISTORIZING

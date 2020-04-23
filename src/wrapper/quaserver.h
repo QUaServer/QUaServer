@@ -311,7 +311,7 @@ private:
 	void addChange(const QUaChangeStructureDataType& change);
     // mandatory and optional variable children browsenames for event type definition
     // need this to store historic events in a consistent way, ignoring manually added children
-    QHash<QUaNodeId, QSet<QUaQualifiedName>> m_hashTypeAggregatedVariableChildren;
+    QHash<QUaNodeId, QList<QUaQualifiedName>> m_hashTypeAggregatedVariableChildren;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

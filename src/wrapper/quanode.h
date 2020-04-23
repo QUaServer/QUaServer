@@ -324,17 +324,17 @@ private:
 	// NOTE : need to cleanup result after calling this method
 	static UA_NodeId getParentNodeId(const UA_NodeId& childNodeId, UA_Server* server);
 	// NOTE : need to cleanup result after calling this method
-	static QSet<UA_NodeId> getChildrenNodeIds(
+	static QList<UA_NodeId> getChildrenNodeIds(
 		const UA_NodeId& parentNodeId, 
 		UA_Server* server,
 		const UA_UInt32 &nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE,
 		const UA_NodeId &referenceTypeId = UA_NODEID_NULL
 	);
 	// NOTE : need to cleanup result after calling this method
-	static QSet<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
+	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
 
 	// NOTE : needed to store historic events in a consistent way, ignoring manually added children
-	static QSet<QUaQualifiedName> getTypeAggregatedVariableChildrenBrowseNames(
+	static QList<QUaQualifiedName> getTypeAggregatedVariableChildrenBrowseNames(
 		const QUaNodeId& typeNodeId,
 		UA_Server* server
 	);

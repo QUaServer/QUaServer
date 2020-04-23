@@ -963,7 +963,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
 		   !UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
-		QSet<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
+		auto childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
 		for (auto childNodeId : childrenNodeIds)
 		{
 			// ignore if not optional
@@ -1610,7 +1610,7 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 }
 
 // NOTE : need to cleanup result after calling this method
-QSet<UA_NodeId> QUaNode::getChildrenNodeIds(
+QList<UA_NodeId> QUaNode::getChildrenNodeIds(
 	const UA_NodeId & parentNodeId, 
 	UA_Server * server,
 	const UA_UInt32& nodeClassMask, /* = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE*/
@@ -1618,7 +1618,7 @@ QSet<UA_NodeId> QUaNode::getChildrenNodeIds(
 	// NOTE : by default browse only objects or variables (no types or refs)
 )
 {
-	QSet<UA_NodeId> retListChildren;
+	QList<UA_NodeId> retListChildren;
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
 	bDesc->referenceTypeId = referenceTypeId;
@@ -1663,9 +1663,9 @@ QSet<UA_NodeId> QUaNode::getChildrenNodeIds(
 }
 
 // NOTE : need to cleanup result after calling this method
-QSet<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server)
+QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server)
 {
-	QSet<UA_NodeId> retListMethods;
+	QList<UA_NodeId> retListMethods;
 	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
@@ -1696,18 +1696,18 @@ QSet<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Ser
 	return retListMethods;
 }
 
-QSet<QUaQualifiedName> QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
+QList<QUaQualifiedName> QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
 	const QUaNodeId& typeNodeId, 
 	UA_Server* server)
 {
-	QSet<QUaQualifiedName> retNames;
+	QList<QUaQualifiedName> retNames;
 	UA_NodeId typeUaNodeId = typeNodeId;
 	// look for children starting from this type of to base object type
 	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
 		   !UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
 		// NOTE : only variable children that have a modelling rule
-		QSet<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(
+		auto childrenNodeIds = QUaNode::getChildrenNodeIds(
 			typeUaNodeId, 
 			server,
 			UA_NODECLASS_VARIABLE

@@ -468,6 +468,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         eventPoint.timestamp = event->time();
         // store
         bool ok = QUaHistoryBackend::setEvent(
+            srv,
             eventTypeNodeId,
             emittersNodeIds,
             eventPoint
