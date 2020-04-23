@@ -383,6 +383,8 @@ public:
 
 private:
 	UA_NodeId m_nodeId;
+	friend QDataStream& operator<<(QDataStream& outStream, const QUaNodeId& inNodeId);
+	friend QDataStream& operator>>(QDataStream& inStream, QUaNodeId& outNodeId);
 };
 
 Q_DECLARE_METATYPE(QUaNodeId);
@@ -396,6 +398,72 @@ inline uint qHash(const QUaNodeId& key, uint seed)
 			qHash(key.numericId(), seed) :
 			key.internalHash()
 		);
+}
+
+inline QDataStream& operator<<(QDataStream& outStream, const QUaNodeId& inNodeId)
+{
+	outStream << inNodeId.m_nodeId.namespaceIndex;
+	outStream << static_cast<quint8>(inNodeId.m_nodeId.identifierType);
+	QUaNodeIdType type = inNodeId.type();
+	switch (type)
+	{
+	case QUaNodeIdType::Numeric:
+		outStream << inNodeId.m_nodeId.identifier.numeric;
+		break;
+	case QUaNodeIdType::String:
+		outStream << inNodeId.stringId();
+		break;
+	case QUaNodeIdType::Guid:
+		outStream << inNodeId.uuId();
+		break;
+	case QUaNodeIdType::ByteString:
+		outStream << inNodeId.byteArrayId();
+		break;
+	default:
+		break;
+	}
+	return outStream;
+}
+
+inline QDataStream& operator>>(QDataStream& inStream, QUaNodeId& outNodeId)
+{
+	inStream >> outNodeId.m_nodeId.namespaceIndex;
+	quint8 identifierType;
+	inStream >> identifierType;
+	outNodeId.m_nodeId.identifierType = static_cast<UA_NodeIdType>(identifierType);
+	QUaNodeIdType type = outNodeId.type();
+	switch (type)
+	{
+	case QUaNodeIdType::Numeric:
+		{
+			inStream >> outNodeId.m_nodeId.identifier.numeric;
+		}
+		break;
+	case QUaNodeIdType::String:
+		{
+			QString strId;
+			inStream >> strId;
+			outNodeId.setStringId(strId);
+		}
+		break;
+	case QUaNodeIdType::Guid:
+		{
+			QUuid uuId;
+			inStream >> uuId;
+			outNodeId.setUuId(uuId);
+		}
+		break;
+	case QUaNodeIdType::ByteString:
+		{
+			QByteArray byteId;
+			inStream >> byteId;
+			outNodeId.setByteArrayId(byteId);
+		}
+		break;
+	default:
+		break;
+	}
+	return inStream;
 }
 
 class QUaLocalizedText
@@ -765,7 +833,7 @@ public:
 	static QByteArray toByteArray(const QUaEventHistoryQueryData& inQueryData);
 	static QUaEventHistoryQueryData fromByteArray(const QByteArray& byteArray);
 
-	typedef QHash<QUaQualifiedName, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
+	typedef QHash<QUaNodeId, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
 
 	static QByteArray ContinuationToByteArray(const QUaEventHistoryContinuationPoint& inContinuation);
 	static QUaEventHistoryContinuationPoint ContinuationFromByteArray(const QByteArray& byteArray);
@@ -781,7 +849,7 @@ private:
 	friend QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& outQueryData);
 };
 
-typedef QHash<QUaQualifiedName, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
+typedef QHash<QUaNodeId, QUaEventHistoryQueryData> QUaEventHistoryContinuationPoint;
 
 inline QDataStream& operator<<(QDataStream& outStream, const QUaEventHistoryQueryData& inQueryData)
 {

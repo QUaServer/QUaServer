@@ -33,6 +33,7 @@ class QUaServer : public QObject
 	friend class QUaBaseObject;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	friend class QUaBaseEvent;
+    friend class QUaServer_Anex;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     friend class QUaStateVariable;
@@ -291,7 +292,8 @@ private:
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
-    QHash<QString         , QList<QUaQualifiedName>> m_hashMandatoryChildren;
+    // mandatory children browsenames for type definition
+    QHash<QUaNodeId, QSet<QUaQualifiedName>> m_hashMandatoryChildren;
 
 	QUaValidationCallback m_validationCallback;
 
@@ -307,6 +309,9 @@ private:
 	QUaGeneralModelChangeEvent * m_changeEvent;
 	QUaChangesList m_listChanges; // buffer
 	void addChange(const QUaChangeStructureDataType& change);
+    // mandatory and optional variable children browsenames for event type definition
+    // need this to store historic events in a consistent way, ignoring manually added children
+    QHash<QUaNodeId, QSet<QUaQualifiedName>> m_hashTypeAggregatedVariableChildren;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -656,7 +661,7 @@ inline T * QUaServer::createInstance(
 		return nullptr;
 	}
 	// get new c++ instance created in UA constructor
-	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this);
+	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, this->m_server);
 	T * newInstance = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newInstance);
     Q_ASSERT(newInstance->parent() == parentNode);
@@ -678,7 +683,7 @@ inline T * QUaServer::createEvent()
 		return nullptr;
 	}
 	// get new c++ instance created in UA constructor
-	auto tmp = QUaNode::getNodeContext(newEventNodeId, this);
+	auto tmp = QUaNode::getNodeContext(newEventNodeId, this->m_server);
 	T * newEvent = qobject_cast<T*>(tmp);
 	Q_CHECK_PTR(newEvent);
     // set originator 
@@ -1140,7 +1145,7 @@ inline bool QUaNode::deserializeInternal(
             continue;
         }
         // get new c++ instance created in UA constructor
-        auto instance = QUaNode::getNodeContext(newInstanceNodeId, this->server());
+        auto instance = QUaNode::getNodeContext(newInstanceNodeId, this->m_qUaServer->m_server);
         // return c++ instance
         UA_NodeId_clear(&newInstanceNodeId);
         // deserialize (recursive)
@@ -1194,7 +1199,7 @@ inline T * QUaBaseObject::createEvent()
         return nullptr;
     }
     // get new c++ instance created in UA constructor
-    auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer);
+    auto tmp = QUaNode::getNodeContext(newEventNodeId, m_qUaServer->m_server);
     T * newEvent = qobject_cast<T*>(tmp);
     Q_CHECK_PTR(newEvent);
     // set originator 

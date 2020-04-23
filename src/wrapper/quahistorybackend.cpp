@@ -724,17 +724,17 @@ QUaHistoryBackend::readHistoryData(
 // TODO : make QMap<QUaQualifiedName, faster by providing custom comparison operator
 //        now have to use QHash becasue QMap is using QString() operator for
 //        comparison and is very expensive
-typedef QHash<uint            /*EventKey*/, QUaHistoryEventPoint> QUaEventTypeTable;
-typedef QHash<QUaQualifiedName/*TypeName*/, QUaEventTypeTable   > QUaEventTypeDatabase;
+typedef QHash<uint        /*EventKey*/, QUaHistoryEventPoint> QUaEventTypeTable;
+typedef QHash<QUaNodeId /*TypeNodeId*/, QUaEventTypeTable   > QUaEventTypeDatabase;
 QUaEventTypeDatabase m_eventTypeDatabase;
 
-typedef QMultiMap <QDateTime                   , uint     /*EventKey*/> QUaEventEmitterTable;
-typedef QHash     <QUaQualifiedName/*TypeName*/, QUaEventEmitterTable > QUaEventTypeIndex;
-typedef QHash     <QUaNodeId      /*EmitterId*/, QUaEventTypeIndex    > QUaEventEmitterDatabase;
+typedef QMultiMap <QDateTime               , uint     /*EventKey*/> QUaEventEmitterTable;
+typedef QHash     <QUaNodeId /*TypeNodeId*/, QUaEventEmitterTable > QUaEventTypeIndex;
+typedef QHash     <QUaNodeId  /*EmitterId*/, QUaEventTypeIndex    > QUaEventEmitterDatabase;
 QUaEventEmitterDatabase m_eventEmitterDatabase;
 
 bool writeHistoryEventsOfType(
-	const QUaQualifiedName& eventTypeName,
+	const QUaNodeId& eventTypeNodeId,
 	const QVector<QUaNodeId>& emittersNodeIds,
 	const QUaHistoryEventPoint& eventPoint/*,
 	QQueue<QUaLog>& logOut*/
@@ -746,15 +746,15 @@ bool writeHistoryEventsOfType(
 	Q_ASSERT(eventPoint.fields.contains("EventId"));
 	QByteArray byteEventId = eventPoint.fields["EventId"].value<QByteArray>();
 	uint intEventKey = qHash(byteEventId);
-	Q_ASSERT(!m_eventTypeDatabase[eventTypeName].contains(intEventKey));
+	Q_ASSERT(!m_eventTypeDatabase[eventTypeNodeId].contains(intEventKey));
 	// insert in event type table
-	m_eventTypeDatabase[eventTypeName][intEventKey] = eventPoint;
+	m_eventTypeDatabase[eventTypeNodeId][intEventKey] = eventPoint;
 	// create reference from each emitter's table
 	for (auto &emitterNodeId : emittersNodeIds)
 	{
 		// NOTE : use QMultiMap::insert which allows 
 		// multiple values (eventKey) for same key (time)
-		m_eventEmitterDatabase[emitterNodeId][eventTypeName].insert(
+		m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId].insert(
 			eventPoint.timestamp, 
 			intEventKey
 		);
@@ -764,12 +764,12 @@ bool writeHistoryEventsOfType(
 }
 
 bool QUaHistoryBackend::setEvent(
-	const QUaQualifiedName& eventTypeName,
+	const QUaNodeId& eventTypeNodeId,
 	const QVector<QUaNodeId>& emittersNodeIds,
 	const QUaHistoryEventPoint& eventPoint)
 {
 	return writeHistoryEventsOfType(
-		eventTypeName,
+		eventTypeNodeId,
 		emittersNodeIds,
 		eventPoint
 	);
@@ -807,18 +807,18 @@ bool QUaHistoryBackend::setEvent(
 }
 
 QDateTime findTimestampEventOfType(
-	const QUaNodeId& emtNodeId,
-	const QUaQualifiedName& evtTypeName,
+	const QUaNodeId& emitterNodeId,
+	const QUaNodeId& eventTypeNodeId,
 	const QDateTime& timestamp,
 	const QUaHistoryBackend::TimeMatch& match/*,
 	QQueue<QUaLog>& logOut*/
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
+	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
 	// NOTE : the database might or might not contain the input timestamp
 	QDateTime time;
-	auto& table = m_eventEmitterDatabase[emtNodeId][evtTypeName];
+	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
 	switch (match)
 	{
 	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
@@ -864,16 +864,16 @@ QDateTime findTimestampEventOfType(
 
 // get the number for data points within a time range for the given node
 quint64 numEventsOfTypeInRange(
-	const QUaNodeId& emtNodeId,
-	const QUaQualifiedName& evtTypeName,
+	const QUaNodeId& emitterNodeId,
+	const QUaNodeId& eventTypeNodeId,
 	const QDateTime& timeStart,
 	const QDateTime& timeEnd/*,
 	QQueue<QUaLog>& logOut*/
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
-	auto& table = m_eventEmitterDatabase[emtNodeId][evtTypeName];
+	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
+	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
 	// the database must contain the start timestamp
 	Q_ASSERT(table.contains(timeStart));
 	// if the end timestamp is valid, then it must be contained in the database
@@ -895,19 +895,19 @@ quint64 numEventsOfTypeInRange(
 
 // TODO : pass pre-allocated vector and user should just populate it
 QVector<QUaHistoryEventPoint> readHistoryEventsOfType(
-	const QUaNodeId& emtNodeId,
-	const QUaQualifiedName& evtTypeName,
+	const QUaNodeId& emitterNodeId,
+	const QUaNodeId& eventTypeNodeId,
 	const QDateTime& timeStart,
 	const quint64& numPointsOffset,
 	const quint64& numPointsToRead/*,
 	QQueue<QUaLog>& logOut*/
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emtNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emtNodeId].contains(evtTypeName));
-	Q_ASSERT(m_eventTypeDatabase.contains(evtTypeName));
-	auto& table  = m_eventEmitterDatabase[emtNodeId][evtTypeName];
-	auto& source = m_eventTypeDatabase[evtTypeName];
+	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
+	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
+	Q_ASSERT(m_eventTypeDatabase.contains(eventTypeNodeId));
+	auto& table  = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
+	auto& source = m_eventTypeDatabase[eventTypeNodeId];
 	Q_ASSERT(table.contains(timeStart));
 	auto points = QVector<QUaHistoryEventPoint>();
 	// get starting point to read
@@ -984,8 +984,8 @@ void QUaHistoryBackend::readEvent(
 	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) 
 	{
 		// check if any events for given emitter
-		QUaNodeId emtNodeId = QUaNodeId(nodesToRead[ithNode].nodeId);
-		if (!m_eventEmitterDatabase.contains(emtNodeId))
+		QUaNodeId emitterNodeId = QUaNodeId(nodesToRead[ithNode].nodeId);
+		if (!m_eventEmitterDatabase.contains(emitterNodeId))
 		{
 			historyData[ithNode]->eventsSize = 0;
 			continue;
@@ -1004,28 +1004,28 @@ void QUaHistoryBackend::readEvent(
 		else
 		{
 			// if no valid continuation point, then compute it
-			QList<QUaQualifiedName> evtTypeNames = m_eventEmitterDatabase[emtNodeId].keys();
-			for (auto evtTypeName : evtTypeNames)
+			QList<QUaNodeId> evtTypeNodeIds = m_eventEmitterDatabase[emitterNodeId].keys();
+			for (auto evtTypeNodeId : evtTypeNodeIds)
 			{
 				QDateTime timeStartExisting = findTimestampEventOfType(
-					emtNodeId,
-					evtTypeName,
+					emitterNodeId,
+					evtTypeNodeId,
 					timeStart,
 					TimeMatch::ClosestFromAbove
 				);
 				QDateTime timeEndExisting = findTimestampEventOfType(
-					emtNodeId,
-					evtTypeName,
+					emitterNodeId,
+					evtTypeNodeId,
 					timeEnd,
 					TimeMatch::ClosestFromBelow
 				);
 				quint64 numEventsToRead = numEventsOfTypeInRange(
-					emtNodeId,
-					evtTypeName,
+					emitterNodeId,
+					evtTypeNodeId,
 					timeStartExisting,
 					timeEndExisting
 				);
-				queryData[evtTypeName] = {
+				queryData[evtTypeNodeId] = {
 					timeStartExisting,
 					numEventsToRead
 				};
@@ -1038,20 +1038,20 @@ void QUaHistoryBackend::readEvent(
 		quint64 totalMissingToRead = 0;
 		quint64 totalToReadInThisCall = 0;
 		quint64 totalAlreadyReadInThisCall = 0;
-		QList<QUaQualifiedName> evtTypeNames = queryData.keys();
-		for (auto& evtTypeName : evtTypeNames)
+		QList<QUaNodeId> evtTypeNodeIds = queryData.keys();
+		for (auto& evtTypeNodeId : evtTypeNodeIds)
 		{
-			totalMissingToRead += queryData[evtTypeName].m_numEventsToRead;
+			totalMissingToRead += queryData[evtTypeNodeId].m_numEventsToRead;
 		}
 		Q_ASSERT(totalMissingToRead >= 0);
 		totalToReadInThisCall = (std::min)(maxPerEmitter, totalMissingToRead);
 		// alloc output in qt format
 		QVector<QUaHistoryEventPoint> allEvents;
 		allEvents.resize(totalToReadInThisCall);
-		for (auto &evtTypeName : evtTypeNames)
+		for (auto &evtTypeNodeId : evtTypeNodeIds)
 		{
 			quint64 totalToReadForThisType =
-				queryData[evtTypeName].m_numEventsToRead;
+				queryData[evtTypeNodeId].m_numEventsToRead;
 			Q_ASSERT(totalToReadForThisType >= 0);
 			if (totalToReadForThisType == 0)
 			{
@@ -1067,19 +1067,19 @@ void QUaHistoryBackend::readEvent(
 			// (Using SQLite ROW_NUMBER() for pagination)
 			// https://www.sqlitetutorial.net/sqlite-limit/
 			auto eventsOfType = readHistoryEventsOfType(
-				emtNodeId,
-				evtTypeName,
-				queryData[evtTypeName].m_timeStartExisting,
-				queryData[evtTypeName].m_numEventsAlreadyRead, // offset
+				emitterNodeId,
+				evtTypeNodeId,
+				queryData[evtTypeNodeId].m_timeStartExisting,
+				queryData[evtTypeNodeId].m_numEventsAlreadyRead, // offset
 				totalToReadForThisType
 			);
 			Q_ASSERT_X(eventsOfType.size() == totalToReadForThisType, "TODO", "Create an error log");
 			// update continuation
-			queryData[evtTypeName].m_numEventsToRead      -= totalToReadForThisType;
-			queryData[evtTypeName].m_numEventsAlreadyRead += totalToReadForThisType;
-			if (queryData[evtTypeName].m_numEventsToRead == 0)
+			queryData[evtTypeNodeId].m_numEventsToRead      -= totalToReadForThisType;
+			queryData[evtTypeNodeId].m_numEventsAlreadyRead += totalToReadForThisType;
+			if (queryData[evtTypeNodeId].m_numEventsToRead == 0)
 			{
-				queryData.remove(evtTypeName);
+				queryData.remove(evtTypeNodeId);
 			}
 			Q_ASSERT(eventsOfType.size() == totalToReadForThisType);
 			std::copy(eventsOfType.begin(), eventsOfType.end(), allEvents.begin() + totalAlreadyReadInThisCall);

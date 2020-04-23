@@ -109,7 +109,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	{
 		return;
 	}
-	m_sourceNode = QUaNode::getNodeContext(m_sourceNodeId, m_qUaServer);
+	m_sourceNode = QUaNode::getNodeContext(m_sourceNodeId, m_qUaServer->m_server);
 	if (m_sourceNode)
 	{
 		// add reference

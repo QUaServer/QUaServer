@@ -136,18 +136,17 @@ QUaNode::QUaNode(
 		return; 
 	}
 	// get all UA children in advance, because if none, then better early exit
-	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(nodeId, server);
+	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(nodeId, server->m_server);
 	if (chidrenNodeIds.count() <= 0)
 	{ 
 		return; 
 	}
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
 	QHash<QUaQualifiedName, UA_NodeId> mapChildren;
-	for (int i = 0; i < chidrenNodeIds.count(); i++)
+	for (auto &childNodeId : chidrenNodeIds)
 	{
-		auto childNodeId = chidrenNodeIds[i];
 		// read browse name
-		QUaQualifiedName browseName = QUaNode::getBrowseName(childNodeId, server);
+		QUaQualifiedName browseName = QUaNode::getBrowseName(childNodeId, server->m_server);
 		Q_ASSERT(!mapChildren.contains( browseName));
 		mapChildren[browseName] = childNodeId;
 	}
@@ -182,7 +181,7 @@ QUaNode::QUaNode(
 		// get child nodeId for child
 		auto childNodeId = mapChildren.take(browseName);
 		// get node context (C++ instance)
-		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server->m_server);
 		Q_CHECK_PTR(nodeInstance);
 		// assign C++ parent
 		nodeInstance->setParent(this);
@@ -192,15 +191,16 @@ QUaNode::QUaNode(
 		//        so in the end we have to query children by object name
 	} // for each prop
 	// handle mandatory children of instance declarations
-	Q_ASSERT(m_qUaServer->m_hashMandatoryChildren.contains(strClassName));
-	const auto &mandatoryList = m_qUaServer->m_hashMandatoryChildren[strClassName];
+	QUaNodeId typeNodeId = this->typeDefinitionNodeId();
+	Q_ASSERT(m_qUaServer->m_hashMandatoryChildren.contains(typeNodeId));
+	const auto &mandatoryList = m_qUaServer->m_hashMandatoryChildren[typeNodeId];
 	for (const auto browseName : mandatoryList)
 	{
 		Q_ASSERT(mapChildren.contains(browseName));
 		// get child nodeId for child
 		auto childNodeId = mapChildren.take(browseName);
 		// get node context (C++ instance)
-		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server);
+		auto nodeInstance = QUaNode::getNodeContext(childNodeId, server->m_server);
 		Q_CHECK_PTR(nodeInstance);
 		// assign C++ parent
 		nodeInstance->setParent(this);
@@ -209,9 +209,9 @@ QUaNode::QUaNode(
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
 	// cleanup
-	for (int i = 0; i < chidrenNodeIds.count(); i++)
+	for (auto childNodeId : chidrenNodeIds)
 	{
-		UA_NodeId_clear(&chidrenNodeIds[i]);
+		UA_NodeId_clear(&childNodeId);
 	}
 }
 
@@ -267,10 +267,6 @@ QUaLocalizedText QUaNode::displayName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QString();
-	}
 	// read display name
 	UA_LocalizedText outDisplayName;
 	auto st = UA_Server_readDisplayName(m_qUaServer->m_server, m_nodeId, &outDisplayName);
@@ -302,10 +298,6 @@ QUaLocalizedText QUaNode::description() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QUaLocalizedText();
-	}
 	// read description
 	UA_LocalizedText outDescription;
 	auto st = UA_Server_readDescription(m_qUaServer->m_server, m_nodeId, &outDescription);
@@ -335,10 +327,6 @@ quint32 QUaNode::writeMask() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return quint32();
-	}
 	// read writeMask
 	UA_UInt32 outWriteMask;
 	auto st = UA_Server_readWriteMask(m_qUaServer->m_server, m_nodeId, &outWriteMask);
@@ -364,10 +352,6 @@ QUaNodeId QUaNode::nodeId() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QUaNodeId();
-	}
 	return m_nodeId;
 }
 
@@ -375,10 +359,6 @@ QString QUaNode::nodeClass() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QString();
-	}
 	// read nodeClass
 	UA_NodeClass outNodeClass;
 	auto st = UA_Server_readNodeClass(m_qUaServer->m_server, m_nodeId, &outNodeClass);
@@ -392,10 +372,6 @@ QUaQualifiedName QUaNode::browseName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QString();
-	}
 	// check cache
 	if (!m_browseName.isEmpty())
 	{
@@ -449,10 +425,6 @@ QUaNodeId QUaNode::typeDefinitionNodeId() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QUaNodeId();
-	}
 	if (!m_typeDefinitionNodeId.isNull())
 	{
 		return m_typeDefinitionNodeId;
@@ -507,7 +479,7 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	UA_NodeId_copy(&typeNodeId, &bDesc->nodeId); // from child
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
-	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
 	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
@@ -532,10 +504,6 @@ QString QUaNode::typeDefinitionDisplayName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QString();
-	}
 	UA_NodeId typeId = this->typeDefinitionNodeId();
 	Q_ASSERT(!UA_NodeId_isNull(&typeId));
 	if (UA_NodeId_isNull(&typeId))
@@ -561,10 +529,6 @@ QUaQualifiedName QUaNode::typeDefinitionBrowseName() const
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
-	if (UA_NodeId_isNull(&m_nodeId))
-	{
-		return QUaQualifiedName();
-	}
 	QUaNodeId typeId = this->typeDefinitionNodeId();
 	Q_ASSERT(!typeId.isNull());
 	if (typeId.isNull())
@@ -806,7 +770,7 @@ QList<QUaNode*> QUaNode::findReferences(const QUaReferenceType& ref, const bool&
 	while (i.hasNext())
 	{
 		UA_NodeId nodeId = i.next();
-		QUaNode* node = QUaNode::getNodeContext(nodeId, m_qUaServer);
+		QUaNode* node = QUaNode::getNodeContext(nodeId, m_qUaServer->m_server);
 		if (node)
 		{
 			Q_ASSERT(UA_NodeId_equal(&nodeId, &node->m_nodeId));
@@ -999,7 +963,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
 		   !UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
-		QList<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
+		QSet<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
 		for (auto childNodeId : childrenNodeIds)
 		{
 			// ignore if not optional
@@ -1203,7 +1167,7 @@ QUaNode* QUaNode::cloneNode(
 		return nullptr;
 	}
 	// get new c++ instance
-	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, m_qUaServer);
+	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, m_qUaServer->m_server);
 	QUaNode* newInstance = qobject_cast<QUaNode*>(tmp);
 	Q_CHECK_PTR(newInstance);
 	UA_NodeId_clear(&newInstanceNodeId);
@@ -1265,17 +1229,17 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 		if (methodName == methBrowseName)
 		{
 			// cleanup
-			for (int i = 0; i < methodsNodeIds.count(); i++)
+			for (auto methodNodeId : methodsNodeIds)
 			{
-				UA_NodeId_clear(&methodsNodeIds[i]);
+				UA_NodeId_clear(&methodNodeId);
 			}
 			return true;
 		}
 	}
 	// cleanup
-	for (int i = 0; i < methodsNodeIds.count(); i++)
+	for (auto methodNodeId : methodsNodeIds)
 	{
-		UA_NodeId_clear(&methodsNodeIds[i]);
+		UA_NodeId_clear(&methodNodeId);
 	}
 	return false;
 }
@@ -1380,9 +1344,9 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 	if (UA_NodeId_isNull(&methodNodeId))
 	{
 		// cleanup
-		for (int i = 0; i < methodsNodeIds.count(); i++)
+		for (auto methodNodeId : methodsNodeIds)
 		{
-			UA_NodeId_clear(&methodsNodeIds[i]);
+			UA_NodeId_clear(&methodNodeId);
 		}
 		UA_NodeId_clear(&typeNodeId);
 		return false;
@@ -1397,9 +1361,9 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 		true
 	);
 	// cleanup
-	for (int i = 0; i < methodsNodeIds.count(); i++)
+	for (auto methodNodeId : methodsNodeIds)
 	{
-		UA_NodeId_clear(&methodsNodeIds[i]);
+		UA_NodeId_clear(&methodNodeId);
 	}
 	UA_NodeId_clear(&typeNodeId);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -1602,12 +1566,6 @@ QString QUaNode::className() const
 }
 
 // NOTE : need to cleanup result after calling this method
-UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, QUaServer * server)
-{
-	return QUaNode::getParentNodeId(childNodeId, server->m_server);
-}
-
-// NOTE : need to cleanup result after calling this method
 UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
@@ -1652,20 +1610,21 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 }
 
 // NOTE : need to cleanup result after calling this method
-QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, QUaServer * server)
+QSet<UA_NodeId> QUaNode::getChildrenNodeIds(
+	const UA_NodeId & parentNodeId, 
+	UA_Server * server,
+	const UA_UInt32& nodeClassMask, /* = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE*/
+	const UA_NodeId& referenceTypeId /*= UA_NODEID_NULL*/
+	// NOTE : by default browse only objects or variables (no types or refs)
+)
 {
-	return QUaNode::getChildrenNodeIds(parentNodeId, server->m_server);
-}
-
-// NOTE : need to cleanup result after calling this method
-QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_Server * server)
-{
-	QList<UA_NodeId> retListChildren;
+	QSet<UA_NodeId> retListChildren;
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
+	bDesc->referenceTypeId = referenceTypeId;
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
-	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
+	bDesc->nodeClassMask   = nodeClassMask; 
 	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // only need node ids
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
@@ -1675,16 +1634,22 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
-			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
-			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 			// ignore modelling rules
-            auto nodeIdMandatory = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY);
-            if (UA_NodeId_equal(&nodeId, &nodeIdMandatory))
+            if (UA_NodeId_equal(
+					&rDesc.nodeId.nodeId, 
+					&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)
+				) ||
+				UA_NodeId_equal(
+					&rDesc.nodeId.nodeId,
+					&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL)
+				))
 			{
-				UA_NodeId_clear(&nodeId);
 				continue;
 			}
-			retListChildren.append(nodeId);
+			UA_NodeId nodeId;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
+			Q_ASSERT(!retListChildren.contains(nodeId));
+			retListChildren << nodeId;
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
@@ -1698,15 +1663,9 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(const UA_NodeId & parentNodeId, UA_
 }
 
 // NOTE : need to cleanup result after calling this method
-QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, QUaServer* server)
+QSet<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server)
 {
-	return QUaNode::getMethodsNodeIds(parentNodeId, server->m_server);
-}
-
-// NOTE : need to cleanup result after calling this method
-QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server)
-{
-	QList<UA_NodeId> retListMethods;
+	QSet<UA_NodeId> retListMethods;
 	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
@@ -1723,7 +1682,8 @@ QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Se
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
 			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
-			retListMethods.append(nodeId);
+			Q_ASSERT(!retListMethods.contains(nodeId));
+			retListMethods << nodeId;
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
@@ -1736,9 +1696,48 @@ QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Se
 	return retListMethods;
 }
 
-QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, QUaServer * server)
+QSet<QUaQualifiedName> QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
+	const QUaNodeId& typeNodeId, 
+	UA_Server* server)
 {
-	return QUaNode::getNodeContext(nodeId, server->m_server);
+	QSet<QUaQualifiedName> retNames;
+	UA_NodeId typeUaNodeId = typeNodeId;
+	// look for children starting from this type of to base object type
+	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
+		   !UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
+	{
+		// NOTE : only variable children that have a modelling rule
+		QSet<UA_NodeId> childrenNodeIds = QUaNode::getChildrenNodeIds(
+			typeUaNodeId, 
+			server,
+			UA_NODECLASS_VARIABLE
+		);
+		for (auto childNodeId : childrenNodeIds)
+		{
+			UA_NodeId modellingRule = QUaNode::getModellingRule(childNodeId, server);
+			if (UA_NodeId_isNull(&modellingRule))
+			{
+				continue;
+			}
+			// ignore if browse name does not match
+			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, server);
+			if (retNames.contains(childBrowseName))
+			{
+				continue;
+			}
+			retNames << childBrowseName;
+		}
+		// cleanup
+		for (auto childNodeId : childrenNodeIds)
+		{
+			UA_NodeId_clear(&childNodeId);
+		}
+		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeUaNodeId, server);
+		UA_NodeId_clear(&typeUaNodeId);
+		UA_NodeId_copy (&typeNodeIdNew, &typeUaNodeId);
+		UA_NodeId_clear(&typeNodeIdNew);
+	}
+	return retNames;
 }
 
 QUaNode * QUaNode::getNodeContext(const UA_NodeId & nodeId, UA_Server * server)
@@ -1761,11 +1760,6 @@ void * QUaNode::getVoidContext(const UA_NodeId & nodeId, UA_Server * server)
 	return context;
 }
 
-QUaQualifiedName QUaNode::getBrowseName(const UA_NodeId & nodeId, QUaServer * server)
-{
-	return QUaNode::getBrowseName(nodeId, server->m_server);
-}
-
 QUaQualifiedName QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * server)
 {
 	// read browse name
@@ -1778,12 +1772,7 @@ QUaQualifiedName QUaNode::getBrowseName(const UA_NodeId & nodeId, UA_Server * se
 	return  browseName;
 }
 
-bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server)
-{
-	return QUaNode::hasMandatoryModellingRule(nodeId, server->m_server);
-}
-
-bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server)
+UA_NodeId QUaNode::getModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
@@ -1795,59 +1784,32 @@ bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* serv
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
 	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
-	bool isMandatory = false;
+	UA_NodeId modellingRule = UA_NODEID_NULL;
 	if (bRes.referencesSize > 0)
 	{
 		Q_ASSERT(bRes.referencesSize == 1);
 		// check if modelling rule is mandatory
 		UA_ReferenceDescription rDesc = bRes.references[0];
-		isMandatory = UA_NodeId_equal(
-			&rDesc.nodeId.nodeId, 
-			&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)
-		);		
+		modellingRule = rDesc.nodeId.nodeId;		
 	}
 	// cleanup
 	UA_BrowseDescription_deleteMembers(bDesc);
 	UA_BrowseDescription_delete(bDesc);
 	UA_BrowseResult_deleteMembers(&bRes);
 	// return
-	return isMandatory;
+	return modellingRule;
 }
 
-bool QUaNode::hasOptionalModellingRule(const UA_NodeId& nodeId, QUaServer* server)
+bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
-	return QUaNode::hasOptionalModellingRule(nodeId, server->m_server);
+	UA_NodeId modellingRule = QUaNode::getModellingRule(nodeId, server);
+	return UA_NodeId_equal(&modellingRule, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY));
 }
 
 bool QUaNode::hasOptionalModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
-	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
-	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
-	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE);
-	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
-	bDesc->includeSubtypes = false;
-	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT; // in specific UA_NS0ID_MODELLINGRULE_OPTIONAL 80 /* Object */
-	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // no info needed, only existance
-	// browse
-	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
-	bool isMandatory = false;
-	if (bRes.referencesSize > 0)
-	{
-		Q_ASSERT(bRes.referencesSize == 1);
-		// check if modelling rule is mandatory
-		UA_ReferenceDescription rDesc = bRes.references[0];
-		isMandatory = UA_NodeId_equal(
-			&rDesc.nodeId.nodeId,
-			&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL)
-		);
-	}
-	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
-	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
-	// return
-	return isMandatory;
+	UA_NodeId modellingRule = QUaNode::getModellingRule(nodeId, server);
+	return UA_NodeId_equal(&modellingRule, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL));
 }
 
 int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)

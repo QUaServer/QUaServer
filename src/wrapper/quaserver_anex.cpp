@@ -442,12 +442,22 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         auto node  = QUaNode::getNodeContext(eventNodeId, server);
         auto event = qobject_cast<QUaBaseEvent*>(node);
         Q_ASSERT(event);
+        // get event type node id
+        QUaNodeId eventTypeNodeId = event->typeDefinitionNodeId();
+        auto srv = QUaServer::getServerNodeContext(server);
+        Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
         // populate history point
         QUaHistoryEventPoint eventPoint;
-        for (auto var : event->browseChildren<QUaBaseVariable>())
+        for (auto &fieldName : srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId])
         {
-            QUaQualifiedName component   = var->browseName();
-            eventPoint.fields[component] = var->value();
+            auto var = event->browseChild<QUaBaseVariable>(fieldName);
+            if (!var)
+            {
+                // NOTE : we need the empty column
+                eventPoint.fields[fieldName] = QVariant();
+                continue;
+            }
+            eventPoint.fields[fieldName] = var->value();
         }
         Q_ASSERT(!eventPoint.fields.contains("EventNodeId"));
         Q_ASSERT(!eventPoint.fields.contains("OriginNodeId"));
@@ -458,7 +468,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         eventPoint.timestamp = event->time();
         // store
         bool ok = QUaHistoryBackend::setEvent(
-            event->typeDefinitionBrowseName(),
+            eventTypeNodeId,
             emittersNodeIds,
             eventPoint
         );

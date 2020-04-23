@@ -22,6 +22,7 @@ struct QUaHistoryDataPoint
 struct QUaHistoryEventPoint
 {
 	QDateTime timestamp;
+	// TODO : check if can change to QHash (if can insert in SQL in arbitrary order)
 	QMap<QUaQualifiedName, QVariant> fields;
 };
 
@@ -127,18 +128,8 @@ private:
 
 	// event history support
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    //static void setEvent(
-    //    UA_Server*            server,
-    //    void*                 hdbContext,
-    //    const UA_NodeId*      originId,
-    //    const UA_NodeId*      emitterId,
-    //    const UA_NodeId*      eventId,
-    //    UA_Boolean            willEventNodeBeDeleted,
-    //    const UA_EventFilter* historicalEventFilter,
-    //    UA_EventFieldList*    fieldList
-    //);
 	static bool QUaHistoryBackend::setEvent(
-		const QUaQualifiedName&     eventTypeName,
+		const QUaNodeId&            eventTypeNodeId,
 		const QVector<QUaNodeId>&   emittersNodeIds,
 		const QUaHistoryEventPoint& eventPoint
 	);

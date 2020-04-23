@@ -193,7 +193,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 			UA_NodeId_clear(&topBoundParentNodeId);
 			return UA_STATUSCODE_GOOD;
 		}
-		parentContext = QUaNode::getNodeContext(topBoundParentNodeId, server);
+		parentContext = QUaNode::getNodeContext(topBoundParentNodeId, server->m_server);
 		// check if parent node is bound
 		if (parentContext)
 		{
@@ -236,7 +236,7 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	if (parentContext && UA_NodeId_equal(&topBoundParentNodeId, &directParentNodeId))
 	{
 		newInstance->setParent(parentContext);
-		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server));
+		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server->m_server));
 		// emit child added to parent
 		emit parentContext->childAdded(newInstance);
 	}
@@ -1896,19 +1896,25 @@ void QUaServer::registerTypeLifeCycle(const UA_NodeId& typeNodeId, const QMetaOb
 void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObject& metaObject)
 {
 	// cache mandatory children if not done before
-	QString strClassName = QString(metaObject.className());
-	if (m_hashMandatoryChildren.contains(strClassName))
+	Q_ASSERT(!m_hashMandatoryChildren.contains(typeNodeId));
+	if (m_hashMandatoryChildren.contains(typeNodeId))
 	{
 		return;
 	}
-	// copy mandatory from parent type
-	QString strParentClassName = QString(metaObject.superClass()->className());
+	// copy mandatory from parent type, unless base type
+	if (UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)) ||
+		UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)))
+	{
+		m_hashMandatoryChildren[typeNodeId] = QSet<QUaQualifiedName>();
+		return;
+	}
+	QUaNodeId superTypeNodeId = QUaNode::superTypeDefinitionNodeId(typeNodeId, this->m_server);
 	Q_ASSERT_X(
-		m_hashMandatoryChildren.contains(strParentClassName) ||
+		m_hashMandatoryChildren.contains(superTypeNodeId) ||
 		metaObject.superClass() == &QUaNode::staticMetaObject,
-		"QUaServer::registerTypeDefaults", "Parent must already be registered.");
-	m_hashMandatoryChildren[strClassName] =
-		m_hashMandatoryChildren.value(strParentClassName, QList<QUaQualifiedName>());
+		"QUaServer::registerTypeDefaults", "Parent type must already be registered.");
+	m_hashMandatoryChildren[typeNodeId] =
+		m_hashMandatoryChildren.value(superTypeNodeId, QSet<QUaQualifiedName>());
 	// get mandatory children browse names
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
 	for (auto childNodeId : chidrenNodeIds)
@@ -1920,17 +1926,12 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		}
 		// sometimes children repeat parent's mandatory, no need to add twice
 		QUaQualifiedName mandatoryBrowseName = QUaNode::getBrowseName(childNodeId, m_server);
-		if (m_hashMandatoryChildren[strClassName].contains(mandatoryBrowseName))
+		if (m_hashMandatoryChildren[typeNodeId].contains(mandatoryBrowseName))
 		{
 			continue;
 		}
-		m_hashMandatoryChildren[strClassName]
+		m_hashMandatoryChildren[typeNodeId]
 			<< mandatoryBrowseName;
-	}
-	// cleanup for mandatory children
-	for (int i = 0; i < chidrenNodeIds.count(); i++)
-	{
-		UA_NodeId_clear(&chidrenNodeIds[i]);
 	}
 	// get qt type methods by name
 	// loop meta methods and find out which ones inherit from
@@ -1952,6 +1953,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 			"Qt type does not implement method. Qt types must implement both mandatory and optional.");
 		if (!hashQtMethods.contains(methBrowseName))
 		{
+			QString strClassName = QString(metaObject.className());
 			qDebug() << "Error Registering" << methBrowseName << "for" << strClassName;
 			continue;
 		}
@@ -1962,10 +1964,22 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		QUaServer::bindMethod(this, &methodNodeId, methIdx);
 	}
 	// cleanup for all ua methods
-	for (int i = 0; i < methodsNodeIds.count(); i++)
+	for (auto methNodeId : methodsNodeIds)
 	{
-		UA_NodeId_clear(&methodsNodeIds[i]);
+		UA_NodeId_clear(&methNodeId);
 	}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// needed to store historic events in a consistent way
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		Q_ASSERT(!m_hashTypeAggregatedVariableChildren.contains(typeNodeId));
+		m_hashTypeAggregatedVariableChildren[typeNodeId] =
+			QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
+				typeNodeId, 
+				this->m_server
+			);
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 void QUaServer::registerMetaEnums(const QMetaObject& metaObject)
@@ -2453,7 +2467,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 	if (parentNode && metaObject.inherits(&QUaCondition::staticMetaObject))
 	{
 		// add HasCondition reference
-		auto node = QUaNode::getNodeContext(nodeIdNewInstance, this);
+		auto node = QUaNode::getNodeContext(nodeIdNewInstance, this->m_server);
 		auto condition = qobject_cast<QUaCondition*>(node);
 		Q_CHECK_PTR(condition);
 		// set default originator

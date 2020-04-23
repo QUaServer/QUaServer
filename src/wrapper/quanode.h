@@ -170,8 +170,8 @@ public:
 	// Browse API
 	// (* actually browses using QObject tree)
 
-	QUaNodeId typeDefinitionNodeId() const;
-	QString   typeDefinitionDisplayName() const;
+	QUaNodeId        typeDefinitionNodeId() const;
+	QString          typeDefinitionDisplayName() const;
 	QUaQualifiedName typeDefinitionBrowseName() const;
 
 	// if browseName empty, get all children
@@ -322,27 +322,31 @@ private:
 	// Static Helpers
 
 	// NOTE : need to cleanup result after calling this method
-	static UA_NodeId getParentNodeId(const UA_NodeId& childNodeId, QUaServer* server);
 	static UA_NodeId getParentNodeId(const UA_NodeId& childNodeId, UA_Server* server);
 	// NOTE : need to cleanup result after calling this method
-	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId& parentNodeId, QUaServer* server);
-	static QList<UA_NodeId> getChildrenNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
+	static QSet<UA_NodeId> getChildrenNodeIds(
+		const UA_NodeId& parentNodeId, 
+		UA_Server* server,
+		const UA_UInt32 &nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE,
+		const UA_NodeId &referenceTypeId = UA_NODEID_NULL
+	);
 	// NOTE : need to cleanup result after calling this method
-	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, QUaServer* server);
-	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
+	static QSet<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
 
-	static QUaNode* getNodeContext(const UA_NodeId& nodeId, QUaServer* server);
+	// NOTE : needed to store historic events in a consistent way, ignoring manually added children
+	static QSet<QUaQualifiedName> getTypeAggregatedVariableChildrenBrowseNames(
+		const QUaNodeId& typeNodeId,
+		UA_Server* server
+	);
+
 	static QUaNode* getNodeContext(const UA_NodeId& nodeId, UA_Server* server);
 	static void*    getVoidContext(const UA_NodeId& nodeId, UA_Server* server);
 
-	static QUaQualifiedName getBrowseName(const UA_NodeId& nodeId, QUaServer* server);
 	static QUaQualifiedName getBrowseName(const UA_NodeId& nodeId, UA_Server* server);
 
-	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, QUaServer* server);
+	static UA_NodeId getModellingRule    (const UA_NodeId& nodeId, UA_Server* server);
 	static bool hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server);
-
-	static bool hasOptionalModellingRule(const UA_NodeId& nodeId, QUaServer* server);
-	static bool hasOptionalModellingRule(const UA_NodeId& nodeId, UA_Server* server);
+	static bool hasOptionalModellingRule (const UA_NodeId& nodeId, UA_Server* server);
 
 	static int getPropsOffsetHelper(const QMetaObject& metaObject);
 	// NOTE : need to cleanup result after calling this method
