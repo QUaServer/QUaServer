@@ -188,6 +188,15 @@ public:
 	template<typename T>
 	T* createEvent();
 
+#ifdef UA_ENABLE_HISTORIZING
+    bool eventHistoryRead() const;
+    void setEventHistoryRead(const bool& eventHistoryRead);
+
+    // not supported
+    //bool eventHistoryWrite() const;
+    //void setEventHistoryWrite(const bool& eventHistoryWrite);
+#endif // UA_ENABLE_HISTORIZING
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 	// Access Control API
@@ -327,6 +336,8 @@ private:
     UA_HistoryDatabase m_historDatabase;
     QUaHistoryBackend  m_historBackend;
     UA_HistoryDataGathering getGathering() const;
+    quint8 eventNotifier() const;
+    void   setEventNotifier(const quint8& eventNotifier);
 #endif // UA_ENABLE_HISTORIZING
 
 	// reset open62541 config

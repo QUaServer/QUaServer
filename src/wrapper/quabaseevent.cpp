@@ -67,7 +67,7 @@ void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
     if (obj)
     {
         // source node must be an event notifier
-        obj->setEventNotifier(true);
+        obj->setSubscribeToEvents(true);
         // there is supposed to be a (non-looping) event generation hierarchy
         // TODO : implement event hierarchy according to Part 3 - 7.x
         // for now all source nodes are directly event sources of server object directly

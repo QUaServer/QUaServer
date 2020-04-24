@@ -192,7 +192,7 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 				.arg(nodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
 		return 0;
 	}
 	auto& table = m_database[nodeId];
@@ -233,8 +233,8 @@ QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
 	points.resize(numPointsToRead);
 	// copy return data points
 	std::generate(points.begin(), points.end(),
-		[&iterIni, &table]() {
-			QUaHistoryDataPoint retVal;
+	[&iterIni, &table]() {
+		QUaHistoryDataPoint retVal;
 		if (iterIni == table.end())
 		{
 			// NOTE : return an invalid value if API requests more values than available
@@ -255,7 +255,7 @@ QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
 
 bool QUaInMemoryHistorizer::writeHistoryEventsOfType(
 	const QUaNodeId            &eventTypeNodeId,
-	const QVector<QUaNodeId>   &emittersNodeIds,
+	const QList<QUaNodeId>     &emittersNodeIds,
 	const QUaHistoryEventPoint &eventPoint,
 	QQueue<QUaLog>             &logOut
 )
@@ -263,10 +263,29 @@ bool QUaInMemoryHistorizer::writeHistoryEventsOfType(
 	// get a unique integer id (key) for the event
 	// timestamp cannot be used because there can be multiple
 	// events for the same timestamp
-	Q_ASSERT(eventPoint.fields.contains("EventId"));
+	Q_ASSERT(emittersNodeIds.count() > 0);
+	if (!eventPoint.fields.contains("EventId"))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not find mandatory (unique) EventId field in event %1.")
+				.arg(eventTypeNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return false;
+	}
 	QByteArray byteEventId = eventPoint.fields["EventId"].value<QByteArray>();
 	uint intEventKey = qHash(byteEventId);
-	Q_ASSERT(!m_eventTypeDatabase[eventTypeNodeId].contains(intEventKey));
+	if (m_eventTypeDatabase[eventTypeNodeId].contains(intEventKey))
+	{
+		logOut << QUaLog({
+			QObject::tr("Repeated (unique) EventId field hash for event %1. Ignoring event.")
+				.arg(eventTypeNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return false;
+	}
 	// insert in event type table
 	m_eventTypeDatabase[eventTypeNodeId][intEventKey] = eventPoint;
 	// create reference from each emitter's table
@@ -288,6 +307,15 @@ QVector<QUaNodeId> QUaInMemoryHistorizer::eventTypesOfEmitter(
 	QQueue<QUaLog>  &logOut
 )
 {
+	if (!m_eventEmitterDatabase.contains(emitterNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No event types stored for emitter %1.")
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+	}
 	return m_eventEmitterDatabase[emitterNodeId].keys().toVector();
 }
 
@@ -299,8 +327,27 @@ QDateTime QUaInMemoryHistorizer::findTimestampEventOfType(
 	QQueue<QUaLog>                     &logOut
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
+	if (!m_eventEmitterDatabase.contains(emitterNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No event types stored for emitter %1.")
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return QDateTime();
+	}
+	if (!m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return QDateTime();
+	}
 	// NOTE : the database might or might not contain the input timestamp
 	QDateTime time;
 	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
@@ -354,14 +401,55 @@ quint64 QUaInMemoryHistorizer::numEventsOfTypeInRange(
 	QQueue<QUaLog>  &logOut
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
+	if (!m_eventEmitterDatabase.contains(emitterNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No event types stored for emitter %1.")
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return 0;
+	}
+	if (!m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return 0;
+	}
 	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
 	// the database must contain the start timestamp
-	Q_ASSERT(table.contains(timeStart));
+	if (!table.contains(timeStart))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2 with start timestamp %3.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId)
+				.arg(timeStart.toString()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return 0;
+	}
 	// if the end timestamp is valid, then it must be contained in the database
 	// else it means the API is requesting up to the most recent timestamp (end)
-	Q_ASSERT(table.contains(timeEnd) || !timeEnd.isValid());
+	if (!table.contains(timeEnd) && timeEnd.isValid())
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2 with end timestamp %3.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId)
+				.arg(timeEnd.toString()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return 0;
+	}
 	auto iterStart = table.find(timeStart);
 	quint64 distance = static_cast<quint64>(std::distance(
 		iterStart,
@@ -385,33 +473,72 @@ QVector<QUaHistoryEventPoint> QUaInMemoryHistorizer::readHistoryEventsOfType(
 	QQueue<QUaLog>  &logOut
 )
 {
-	Q_ASSERT(m_eventEmitterDatabase.contains(emitterNodeId));
-	Q_ASSERT(m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId));
-	Q_ASSERT(m_eventTypeDatabase.contains(eventTypeNodeId));
-	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
-	auto& source = m_eventTypeDatabase[eventTypeNodeId];
-	Q_ASSERT(table.contains(timeStart));
 	auto points = QVector<QUaHistoryEventPoint>();
+	if (!m_eventEmitterDatabase.contains(emitterNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No event types stored for emitter %1.")
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return points;
+	}
+	if (!m_eventEmitterDatabase[emitterNodeId].contains(eventTypeNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return points;
+	}
+	if (!m_eventTypeDatabase.contains(eventTypeNodeId))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1.")
+				.arg(eventTypeNodeId),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return points;
+	}
+	auto& table  = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
+	auto& source = m_eventTypeDatabase[eventTypeNodeId];
+	if (!table.contains(timeStart))
+	{
+		logOut << QUaLog({
+			QObject::tr("No events of type %1 stored for emitter %2 with start timestamp %3.")
+				.arg(eventTypeNodeId)
+				.arg(emitterNodeId)
+				.arg(timeStart.toString()),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
+		return points;
+	}
 	// get starting point to read
 	auto iterIni = table.find(timeStart) + numPointsOffset;
 	// resize return value accordingly
 	points.resize(numPointsToRead);
 	// copy return data points
 	std::generate(points.begin(), points.end(),
-		[&iterIni, &table, &source]()
+	[&iterIni, &table, &source]()
+	{
+		QUaHistoryEventPoint retVal;
+		if (iterIni == table.end())
 		{
-			QUaHistoryEventPoint retVal;
-			if (iterIni == table.end())
-			{
-				// NOTE : return an invalid value if API requests more values than available
-				return retVal;
-			}
-			uint& intEventKey = iterIni.value();
-			Q_ASSERT(source.contains(intEventKey));
-			retVal = source[intEventKey];
-			iterIni++;
+			// NOTE : return an invalid value if API requests more values than available
 			return retVal;
-		});
+		}
+		uint& intEventKey = iterIni.value();
+		Q_ASSERT(source.contains(intEventKey));
+		retVal = source[intEventKey];
+		iterIni++;
+		return retVal;
+	});
 	return points;
 }
 

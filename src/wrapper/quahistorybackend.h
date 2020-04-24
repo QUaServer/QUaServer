@@ -108,7 +108,7 @@ public:
 	// write a event's data to backend
 	bool writeHistoryEventsOfType(
 		const QUaNodeId            &eventTypeNodeId,
-		const QVector<QUaNodeId>   &emittersNodeIds,
+		const QList<QUaNodeId>     &emittersNodeIds,
 		const QUaHistoryEventPoint &eventPoint,
 		QQueue<QUaLog>             &logOut
 	);
@@ -172,7 +172,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	std::function<bool(
 		const QUaNodeId            &,
-		const QVector<QUaNodeId>   &,
+		const QList<QUaNodeId>     &,
 		const QUaHistoryEventPoint &,
 		QQueue<QUaLog>             &
 	)> m_writeHistoryEventsOfType;
@@ -206,7 +206,7 @@ private:
 	static bool QUaHistoryBackend::setEvent(
 		QUaServer*                  server,
 		const QUaNodeId&            eventTypeNodeId,
-		const QVector<QUaNodeId>&   emittersNodeIds,
+		const QList<QUaNodeId>&     emittersNodeIds,
 		const QUaHistoryEventPoint& eventPoint
 	);
     static void readEvent(
@@ -348,7 +348,7 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 	// writeHistoryEventsOfType
 	m_writeHistoryEventsOfType = [&historizer](
 		const QUaNodeId            &eventTypeNodeId,
-		const QVector<QUaNodeId>   &emittersNodeIds,
+		const QList<QUaNodeId>     &emittersNodeIds,
 		const QUaHistoryEventPoint &eventPoint,
 		QQueue<QUaLog>             &logOut
 	) -> bool{

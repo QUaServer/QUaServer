@@ -1001,6 +1001,21 @@ UA_HistoryDataGathering QUaServer::getGathering() const
 {
 	return static_cast<UA_HistoryDatabaseContext_default*>(m_historDatabase.context)->gathering;
 }
+quint8 QUaServer::eventNotifier() const
+{
+	UA_Byte outByte;
+	auto st = UA_Server_readEventNotifier(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), &outByte);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	return outByte;
+}
+void QUaServer::setEventNotifier(const quint8& eventNotifier)
+{
+	auto st = UA_Server_writeEventNotifier(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), eventNotifier);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// TODO : emit signal?	
+}
 #endif // UA_ENABLE_HISTORIZING
 
 void QUaServer::resetConfig()
@@ -2887,6 +2902,27 @@ QUaNode * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const
 	// if not, then not supported
 	return nullptr;
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#ifdef UA_ENABLE_HISTORIZING
+
+bool QUaServer::eventHistoryRead() const
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	return eventNotifier.bits.bHistoryRead;
+}
+
+void QUaServer::setEventHistoryRead(const bool& eventHistoryRead)
+{
+	QUaEventNotifier eventNotifier;
+	eventNotifier.intValue = this->eventNotifier();
+	eventNotifier.bits.bHistoryRead = eventHistoryRead;
+	this->setEventNotifier(eventNotifier.intValue);
+}
+
+#endif // UA_ENABLE_HISTORIZING
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 bool QUaServer::anonymousLoginAllowed() const
 {

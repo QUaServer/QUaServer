@@ -231,6 +231,7 @@ union QUaAccessLevel
 
 union QUaEventNotifier
 {
+	// https://reference.opcfoundation.org/v104/Core/DataTypes/EventNotifierType/
 	struct bit_map {
 		bool bSubscribeToEvents : 1; // UA_EVENTNOTIFIERTYPE_SUBSCRIBETOEVENTS
 		bool bUnused            : 1; // N/A

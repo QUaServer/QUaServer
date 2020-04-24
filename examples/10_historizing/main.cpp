@@ -35,16 +35,21 @@ int main(int argc, char* argv[])
 
 	// it is also possible to historize events
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// enable event history on server object
+	server.setEventHistoryRead(true);
 	// create event with server as originator
 	auto srvEvt = server.createEvent<MyEvent>();
-	srvEvt->setDisplayName("MyServerEvent");
+	srvEvt->setDisplayName("ServerEvent");
 	srvEvt->setSourceName("Server");
-	// Create event with object as originator
-	auto obj = objsFolder->addBaseObject("MyObject");
+	// create cusotm object to trigger a custom event
+	auto obj = objsFolder->addBaseObject("CustomObject");
+	// enable event history on custom object
 	obj->setSubscribeToEvents(true);
+	obj->setEventHistoryRead(true);
+	// create custom event with custom object as originator
 	auto objEvt = obj->createEvent<MyEvent>();
-	objEvt->setDisplayName("MyObjectEvent");
-	objEvt->setSourceName("MyObject");
+	objEvt->setDisplayName("CustomEvent");
+	objEvt->setSourceName("CustomObject");
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_HISTORIZING

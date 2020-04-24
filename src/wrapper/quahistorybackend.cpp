@@ -449,12 +449,13 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			1 /* read just 1 value */,
 			logOut
 		);
-		QUaHistoryBackend::processServerLog(srv, logOut);
 		// unexpected size considered error
 		if (static_cast<size_t>(points.count()) != 1)
 		{
+			QUaHistoryBackend::processServerLog(srv, logOut);
 			return nullptr;
 		}
+		QUaHistoryBackend::processServerLog(srv, logOut);
 		// TODO : find better way to store the instance of the returned address
 		static auto retVal = QUaHistoryBackend::dataPointToValue(points.begin());
 		return &retVal;
@@ -722,7 +723,7 @@ QUaHistoryBackend::readHistoryData(
 
 bool QUaHistoryBackend::writeHistoryEventsOfType(
 	const QUaNodeId            &eventTypeNodeId,
-	const QVector<QUaNodeId>   &emittersNodeIds,
+	const QList<QUaNodeId>   &emittersNodeIds,
 	const QUaHistoryEventPoint &eventPoint,
 	QQueue<QUaLog>             &logOut
 )
@@ -822,7 +823,7 @@ QVector<QUaHistoryEventPoint> QUaHistoryBackend::readHistoryEventsOfType(
 bool QUaHistoryBackend::setEvent(
 	QUaServer* server,
 	const QUaNodeId& eventTypeNodeId,
-	const QVector<QUaNodeId>& emittersNodeIds,
+	const QList<QUaNodeId>& emittersNodeIds,
 	const QUaHistoryEventPoint& eventPoint)
 {
 	QQueue<QUaLog> logOut;
@@ -832,7 +833,7 @@ bool QUaHistoryBackend::setEvent(
 		eventPoint,
 		logOut
 	);
-	// TODO : process log
+	QUaHistoryBackend::processServerLog(server, logOut);
 	return ok;
 }
 
@@ -859,7 +860,7 @@ void QUaHistoryBackend::readEvent(
 	Q_UNUSED(releaseContinuationPoints);
 	QQueue<QUaLog> logOut;
 	auto srv = QUaServer::getServerNodeContext(server);
-	// max number of events to read for each emitter
+	// TODO : max number of events to read for each emitter
 	// TODO : add a member to quaBaseEvent to explicit history enable
 	// TODO : make maxInternal configurable, also rethink for data history as well
 	// TODO : bug when no data requested time range, now it returns first point
@@ -909,7 +910,6 @@ void QUaHistoryBackend::readEvent(
 				emitterNodeId,
 				logOut
 			);
-			// TODO : process log
 			for (auto evtTypeNodeId : evtTypeNodeIds)
 			{
 				QDateTime timeStartExisting = srv->m_historBackend.findTimestampEventOfType(
@@ -919,7 +919,22 @@ void QUaHistoryBackend::readEvent(
 					TimeMatch::ClosestFromAbove,
 					logOut
 				);
-				// TODO : process log
+				if (!timeStartExisting.isValid())
+				{
+					logOut << QUaLog({
+						QObject::tr("Invalid start timestamp returned for events of type %1 for emitter %2.")
+							.arg(evtTypeNodeId)
+							.arg(emitterNodeId),
+						QUaLogLevel::Error,
+						QUaLogCategory::History
+					});
+					continue;
+				}
+				if (timeStartExisting < timeStart)
+				{
+					// out of range
+					continue;
+				}
 				QDateTime timeEndExisting = srv->m_historBackend.findTimestampEventOfType(
 					emitterNodeId,
 					evtTypeNodeId,
@@ -927,7 +942,22 @@ void QUaHistoryBackend::readEvent(
 					TimeMatch::ClosestFromBelow,
 					logOut
 				);
-				// TODO : process log
+				if (!timeEndExisting.isValid())
+				{
+					logOut << QUaLog({
+						QObject::tr("Invalid end timestamp returned for events of type %1 for emitter %2.")
+							.arg(evtTypeNodeId)
+							.arg(emitterNodeId),
+						QUaLogLevel::Error,
+						QUaLogCategory::History
+					});
+					continue;
+				}
+				if (timeEndExisting > timeEnd)
+				{
+					// out of range
+					continue;
+				}
 				quint64 numEventsToRead = srv->m_historBackend.numEventsOfTypeInRange(
 					emitterNodeId,
 					evtTypeNodeId,
@@ -935,26 +965,31 @@ void QUaHistoryBackend::readEvent(
 					timeEndExisting,
 					logOut
 				);
-				// TODO : process log
+				if (numEventsToRead == 0)
+				{
+					continue;
+				}
 				queryData[evtTypeNodeId] = {
 					timeStartExisting,
 					numEventsToRead
 				};
 			}
-			auto test = QUaEventHistoryQueryData::ContinuationToByteArray(queryData);
-			auto copy = QUaEventHistoryQueryData::ContinuationFromByteArray(test);
-			Q_ASSERT(copy == queryData);
 		}
 		// calculate absolute total, total already read and total missing to read
 		quint64 totalMissingToRead = 0;
 		quint64 totalToReadInThisCall = 0;
 		quint64 totalAlreadyReadInThisCall = 0;
 		QList<QUaNodeId> evtTypeNodeIds = queryData.keys();
+		// early exit
+		if (evtTypeNodeIds.isEmpty())
+		{
+			// next node to read
+			continue;
+		}
 		for (auto& evtTypeNodeId : evtTypeNodeIds)
 		{
 			totalMissingToRead += queryData[evtTypeNodeId].m_numEventsToRead;
 		}
-		Q_ASSERT(totalMissingToRead >= 0);
 		totalToReadInThisCall = (std::min)(maxPerEmitter, totalMissingToRead);
 		// alloc output in qt format
 		QVector<QUaHistoryEventPoint> allEvents;
@@ -963,7 +998,6 @@ void QUaHistoryBackend::readEvent(
 		{
 			quint64 totalToReadForThisType =
 				queryData[evtTypeNodeId].m_numEventsToRead;
-			Q_ASSERT(totalToReadForThisType >= 0);
 			if (totalToReadForThisType == 0)
 			{
 				continue;
@@ -972,11 +1006,6 @@ void QUaHistoryBackend::readEvent(
 			totalToReadForThisType = (std::min)(totalToReadForThisType, totalToReadInThisCall);
 			Q_ASSERT(totalToReadForThisType > 0);
 			// read output for current event type
-			// TODO ; due to bug explained below, we might have to keep the m_timeStartExisting
-			//        fixed and use an offset to keep track of already read values
-			// https://www.sqlitetutorial.net/sqlite-window-functions/sqlite-row_number/
-			// (Using SQLite ROW_NUMBER() for pagination)
-			// https://www.sqlitetutorial.net/sqlite-limit/
 			auto eventsOfType = srv->m_historBackend.readHistoryEventsOfType(
 				emitterNodeId,
 				evtTypeNodeId,
@@ -985,8 +1014,27 @@ void QUaHistoryBackend::readEvent(
 				totalToReadForThisType,
 				logOut
 			);
-			// TODO : process log
-			Q_ASSERT_X(eventsOfType.size() == totalToReadForThisType, "TODO", "Create an error log");
+			Q_ASSERT_X(
+				eventsOfType.size() == totalToReadForThisType, 
+				"readHistoryEventsOfType", 
+				"readHistoryEventsOfType returned less values than requested"
+			);
+			if (eventsOfType.size() != totalToReadForThisType)
+			{
+				logOut << QUaLog({
+					QObject::tr("Reading historic events of type %1 for emitter %2 "
+					"returned less values than requested. "
+					"Returned (%3) != Requested (%4).")
+						.arg(evtTypeNodeId)
+						.arg(emitterNodeId)
+						.arg(eventsOfType.size())
+						.arg(totalToReadForThisType),
+					QUaLogLevel::Warning,
+					QUaLogCategory::History
+				});
+			}
+			totalToReadForThisType = (std::min)(totalToReadForThisType, static_cast<quint64>(eventsOfType.size()));
+			Q_ASSERT(totalToReadForThisType > 0);
 			// update continuation
 			queryData[evtTypeNodeId].m_numEventsToRead      -= totalToReadForThisType;
 			queryData[evtTypeNodeId].m_numEventsAlreadyRead += totalToReadForThisType;
@@ -994,7 +1042,6 @@ void QUaHistoryBackend::readEvent(
 			{
 				queryData.remove(evtTypeNodeId);
 			}
-			Q_ASSERT(eventsOfType.size() == totalToReadForThisType);
 			std::copy(eventsOfType.begin(), eventsOfType.end(), allEvents.begin() + totalAlreadyReadInThisCall);
 			totalAlreadyReadInThisCall += totalToReadForThisType;
 			Q_ASSERT(totalAlreadyReadInThisCall <= totalToReadInThisCall);
@@ -1038,6 +1085,7 @@ void QUaHistoryBackend::readEvent(
 			iterRow++;
 		}
 	} // end nodesToReadSize
+	QUaHistoryBackend::processServerLog(srv, logOut);
 	response->responseHeader.serviceResult = UA_STATUSCODE_GOOD;
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

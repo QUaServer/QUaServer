@@ -249,18 +249,6 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
 #endif
 
     // [MODIFIED] : do not check if condition or branch
-//#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-//    UA_Boolean isCallerAC = false;
-//    if (isConditionOrBranch(server, &eventNodeId, &origin, &isCallerAC)) {
-//        if (!isCallerAC) {
-//            UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-//                "Condition Events: Please use A&C API to trigger Condition Events 0x%08X",
-//                UA_STATUSCODE_BADINVALIDARGUMENT);
-//            UA_UNLOCK(server->serviceMutex);
-//            return UA_STATUSCODE_BADINVALIDARGUMENT;
-//        }
-//    }
-//#endif /*UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS*/
 
     /* Check that the origin node exists */
     const UA_Node* originNode = UA_NODESTORE_GET(server, &origin);
@@ -284,15 +272,6 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     }
 
     // [MODIFIED] : do not set standard fields
-    ///* Update the standard fields of the event */
-    //UA_StatusCode retval = eventSetStandardFields(server, &eventNodeId, &origin, outEventId);
-    //if (retval != UA_STATUSCODE_GOOD) {
-    //    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-    //        "Events: Could not set the standard event fields with StatusCode %s",
-    //        UA_StatusCode_name(retval));
-    //    UA_UNLOCK(server->serviceMutex);
-    //    return retval;
-    //}
 
     /* List of nodes that emit the node. Events propagate upwards (bubble up) in
      * the node hierarchy. */
@@ -312,12 +291,16 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
 
     // [MODIFIED] : added missing retval
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
-
-    // [MODIFIED] : added event history decarations
     // NOTE : declaration must be here, because "goto cleanup" statements
     //        below could bypass them and compiler does not like it
  #ifdef UA_ENABLE_HISTORIZING
-    QVector<QUaNodeId> emittersNodeIds;
+    QList<QUaNodeId> emittersNodeIds;
+    auto srv = QUaServer::getServerNodeContext(server);
+    Q_ASSERT(srv);
+    if (srv->eventHistoryRead())
+    {
+        emittersNodeIds << UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+    }
 #endif // UA_ENABLE_HISTORIZING
 
     /* Get all ReferenceTypes over which the events propagate */
@@ -344,7 +327,6 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         currIndex += emitRefTypesSize[i];
     }
 
-
     /* Get the list of nodes in the hierarchy that emits the event. */
     retval = browseRecursive(server, 2, emitStartNodes,
         totalEmitRefTypesSize, totalEmitRefTypes,
@@ -357,9 +339,6 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         goto cleanup;
     }
 
-#ifdef UA_ENABLE_HISTORIZING
-    emittersNodeIds.resize(static_cast<int>(emitNodesSize));
-#endif // UA_ENABLE_HISTORIZING
     /* Add the event to the listening MonitoredItems at each relevant node */
     for (size_t i = 0; i < emitNodesSize; i++) {
         const UA_ObjectNode* node = (const UA_ObjectNode*)
@@ -382,69 +361,24 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
 #ifdef UA_ENABLE_HISTORIZING
         // [MODIFIED] : do not support filter "HistoricalEventFilter" 
-        emittersNodeIds[static_cast<int>(i)] = emitNodes[i].nodeId;
-        //if (!server->config.historyDatabase.setEvent)
-        //    continue;
-        //UA_EventFilter* filter = NULL;
-        //UA_EventFieldList* fieldList = NULL;
-        //UA_Variant historicalEventFilterValue;
-        //UA_Variant_init(&historicalEventFilterValue);
-        ///* a HistoricalEventNode that has event history available will provide this property */
-        //retval = readObjectProperty(server, emitNodes[i].nodeId,
-        //    UA_QUALIFIEDNAME(0, (char*)"HistoricalEventFilter"),
-        //    &historicalEventFilterValue);
-        ///* check if the property was found and the read was successful */
-        //if (retval != UA_STATUSCODE_GOOD) {
-        //    /* do not vex users with no match errors */
-        //    if (retval != UA_STATUSCODE_BADNOMATCH)
-        //        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-        //            "Cannot read the HistoricalEventFilter property of a "
-        //            "listening node. StatusCode %s",
-        //            UA_StatusCode_name(retval));
-        //}
-        ///* if found then check if HistoricalEventFilter property has a valid value */
-        //else if (UA_Variant_isEmpty(&historicalEventFilterValue) ||
-        //    !UA_Variant_isScalar(&historicalEventFilterValue) ||
-        //    historicalEventFilterValue.type->typeIndex != UA_TYPES_EVENTFILTER) {
-        //    UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-        //        "HistoricalEventFilter property of a listening node "
-        //        "does not have a valid value");
-        //}
-        ///* finally, if found and valid then filter */
-        //else {
-        //    filter = (UA_EventFilter*)historicalEventFilterValue.data;
-        //    UA_EventNotification eventNotification;
-        //    retval = QUaServer_Anex::UA_Server_filterEvent(server, &server->adminSession, &eventNodeId,
-        //        filter, &eventNotification);
-        //    if (retval == UA_STATUSCODE_GOOD) {
-        //        fieldList = UA_EventFieldList_new();
-        //        *fieldList = eventNotification.fields;
-        //    }
-        //    /* eventNotification structure is not cleared so that users can
-        //     * avoid copying the field list if they want to store it */
-        //     /* EventFilterResult isn't being used currently
-        //     UA_EventFilterResult_clear(&notification->result); */
-        //}
-        // [MODIFIED] : optimized to avoid multiple conversions
-        //server->config.historyDatabase.setEvent(server, server->config.historyDatabase.context,
-        //    &origin, &emitNodes[i].nodeId,
-        //    &eventNodeId, deleteEventNode,
-        //    filter,
-        //    fieldList);
-        //UA_Variant_clear(&historicalEventFilterValue);
-        //retval = UA_STATUSCODE_GOOD;
+        // NOTE : delete a bunch of stuff of the original history plugin
+        // get emitter instance
+        auto emitter = qobject_cast<QUaBaseObject*>(QUaNode::getNodeContext(emitNodes[i].nodeId, server));
+        // NOTE : emitter can be null for default objects (open62541?) like UA_NS0ID_ROOTFOLDER
+        if (emitter && emitter->eventHistoryRead())
+        {
+            emittersNodeIds << emitNodes[i].nodeId;
+        }
 #endif // UA_ENABLE_HISTORIZING
     }
 #ifdef UA_ENABLE_HISTORIZING
-    if (emitNodesSize > 0)
+    if (emittersNodeIds.count() > 0)
     {
         // get event instance
-        auto node  = QUaNode::getNodeContext(eventNodeId, server);
-        auto event = qobject_cast<QUaBaseEvent*>(node);
+        auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
         Q_ASSERT(event);
         // get event type node id
         QUaNodeId eventTypeNodeId = event->typeDefinitionNodeId();
-        auto srv = QUaServer::getServerNodeContext(server);
         Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
         // populate history point
         QUaHistoryEventPoint eventPoint;
@@ -477,17 +411,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     }
 #endif // UA_ENABLE_HISTORIZING
 
-
     // [MODIFIED] : do not delete node
-    ///* Delete the node representation of the event */
-    //if (deleteEventNode) {
-    //    retval = deleteNode(server, eventNodeId, true);
-    //    if (retval != UA_STATUSCODE_GOOD) {
-    //        UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
-    //            "Attempt to remove event using deleteNode failed. StatusCode %s",
-    //            UA_StatusCode_name(retval));
-    //    }
-    //}
 
 cleanup:
     for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {

@@ -80,7 +80,7 @@ public:
 	// write a event's data to backend
 	bool writeHistoryEventsOfType(
 		const QUaNodeId            &eventTypeNodeId,
-		const QVector<QUaNodeId>   &emittersNodeIds,
+		const QList<QUaNodeId>     &emittersNodeIds,
 		const QUaHistoryEventPoint &eventPoint,
 		QQueue<QUaLog>             &logOut
 	);
