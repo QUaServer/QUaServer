@@ -46,6 +46,7 @@ class QUaBaseVariable : public QUaNode
 	Q_PROPERTY(bool historizing READ historizing)
 #else
 	Q_PROPERTY(bool historizing READ historizing WRITE setHistorizing)
+	Q_PROPERTY(quint64 maxHistoryDataResponseSize READ maxHistoryDataResponseSize WRITE setMaxHistoryDataResponseSize)
 #endif // UA_ENABLE_HISTORIZING
 
 public:
@@ -136,6 +137,9 @@ public:
 	bool              historizing() const;
 #ifdef UA_ENABLE_HISTORIZING
 	void              setHistorizing(const bool & historizing);
+
+	quint64 maxHistoryDataResponseSize() const;
+	void    setMaxHistoryDataResponseSize(const quint64& maxHistoryDataResponseSize);
 #endif // UA_ENABLE_HISTORIZING
 	// set callback which is called before a read is performed
 	// call with the default argument for no pre-read callback
@@ -197,6 +201,9 @@ private:
 	bool m_bInternalWrite;
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;
+#ifdef UA_ENABLE_HISTORIZING
+	quint64 m_maxHistoryDataResponseSize;
+#endif // UA_ENABLE_HISTORIZING
 
 protected:
 

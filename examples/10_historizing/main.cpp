@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
-	// it is also possible to historize events
+	// historize events if enabled
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// enable event history on server object
 	server.setEventHistoryRead(true);

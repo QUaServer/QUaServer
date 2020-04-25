@@ -933,6 +933,11 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	m_conditionsRefreshRequired = false;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#ifdef UA_ENABLE_HISTORIZING
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	m_maxHistoryEventResponseSize = 1000;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+#endif // UA_ENABLE_HISTORIZING
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// register custom types to be used with Qt (QVariant and stuff)
@@ -2919,6 +2924,16 @@ void QUaServer::setEventHistoryRead(const bool& eventHistoryRead)
 	eventNotifier.intValue = this->eventNotifier();
 	eventNotifier.bits.bHistoryRead = eventHistoryRead;
 	this->setEventNotifier(eventNotifier.intValue);
+}
+
+quint64 QUaServer::maxHistoryEventResponseSize() const
+{
+	return m_maxHistoryEventResponseSize;
+}
+
+void QUaServer::setMaxHistoryEventResponseSize(const quint64& maxHistoryEventResponseSize)
+{
+	m_maxHistoryEventResponseSize = maxHistoryEventResponseSize;
 }
 
 #endif // UA_ENABLE_HISTORIZING

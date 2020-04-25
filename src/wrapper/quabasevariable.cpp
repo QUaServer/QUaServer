@@ -1,6 +1,6 @@
 #include "quabasevariable.h"
 
-#include <QUaServer>
+#include "quaserver_anex.h"
 #include <QUaBaseDataVariable>
 
 // [STATIC]
@@ -139,6 +139,9 @@ QUaBaseVariable::QUaBaseVariable(
 	//    const UA_NodeId &nodeId = *server->m_newNodeNodeId;
 	// sets also write callback to emit onWrite signal
 	setReadCallback();
+#ifdef UA_ENABLE_HISTORIZING
+	m_maxHistoryDataResponseSize = 1000;
+#endif // UA_ENABLE_HISTORIZING
 }
 
 void QUaBaseVariable::setReadCallback(const std::function<QVariant()>& readCallback){
@@ -870,11 +873,28 @@ void QUaBaseVariable::setHistorizing(const bool& historizing)
 	UA_HistorizingNodeIdSettings setting;
 	setting.historizingBackend         = QUaHistoryBackend::m_historUaBackend;
 	// TODO : make magic number for maxHistoryDataResponseSize configurable? Maybe as global on the server?
-	setting.maxHistoryDataResponseSize = 1000; // max size client can ask for
+	setting.maxHistoryDataResponseSize = m_maxHistoryDataResponseSize; // max size client can ask for
 	setting.historizingUpdateStrategy  = UA_HISTORIZINGUPDATESTRATEGY_VALUESET; // when value updated or polling
 	st = gathering.registerNodeId(m_qUaServer->m_server, gathering.context, &m_nodeId, setting);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+}
+quint64 QUaBaseVariable::maxHistoryDataResponseSize() const
+{
+	return quint64();
+}
+void QUaBaseVariable::setMaxHistoryDataResponseSize(const quint64& maxHistoryDataResponseSize)
+{
+	// set internal value (put a minimum of 50 just in case)
+	m_maxHistoryDataResponseSize = (std::max)(static_cast<quint64>(50), maxHistoryDataResponseSize);
+	// check if historizing already set
+	auto gathering = m_qUaServer->getGathering();
+	UA_NodeIdStoreContext* ctx = (UA_NodeIdStoreContext*)gathering.context;
+	UA_NodeIdStoreContextItem_gathering_default* item = getNodeIdStoreContextItem_gathering_default(ctx, &m_nodeId);
+	if (!item) {
+		return;
+	}
+	item->setting.maxHistoryDataResponseSize = m_maxHistoryDataResponseSize; // max size client can ask for
 }
 #endif // UA_ENABLE_HISTORIZING
 

@@ -195,6 +195,9 @@ public:
     // not supported
     //bool eventHistoryWrite() const;
     //void setEventHistoryWrite(const bool& eventHistoryWrite);
+
+    quint64 maxHistoryEventResponseSize() const;
+    void    setMaxHistoryEventResponseSize(const quint64 & maxHistoryEventResponseSize);
 #endif // UA_ENABLE_HISTORIZING
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -338,6 +341,7 @@ private:
     UA_HistoryDataGathering getGathering() const;
     quint8 eventNotifier() const;
     void   setEventNotifier(const quint8& eventNotifier);
+    quint64 m_maxHistoryEventResponseSize;
 #endif // UA_ENABLE_HISTORIZING
 
 	// reset open62541 config

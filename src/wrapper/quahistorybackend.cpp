@@ -860,15 +860,16 @@ void QUaHistoryBackend::readEvent(
 	Q_UNUSED(releaseContinuationPoints);
 	QQueue<QUaLog> logOut;
 	auto srv = QUaServer::getServerNodeContext(server);
-	// TODO : max number of events to read for each emitter
-	// TODO : add a member to quaBaseEvent to explicit history enable
-	// TODO : make maxInternal configurable, also rethink for data history as well
-	// TODO : bug when no data requested time range, now it returns first point
-	const quint64 maxInternal = 500;
-	quint64 maxPerEmitter = (std::min)(
-		maxInternal, 
-		static_cast<quint64>(historyReadDetails->numValuesPerNode)
-	);
+	// merge request per node limit with internal server limit
+	quint64 maxPerEmitterRequest = static_cast<quint64>(historyReadDetails->numValuesPerNode);
+	quint64 maxPerEmitterServer  = srv->maxHistoryEventResponseSize();
+	quint64 maxPerEmitter = maxPerEmitterRequest > 0 && maxPerEmitterServer > 0 ?
+		(std::min)(maxPerEmitterServer, maxPerEmitterRequest) : 
+		maxPerEmitterRequest > 0 ?
+		maxPerEmitterServer :
+		maxPerEmitterServer > 0 ?
+		maxPerEmitterRequest :
+		static_cast<quint64>((std::numeric_limits<quint32>::max)());
 	// get time range to read for each emitter
 	auto startTimestamp = historyReadDetails->startTime;
 	auto endTimestamp   = historyReadDetails->endTime;

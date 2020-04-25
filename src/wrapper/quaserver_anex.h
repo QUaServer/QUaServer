@@ -449,6 +449,30 @@ QUaServer::getGathering
 typedef struct {
     UA_HistoryDataGathering gathering;
 } UA_HistoryDatabaseContext_default;
+
+typedef struct {
+    UA_NodeId nodeId;
+    UA_HistorizingNodeIdSettings setting;
+    UA_MonitoredItemCreateResult monitoredResult;
+} UA_NodeIdStoreContextItem_gathering_default;
+
+typedef struct {
+    UA_NodeIdStoreContextItem_gathering_default* dataStore;
+    size_t storeEnd;
+    size_t storeSize;
+} UA_NodeIdStoreContext;
+
+inline static UA_NodeIdStoreContextItem_gathering_default*
+getNodeIdStoreContextItem_gathering_default(UA_NodeIdStoreContext* context,
+    const UA_NodeId* nodeId)
+{
+    for (size_t i = 0; i < context->storeEnd; ++i) {
+        if (UA_NodeId_equal(&context->dataStore[i].nodeId, nodeId)) {
+            return &context->dataStore[i];
+        }
+    }
+    return NULL;
+}
 #endif // UA_ENABLE_HISTORIZING
 
 /*********************************************************************************************

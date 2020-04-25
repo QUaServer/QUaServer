@@ -387,7 +387,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
             auto var = event->browseChild<QUaBaseVariable>(fieldName);
             if (!var)
             {
-                // NOTE : we need the empty column
+                // NOTE : we need the empty column for consistent storing of event types
                 eventPoint.fields[fieldName] = QVariant();
                 continue;
             }
