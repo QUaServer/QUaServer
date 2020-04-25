@@ -93,10 +93,53 @@ public:
 		QQueue<QUaLog>& logOut
 	);
 
+	// event history support
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// write a event's data to backend
+	bool writeHistoryEventsOfType(
+		const QUaNodeId            &eventTypeNodeId,
+		const QList<QUaNodeId>     &emittersNodeIds,
+		const QUaHistoryEventPoint &eventPoint,
+		QQueue<QUaLog>             &logOut
+	);
+	// get event types (node ids) for which there are events stored for the
+	// given emitter
+	QVector<QUaNodeId> eventTypesOfEmitter(
+		const QUaNodeId &emitterNodeId,
+		QQueue<QUaLog>  &logOut
+	);
+	// find a timestamp matching the criteria for the emitter and event type
+	QDateTime findTimestampEventOfType(
+		const QUaNodeId                    &emitterNodeId,
+		const QUaNodeId                    &eventTypeNodeId,
+		const QDateTime                    &timestamp,
+		const QUaHistoryBackend::TimeMatch &match,
+		QQueue<QUaLog>                     &logOut
+	);
+	// get the number for events within a time range for the given emitter and event type
+	quint64 numEventsOfTypeInRange(
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const QDateTime &timeEnd,
+		QQueue<QUaLog>  &logOut
+	);
+	// return the numPointsToRead events for the given emitter and event type,
+	// starting from the numPointsOffset offset after given start time (pagination)
+	QVector<QUaHistoryEventPoint> readHistoryEventsOfType(
+		const QUaNodeId &emitterNodeId,
+		const QUaNodeId &eventTypeNodeId,
+		const QDateTime &timeStart,
+		const quint64   &numPointsOffset,
+		const quint64   &numPointsToRead,
+		QQueue<QUaLog>  &logOut
+	);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 private:
 	QString m_strSqliteDbName;
-	QTimer m_timerTransaction;
-	int    m_timeoutTransaction;
+	QTimer  m_timerTransaction;
+	int     m_timeoutTransaction;
 	QQueue<QUaLog> m_deferedLogOut;
 	// get database handle, creates it if not already
 	bool getOpenedDatabase(
@@ -106,19 +149,26 @@ private:
 	// check table exists
 	bool tableExists(
 		QSqlDatabase& db,
+		const QString& tableName,
+		bool& tableExists,
+		QQueue<QUaLog>& logOut
+	);
+	// check node id table exists
+	bool tableDataByNodeIdExists(
+		QSqlDatabase& db,
 		const QUaNodeId &nodeId,
 		bool& tableExists,
 		QQueue<QUaLog>& logOut
 	);
 	// create node history table
-	bool createNodeTable(
+	bool createDataNodeTable(
 		QSqlDatabase& db,
 		const QUaNodeId &nodeId,
 		const QMetaType::Type& storeType,
 		QQueue<QUaLog>& logOut
 	);
 	// insert new data point into node history table
-	bool insertNewDataPoint(
+	bool insertDataPoint(
 		QSqlDatabase& db,
 		const QUaNodeId &nodeId,
 		const QUaHistoryDataPoint& dataPoint,
@@ -129,8 +179,14 @@ private:
 		QSqlDatabase& db,
 		QQueue<QUaLog>& logOut
 	);
-	// prepared statements cache
-	struct PreparedStatements {
+	// prepare a generic statement
+	bool prepareStmt(
+		QSqlQuery &query,
+		const QString &strStmt,
+		QQueue<QUaLog>& logOut
+	);
+	// data prepared statements cache
+	struct DataPreparedStatements {
 		QSqlQuery writeHistoryData;
 		QSqlQuery firstTimestamp;
 		QSqlQuery lastTimestamp;
@@ -141,22 +197,115 @@ private:
 		QSqlQuery numDataPointsInRangeEndInvalid;
 		QSqlQuery readHistoryData;
 	};
-	QHash<QUaNodeId, PreparedStatements> m_prepStmts;
+	QHash<QUaNodeId, DataPreparedStatements> m_dataPrepStmts;
 	// prepare statement to insert history data points
-	bool prepareAllStmts(
+	bool dataPrepareAllStmts(
 		QSqlDatabase& db,
 		const QUaNodeId &nodeId,
-		QQueue<QUaLog>& logOut
-	);
-	bool prepareStmt(
-		QSqlQuery &query,
-		const QString &strStmt,
 		QQueue<QUaLog>& logOut
 	);
 
 	// return SQL type in string form, for given Qt type (only QUaServer supported types)
 	static QHash<int, QString> m_hashTypes;
+	static QMetaType::Type QVariantToQtType(const QVariant& value);
 	static const QString QtTypeToSqlType(const QMetaType::Type& qtType);
+
+	// event history support
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// check event type node id table exists
+	bool tableEventTypeByNodeIdExists(
+		QSqlDatabase& db,
+		const QUaNodeId& eventTypeNodeId,
+		const QUaHistoryEventPoint& eventPoint,
+		bool& tableExists,
+		QQueue<QUaLog>& logOut
+	);
+	// create event type history table
+	bool createEventTypeTable(
+		QSqlDatabase& db,
+		const QUaNodeId &eventTypeNodeId,
+		const QUaHistoryEventPoint& eventPoint,
+		QQueue<QUaLog>& logOut
+	);
+	// prepare statement to insert history event of type
+	bool eventTypePrepareStmt(
+		QSqlDatabase& db,
+		const QUaNodeId& eventTypeNodeId,
+		const QUaHistoryEventPoint& eventPoint,
+		QQueue<QUaLog>& logOut
+	);
+	// event type prepared statements cache
+	QHash<QUaNodeId, QSqlQuery> m_eventTypePrepStmts;
+	// check event type name table exists
+	bool tableEventTypeNameExists(
+		QSqlDatabase& db,
+		bool& tableExists,
+		QQueue<QUaLog>& logOut
+	);
+	// create event type name table
+	bool createEventTypeNameTable(
+		QSqlDatabase& db,
+		QQueue<QUaLog>& logOut
+	);
+	// prepare statement to insert event type name
+	bool eventTypeNamePrepareStmt(
+		QSqlDatabase& db,
+		QQueue<QUaLog>& logOut
+	);
+	// event type name prepared statement cache
+	struct EventTypeNamePreparedStatements {
+		QSqlQuery insertEventTypeName;
+		QSqlQuery selectEventTypeName;
+	};
+	QHash<QString, EventTypeNamePreparedStatements> m_eventTypeNamePrepStmt;
+	static QString eventTypesTable;
+	// check emitter node id table exists
+	bool tableEmitterByNodeIdExists(
+		QSqlDatabase& db,
+		const QUaNodeId& emitterNodeId,
+		bool& tableExists,
+		QQueue<QUaLog>& logOut
+	);
+	// create emitter history table
+	bool createEmitterTable(
+		QSqlDatabase& db,
+		const QUaNodeId& emitterNodeId,
+		QQueue<QUaLog>& logOut
+	);
+	// prepare statement to insert history event in emitter table
+	bool emitterPrepareStmt(
+		QSqlDatabase& db,
+		const QUaNodeId& emitterNodeId,
+		QQueue<QUaLog>& logOut
+	);
+	// emitter prepared statements cache
+	QHash<QUaNodeId, QSqlQuery> m_emitterPrepStmts;
+	// insert new event, return unique key
+	bool insertEventPoint(
+		QSqlDatabase& db,
+		const QUaNodeId& eventTypeNodeId,
+		const QUaHistoryEventPoint& eventPoint,
+		qint64 & outEventKey,
+		QQueue<QUaLog>& logOut
+	);
+	// insert new event type name if not exists, return unique key
+	bool selectOrInsertEventTypeName(
+		QSqlDatabase& db,
+		const QUaNodeId& eventTypeNodeId,
+		qint64& outEventTypeKey,
+		QQueue<QUaLog>& logOut
+	);
+	// insert new event in emitter table
+	bool insertEventReferenceInEmitterTable(
+		QSqlDatabase& db,
+		const QUaNodeId& emitterNodeId,
+		const QDateTime& timestamp,
+		qint64& outEventTypeKey,
+		qint64& outEventKey,
+		QQueue<QUaLog>& logOut
+	);
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 };
 
 #endif // UA_ENABLE_HISTORIZING

@@ -37,12 +37,13 @@ int main(int argc, char* argv[])
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// enable event history on server object
 	server.setEventHistoryRead(true);
+	server.registerType<MyEvent>({ 0, "CustomEventType" });
 	// create event with server as originator
 	auto srvEvt = server.createEvent<MyEvent>();
 	srvEvt->setDisplayName("ServerEvent");
 	srvEvt->setSourceName("Server");
 	// create cusotm object to trigger a custom event
-	auto obj = objsFolder->addBaseObject("CustomObject");
+	auto obj = objsFolder->addBaseObject("CustomObject", {0, "CustomObject" });
 	// enable event history on custom object
 	obj->setSubscribeToEvents(true);
 	obj->setEventHistoryRead(true);

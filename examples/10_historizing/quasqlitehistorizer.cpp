@@ -126,27 +126,23 @@ bool QUaSqliteHistorizer::writeHistoryData(
 	{
 		return false;
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return false;
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		// get sql data type to store
-		auto dataType = static_cast<QMetaType::Type>(
-			dataPoint.value.type() < 1024 ?
-			dataPoint.value.type() :
-			dataPoint.value.userType()
-			);
-		if (!this->createNodeTable(db, nodeId, dataType, logOut))
+		auto dataType = QUaSqliteHistorizer::QVariantToQtType(dataPoint.value);
+		if (!this->createDataNodeTable(db, nodeId, dataType, logOut))
 		{
 			return false;
 		}
 	}
 	// insert new data point
-	return this->insertNewDataPoint(
+	return this->insertDataPoint(
 		db,
 		nodeId,
 		dataPoint,
@@ -193,13 +189,13 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 	{
 		return QDateTime();
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return QDateTime();
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying first timestamp. "
@@ -212,7 +208,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
 	// get prepared statement cache
-	QSqlQuery& query = m_prepStmts[nodeId].firstTimestamp;
+	QSqlQuery& query = m_dataPrepStmts[nodeId].firstTimestamp;
 	if (!query.exec())
 	{
 		logOut << QUaLog({
@@ -256,13 +252,13 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 	{
 		return QDateTime();
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return QDateTime();
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying last timestamp. "
@@ -275,7 +271,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
 	// get prepared statement cache
-	QSqlQuery& query = m_prepStmts[nodeId].lastTimestamp;
+	QSqlQuery& query = m_dataPrepStmts[nodeId].lastTimestamp;
 	if (!query.exec())
 	{
 		logOut << QUaLog({
@@ -320,13 +316,13 @@ bool QUaSqliteHistorizer::hasTimestamp(
 	{
 		return false;
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return false;
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying exact timestamp. "
@@ -338,7 +334,7 @@ bool QUaSqliteHistorizer::hasTimestamp(
 		return false;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery& query = m_prepStmts[nodeId].hasTimestamp;
+	QSqlQuery& query = m_dataPrepStmts[nodeId].hasTimestamp;
 	query.bindValue(0, timestamp.toMSecsSinceEpoch());
 	if (!query.exec())
 	{
@@ -384,13 +380,13 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 	{
 		return QDateTime();
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return QDateTime();
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying around timestamp. "
@@ -408,12 +404,12 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 	{
 	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
 	{
-		query = m_prepStmts[nodeId].findTimestampAbove;
+		query = m_dataPrepStmts[nodeId].findTimestampAbove;
 	}
 	break;
 	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
 	{
-		query = m_prepStmts[nodeId].findTimestampBelow;
+		query = m_dataPrepStmts[nodeId].findTimestampBelow;
 	}
 	break;
 	default:
@@ -478,13 +474,13 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 	{
 		return 0;
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return 0;
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying number of points in range. "
@@ -499,13 +495,13 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 	QSqlQuery query;
 	if (timeEnd.isValid())
 	{
-		query = m_prepStmts[nodeId].numDataPointsInRangeEndValid;
+		query = m_dataPrepStmts[nodeId].numDataPointsInRangeEndValid;
 		query.bindValue(0, timeStart.toMSecsSinceEpoch());
 		query.bindValue(1, timeEnd.toMSecsSinceEpoch());
 	}
 	else
 	{
-		query = m_prepStmts[nodeId].numDataPointsInRangeEndInvalid;
+		query = m_dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid;
 		query.bindValue(0, timeStart.toMSecsSinceEpoch());
 	}
 	if (!query.exec())
@@ -551,13 +547,13 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 	{
 		return points;
 	}
-	// check type table exists
-	bool typeTableExists;
-	if (!this->tableExists(db, nodeId, typeTableExists, logOut))
+	// check data table exists
+	bool dataTableExists;
+	if (!this->tableDataByNodeIdExists(db, nodeId, dataTableExists, logOut))
 	{
 		return points;
 	}
-	if (!typeTableExists)
+	if (!dataTableExists)
 	{
 		logOut << QUaLog({
 			QObject::tr("Error querying data points. "
@@ -569,7 +565,7 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 		return points;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery& query = m_prepStmts[nodeId].readHistoryData;
+	QSqlQuery& query = m_dataPrepStmts[nodeId].readHistoryData;
 	query.bindValue(0, timeStart.toMSecsSinceEpoch());
 	query.bindValue(1, numPointsToRead);
 	if (!query.exec())
@@ -609,6 +605,155 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 	return points;
 }
 
+// event history support
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+bool QUaSqliteHistorizer::writeHistoryEventsOfType(
+	const QUaNodeId            &eventTypeNodeId,
+	const QList<QUaNodeId>     &emittersNodeIds,
+	const QUaHistoryEventPoint &eventPoint,
+	QQueue<QUaLog>             &logOut
+)
+{
+	// check if there are any queued logs that need to be reported
+	if (!m_deferedLogOut.isEmpty())
+	{
+		logOut << m_deferedLogOut;
+		m_deferedLogOut.clear();
+	}
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return false;
+	}
+	// handle transactions
+	if (!this->handleTransactions(db, logOut))
+	{
+		return false;
+	}
+	// check event data table exists
+	bool eventTypeTableExists;
+	if (!this->tableEventTypeByNodeIdExists(
+		db, 
+		eventTypeNodeId, 
+		eventPoint, 
+		eventTypeTableExists, 
+		logOut))
+	{
+		return false;
+	}
+	if (!eventTypeTableExists)
+	{
+		// create event data table
+		if (!this->createEventTypeTable(db, eventTypeNodeId, eventPoint, logOut))
+		{
+			return false;
+		}
+	}
+	// check table of event type names exist
+	bool eventTypeNameTableExists;
+	if (!this->tableEventTypeNameExists(db, eventTypeNameTableExists, logOut))
+	{
+		return false;
+	}
+	if (!eventTypeNameTableExists)
+	{
+		// create event type name table
+		if (!this->createEventTypeNameTable(db, logOut))
+		{
+			return false;
+		}
+	}
+	// chech each emitter table exists
+	for (auto &emitterNodeId : emittersNodeIds)
+	{
+		bool emitterTableExists;
+		if (!this->tableEmitterByNodeIdExists(db, emitterNodeId, emitterTableExists, logOut))
+		{
+			return false;
+		}
+		if (!emitterTableExists)
+		{
+			// create emitter table
+			if (!this->createEmitterTable(db, emitterNodeId, logOut))
+			{
+				return false;
+			}
+		}
+	}
+	// insert new event in its event type table, return new event key
+	qint64 eventKey = -1;
+	if (!this->insertEventPoint(db, eventTypeNodeId, eventPoint, eventKey, logOut))
+	{
+		return false;
+	}
+	// check if event type table name already in table else insert it, fetch event type name key
+	qint64 outEventTypeKey = -1;
+	if (!this->selectOrInsertEventTypeName(db, eventTypeNodeId, outEventTypeKey, logOut))
+	{
+		return false;
+	}
+	// insert reference to new event and event type in each emitter
+	bool ok = true;
+	for (auto& emitterNodeId : emittersNodeIds)
+	{
+		ok = ok && this->insertEventReferenceInEmitterTable(
+			db,
+			emitterNodeId,
+			eventPoint.timestamp,
+			outEventTypeKey,
+			eventKey,
+			logOut
+		);
+	}
+	return ok;
+}
+
+QVector<QUaNodeId> QUaSqliteHistorizer::eventTypesOfEmitter(
+	const QUaNodeId &emitterNodeId,
+	QQueue<QUaLog>  &logOut
+)
+{
+	return QVector<QUaNodeId>();
+}
+
+QDateTime QUaSqliteHistorizer::findTimestampEventOfType(
+	const QUaNodeId                    &emitterNodeId,
+	const QUaNodeId                    &eventTypeNodeId,
+	const QDateTime                    &timestamp,
+	const QUaHistoryBackend::TimeMatch &match,
+	QQueue<QUaLog>                     &logOut
+)
+{
+	return QDateTime();
+}
+
+quint64 QUaSqliteHistorizer::numEventsOfTypeInRange(
+	const QUaNodeId &emitterNodeId,
+	const QUaNodeId &eventTypeNodeId,
+	const QDateTime &timeStart,
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut
+)
+{
+	return quint64();
+}
+
+QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
+	const QUaNodeId &emitterNodeId,
+	const QUaNodeId &eventTypeNodeId,
+	const QDateTime &timeStart,
+	const quint64   &numPointsOffset,
+	const quint64   &numPointsToRead,
+	QQueue<QUaLog>  &logOut
+)
+{
+	return QVector<QUaHistoryEventPoint>();
+}
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 bool QUaSqliteHistorizer::getOpenedDatabase(
 	QSqlDatabase& db,
 	QQueue<QUaLog>& logOut
@@ -642,58 +787,72 @@ bool QUaSqliteHistorizer::getOpenedDatabase(
 }
 
 bool QUaSqliteHistorizer::tableExists(
+	QSqlDatabase& db, 
+	const QString& tableName, 
+	bool& tableExists, 
+	QQueue<QUaLog>& logOut
+)
+{
+	// if not exists in cache, check database
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"SELECT "
+			"name "
+		"FROM "
+			"sqlite_master "
+		"WHERE "
+			"type='table' "
+		"AND "
+			"name=\"%1\";"
+	).arg(tableName);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying if table [%1] exists in %2 database. Sql : %3.")
+				.arg(tableName)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+		});
+		return false;
+	}
+	// empty result if not exists
+	tableExists = query.next();
+	return true;
+}
+
+bool QUaSqliteHistorizer::tableDataByNodeIdExists(
 	QSqlDatabase& db,
 	const QUaNodeId &nodeId,
 	bool& tableExists,
 	QQueue<QUaLog>& logOut)
 {
 	// save time by using cache instead of SQL
-	if (m_prepStmts.contains(nodeId))
+	if (m_dataPrepStmts.contains(nodeId))
 	{
 		tableExists = true;
 		return true;
 	}
-	// if not exists in cache, check database
-	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query(db);
-	QString strStmt = QString(
-		"SELECT "
-		"name "
-		"FROM "
-		"sqlite_master "
-		"WHERE "
-		"type='table' "
-		"AND "
-		"name=\"%1\";"
-	).arg(nodeId);
-	if (!query.exec(strStmt))
+	// use generic method
+	bool ok = this->tableExists(
+		db,
+		nodeId,
+		tableExists,
+		logOut
+	);
+	// early exit if cannot continue
+	if (!ok || !tableExists)
 	{
-		logOut << QUaLog({
-			QObject::tr("Error querying if table [%1] exists in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(m_strSqliteDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
-			});
-		return false;
+		return ok;
 	}
-	// empty result if not exists
-	if (!query.next())
-	{
-		tableExists = false;
-		return true;
-	}
-	tableExists = true;
 	// cache prepared statement if table exists
-	if (!this->prepareAllStmts(db, nodeId, logOut))
-	{
-		return false;
-	}
-	return true;
+	ok = this->dataPrepareAllStmts(db, nodeId, logOut);
+	return ok;
 }
 
-bool QUaSqliteHistorizer::createNodeTable(
+bool QUaSqliteHistorizer::createDataNodeTable(
 	QSqlDatabase& db,
 	const QUaNodeId &nodeId,
 	const QMetaType::Type& storeType,
@@ -711,10 +870,7 @@ bool QUaSqliteHistorizer::createNodeTable(
 		");"
 	)
 		.arg(nodeId)
-		.arg(QUaSqliteHistorizer::QtTypeToSqlType(
-			static_cast<QMetaType::Type>(storeType)
-		)
-		);
+		.arg(QUaSqliteHistorizer::QtTypeToSqlType(storeType));
 	if (!query.exec(strStmt))
 	{
 		logOut << QUaLog({
@@ -742,22 +898,19 @@ bool QUaSqliteHistorizer::createNodeTable(
 		return false;
 	}
 	// cache prepared statement
-	if (!this->prepareAllStmts(db, nodeId, logOut))
-	{
-		return false;
-	}
-	return true;
+	bool ok = this->dataPrepareAllStmts(db, nodeId, logOut);
+	return ok;
 }
 
-bool QUaSqliteHistorizer::insertNewDataPoint(
+bool QUaSqliteHistorizer::insertDataPoint(
 	QSqlDatabase& db,
 	const QUaNodeId &nodeId,
 	const QUaHistoryDataPoint& dataPoint,
 	QQueue<QUaLog>& logOut)
 {
 	Q_ASSERT(db.isValid() && db.isOpen());
-	Q_ASSERT(m_prepStmts.contains(nodeId));
-	QSqlQuery& query = m_prepStmts[nodeId].writeHistoryData;
+	Q_ASSERT(m_dataPrepStmts.contains(nodeId));
+	QSqlQuery& query = m_dataPrepStmts[nodeId].writeHistoryData;
 	query.bindValue(0, dataPoint.timestamp.toMSecsSinceEpoch());
 	query.bindValue(1, dataPoint.value);
 	query.bindValue(2, dataPoint.status);
@@ -776,7 +929,7 @@ bool QUaSqliteHistorizer::insertNewDataPoint(
 	return true;
 }
 
-bool QUaSqliteHistorizer::prepareAllStmts(
+bool QUaSqliteHistorizer::dataPrepareAllStmts(
 	QSqlDatabase& db,
 	const QUaNodeId &nodeId,
 	QQueue<QUaLog>& logOut)
@@ -792,7 +945,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].writeHistoryData = query;
+	m_dataPrepStmts[nodeId].writeHistoryData = query;
 	// prepared statement for first timestamp
 	strStmt = QString(
 		"SELECT "
@@ -808,7 +961,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].firstTimestamp = query;
+	m_dataPrepStmts[nodeId].firstTimestamp = query;
 	// prepared statement for last timestamp
 	strStmt = QString(
 		"SELECT "
@@ -824,7 +977,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].lastTimestamp = query;
+	m_dataPrepStmts[nodeId].lastTimestamp = query;
 	// prepared statement for has timestamp
 	strStmt = QString(
 		"SELECT "
@@ -838,7 +991,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].hasTimestamp = query;
+	m_dataPrepStmts[nodeId].hasTimestamp = query;
 	// prepared statement for find timestamp from above
 	strStmt = QString(
 		"SELECT "
@@ -856,7 +1009,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].findTimestampAbove = query;
+	m_dataPrepStmts[nodeId].findTimestampAbove = query;
 	// prepared statement for find timestamp from below
 	strStmt = QString(
 		"SELECT "
@@ -874,7 +1027,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].findTimestampBelow = query;
+	m_dataPrepStmts[nodeId].findTimestampBelow = query;
 	// prepared statement for num points in range when end time is valid
 	strStmt = QString(
 		"SELECT "
@@ -892,7 +1045,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].numDataPointsInRangeEndValid = query;
+	m_dataPrepStmts[nodeId].numDataPointsInRangeEndValid = query;
 	// prepared statement for num points in range when end time is invalid
 	strStmt = QString(
 		"SELECT "
@@ -908,7 +1061,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].numDataPointsInRangeEndInvalid = query;
+	m_dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid = query;
 	// prepared statement for reading data points
 	strStmt = QString(
 		"SELECT "
@@ -926,7 +1079,7 @@ bool QUaSqliteHistorizer::prepareAllStmts(
 	{
 		return false;
 	}
-	m_prepStmts[nodeId].readHistoryData = query;
+	m_dataPrepStmts[nodeId].readHistoryData = query;
 	// success
 	return true;
 }
@@ -982,6 +1135,15 @@ bool QUaSqliteHistorizer::handleTransactions(
 	return true;
 }
 
+QMetaType::Type QUaSqliteHistorizer::QVariantToQtType(const QVariant& value)
+{
+	return static_cast<QMetaType::Type>(
+		value.type() < 1024 ?
+		value.type() :
+		value.userType()
+	);
+}
+
 const QString QUaSqliteHistorizer::QtTypeToSqlType(const QMetaType::Type& qtType)
 {
 	Q_ASSERT_X(
@@ -990,5 +1152,486 @@ const QString QUaSqliteHistorizer::QtTypeToSqlType(const QMetaType::Type& qtType
 	);
 	return QUaSqliteHistorizer::m_hashTypes.value(qtType, "BLOB");
 }
+
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+bool QUaSqliteHistorizer::tableEventTypeByNodeIdExists(
+	QSqlDatabase& db, 
+	const QUaNodeId& eventTypeNodeId, 
+	const QUaHistoryEventPoint& eventPoint,
+	bool& tableExists, 
+	QQueue<QUaLog>& logOut)
+{
+	// save time by using cache instead of SQL
+	if (m_eventTypePrepStmts.contains(eventTypeNodeId))
+	{
+		tableExists = true;
+		return true;
+	}
+	// use generic method
+	bool ok = this->tableExists(
+		db,
+		eventTypeNodeId,
+		tableExists,
+		logOut
+	);
+	// early exit if cannot continue
+	if (!ok || !tableExists)
+	{
+		return ok;
+	}
+	// cache prepared statement if table exists
+	ok = this->eventTypePrepareStmt(db, eventTypeNodeId, eventPoint, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::createEventTypeTable(
+	QSqlDatabase& db, 
+	const QUaNodeId& eventTypeNodeId, 
+	const QUaHistoryEventPoint& eventPoint, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"CREATE TABLE \"%1\""
+		"("
+			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+	).arg(eventTypeNodeId);
+	// add columns
+	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	while (i.hasNext()) {
+		i.next();
+		auto& name = i.key();
+		auto& value = i.value();
+		strStmt += QString("[%1] %2")
+			.arg(name.name())
+			.arg(
+				QUaSqliteHistorizer::QtTypeToSqlType(QUaSqliteHistorizer::QVariantToQtType(value)));
+		if (i.hasNext())
+		{
+			strStmt += ", ";
+		}
+	}
+	// close statement
+	strStmt += ");";
+	// execute
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1 event type table in %2 database. Sql : %3.")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// cache prepared statement if table exists
+	bool ok = this->eventTypePrepareStmt(db, eventTypeNodeId, eventPoint, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::eventTypePrepareStmt(
+	QSqlDatabase& db, 
+	const QUaNodeId& eventTypeNodeId, 
+	const QUaHistoryEventPoint& eventPoint, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt;
+	// prepared statement for insert
+	strStmt = QString(
+		"INSERT INTO \"%1\" ("
+	).arg(eventTypeNodeId);
+	// iterate column names (e.g. Time, Value, Status)
+	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	while (i.hasNext()) {
+		i.next();
+		auto& name = i.key();
+		strStmt += QString("%1")
+			.arg(name.name());
+		if (i.hasNext())
+		{
+			strStmt += ", ";
+		}
+	}
+	// continue statement
+	strStmt += ") VALUES (";
+	// iterate column placeholders (e.g. :Time, :Value, :Status)
+	i.toFront();
+	while (i.hasNext()) {
+		i.next();
+		auto& name = i.key();
+		strStmt += QString(":%1")
+			.arg(name.name());
+		if (i.hasNext())
+		{
+			strStmt += ", ";
+		}
+	}
+	// close statement
+	strStmt += ");";
+	// prepare
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_eventTypePrepStmts[eventTypeNodeId] = query;
+	return true;
+}
+
+QString QUaSqliteHistorizer::eventTypesTable = "EventTypeTableNames";
+
+bool QUaSqliteHistorizer::tableEventTypeNameExists(
+	QSqlDatabase& db, 
+	bool& tableExists, 
+	QQueue<QUaLog>& logOut)
+{
+	// save time by using cache instead of SQL
+	if (m_eventTypeNamePrepStmt.contains(QUaSqliteHistorizer::eventTypesTable))
+	{
+		tableExists = true;
+		return true;
+	}
+	// use generic method
+	bool ok = this->tableExists(
+		db,
+		QUaSqliteHistorizer::eventTypesTable,
+		tableExists,
+		logOut
+	);
+	// early exit if cannot continue
+	if (!ok || !tableExists)
+	{
+		return ok;
+	}
+	// cache prepared statement if table exists
+	ok = this->eventTypeNamePrepareStmt(db, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::createEventTypeNameTable(
+	QSqlDatabase& db, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"CREATE TABLE \"%1\""
+		"("
+			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+			"[TableName] TEXT NOT NULL"
+		");"
+	).arg(QUaSqliteHistorizer::eventTypesTable);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+				.arg(QUaSqliteHistorizer::eventTypesTable)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// create unique index on [TableName] key for faster queries
+	strStmt = QString("CREATE UNIQUE INDEX \"%1_TableName\" ON \"%1\"(TableName);")
+		.arg(QUaSqliteHistorizer::eventTypesTable);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1_TableName index on %1 table in %2 database. Sql : %3.")
+				.arg(QUaSqliteHistorizer::eventTypesTable)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// cache prepared statement
+	bool ok = this->eventTypeNamePrepareStmt(db, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::eventTypeNamePrepareStmt(
+	QSqlDatabase& db, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt;
+	// prepared statement for insert
+	strStmt = QString(
+		"INSERT INTO \"%1\" (TableName) VALUES (:TableName);"
+	).arg(QUaSqliteHistorizer::eventTypesTable);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_eventTypeNamePrepStmt[QUaSqliteHistorizer::eventTypesTable].insertEventTypeName = query;
+	// prepared statement select exsiting
+	strStmt = QString(
+		"SELECT "
+			"t.%1 "
+		"FROM "
+			"%1 t "
+		"WHERE "
+			"t.TableName = :TableName"
+	).arg(QUaSqliteHistorizer::eventTypesTable);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_eventTypeNamePrepStmt[QUaSqliteHistorizer::eventTypesTable].selectEventTypeName = query;
+	return true;
+}
+
+bool QUaSqliteHistorizer::tableEmitterByNodeIdExists(
+	QSqlDatabase& db, const 
+	QUaNodeId& emitterNodeId, 
+	bool& tableExists, 
+	QQueue<QUaLog>& logOut)
+{
+	// save time by using cache instead of SQL
+	if (m_emitterPrepStmts.contains(emitterNodeId))
+	{
+		tableExists = true;
+		return true;
+	}
+	// use generic method
+	bool ok = this->tableExists(
+		db,
+		emitterNodeId,
+		tableExists,
+		logOut
+	);
+	// early exit if cannot continue
+	if (!ok || !tableExists)
+	{
+		return ok;
+	}
+	// cache prepared statement if table exists
+	ok = this->emitterPrepareStmt(db, emitterNodeId, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::createEmitterTable(
+	QSqlDatabase& db, 
+	const QUaNodeId& emitterNodeId, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"CREATE TABLE \"%1\""
+		"("
+			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+			"[Time] INTEGER NOT NULL, "
+			"[EventType] INTEGER NOT NULL, "
+			"[EventId] INTEGER NOT NULL"
+		");"
+	).arg(emitterNodeId);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1 table in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// create index on [Time, EventType] key for faster queries
+	strStmt = QString("CREATE INDEX \"%1_Time_EventType\" ON \"%1\"(Time, EventType);")
+		.arg(emitterNodeId);
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not create %1_Time_EventType on %1 table in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	//// create unique index on [EventType] key for faster queries
+	//strStmt = QString("CREATE INDEX \"%1_EventType\" ON \"%1\"(EventType);")
+	//	.arg(emitterNodeId);
+	//if (!query.exec(strStmt))
+	//{
+	//	logOut << QUaLog({
+	//		QObject::tr("Could not create %1_EventType index on %1 table in %2 database. Sql : %3.")
+	//			.arg(emitterNodeId)
+	//			.arg(m_strSqliteDbName)
+	//			.arg(query.lastError().text()),
+	//		QUaLogLevel::Error,
+	//		QUaLogCategory::History
+	//		});
+	//	return false;
+	//}
+	// cache prepared statement
+	bool ok = this->emitterPrepareStmt(db, emitterNodeId, logOut);
+	return ok;
+}
+
+bool QUaSqliteHistorizer::emitterPrepareStmt(
+	QSqlDatabase& db, 
+	const QUaNodeId& emitterNodeId, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	QSqlQuery query(db);
+	QString strStmt;
+	// prepared statement for insert
+	strStmt = QString(
+		"INSERT INTO \"%1\" (Time, EventType, EventId) VALUES (:Time, :EventType, :EventId);"
+	).arg(emitterNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	m_emitterPrepStmts[emitterNodeId] = query;
+	return true;
+}
+
+bool QUaSqliteHistorizer::insertEventPoint(
+	QSqlDatabase& db, 
+	const QUaNodeId& eventTypeNodeId, 
+	const QUaHistoryEventPoint& eventPoint, 
+	qint64& outEventKey, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	Q_ASSERT(m_eventTypePrepStmts.contains(eventTypeNodeId));
+	QSqlQuery& query = m_eventTypePrepStmts[eventTypeNodeId];
+	// iterate column placeholders (e.g. Time, Value, Status)
+	// and bind values
+	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	while (i.hasNext()) {
+		i.next();
+		auto& name = i.key();
+		auto& value = i.value();
+		auto type = QUaSqliteHistorizer::QVariantToQtType(value);
+		query.bindValue(
+			QString(":%1").arg(name.name()),
+			type == QMetaType::UChar ? 
+				value.toUInt() : 
+			type == QMetaType::QDateTime ?
+				value.toDateTime().toMSecsSinceEpoch() : 
+				value
+		);
+	}
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// get new key
+	outEventKey = static_cast<qint64>(query.lastInsertId().toULongLong());
+	return true;
+}
+
+bool QUaSqliteHistorizer::selectOrInsertEventTypeName(
+	QSqlDatabase& db, 
+	const QUaNodeId& eventTypeNodeId, 
+	qint64& outEventTypeKey, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	Q_ASSERT(m_eventTypeNamePrepStmt.contains(QUaSqliteHistorizer::eventTypesTable));
+	// first try to find with select
+	QSqlQuery& querySelect = m_eventTypeNamePrepStmt[QUaSqliteHistorizer::eventTypesTable].selectEventTypeName;
+	//  bind values
+	querySelect.bindValue(0, eventTypeNodeId.toXmlString());
+	// execute
+	if (!querySelect.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not select row in %1 table in %2 database. Sql : %3.")
+				.arg(QUaSqliteHistorizer::eventTypesTable)
+				.arg(m_strSqliteDbName)
+				.arg(querySelect.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// check if exists
+	if(querySelect.next())
+	{
+		outEventTypeKey = static_cast<qint64>(querySelect.value(0).toLongLong());
+		return true;
+	}
+	// insert
+	QSqlQuery& queryInsert = m_eventTypeNamePrepStmt[QUaSqliteHistorizer::eventTypesTable].insertEventTypeName;
+	//  bind values
+	queryInsert.bindValue(0, eventTypeNodeId.toXmlString());
+	// execute
+	if (!queryInsert.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+				.arg(QUaSqliteHistorizer::eventTypesTable)
+				.arg(m_strSqliteDbName)
+				.arg(queryInsert.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	// get new key
+	outEventTypeKey = static_cast<qint64>(queryInsert.lastInsertId().toULongLong());
+	return true;
+}
+
+bool QUaSqliteHistorizer::insertEventReferenceInEmitterTable(
+	QSqlDatabase& db, 
+	const QUaNodeId& emitterNodeId, 
+	const QDateTime& timestamp, 
+	qint64& outEventTypeKey, 
+	qint64& outEventKey, 
+	QQueue<QUaLog>& logOut)
+{
+	Q_ASSERT(db.isValid() && db.isOpen());
+	Q_ASSERT(m_emitterPrepStmts.contains(emitterNodeId));
+	QSqlQuery& query = m_emitterPrepStmts[emitterNodeId];
+	//  bind values
+	query.bindValue(":Time"     , timestamp.toMSecsSinceEpoch());
+	query.bindValue(":EventType", outEventTypeKey);
+	query.bindValue(":EventId"  , outEventKey);
+	// execute
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return false;
+	}
+	return true;
+}
+
+
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // UA_ENABLE_HISTORIZING
