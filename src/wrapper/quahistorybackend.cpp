@@ -84,6 +84,10 @@ void QUaHistoryBackend::fixOutputVariantType(
 	QVariant& value, 
 	const QMetaType::Type& metaType)
 {
+	if (!value.isValid() || value.isNull())
+	{
+		return;
+	}
 	auto oldType = QUaHistoryBackend::QVariantToQtType(value);
 	// if same, nothing to do
 	if (oldType == metaType)
@@ -99,7 +103,7 @@ void QUaHistoryBackend::fixOutputVariantType(
 	}
 	// generic case
 	Q_ASSERT(value.canConvert(metaType));
-	value.convert(metaType); // 22.97
+	value.convert(metaType); // 24% expensive to convert QString to QUaNodeId
 }
 
 UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
@@ -1078,13 +1082,14 @@ void QUaHistoryBackend::readEvent(
 			Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
 			auto& fieldInfo = srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId];
 			std::for_each(eventsOfType.begin(), eventsOfType.end(), [&fieldInfo](QUaHistoryEventPoint &point) {
-				QHashIterator<QString, QVariant> i(point.fields);
-				while (i.hasNext())
+				auto i = point.fields.begin();
+				while (i != point.fields.end())
 				{
-					i.next();
 					auto& name = i.key();
 					QVariant& value = i.value();
-					QUaHistoryBackend::fixOutputVariantType(point.fields[name], fieldInfo[name]); // 31.76 [5.91]
+					auto& type = fieldInfo[name];
+					QUaHistoryBackend::fixOutputVariantType(value, type); // 30.04 [4.94]
+					++i;
 				}
 			});
 			// copy sub-vector to output vector

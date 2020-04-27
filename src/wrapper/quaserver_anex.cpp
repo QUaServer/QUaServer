@@ -382,16 +382,17 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
         // populate history point
         QUaHistoryEventPoint eventPoint;
-        QHashIterator<QString, QUaDataType> i(srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId]);
-        while (i.hasNext())
+        auto& typeData = srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId];
+        auto i = typeData.begin();
+        while (i != typeData.end())
         {
-            i.next();
-            auto& name = i.key();
+            auto &name = i.key();
             auto var = event->browseChild<QUaBaseVariable>(name);
+            ++i;
             if (!var)
             {
                 // NOTE : we need the empty column for consistent storing of event types
-                eventPoint.fields[name] = QVariant();
+                eventPoint.fields[name] = QVariant();   
                 continue;
             }
             eventPoint.fields[name] = var->value();

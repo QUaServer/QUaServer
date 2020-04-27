@@ -1207,16 +1207,18 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 		return points;
 	}
 	// get column indexes
-	QHashIterator<QString, int> i(tableCols);
-	while (i.hasNext()) {
-		i.next();
-		auto& name = i.key();
-		tableCols[name] = query.record().indexOf(name); // 0.17
-		Q_ASSERT(tableCols[name] >= 0);
+	auto i = tableCols.begin();
+	while (i != tableCols.end())
+	{
+		auto& name  = i.key();
+		auto& index = i.value();
+		index = query.record().indexOf(name); // 0.17
+		Q_ASSERT(index >= 0);
+		++i;
 	}
 	// read results
 	const QString strTimeColName("Time");
-	while (query.next()) // 11.32
+	while (query.next()) // 11.3%
 	{
 		qulonglong iTime = query.value(tableCols[strTimeColName]).toULongLong();
 		QDateTime timestamp = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC); // NOTE : expensive if spec not defined
@@ -1226,12 +1228,15 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 			QHash<QString, QVariant>()
 		});
 		int pointIndex = points.size() - 1;
+		auto& fields = points[pointIndex].fields;
 		// loop fields
-		i.toFront();
-		while (i.hasNext()) {
-			i.next();
-			auto& name = i.key();
-			points[pointIndex].fields[name] = query.value(i.value()); // 12.33 ([7.6])
+		i = tableCols.begin();
+		while (i != tableCols.end())
+		{
+			auto& name  = i.key();
+			auto& index = i.value();
+			fields.insert(name, query.value(index)); // 12%
+			++i;
 		}
 	}
 	return points;
