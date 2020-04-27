@@ -334,7 +334,11 @@ private:
 	static QList<UA_NodeId> getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Server* server);
 
 	// NOTE : needed to store historic events in a consistent way, ignoring manually added children
-	static QList<QUaQualifiedName> getTypeAggregatedVariableChildrenBrowseNames(
+	//        decided to make key QString because use of QUaQualifiedName is more expensive for hash
+	//        puposes. This might be an issue if there are two fields with same name but different
+	//        namespace
+	typedef QHash<QString, QUaDataType> QUaEventFieldMetaData;
+	static QUaEventFieldMetaData getTypeAggregatedVariableChildrenData(
 		const QUaNodeId& typeNodeId,
 		UA_Server* server
 	);

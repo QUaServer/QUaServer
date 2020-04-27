@@ -22,8 +22,7 @@ struct QUaHistoryDataPoint
 struct QUaHistoryEventPoint
 {
 	QDateTime timestamp;
-	// TODO : check if can change to QHash (if can insert in SQL in arbitrary order)
-	QMap<QUaQualifiedName, QVariant> fields;
+	QHash<QString, QVariant> fields;
 };
 
 class QUaHistoryBackend
@@ -152,6 +151,8 @@ private:
 	static QUaHistoryDataPoint dataValueToPoint(const UA_DataValue *value);
 	static UA_DataValue dataPointToValue(const QUaHistoryDataPoint *point);
 	static void processServerLog(QUaServer* server, QQueue<QUaLog>& logOut);
+	static QMetaType::Type QVariantToQtType(const QVariant& value);
+	static void fixOutputVariantType(QVariant& value, const QMetaType::Type& metaType);
 
 	// static and unique since implementation is instance independent
 	static UA_HistoryDataBackend CreateUaBackend();

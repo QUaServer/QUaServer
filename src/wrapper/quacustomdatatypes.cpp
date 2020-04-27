@@ -383,7 +383,9 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 	}
 	// check if valid namespace found, else assume ns = 0 and given string is name
 	quint16 new_ns;
-	if (components.at(0).contains(QRegularExpression(QLatin1String("^ns=[0-9]+")))) {
+	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
+	{
+		QString strNs = components.at(0).split(QLatin1String("ns=")).last();
 		bool success = false;
 		uint ns = components.at(0).midRef(3).toString().toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
@@ -393,13 +395,23 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		new_ns = ns;
 	}
 	// check if valid name found, else assume ns = 0 and given string is name
-	if (!components.last().contains(QRegularExpression(QLatin1String("^[isgb]="))))
+	auto& strLast = components.last();
+	if (!strLast.contains(QLatin1String("i=")) &&
+		!strLast.contains(QLatin1String("s=")) &&
+		!strLast.contains(QLatin1String("g=")) &&
+		!strLast.contains(QLatin1String("b=")))
 	{
 		return;
 	}
+	auto lastParts = strLast.split(QLatin1String("="));
 	// if reached here, xml format is correct
 	m_namespace = new_ns;
-	m_name = components.last().midRef(2).toString();
+	m_name = 
+		lastParts.size() == 1 ?
+		QString() : // NOTE : possible that just "s="
+		lastParts.size() == 2 ?
+		lastParts.last() :
+		lastParts.mid(1).join(QLatin1String("="));
 }
 
 void QUaQualifiedName::operator=(const char* strXmlQualName)
@@ -591,36 +603,42 @@ void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
 	m_locale = QString();
-	m_text = strXmlLocalizedText;
+	m_text   = strXmlLocalizedText;
 	QStringList components = strXmlLocalizedText.split(QLatin1String(";"));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
-		// if no valid xml format, assume ns = 0 and given string is name
+		// if no valid xml format, assume no-locale, and given string is text
 		return;
 	}
-	// check if valid namespace found, else assume ns = 0 and given string is name
+	// check if valid locale found, else assume no-locale
 	QString new_locale;
-	if (components.at(0).contains(QRegularExpression(QLatin1String("^l=")))) {
-		/*bool success = false;
-		uint ns = components.at(0).midRef(3).toString().toUInt(&success);
-		if (!success || ns > (std::numeric_limits<quint16>::max)())
+	if (components.at(0).contains(QLatin1String("l="))) 
+	{
+		auto partsLocale = components.at(0).split(QLatin1String("="));
+		if (partsLocale.size() < 2)
 		{
 			return;
 		}
-		new_ns = ns;*/
-		new_locale = components.at(0).midRef(2).toString();
+		new_locale = 
+			partsLocale.size() == 2 ?
+			partsLocale.last() :
+			partsLocale.join(QLatin1String("="));
 	}
-	// check if valid name found, else assume ns = 0 and given string is name
-	if (!components.last().contains(QRegularExpression(QLatin1String("^t="))))
+	// check if valid text found, else assume no-locale and given string is name
+	if (!components.last().contains(QLatin1String("t=")))
 	{
 		return;
 	}
+	auto partsText = components.last().split(QLatin1String("="));
 	// if reached here, xml format is correct
-	/*m_namespace = new_ns;
-	m_name = components.last().midRef(2).toString();*/
 	m_locale = new_locale;
-	m_text   = components.last().midRef(2).toString();
+	m_text =
+		partsText.size() == 1 ?
+		QString() : // NOTE : possible that just "t="
+		partsText.size() == 2 ?
+		partsText.last() :
+		partsText.mid(1).join(QLatin1String("="));
 }
 
 void QUaLocalizedText::operator=(const char* strXmlLocalizedText)
@@ -912,6 +930,10 @@ bool QUaNodeId::isNull() const
 
 void QUaNodeId::clear()
 {
+	if (UA_NodeId_isNull(&m_nodeId))
+	{
+		return;
+	}
 	UA_NodeId_clear(&m_nodeId);
 	m_nodeId = UA_NODEID_NULL;
 }

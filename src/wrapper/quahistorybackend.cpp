@@ -71,6 +71,37 @@ void QUaHistoryBackend::processServerLog(
 	}
 }
 
+QMetaType::Type QUaHistoryBackend::QVariantToQtType(const QVariant& value)
+{
+	return static_cast<QMetaType::Type>(
+		value.type() < 1024 ?
+		value.type() :
+		value.userType()
+	);
+}
+
+void QUaHistoryBackend::fixOutputVariantType(
+	QVariant& value, 
+	const QMetaType::Type& metaType)
+{
+	auto oldType = QUaHistoryBackend::QVariantToQtType(value);
+	// if same, nothing to do
+	if (oldType == metaType)
+	{
+		return;
+	}
+	// special cases
+	if (metaType == QMetaType::QDateTime && value.canConvert(QMetaType::ULongLong))
+	{
+		qulonglong iTime = value.toULongLong();
+		value = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC);  // NOTE : expensive if spec not defined
+		return;
+	}
+	// generic case
+	Q_ASSERT(value.canConvert(metaType));
+	value.convert(metaType); // 22.97
+}
+
 UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 {
 	UA_HistoryDataBackend result;
@@ -296,8 +327,8 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		QUaNodeId nodeIdQt  = *nodeId;
-		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
-		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
+		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
+		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
 		// get server
 		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
@@ -339,8 +370,8 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(releaseContinuationPoints); // not used?
 		// convert inputs
 		QUaNodeId nodeIdQt = *nodeId;
-		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex);
-		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex);
+		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
+		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
 		// get offset wrt to previous call
 		QDateTime timeStartOffset = timeStart;
 		if (continuationPoint->length > 0)
@@ -350,7 +381,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			{
 				return UA_STATUSCODE_BADCONTINUATIONPOINTINVALID;
 			}
-			timeStartOffset = QDateTime::fromMSecsSinceEpoch(*((size_t*)(continuationPoint->data)));
+			timeStartOffset = QDateTime::fromMSecsSinceEpoch(*((size_t*)(continuationPoint->data)), Qt::UTC);
 			Q_ASSERT(timeStartOffset > timeStart);
 		}
 		// get server
@@ -437,7 +468,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		QUaNodeId nodeIdQt = *nodeId;
-		QDateTime time = index == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index);
+		QDateTime time = index == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index, Qt::UTC);
 		Q_ASSERT(time.isValid());
 		// get server
 		QQueue<QUaLog> logOut;
@@ -877,7 +908,7 @@ void QUaHistoryBackend::readEvent(
 	QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
 	// get qualnames for columns in advance
 	size_t numCols = historyReadDetails->filter.selectClausesSize;
-	QVector<QUaQualifiedName> colNames;
+	QVector<QString> colNames;
 	colNames.resize(static_cast<int>(numCols));
 	for (size_t col = 0; col < numCols; ++col)
 	{
@@ -887,7 +918,7 @@ void QUaHistoryBackend::readEvent(
 			colNames[static_cast<int>(col)] = "EventNodeId";
 			continue;
 		}
-		colNames[static_cast<int>(col)] = *sao->browsePath;
+		colNames[static_cast<int>(col)] = QUaTypesConverter::uaStringToQString(sao->browsePath->name);
 	}
 	// loop all emitter nodes for which event history was requested
 	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) 
@@ -907,15 +938,15 @@ void QUaHistoryBackend::readEvent(
 		else
 		{
 			// if no valid continuation point, then compute it
-			QVector<QUaNodeId> evtTypeNodeIds = srv->m_historBackend.eventTypesOfEmitter(
+			QVector<QUaNodeId> eventTypeNodeIds = srv->m_historBackend.eventTypesOfEmitter(
 				emitterNodeId,
 				logOut
 			);
-			for (auto evtTypeNodeId : evtTypeNodeIds)
+			for (auto eventTypeNodeId : eventTypeNodeIds)
 			{
 				QDateTime timeStartExisting = srv->m_historBackend.findTimestampEventOfType(
 					emitterNodeId,
-					evtTypeNodeId,
+					eventTypeNodeId,
 					timeStart,
 					TimeMatch::ClosestFromAbove,
 					logOut
@@ -924,7 +955,7 @@ void QUaHistoryBackend::readEvent(
 				{
 					logOut << QUaLog({
 						QObject::tr("Invalid start timestamp returned for events of type %1 for emitter %2.")
-							.arg(evtTypeNodeId)
+							.arg(eventTypeNodeId)
 							.arg(emitterNodeId),
 						QUaLogLevel::Error,
 						QUaLogCategory::History
@@ -938,7 +969,7 @@ void QUaHistoryBackend::readEvent(
 				}
 				QDateTime timeEndExisting = srv->m_historBackend.findTimestampEventOfType(
 					emitterNodeId,
-					evtTypeNodeId,
+					eventTypeNodeId,
 					timeEnd,
 					TimeMatch::ClosestFromBelow,
 					logOut
@@ -947,7 +978,7 @@ void QUaHistoryBackend::readEvent(
 				{
 					logOut << QUaLog({
 						QObject::tr("Invalid end timestamp returned for events of type %1 for emitter %2.")
-							.arg(evtTypeNodeId)
+							.arg(eventTypeNodeId)
 							.arg(emitterNodeId),
 						QUaLogLevel::Error,
 						QUaLogCategory::History
@@ -961,7 +992,7 @@ void QUaHistoryBackend::readEvent(
 				}
 				quint64 numEventsToRead = srv->m_historBackend.numEventsOfTypeInRange(
 					emitterNodeId,
-					evtTypeNodeId,
+					eventTypeNodeId,
 					timeStartExisting,
 					timeEndExisting,
 					logOut
@@ -970,7 +1001,7 @@ void QUaHistoryBackend::readEvent(
 				{
 					continue;
 				}
-				queryData[evtTypeNodeId] = {
+				queryData[eventTypeNodeId] = {
 					timeStartExisting,
 					numEventsToRead
 				};
@@ -980,25 +1011,25 @@ void QUaHistoryBackend::readEvent(
 		quint64 totalMissingToRead = 0;
 		quint64 totalToReadInThisCall = 0;
 		quint64 totalAlreadyReadInThisCall = 0;
-		QList<QUaNodeId> evtTypeNodeIds = queryData.keys();
+		QList<QUaNodeId> eventTypeNodeIds = queryData.keys();
 		// early exit
-		if (evtTypeNodeIds.isEmpty())
+		if (eventTypeNodeIds.isEmpty())
 		{
 			// next node to read
 			continue;
 		}
-		for (auto& evtTypeNodeId : evtTypeNodeIds)
+		for (auto& eventTypeNodeId : eventTypeNodeIds)
 		{
-			totalMissingToRead += queryData[evtTypeNodeId].m_numEventsToRead;
+			totalMissingToRead += queryData[eventTypeNodeId].m_numEventsToRead;
 		}
 		totalToReadInThisCall = (std::min)(maxPerEmitter, totalMissingToRead);
 		// alloc output in qt format
 		QVector<QUaHistoryEventPoint> allEvents;
 		allEvents.resize(totalToReadInThisCall);
-		for (auto &evtTypeNodeId : evtTypeNodeIds)
+		for (auto &eventTypeNodeId : eventTypeNodeIds)
 		{
 			quint64 totalToReadForThisType =
-				queryData[evtTypeNodeId].m_numEventsToRead;
+				queryData[eventTypeNodeId].m_numEventsToRead;
 			if (totalToReadForThisType == 0)
 			{
 				continue;
@@ -1009,9 +1040,9 @@ void QUaHistoryBackend::readEvent(
 			// read output for current event type
 			auto eventsOfType = srv->m_historBackend.readHistoryEventsOfType(
 				emitterNodeId,
-				evtTypeNodeId,
-				queryData[evtTypeNodeId].m_timeStartExisting,
-				queryData[evtTypeNodeId].m_numEventsAlreadyRead, // offset
+				eventTypeNodeId,
+				queryData[eventTypeNodeId].m_timeStartExisting,
+				queryData[eventTypeNodeId].m_numEventsAlreadyRead, // offset
 				totalToReadForThisType,
 				logOut
 			);
@@ -1026,7 +1057,7 @@ void QUaHistoryBackend::readEvent(
 					QObject::tr("Reading historic events of type %1 for emitter %2 "
 					"returned less values than requested. "
 					"Returned (%3) != Requested (%4).")
-						.arg(evtTypeNodeId)
+						.arg(eventTypeNodeId)
 						.arg(emitterNodeId)
 						.arg(eventsOfType.size())
 						.arg(totalToReadForThisType),
@@ -1037,12 +1068,26 @@ void QUaHistoryBackend::readEvent(
 			totalToReadForThisType = (std::min)(totalToReadForThisType, static_cast<quint64>(eventsOfType.size()));
 			Q_ASSERT(totalToReadForThisType > 0);
 			// update continuation
-			queryData[evtTypeNodeId].m_numEventsToRead      -= totalToReadForThisType;
-			queryData[evtTypeNodeId].m_numEventsAlreadyRead += totalToReadForThisType;
-			if (queryData[evtTypeNodeId].m_numEventsToRead == 0)
+			queryData[eventTypeNodeId].m_numEventsToRead      -= totalToReadForThisType;
+			queryData[eventTypeNodeId].m_numEventsAlreadyRead += totalToReadForThisType;
+			if (queryData[eventTypeNodeId].m_numEventsToRead == 0)
 			{
-				queryData.remove(evtTypeNodeId);
+				queryData.remove(eventTypeNodeId);
 			}
+			// if the user returned non-matching qvariant types, they need fixing
+			Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
+			auto& fieldInfo = srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId];
+			std::for_each(eventsOfType.begin(), eventsOfType.end(), [&fieldInfo](QUaHistoryEventPoint &point) {
+				QHashIterator<QString, QVariant> i(point.fields);
+				while (i.hasNext())
+				{
+					i.next();
+					auto& name = i.key();
+					QVariant& value = i.value();
+					QUaHistoryBackend::fixOutputVariantType(point.fields[name], fieldInfo[name]); // 31.76 [5.91]
+				}
+			});
+			// copy sub-vector to output vector
 			std::copy(eventsOfType.begin(), eventsOfType.end(), allEvents.begin() + totalAlreadyReadInThisCall);
 			totalAlreadyReadInThisCall += totalToReadForThisType;
 			Q_ASSERT(totalAlreadyReadInThisCall <= totalToReadInThisCall);
@@ -1071,11 +1116,11 @@ void QUaHistoryBackend::readEvent(
 				UA_Array_new(numCols, &UA_TYPES[UA_TYPES_VARIANT]);
 			for (size_t col = 0; col < numCols; ++col)
 			{
-				QUaQualifiedName& colName = colNames[static_cast<int>(col)];
+				QString& colName = colNames[static_cast<int>(col)];
 				if (iterRow->fields.contains(colName))
 				{
 					historyData[ithNode]->events[row].eventFields[col] = 
-						QUaTypesConverter::uaVariantFromQVariant(iterRow->fields.value(colName));
+						QUaTypesConverter::uaVariantFromQVariant(iterRow->fields[colName]);
 				}
 				else
 				{

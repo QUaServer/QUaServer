@@ -238,7 +238,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 	int timeKeyCol = rec.indexOf("Time");
 	Q_ASSERT(timeKeyCol >= 0);
 	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt);
+	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 }
 
 QDateTime QUaSqliteHistorizer::lastTimestamp(
@@ -301,7 +301,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 	int timeKeyCol = rec.indexOf("Time");
 	Q_ASSERT(timeKeyCol >= 0);
 	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt);
+	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 }
 
 bool QUaSqliteHistorizer::hasTimestamp(
@@ -459,7 +459,7 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 	int timeKeyCol = rec.indexOf("Time");
 	Q_ASSERT(timeKeyCol >= 0);
 	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt);
+	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 }
 
 quint64 QUaSqliteHistorizer::numDataPointsInRange(
@@ -590,7 +590,7 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 		Q_ASSERT(valueKeyCol >= 0);
 		Q_ASSERT(statusKeyCol >= 0);
 		auto timeInt = query.value(timeKeyCol).toLongLong();
-		auto time = QDateTime::fromMSecsSinceEpoch(timeInt);
+		auto time = QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC); // NOTE : expensive if spec not defined
 		auto value = query.value(valueKeyCol);
 		auto status = query.value(statusKeyCol).toUInt();
 		points << QUaHistoryDataPoint({
@@ -715,7 +715,67 @@ QVector<QUaNodeId> QUaSqliteHistorizer::eventTypesOfEmitter(
 	QQueue<QUaLog>  &logOut
 )
 {
-	return QVector<QUaNodeId>();
+	QVector<QUaNodeId> retTypes;
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return retTypes;
+	}
+	Q_ASSERT(db.isValid() && db.isOpen());
+	// check table of event type names exist
+	bool eventTypeNameTableExists;
+	if (!this->tableEventTypeNameExists(db, eventTypeNameTableExists, logOut))
+	{
+		return retTypes;
+	}
+	bool emitterTableExists;
+	if (!this->tableEmitterByNodeIdExists(db, emitterNodeId, emitterTableExists, logOut))
+	{
+		return retTypes;
+	}
+	if (!eventTypeNameTableExists ||
+		!emitterTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not fetch any event types for emitter [%1] in database %2.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+			});
+		return retTypes;
+	}
+	// create query
+	QSqlQuery query(db);
+	QString strStmt = QString(
+		"SELECT n.TableName FROM EventTypeTableNames n "
+		"INNER JOIN "
+			"("
+			"SELECT DISTINCT EventType FROM \"%1\""
+			") e "
+		"ON n.EventTypeTableNames = e.EventType"
+	).arg(emitterNodeId);
+	// execute query
+	if (!query.exec(strStmt))
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not fetch any event types for emitter [%1] in database %2. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return retTypes;
+	}
+	// loop results
+	// NOTE : cannot prealloc retTypes size because QSqlQuery::size for sqlite returns -1
+	while(query.next())
+	{
+		retTypes << query.value(0).toString();
+	}
+	return retTypes;
 }
 
 QDateTime QUaSqliteHistorizer::findTimestampEventOfType(
@@ -726,7 +786,157 @@ QDateTime QUaSqliteHistorizer::findTimestampEventOfType(
 	QQueue<QUaLog>                     &logOut
 )
 {
-	return QDateTime();
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return QDateTime();
+	}
+	// check tables exist
+	bool eventTypeTableExists;
+	if (!this->tableEventTypeByNodeIdExists(
+		db,
+		eventTypeNodeId,
+		QUaHistoryEventPoint(),
+		eventTypeTableExists,
+		logOut))
+	{
+		return QDateTime();
+	}
+	if (!eventTypeTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying around timestamp. "
+				"Event history database %1 does not contain table for event type [%2]")
+				.arg(m_strSqliteDbName)
+				.arg(eventTypeNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return QDateTime();
+	}
+	bool emitterTableExists;
+	if (!this->tableEmitterByNodeIdExists(db, emitterNodeId, emitterTableExists, logOut))
+	{
+		return QDateTime();
+	}
+	if (!emitterTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying around timestamp. "
+				"Event history database %1 does not contain table for emitter [%2]")
+				.arg(m_strSqliteDbName)
+				.arg(emitterNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return QDateTime();
+	}
+	Q_ASSERT(db.isValid() && db.isOpen());
+	// check if event type table name already in table else insert it, fetch event type name key
+	qint64 outEventTypeKey = -1;
+	if (!this->selectOrInsertEventTypeName(db, eventTypeNodeId, outEventTypeKey, logOut))
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying around timestamp. "
+				"Event history database %1 does not table name for event type [%2] in %3 table.")
+				.arg(m_strSqliteDbName)
+				.arg(eventTypeNodeId)
+				.arg(QUaSqliteHistorizer::eventTypesTable),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return QDateTime();
+	}
+	Q_ASSERT(outEventTypeKey >= 0);
+	// get correct query
+	QSqlQuery query(db);
+	switch (match)
+	{
+	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+	{
+		// prepared statement for find timestamp from above
+		QString strStmt = QString(
+			"SELECT "
+				"e.Time "
+			"FROM "
+				"\"%1\" e "
+			"WHERE "
+				"e.Time >= :Time "
+			"AND "
+				"e.EventType = %2 "
+			"ORDER BY "
+				"e.Time ASC "
+			"LIMIT "
+				"1;"
+		).arg(emitterNodeId).arg(outEventTypeKey);
+		if (!this->prepareStmt(query, strStmt, logOut))
+		{
+			return QDateTime();
+		}
+	}
+	break;
+	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+	{
+		// prepared statement for find timestamp from below
+		QString strStmt = QString(
+			"SELECT "
+				"e.Time "
+			"FROM "
+				"\"%1\" e "
+			"WHERE "
+				"e.Time < :Time "
+			"AND "
+				"e.EventType = %2 "
+			"ORDER BY "
+				"e.Time DESC "
+			"LIMIT "
+				"1;"
+		).arg(emitterNodeId).arg(outEventTypeKey);
+		if (!this->prepareStmt(query, strStmt, logOut))
+		{
+			return QDateTime();
+		}
+	}
+	break;
+	default:
+	{
+		Q_ASSERT(false);
+	}
+	break;
+	}
+	// set reference time
+	query.bindValue(0, timestamp.toMSecsSinceEpoch());
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] event emitter table around timestamp in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+			});
+		return QDateTime();
+	}
+	// if there is none return either first or last
+	if (!query.next())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] event emitter table around timestamp in %2 database.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Warning,
+			QUaLogCategory::Serialization
+			});
+		return QDateTime();
+	}
+	// get time key
+	QSqlRecord rec = query.record();
+	int timeKeyCol = rec.indexOf("Time");
+	Q_ASSERT(timeKeyCol >= 0);
+	auto timeInt = query.value(timeKeyCol).toLongLong();
+	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 }
 
 quint64 QUaSqliteHistorizer::numEventsOfTypeInRange(
@@ -737,7 +947,122 @@ quint64 QUaSqliteHistorizer::numEventsOfTypeInRange(
 	QQueue<QUaLog>  &logOut
 )
 {
-	return quint64();
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return 0;
+	}
+	// check tables exist
+	bool eventTypeTableExists;
+	if (!this->tableEventTypeByNodeIdExists(
+		db,
+		eventTypeNodeId,
+		QUaHistoryEventPoint(),
+		eventTypeTableExists,
+		logOut))
+	{
+		return 0;
+	}
+	if (!eventTypeTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying number of events in time range. "
+				"Event history database %1 does not contain table for event type [%2]")
+				.arg(m_strSqliteDbName)
+				.arg(eventTypeNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return 0;
+	}
+	bool emitterTableExists;
+	if (!this->tableEmitterByNodeIdExists(db, emitterNodeId, emitterTableExists, logOut))
+	{
+		return 0;
+	}
+	if (!emitterTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying number of events in time range. "
+				"Event history database %1 does not contain table for emitter [%2]")
+				.arg(m_strSqliteDbName)
+				.arg(emitterNodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return 0;
+	}
+	Q_ASSERT(db.isValid() && db.isOpen());
+	// check if event type table name already in table else insert it, fetch event type name key
+	qint64 outEventTypeKey = -1;
+	if (!this->selectOrInsertEventTypeName(db, eventTypeNodeId, outEventTypeKey, logOut))
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying number of events in time range. "
+				"Event history database %1 does not table name for event type [%2] in %3 table.")
+				.arg(m_strSqliteDbName)
+				.arg(eventTypeNodeId)
+				.arg(QUaSqliteHistorizer::eventTypesTable),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return 0;
+	}
+	Q_ASSERT(outEventTypeKey >= 0);
+	Q_ASSERT(timeStart.isValid() && timeEnd.isValid());
+	QSqlQuery query(db);
+	// prepared statement for num points in range
+	QString strStmt = QString(
+		"SELECT "
+			"COUNT(*) "
+		"FROM "
+			"\"%1\" e "
+		"WHERE "
+			"e.Time >= :TimeStart "
+		"AND "
+			"e.Time <= :TimeEnd "
+		"AND "
+				"e.EventType = %2 "
+		"ORDER BY "
+			"e.Time ASC;"
+	).arg(emitterNodeId).arg(outEventTypeKey);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return false;
+	}
+	// bind
+	query.bindValue(":TimeStart", timeStart.toMSecsSinceEpoch());
+	query.bindValue(":TimeEnd"  , timeEnd.toMSecsSinceEpoch());
+	// execute
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for number of events in range in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+			});
+		return 0;
+	}
+	if (!query.next())
+	{
+		logOut << QUaLog({
+			QObject::tr("Empty result querying [%1] table for events of events in range in %2 database. Sql : %3.")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Warning,
+			QUaLogCategory::Serialization
+			});
+		return 0;
+	}
+	// get number of points in range
+	QSqlRecord rec = query.record();
+	auto num = query.value(0).toULongLong();
+	return num;
 }
 
 QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
@@ -749,7 +1074,167 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 	QQueue<QUaLog>  &logOut
 )
 {
-	return QVector<QUaHistoryEventPoint>();
+	auto points = QVector<QUaHistoryEventPoint>();
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(db, logOut))
+	{
+		return points;
+	}
+	// check tables exist
+	bool eventTypeTableExists;
+	if (!this->tableEventTypeByNodeIdExists(
+		db,
+		eventTypeNodeId,
+		QUaHistoryEventPoint(),
+		eventTypeTableExists,
+		logOut))
+	{
+		return points;
+	}
+	if (!eventTypeTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for event points. "
+				"Event history database %2 does not contain table for event type [%1]")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return points;
+	}
+	bool emitterTableExists;
+	if (!this->tableEmitterByNodeIdExists(db, emitterNodeId, emitterTableExists, logOut))
+	{
+		return points;
+	}
+	if (!emitterTableExists)
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for event points. "
+				"Event history database %2 does not contain table for emitter [%1]")
+				.arg(emitterNodeId)
+				.arg(m_strSqliteDbName),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return points;
+	}
+	Q_ASSERT(db.isValid() && db.isOpen());
+	// check if event type table name already in table else insert it, fetch event type name key
+	qint64 outEventTypeKey = -1;
+	if (!this->selectOrInsertEventTypeName(db, eventTypeNodeId, outEventTypeKey, logOut))
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for event points. "
+				"Event history database %2 does not table name for event type [%1] in %3 table.")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(QUaSqliteHistorizer::eventTypesTable),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+			});
+		return points;
+	}
+	Q_ASSERT(outEventTypeKey >= 0);
+	Q_ASSERT(timeStart.isValid());
+	QSqlQuery query(db);
+	// get column names
+	QString strStmt = QString(
+		"SELECT c.name FROM pragma_table_info(\"%1\") c;"
+	).arg(eventTypeNodeId);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return points;
+	}
+	// execute
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for column names in %2 database. Sql : %3.")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+			});
+		return points;
+	}
+	// read results
+	QHash<QString, int> tableCols;
+	while (query.next())
+	{
+		tableCols[query.value(0).toString()] = -1;
+	}
+	Q_ASSERT(tableCols.size() > 1);
+	// prepared statement for num points in range
+	strStmt = QString(
+		"SELECT * FROM \"%1\" t "
+		"INNER JOIN ("
+			"SELECT "
+				"EventId "
+			"FROM "
+				"\"%2\" e "
+			"WHERE "
+				"e.Time >= :TimeStart "
+			"AND "
+					"e.EventType = %3 "
+			"ORDER BY "
+				"e.Time ASC LIMIT :Limit OFFSET :Offset"
+		") e "
+		"ON t.\"%1\" = e.EventId;"
+	).arg(eventTypeNodeId).arg(emitterNodeId).arg(outEventTypeKey);
+	if (!this->prepareStmt(query, strStmt, logOut))
+	{
+		return points;
+	}
+	// bind
+	query.bindValue(":TimeStart", timeStart.toMSecsSinceEpoch());
+	query.bindValue(":Limit"    , numPointsToRead);
+	query.bindValue(":Offset"   , numPointsOffset);
+	// execute
+	if (!query.exec())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error querying [%1] table for event points in %2 database. Sql : %3.")
+				.arg(eventTypeNodeId)
+				.arg(m_strSqliteDbName)
+				.arg(query.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::Serialization
+			});
+		return points;
+	}
+	// get column indexes
+	QHashIterator<QString, int> i(tableCols);
+	while (i.hasNext()) {
+		i.next();
+		auto& name = i.key();
+		tableCols[name] = query.record().indexOf(name); // 0.17
+		Q_ASSERT(tableCols[name] >= 0);
+	}
+	// read results
+	const QString strTimeColName("Time");
+	while (query.next()) // 11.32
+	{
+		qulonglong iTime = query.value(tableCols[strTimeColName]).toULongLong();
+		QDateTime timestamp = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC); // NOTE : expensive if spec not defined
+		// insert point
+		points << QUaHistoryEventPoint({
+			timestamp,
+			QHash<QString, QVariant>()
+		});
+		int pointIndex = points.size() - 1;
+		// loop fields
+		i.toFront();
+		while (i.hasNext()) {
+			i.next();
+			auto& name = i.key();
+			points[pointIndex].fields[name] = query.value(i.value()); // 12.33 ([7.6])
+		}
+	}
+	return points;
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1199,13 +1684,13 @@ bool QUaSqliteHistorizer::createEventTypeTable(
 			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
 	).arg(eventTypeNodeId);
 	// add columns
-	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	QHashIterator<QString, QVariant> i(eventPoint.fields);
 	while (i.hasNext()) {
 		i.next();
 		auto& name = i.key();
 		auto& value = i.value();
 		strStmt += QString("[%1] %2")
-			.arg(name.name())
+			.arg(name)
 			.arg(
 				QUaSqliteHistorizer::QtTypeToSqlType(QUaSqliteHistorizer::QVariantToQtType(value)));
 		if (i.hasNext())
@@ -1247,12 +1732,12 @@ bool QUaSqliteHistorizer::eventTypePrepareStmt(
 		"INSERT INTO \"%1\" ("
 	).arg(eventTypeNodeId);
 	// iterate column names (e.g. Time, Value, Status)
-	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	QHashIterator<QString, QVariant> i(eventPoint.fields);
 	while (i.hasNext()) {
 		i.next();
 		auto& name = i.key();
 		strStmt += QString("%1")
-			.arg(name.name());
+			.arg(name);
 		if (i.hasNext())
 		{
 			strStmt += ", ";
@@ -1266,7 +1751,7 @@ bool QUaSqliteHistorizer::eventTypePrepareStmt(
 		i.next();
 		auto& name = i.key();
 		strStmt += QString(":%1")
-			.arg(name.name());
+			.arg(name);
 		if (i.hasNext())
 		{
 			strStmt += ", ";
@@ -1463,21 +1948,6 @@ bool QUaSqliteHistorizer::createEmitterTable(
 			});
 		return false;
 	}
-	//// create unique index on [EventType] key for faster queries
-	//strStmt = QString("CREATE INDEX \"%1_EventType\" ON \"%1\"(EventType);")
-	//	.arg(emitterNodeId);
-	//if (!query.exec(strStmt))
-	//{
-	//	logOut << QUaLog({
-	//		QObject::tr("Could not create %1_EventType index on %1 table in %2 database. Sql : %3.")
-	//			.arg(emitterNodeId)
-	//			.arg(m_strSqliteDbName)
-	//			.arg(query.lastError().text()),
-	//		QUaLogLevel::Error,
-	//		QUaLogCategory::History
-	//		});
-	//	return false;
-	//}
 	// cache prepared statement
 	bool ok = this->emitterPrepareStmt(db, emitterNodeId, logOut);
 	return ok;
@@ -1515,14 +1985,14 @@ bool QUaSqliteHistorizer::insertEventPoint(
 	QSqlQuery& query = m_eventTypePrepStmts[eventTypeNodeId];
 	// iterate column placeholders (e.g. Time, Value, Status)
 	// and bind values
-	QMapIterator<QUaQualifiedName, QVariant> i(eventPoint.fields);
+	QHashIterator<QString, QVariant> i(eventPoint.fields);
 	while (i.hasNext()) {
 		i.next();
 		auto& name = i.key();
 		auto& value = i.value();
 		auto type = QUaSqliteHistorizer::QVariantToQtType(value);
 		query.bindValue(
-			QString(":%1").arg(name.name()),
+			QString(":%1").arg(name),
 			type == QMetaType::UChar ? 
 				value.toUInt() : 
 			type == QMetaType::QDateTime ?

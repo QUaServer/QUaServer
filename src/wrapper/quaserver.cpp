@@ -1994,7 +1994,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	{
 		Q_ASSERT(!m_hashTypeAggregatedVariableChildren.contains(typeNodeId));
 		m_hashTypeAggregatedVariableChildren[typeNodeId] =
-			QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
+			QUaNode::getTypeAggregatedVariableChildrenData(
 				typeNodeId, 
 				this->m_server
 			);

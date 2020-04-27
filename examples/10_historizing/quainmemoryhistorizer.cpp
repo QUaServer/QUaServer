@@ -423,6 +423,7 @@ quint64 QUaInMemoryHistorizer::numEventsOfTypeInRange(
 		return 0;
 	}
 	auto& table = m_eventEmitterDatabase[emitterNodeId][eventTypeNodeId];
+	Q_ASSERT(timeStart.isValid() && timeEnd.isValid());
 	// the database must contain the start timestamp
 	if (!table.contains(timeStart))
 	{
@@ -436,9 +437,8 @@ quint64 QUaInMemoryHistorizer::numEventsOfTypeInRange(
 		});
 		return 0;
 	}
-	// if the end timestamp is valid, then it must be contained in the database
-	// else it means the API is requesting up to the most recent timestamp (end)
-	if (!table.contains(timeEnd) && timeEnd.isValid())
+	// the database must contain the end timestamp
+	if (!table.contains(timeEnd))
 	{
 		logOut << QUaLog({
 			QObject::tr("No events of type %1 stored for emitter %2 with end timestamp %3.")

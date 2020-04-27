@@ -102,33 +102,46 @@ QString nodeIdToQString(const UA_NodeId & id)
 bool nodeIdStringSplit(const QString & nodeIdString, quint16 * nsIndex, QString * identifier, char * identifierType)
 {
 	quint16 namespaceIndex = 0;
-
 	QStringList components = nodeIdString.split(QLatin1String(";"));
-
 	if (components.size() > 2)
+	{
 		return false;
-
-	if (components.size() == 2 && components.at(0).contains(QRegularExpression(QLatin1String("^ns=[0-9]+")))) {
+	}
+	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
+	{
+		QString strNs = components.at(0).split(QLatin1String("ns=")).last();
 		bool success = false;
-		uint ns = components.at(0).midRef(3).toString().toUInt(&success);
+		uint ns = strNs.toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
 			return false;
 		namespaceIndex = ns;
 	}
-
-	if (components.last().size() < 3)
+	auto& strLast = components.last();
+	if (!strLast.contains(QLatin1String("i=")) &&
+		!strLast.contains(QLatin1String("s=")) &&
+		!strLast.contains(QLatin1String("g=")) &&
+		!strLast.contains(QLatin1String("b=")))
+	{
 		return false;
-
-	if (!components.last().contains(QRegularExpression(QLatin1String("^[isgb]="))))
-		return false;
-
+	}
+	auto lastParts = strLast.split(QLatin1String("="));
 	if (nsIndex)
+	{
 		*nsIndex = namespaceIndex;
-	if (identifier)
-		*identifier = components.last().midRef(2).toString();
+	}
 	if (identifierType)
-		*identifierType = components.last().at(0).toLatin1();
-
+	{
+		*identifierType = lastParts.first().at(0).toLatin1();
+	}
+	if (identifier)
+	{
+		*identifier = 
+			lastParts.size() == 1 ?
+			QString() : // NOTE : possible that just "i="
+			lastParts.size() == 2 ?
+			lastParts.last() : 
+			lastParts.mid(1).join(QLatin1String("="));
+	}
 	return true;
 }
 

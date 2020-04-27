@@ -1696,11 +1696,12 @@ QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Se
 	return retListMethods;
 }
 
-QList<QUaQualifiedName> QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
+QUaNode::QUaEventFieldMetaData QUaNode::getTypeAggregatedVariableChildrenData(
 	const QUaNodeId& typeNodeId, 
 	UA_Server* server)
 {
-	QList<QUaQualifiedName> retNames;
+	QSet<QUaQualifiedName> alreadyAdded;
+	QUaEventFieldMetaData retNames;
 	UA_NodeId typeUaNodeId = typeNodeId;
 	// look for children starting from this type of to base object type
 	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
@@ -1721,11 +1722,21 @@ QList<QUaQualifiedName> QUaNode::getTypeAggregatedVariableChildrenBrowseNames(
 			}
 			// ignore if browse name does not match
 			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, server);
-			if (retNames.contains(childBrowseName))
+			if (alreadyAdded.contains(childBrowseName))
 			{
 				continue;
 			}
-			retNames << childBrowseName;
+			// read type
+			UA_NodeId outDataType;
+			auto st = UA_Server_readDataType(server, childNodeId, &outDataType);
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+			QMetaType::Type qType = QUaDataType::qTypeByNodeId(outDataType);
+			// add to return list
+			Q_ASSERT(!retNames.contains(childBrowseName.name()));
+			retNames[childBrowseName.name()] = qType;
+			// add to already read
+			alreadyAdded << childBrowseName;
 		}
 		// cleanup
 		for (auto childNodeId : childrenNodeIds)
