@@ -983,7 +983,7 @@ void QUaHistoryBackend::readEvent(
 						QObject::tr("Invalid start timestamp returned for events of type %1 for emitter %2.")
 							.arg(eventTypeNodeId)
 							.arg(emitterNodeId),
-						QUaLogLevel::Error,
+						QUaLogLevel::Warning,
 						QUaLogCategory::History
 					});
 					continue;
@@ -1006,7 +1006,7 @@ void QUaHistoryBackend::readEvent(
 						QObject::tr("Invalid end timestamp returned for events of type %1 for emitter %2.")
 							.arg(eventTypeNodeId)
 							.arg(emitterNodeId),
-						QUaLogLevel::Error,
+						QUaLogLevel::Warning,
 						QUaLogCategory::History
 					});
 					continue;

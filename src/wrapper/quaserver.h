@@ -373,9 +373,10 @@ private:
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
     void registerTypeDefaults (const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
 	// meta
-	void registerMetaEnums(const QMetaObject &metaObject);
-	void addMetaProperties(const QMetaObject &metaObject);
-	void addMetaMethods   (const QMetaObject &metaObject);
+	void registerMetaEnums      (const QMetaObject &metaObject);
+	void addMetaProperties      (const QMetaObject &metaObject);
+	void addMetaMethods         (const QMetaObject &metaObject);
+    UA_NodeId typeIdByMetaObject(const QMetaObject &metaObject);
 
 	UA_NodeId createInstanceInternal(
         const QMetaObject &metaObject, 
@@ -1121,9 +1122,15 @@ inline bool QUaNode::deserializeInternal(
             // continue next ref child
             continue;
         }
+        // to create new first get metaobject
+        QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
+
+        // TODO : check if browsename is optional child 
+        const UA_NodeId typeId = this->server()->typeIdByMetaObject(metaObject);
+
         // no existing child matched by browseName, create a new one 
         // but before, check nodeId does not exist
-        QString strTargetNodeId = forwRef.targetNodeId;
+        auto strTargetNodeId = forwRef.targetNodeId;
         if (this->server()->isNodeIdUsed(strTargetNodeId))
         {
             logOut.enqueue({
@@ -1137,8 +1144,6 @@ inline bool QUaNode::deserializeInternal(
             // empty node id means use random node id
             strTargetNodeId.clear();
         }
-        // to create new first get metaobject
-        QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
         // instantiate first in OPC UA
         UA_NodeId newInstanceNodeId = this->server()->createInstanceInternal(
             metaObject, 

@@ -874,6 +874,182 @@ UA_StatusCode QUaNode::addOptionalObjectField(
 	return retval;
 }
 
+UA_NodeId QUaNode::getOptionalChildNodeId(
+	UA_Server* server, 
+	const UA_NodeId& typeNodeIdIn, 
+	const UA_QualifiedName& browseNameIn
+)
+{
+	UA_NodeId optionalFieldNodeId = UA_NODEID_NULL;
+	UA_NodeId typeNodeId;
+	UA_NodeId_copy(&typeNodeIdIn, &typeNodeId);
+	QUaQualifiedName browseName(browseNameIn);
+	// look for optional child starting from this type of to base object type
+	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
+		!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
+	{
+		auto childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, server);
+		for (auto childNodeId : childrenNodeIds)
+		{
+			// ignore if not optional
+			if (!QUaNode::hasOptionalModellingRule(childNodeId, server))
+			{
+				UA_NodeId_clear(&childNodeId);
+				continue;
+			}
+			// ignore if browse name does not match
+			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, server);
+			if (childBrowseName != browseName)
+			{
+				UA_NodeId_clear(&childNodeId);
+				continue;
+			}
+			// copy, do not clear because will be used later
+			optionalFieldNodeId = childNodeId;
+		}
+		// cleanup
+		for (auto childNodeId : childrenNodeIds)
+		{
+			UA_NodeId_clear(&childNodeId);
+		}
+		// check if found
+		if (!UA_NodeId_isNull(&optionalFieldNodeId))
+		{
+			UA_NodeId_clear(&typeNodeId);
+			break;
+		}
+		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeNodeId, server);
+		UA_NodeId_clear(&typeNodeId);
+		UA_NodeId_copy(&typeNodeIdNew, &typeNodeId);
+		UA_NodeId_clear(&typeNodeIdNew);
+	}
+	return optionalFieldNodeId;
+}
+
+QUaNode * QUaNode::instantiateOptionalChild(
+	UA_Server* server, 
+	QUaNode * parent,
+	const UA_NodeId& optionalFieldNodeId,
+	const UA_QualifiedName childName)
+{
+	UA_NodeId outOptionalNode;
+	UA_NodeId parentNodeId = parent->nodeId();
+	// get the internal node
+	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(server, &optionalFieldNodeId);
+	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
+	if (optionalFieldNode == NULL)
+	{
+		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+			"Couldn't find optional Field Node in ConditionType. StatusCode %s",
+			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
+		return nullptr;
+	}
+	switch (nodeClass) {
+	case UA_NODECLASS_VARIABLE:
+	{
+		UA_StatusCode retval = QUaNode::addOptionalVariableField(
+			server,
+			&parentNodeId,
+			&childName,
+			(const UA_VariableNode*)optionalFieldNode,
+			&outOptionalNode
+		);
+		if (retval != UA_STATUSCODE_GOOD)
+		{
+			UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+				"Adding Condition Optional Variable Field failed. StatusCode %s",
+				UA_StatusCode_name(retval));
+			return nullptr;
+		}
+		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+	}
+	break;
+	case UA_NODECLASS_OBJECT:
+	{
+		UA_StatusCode retval = QUaNode::addOptionalObjectField(
+			server,
+			&parentNodeId, &childName,
+			(const UA_ObjectNode*)optionalFieldNode,
+			&outOptionalNode
+		);
+		if (retval != UA_STATUSCODE_GOOD)
+		{
+			UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
+				"Adding Condition Optional Object Field failed. StatusCode %s",
+				UA_StatusCode_name(retval));
+			return nullptr;
+		}
+		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+	}
+	break;
+	case UA_NODECLASS_METHOD:
+		// NOTE : use QUaNode::addOptionalMethod instead
+		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+		return nullptr;
+	default:
+		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+		return nullptr;
+	}
+	// if we reached here, the optional field has been instantiated
+	// if the type of the optional field is registered in QUaServer then
+	// it has been boud to its corresponding Qt type and there is nothing
+	// more to do here
+	QUaNode* child = QUaNode::getNodeContext(outOptionalNode, server);
+	if (child)
+	{
+		Q_ASSERT(child->browseName() == childName);
+		return child;
+	}
+	// else the type is not registered, so we need to create an instance of its
+	// base class at least
+	QMetaObject metaObject;
+	switch (nodeClass) {
+	case UA_NODECLASS_VARIABLE: {
+		metaObject = QUaBaseDataVariable::staticMetaObject;
+	}
+	case UA_NODECLASS_OBJECT: {
+		metaObject = QUaBaseObject::staticMetaObject;
+	}
+	default:
+		Q_ASSERT(false);
+		return nullptr;
+	}
+	auto srv = QUaServer::getServerNodeContext(server);
+	// to understand code below, see QUaServer::uaConstructor
+	srv->m_newNodeNodeId = &outOptionalNode;
+	srv->m_newNodeMetaObject = &metaObject;
+	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
+	auto* pQObject = metaObject.newInstance(Q_ARG(QUaServer*, srv));
+	Q_ASSERT_X(pQObject, "QUaNode::instantiateOptionalChild",
+		"Failed instantiation. No matching Q_INVOKABLE constructor with signature "
+		"CONSTRUCTOR(QUaServer *server) found.");
+	auto* newInstance = qobject_cast<QUaNode*>(pQObject);
+	Q_CHECK_PTR(newInstance);
+	if (!newInstance)
+	{
+		return nullptr;
+	}
+	// need to bind again using the official (void ** nodeContext) of the UA constructor
+	// because we set context on C++ instantiation, but later the UA library overwrites it 
+	// after calling the UA constructor
+	auto st = UA_Server_setNodeContext(
+		server,
+		outOptionalNode,
+		static_cast<void*>(newInstance)
+	);
+	Q_ASSERT(st);
+	Q_UNUSED(st);
+	newInstance->m_nodeId = outOptionalNode;
+	// need to set parent and browse name
+	newInstance->setParent(parent);
+	newInstance->setObjectName(QUaQualifiedName(childName));
+	// emit child added to parent
+	emit parent->childAdded(newInstance);
+	// success
+	return newInstance;
+	
+}
+
 // NOTE : need to cleanup result after calling this method
 QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool & isForward /*= true*/) const
 {
@@ -957,46 +1133,13 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 {
 	// look if optional child really in model
-	UA_NodeId optionalFieldNodeId = UA_NODEID_NULL;
 	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
-	// look for optional child starting from this type of to base object type
-	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
-		   !UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
-	{
-		auto childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_qUaServer->m_server);
-		for (auto childNodeId : childrenNodeIds)
-		{
-			// ignore if not optional
-			if (!QUaNode::hasOptionalModellingRule(childNodeId, m_qUaServer->m_server))
-			{
-				UA_NodeId_clear(&childNodeId);
-				continue;
-			}
-			// ignore if browse name does not match
-			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, m_qUaServer->m_server);
-			if (childBrowseName != browseName)
-			{
-				UA_NodeId_clear(&childNodeId);
-				continue;
-			}
-			// copy, do not clear because will be used later
-			optionalFieldNodeId = childNodeId;
-		}
-		// cleanup
-		for (auto childNodeId : childrenNodeIds)
-		{
-			UA_NodeId_clear(&childNodeId);
-		}
-		// check if found
-		if (!UA_NodeId_isNull(&optionalFieldNodeId))
-		{
-			break;
-		}
-		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeNodeId, m_qUaServer->m_server);
-		UA_NodeId_clear(&typeNodeId);
-		UA_NodeId_copy(&typeNodeIdNew, &typeNodeId);
-		UA_NodeId_clear(&typeNodeIdNew);
-	}
+	UA_NodeId optionalFieldNodeId = QUaNode::getOptionalChildNodeId(
+		m_qUaServer->m_server, 
+		typeNodeId, 
+		browseName
+	);
+	UA_NodeId_clear(&typeNodeId);
 	if (UA_NodeId_isNull(&optionalFieldNodeId))
 	{
 		UA_LOG_WARNING(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
@@ -1004,72 +1147,22 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
 		return nullptr;
 	}
-	// get the internal node
-	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(m_qUaServer->m_server, &optionalFieldNodeId);
-	UA_NodeId_clear(&optionalFieldNodeId);
-	if (optionalFieldNode == NULL) 
-	{
-		UA_LOG_WARNING(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
-			"Couldn't find optional Field Node in ConditionType. StatusCode %s",
-			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
-		return nullptr;
-	}
 	// convert browse name to qualified name
-	UA_QualifiedName fieldName = browseName;
+	UA_QualifiedName childName = browseName;
 	// instantiate according to type
-	UA_NodeId outOptionalNode;
-	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
-	switch (nodeClass) {
-	case UA_NODECLASS_VARIABLE: 
+	QUaNode * newInstance = QUaNode::instantiateOptionalChild(
+		m_qUaServer->m_server,
+		this,
+		optionalFieldNodeId,
+		childName
+	);
+	UA_NodeId_clear(&optionalFieldNodeId);
+	UA_QualifiedName_deleteMembers(&childName);
+	if (!newInstance)
 	{
-		UA_StatusCode retval = QUaNode::addOptionalVariableField(
-			m_qUaServer->m_server, 
-			&m_nodeId, 
-			&fieldName,
-			(const UA_VariableNode*)optionalFieldNode, 
-			&outOptionalNode
-		);
-		if (retval != UA_STATUSCODE_GOOD) 
-		{
-			UA_LOG_ERROR(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
-				"Adding Condition Optional Variable Field failed. StatusCode %s",
-				UA_StatusCode_name(retval));
-			UA_QualifiedName_deleteMembers(&fieldName);
-			return nullptr;
-		}
-		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
-	}
-	break;
-	case UA_NODECLASS_OBJECT: 
-	{
-		UA_StatusCode retval = QUaNode::addOptionalObjectField(
-			m_qUaServer->m_server, 
-			&m_nodeId, &fieldName,
-			(const UA_ObjectNode*)optionalFieldNode, 
-			&outOptionalNode
-		);
-		if (retval != UA_STATUSCODE_GOOD) 
-		{
-			UA_LOG_ERROR(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
-				"Adding Condition Optional Object Field failed. StatusCode %s",
-				UA_StatusCode_name(retval));
-			UA_QualifiedName_deleteMembers(&fieldName);
-			return nullptr;
-		}
-		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
-	}
-	break;
-	case UA_NODECLASS_METHOD:
-		// NOTE : use QUaNode::addOptionalMethod instead
-		UA_QualifiedName_deleteMembers(&fieldName);
-		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
-		return nullptr;
-	default:
-		UA_QualifiedName_deleteMembers(&fieldName);
-		UA_NODESTORE_RELEASE(m_qUaServer->m_server, optionalFieldNode);
+		Q_ASSERT_X(false, "QUaNode::instantiateOptionalChild", "Could not instatiate");
 		return nullptr;
 	}
-	UA_QualifiedName_deleteMembers(&fieldName);
 	// trigger reference added, model change event, so client (UaExpert) auto refreshes tree
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	if (!this->metaObject()->inherits(&QUaBaseEvent::staticMetaObject)
@@ -1089,62 +1182,6 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 		}
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// if we reached here, the optional field has been instantiated
-	// if the type of the optional field is registered in QUaServer then
-	// it has been boud to its corresponding Qt type and there is nothing
-	// more to do here
-	QUaNode* child = QUaNode::getNodeContext(outOptionalNode, m_qUaServer->m_server);
-	if (child)
-	{
-		Q_ASSERT(child->browseName() == browseName);
-		// TODO : clean up ?
-		return child;
-	}
-	// else the type is not registered, so we need to create an instance of its
-	// base class at least
-	QMetaObject metaObject;
-	switch (nodeClass) {
-	case UA_NODECLASS_VARIABLE: {
-		metaObject = QUaBaseDataVariable::staticMetaObject;
-	}
-	case UA_NODECLASS_OBJECT: {
-		metaObject = QUaBaseObject::staticMetaObject;
-	}
-	default:
-		Q_ASSERT(false);
-		return nullptr;
-	}
-	// to understand code below, see QUaServer::uaConstructor
-	m_qUaServer->m_newNodeNodeId     = &outOptionalNode;
-	m_qUaServer->m_newNodeMetaObject = &metaObject;
-	// instantiate new C++ node, m_newNodeNodeId and m_newNodeMetaObject only meant to be used during this call
-	auto* pQObject = metaObject.newInstance(Q_ARG(QUaServer*, m_qUaServer));
-	Q_ASSERT_X(pQObject, "QUaNode::instantiateOptionalChild",
-		"Failed instantiation. No matching Q_INVOKABLE constructor with signature "
-		"CONSTRUCTOR(QUaServer *server) found.");
-	auto* newInstance = qobject_cast<QUaNode*>(pQObject);
-	Q_CHECK_PTR(newInstance);
-	if (!newInstance)
-	{
-		return nullptr;
-	}
-	// need to bind again using the official (void ** nodeContext) of the UA constructor
-	// because we set context on C++ instantiation, but later the UA library overwrites it 
-	// after calling the UA constructor
-	auto st = UA_Server_setNodeContext(
-		m_qUaServer->m_server,
-		outOptionalNode,
-		static_cast<void*>(newInstance)
-	);
-	Q_ASSERT(st);
-	Q_UNUSED(st);
-	newInstance->m_nodeId = outOptionalNode;
-	// need to set parent and browse name
-	newInstance->setParent(this);
-	newInstance->setObjectName( browseName);
-	// emit child added to parent
-	emit this->childAdded(newInstance);
-	// success
 	return newInstance;
 }
 

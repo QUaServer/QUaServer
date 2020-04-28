@@ -229,7 +229,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -241,7 +241,7 @@ QDateTime QUaSqliteHistorizer::firstTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -292,7 +292,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -304,7 +304,7 @@ QDateTime QUaSqliteHistorizer::lastTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -356,7 +356,7 @@ bool QUaSqliteHistorizer::hasTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return false;
 	}
@@ -369,7 +369,7 @@ bool QUaSqliteHistorizer::hasTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return false;
 	}
@@ -440,7 +440,7 @@ QDateTime QUaSqliteHistorizer::findTimestamp(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -524,7 +524,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return 0;
 	}
@@ -536,7 +536,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return 0;
 	}
@@ -590,7 +590,7 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return points;
 	}
@@ -929,7 +929,7 @@ QDateTime QUaSqliteHistorizer::findTimestampEventOfType(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -937,11 +937,11 @@ QDateTime QUaSqliteHistorizer::findTimestampEventOfType(
 	if (!query.next())
 	{
 		logOut << QUaLog({
-			QObject::tr("Error querying [%1] event emitter table around timestamp in %2 database.")
+			QObject::tr("Query [%1] event emitter table around timestamp returned empty in %2 database.")
 				.arg(emitterNodeId)
 				.arg(m_strSqliteDbName),
 			QUaLogLevel::Warning,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return QDateTime();
 	}
@@ -1057,7 +1057,7 @@ quint64 QUaSqliteHistorizer::numEventsOfTypeInRange(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return 0;
 	}
@@ -1069,7 +1069,7 @@ quint64 QUaSqliteHistorizer::numEventsOfTypeInRange(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return 0;
 	}
@@ -1171,7 +1171,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return points;
 	}
@@ -1216,7 +1216,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 			});
 		return points;
 	}
@@ -1318,7 +1318,7 @@ bool QUaSqliteHistorizer::tableExists(
 				.arg(m_strSqliteDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
-			QUaLogCategory::Serialization
+			QUaLogCategory::History
 		});
 		return false;
 	}

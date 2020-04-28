@@ -1746,15 +1746,8 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 		return retList;
 	}
 	// try to get typeNodeId, if null, then register it
-	QString   strClassName = QString(metaObject.className());
-	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	if (UA_NodeId_isNull(&typeNodeId))
-	{
-		this->registerTypeInternal(metaObject);
-		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	}
+	UA_NodeId typeNodeId = this->typeIdByMetaObject(metaObject);
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
-
 	// make ua browse
 	auto refTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
 	QList<UA_NodeId> retRefSet;
@@ -1943,8 +1936,7 @@ void QUaServer::registerMetaEnums(const QMetaObject& metaObject)
 
 void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 {
-	QString   strParentClassName = QString(metaObject.className());
-	UA_NodeId parentTypeNodeId = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
+	UA_NodeId parentTypeNodeId = this->typeIdByMetaObject(metaObject);
 	Q_ASSERT(!UA_NodeId_isNull(&parentTypeNodeId));
 	// loop meta properties and find out which ones inherit from
 	int propCount = metaObject.propertyCount();
@@ -2000,13 +1992,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 				continue;
 			}
 			// check if prop type registered, register of not
-			QString strPropClassName = QString(propMetaObject.className());
-			propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
-			if (UA_NodeId_isNull(&propTypeNodeId))
-			{
-				this->registerTypeInternal(propMetaObject);
-				propTypeNodeId = m_mapTypes.value(strPropClassName, UA_NODEID_NULL);
-			}
+			propTypeNodeId = this->typeIdByMetaObject(propMetaObject);
 			// set is variable
 			isVariable = propMetaObject.inherits(&QUaBaseVariable::staticMetaObject);
 			// check if ua property, then set correct reference
@@ -2108,8 +2094,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 
 void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 {
-	QString   strParentClassName = QString(parentMetaObject.className());
-	UA_NodeId parentTypeNodeId = m_mapTypes.value(strParentClassName, UA_NODEID_NULL);
+	UA_NodeId parentTypeNodeId = this->typeIdByMetaObject(parentMetaObject);
 	Q_ASSERT(!UA_NodeId_isNull(&parentTypeNodeId));
 	// loop meta methods and find out which ones inherit from
 	for (int methIdx = parentMetaObject.methodOffset(); methIdx < parentMetaObject.methodCount(); methIdx++)
@@ -2283,6 +2268,19 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 	}
 }
 
+// NOTE : do not clean
+UA_NodeId QUaServer::typeIdByMetaObject(const QMetaObject& metaObject)
+{
+	QString   strClassName = QString(metaObject.className());
+	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	if (UA_NodeId_isNull(&typeNodeId))
+	{
+		this->registerTypeInternal(metaObject);
+		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
+	}
+	return typeNodeId;
+}
+
 UA_NodeId QUaServer::createInstanceInternal(
 	const QMetaObject& metaObject,
 	QUaNode* parentNode,
@@ -2311,13 +2309,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 	}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// try to get typeNodeId, if null, then register it
-	QString   strClassName = QString(metaObject.className());
-	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	if (UA_NodeId_isNull(&typeNodeId))
-	{
-		this->registerTypeInternal(metaObject);
-		typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	}
+	UA_NodeId typeNodeId = this->typeIdByMetaObject(metaObject);
 	Q_ASSERT(!UA_NodeId_isNull(&typeNodeId));
 	// adapt parent relation with child according to parent type
 	// NOTE : parent can be null (no address space representation, e.g. events, conditions)
@@ -2456,13 +2448,7 @@ UA_NodeId QUaServer::createEventInternal(
 		return UA_NODEID_NULL;
 	}
 	// try to get typeEvtId, if null, then register it
-	QString   strClassName = QString(metaObject.className());
-	UA_NodeId typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	if (UA_NodeId_isNull(&typeEvtId))
-	{
-		this->registerTypeInternal(metaObject);
-		typeEvtId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
-	}
+	UA_NodeId typeEvtId = this->typeIdByMetaObject(metaObject);
 	Q_ASSERT(!UA_NodeId_isNull(&typeEvtId));
 	// create event instance
 	UA_NodeId nodeIdNewEvent;

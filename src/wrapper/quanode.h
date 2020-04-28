@@ -371,6 +371,18 @@ private:
 		const UA_ObjectNode*    optionalObjectFieldNode,
 		UA_NodeId*              outOptionalObject);
 
+	static UA_NodeId getOptionalChildNodeId(
+		UA_Server* server, 
+		const UA_NodeId& typeNodeId, 
+		const UA_QualifiedName& browseName
+	);
+	static QUaNode * instantiateOptionalChild(
+		UA_Server* server,
+		QUaNode * parent,
+		const UA_NodeId& optionalFieldNodeId,
+		const UA_QualifiedName childName
+	);
+
 	QSet<UA_NodeId> getRefsInternal(const QUaReferenceType& ref, const bool& isForward = true) const;
 	// NOTE : need internal because user might reimplement public
 	QUaWriteMask   userWriteMaskInternal(const QString& strUserName);
