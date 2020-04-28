@@ -11,6 +11,11 @@ QUaBaseEvent::QUaBaseEvent(
 ) : QUaBaseObject(server)
 {
 	m_sourceNodeId = UA_NODEID_NULL;
+#ifdef UA_ENABLE_HISTORIZING
+    // historize by default, though there might be some types for which
+    // we dont want default historization like change event or condition sync
+    m_historizing = true;
+#endif // UA_ENABLE_HISTORIZING
 	// set event type definition
 	this->setEventType(this->typeDefinitionNodeId());
     this->setSeverity(0);
@@ -161,6 +166,18 @@ void QUaBaseEvent::trigger()
     this->setEventId(QUaBaseEvent::generateEventId());
     this->triggerInternal();
 }
+
+#ifdef UA_ENABLE_HISTORIZING
+bool QUaBaseEvent::historizing() const
+{
+	return m_historizing;
+}
+
+void QUaBaseEvent::setHistorizing(const bool& historizing)
+{
+    m_historizing = historizing;
+}
+#endif // UA_ENABLE_HISTORIZING
 
 QUaProperty * QUaBaseEvent::getEventId() 
 {

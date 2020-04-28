@@ -17,6 +17,8 @@ friend class QUaServer;
 friend class QUaNode;
 friend class QUaBaseObject;
 
+	Q_PROPERTY(bool historizing READ historizing WRITE setHistorizing)
+
 public:
 	// NOTE : Q_INVOKABLE removed on purpose because this class should not be instantiable
 	explicit QUaBaseEvent(
@@ -66,7 +68,16 @@ public:
 	// Updates EventId and triggers the event and 
 	void trigger();
 
+#ifdef UA_ENABLE_HISTORIZING
+	// Whether the Server is actively storing the history of the event (or alarm/condition)
+	bool historizing() const;
+	void setHistorizing(const bool& historizing);
+#endif // UA_ENABLE_HISTORIZING
+
 protected:
+#ifdef UA_ENABLE_HISTORIZING
+	bool m_historizing;
+#endif // UA_ENABLE_HISTORIZING
 	// ByteString : 
 	QUaProperty  * getEventId();
 	// NodeId : 

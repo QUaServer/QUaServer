@@ -8,7 +8,9 @@ QUaGeneralModelChangeEvent::QUaGeneralModelChangeEvent(
 	QUaServer *server
 ) : QUaBaseModelChangeEvent(server)
 {
-	
+#ifdef UA_ENABLE_HISTORIZING
+	m_historizing = false;
+#endif // UA_ENABLE_HISTORIZING
 }
 
 QUaChangesList QUaGeneralModelChangeEvent::changes() const

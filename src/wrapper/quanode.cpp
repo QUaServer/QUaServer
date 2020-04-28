@@ -1732,6 +1732,26 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeAggregatedVariableChildrenData(
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			QMetaType::Type qType = QUaDataType::qTypeByNodeId(outDataType);
+			// ignore type for which there is not yet a Qt type
+			if (qType == QMetaType::UnknownType)
+			{
+				// TODO : support these types
+				continue;
+			}
+			// read valueRank
+			qint32 outValueRank;
+			st = UA_Server_readValueRank(server, childNodeId, &outValueRank);
+			Q_ASSERT(st == UA_STATUSCODE_GOOD);
+			Q_UNUSED(st);
+			if (outValueRank != UA_VALUERANK_SCALAR)
+			{
+				Q_ASSERT_X(outValueRank != UA_VALUERANK_ANY, 
+					"QUaNode::getTypeAggregatedVariableChildrenData", 
+					"Not Supported!");
+				auto byteType = QString("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
+				qType = static_cast<QMetaType::Type>(QMetaType::type(byteType.data()));
+				Q_ASSERT(qType != QMetaType::UnknownType);
+			}
 			// add to return list
 			Q_ASSERT(!retNames.contains(childBrowseName.name()));
 			retNames[childBrowseName.name()] = qType;

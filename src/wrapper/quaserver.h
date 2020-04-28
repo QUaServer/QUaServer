@@ -351,7 +351,6 @@ private:
 	static UA_ByteString * parseCertificate(const QByteArray &inByteCert, 
 		                                    UA_ByteString    &outUaCert, 
 		                                    QByteArray       &outByteCert);
-    void registerCustomTypes();
     void setupServer();
 	UA_Logger getLogger();
 	// types

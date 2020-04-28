@@ -294,10 +294,14 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     // NOTE : declaration must be here, because "goto cleanup" statements
     //        below could bypass them and compiler does not like it
  #ifdef UA_ENABLE_HISTORIZING
+    // get event instance
+    auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
+    Q_ASSERT(event);
+    bool historize = event->historizing();
     QList<QUaNodeId> emittersNodeIds;
     auto srv = QUaServer::getServerNodeContext(server);
     Q_ASSERT(srv);
-    if (srv->eventHistoryRead())
+    if (historize && srv->eventHistoryRead())
     {
         emittersNodeIds << UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
     }
@@ -360,23 +364,23 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         }
         UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
 #ifdef UA_ENABLE_HISTORIZING
-        // [MODIFIED] : do not support filter "HistoricalEventFilter" 
-        // NOTE : delete a bunch of stuff of the original history plugin
-        // get emitter instance
-        auto emitter = qobject_cast<QUaBaseObject*>(QUaNode::getNodeContext(emitNodes[i].nodeId, server));
-        // NOTE : emitter can be null for default objects (open62541?) like UA_NS0ID_ROOTFOLDER
-        if (emitter && emitter->eventHistoryRead())
+        if (historize)
         {
-            emittersNodeIds << emitNodes[i].nodeId;
+            // [MODIFIED] : do not support filter "HistoricalEventFilter" 
+            // NOTE : delete a bunch of stuff of the original history plugin
+            // get emitter instance
+            auto emitter = qobject_cast<QUaBaseObject*>(QUaNode::getNodeContext(emitNodes[i].nodeId, server));
+            // NOTE : emitter can be null for default objects (open62541?) like UA_NS0ID_ROOTFOLDER
+            if (emitter && emitter->eventHistoryRead())
+            {
+                emittersNodeIds << emitNodes[i].nodeId;
+            }
         }
 #endif // UA_ENABLE_HISTORIZING
     }
 #ifdef UA_ENABLE_HISTORIZING
-    if (emittersNodeIds.count() > 0)
+    if (historize && emittersNodeIds.count() > 0)
     {
-        // get event instance
-        auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
-        Q_ASSERT(event);
         // get event type node id
         QUaNodeId eventTypeNodeId = event->typeDefinitionNodeId();
         Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));

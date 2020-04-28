@@ -941,7 +941,7 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	// create long-living open62541 server instance
 	this->m_server = UA_Server_new();
 	// register custom types to be used with Qt (QVariant and stuff)
-	this->registerCustomTypes();
+	QUaTypesConverter::registerCustomTypes();
 	// setup server (other defaults)
 	this->setupServer();
 }
@@ -1169,77 +1169,6 @@ UA_ByteString * QUaServer::parseCertificate(const QByteArray &inByteCert,
 		}
 	}
 	return ptr;
-}
-
-void QUaServer::registerCustomTypes()
-{
-	// Qt Stuff
-	Q_ASSERT(qMetaTypeId<QTimeZone>()        >= QMetaType::User);
-	Q_ASSERT(qMetaTypeId<QUaReferenceType>() >= QMetaType::User);
-	Q_ASSERT(qMetaTypeId<QUaEnumEntry>()     >= QMetaType::User);
-	// data type
-	Q_ASSERT(qMetaTypeId<QUaDataType>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaDataType, QString>([](QUaDataType type) {
-		return type.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
-		return QUaDataType(strType);
-	});
-	// node id
-	Q_ASSERT(qMetaTypeId<QUaNodeId>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaNodeId, QString>([](QUaNodeId nodeId) {
-		return nodeId.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaNodeId>([](QString strNodeId) {
-		return QUaNodeId(strNodeId);
-	});
-	// status code
-	Q_ASSERT(qMetaTypeId<QUaStatusCode>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaStatusCode, QString>([](QUaStatusCode statusCode) {
-		return statusCode.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaStatusCode>([](QString strStatusCode) {
-		return QUaStatusCode(strStatusCode);
-	});
-	// qualified name
-	Q_ASSERT(qMetaTypeId<QUaQualifiedName>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaQualifiedName, QString>([](QUaQualifiedName qualName) {
-		return qualName.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaQualifiedName>([](QString strQualName) {
-		return QUaQualifiedName(strQualName);
-	});
-	// localized text
-	Q_ASSERT(qMetaTypeId<QUaLocalizedText>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaLocalizedText, QString>([](QUaLocalizedText localText) {
-		return localText.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaLocalizedText>([](QString strLocalText) {
-		return QUaLocalizedText(strLocalText);
-	});
-	// exclusive limit transition
-	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitState>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaExclusiveLimitState, QString>([](QUaExclusiveLimitState state) {
-		return state.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaExclusiveLimitState>([](QString strState) {
-		return QUaExclusiveLimitState(strState);
-	});
-	// exclusive limit transition
-	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitTransition>() >= QMetaType::User);
-	// string convertion for serialization
-	QMetaType::registerConverter<QUaExclusiveLimitTransition, QString>([](QUaExclusiveLimitTransition transition) {
-		return transition.operator QString();
-	});
-	QMetaType::registerConverter<QString, QUaExclusiveLimitTransition>([](QString strTransition) {
-		return QUaExclusiveLimitTransition(strTransition);
-	});
 }
 
 void QUaServer::setupServer()

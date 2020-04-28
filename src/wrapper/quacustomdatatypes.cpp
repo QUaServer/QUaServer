@@ -8,10 +8,14 @@
 - Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
 - Add constructors, equality operators converting the underlying type, string for serializaton
 - Provide any helper methods and member accessors, register to Qt using Q_DECLARE_METATYPE
-- Add a #define in quacustomdatatypes.h for the Qt type id qMetaTypeId<T>QMetaType_QualifiedName
+- Add a #define in quacustomdatatypes.h for the Qt type id qMetaTypeId<T> QMetaType_QualifiedName
 - Add the type's UA_NODEID_, UA_TYPES_, etc to the static hashes of QUaDataType:: (below)
 - Add to quatypesconverter.h and .cpp specilzations for templated convertion methods and add to switch statements
-- Register QString converters in QUaServer::registerCustomTypes using QMetaType::registerConverter
+- Register QString converters in QUaTypesConverter::registerCustomTypes using QMetaType::registerConverter
+
+If array of types supported:
+- Add a #define in quacustomdatatypes.h for the Qt type id qMetaTypeId<QList<T>>QMetaType_List_QualifiedName
+- Register QString converters in QUaTypesConverter::registerCustomTypes using QMetaType::registerConverter
 */
 QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("Bool")                      , QMetaType::Bool                  },
@@ -39,9 +43,9 @@ QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("QUaLocalizedText")          , QMetaType_LocalizedText          },
 	// TODO : image
 	//{QString("QImage")                    , QMetaType_Image                  },
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENT
-	{QString("QTimeZone")                 , QMetaType_TimeZone               },
-	{QString("QUaChangeStructureDataType"), QMetaType_ChangeStructureDataType}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	{QString("QTimeZone")                        , QMetaType_TimeZone               },
+	{QString("QUaChangeStructureDataType")       , QMetaType_ChangeStructureDataType}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
@@ -190,7 +194,9 @@ bool QUaDataType::isSupportedQType(const QMetaType::Type& type)
 
 QMetaType::Type QUaDataType::qTypeByNodeId(const UA_NodeId& nodeId)
 {
+#if !defined(UA_ENABLE_HISTORIZING) && !defined(UA_ENABLE_SUBSCRIPTIONS_EVENTS)
 	Q_ASSERT(m_custTypesByNodeId.contains(nodeId));
+#endif
 	return m_custTypesByNodeId.value(nodeId, QMetaType::UnknownType);
 }
 
@@ -488,19 +494,56 @@ QUaQualifiedName QUaQualifiedName::fromUaQualifiedName(const UA_QualifiedName& u
 	return QUaQualifiedName(uaQualName);
 }
 
+QMetaEnum QUaChangeStructureDataType::m_metaEnumVerb = QMetaEnum::fromType<QUa::ChangeVerb>();
+
 QUaChangeStructureDataType::QUaChangeStructureDataType()
-	: m_uiVerb(QUaChangeVerb::NodeAdded)
+	: m_uiVerb(static_cast<uchar>(QUaChangeVerb::NodeAdded))
 {
 }
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(
 	const QUaNodeId& nodeIdAffected,
 	const QUaNodeId& nodeIdAffectedType,
-	const Verb& uiVerb)
+	const QUaChangeVerb& uiVerb)
 	: m_nodeIdAffected(nodeIdAffected),
 	m_nodeIdAffectedType(nodeIdAffectedType),
-	m_uiVerb(uiVerb)
+	m_uiVerb(static_cast<uchar>(uiVerb))
 {
+}
+
+QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeStructure)
+{
+	QStringList components = strChangeStructure.split(QLatin1String("|"));
+	if (components.count() == 0)
+	{
+		return;
+	}
+	if (components.count() >= 1)
+	{
+		m_nodeIdAffected = components.at(0);
+	}
+	if (components.count() >= 2)
+	{
+		m_nodeIdAffectedType = components.at(1);
+	}
+	if (components.count() >= 3)
+	{
+		bool ok = false;
+		auto byte = components.at(2).toUtf8();
+		int val = m_metaEnumVerb.keyToValue(byte.data(), &ok);
+		m_uiVerb = ok ? static_cast<uchar>(val) : static_cast<uchar>(QUaChangeVerb::NodeAdded);
+	}
+}
+
+QUaChangeStructureDataType::operator QString() const
+{
+	const char* verb = m_metaEnumVerb.valueToKey(static_cast<int>(m_uiVerb));
+	return QString("%1|%2|%3").arg(m_nodeIdAffected).arg(m_nodeIdAffectedType).arg(verb);
+}
+
+QString QUaChangeStructureDataType::toString() const
+{
+	return *this;
 }
 
 QUaSession::QUaSession(QObject* parent/* = 0*/)

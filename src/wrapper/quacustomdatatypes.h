@@ -119,10 +119,22 @@ namespace QUa
 		LowToLowLow    = 4
 	};
 	Q_ENUM_NS(ExclusiveLimitTransition)
+
+	enum class ChangeVerb
+	{
+		NodeAdded        = 1,
+		NodeDeleted      = 2,
+		ReferenceAdded   = 4,
+		ReferenceDeleted = 8,
+		DataTypeChanged  = 16
+	};
+	Q_ENUM_NS(ChangeVerb)
 }
 typedef QUa::LogLevel    QUaLogLevel;
 typedef QUa::LogCategory QUaLogCategory;
 typedef QUa::Status      QUaStatus;
+
+typedef QUa::ChangeVerb  QUaChangeVerb;
 
 struct QUaLog
 {
@@ -254,15 +266,25 @@ union QUaEventNotifier
 	};
 };
 
-#define QMetaType_NodeId                  static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId>())
-#define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode>())
+#define QMetaType_NodeId                  static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId       >())
+#define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode   >())
 #define QMetaType_QualifiedName           static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
 #define QMetaType_LocalizedText           static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
+#define QMetaType_DataType                static_cast<QMetaType::Type>(qMetaTypeId<QUaDataType     >())
 // TODO :image
 //#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
+
+// custom list types
+#define QMetaType_List_NodeId        static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaNodeId       >>())
+#define QMetaType_List_StatusCode    static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaStatusCode   >>())
+#define QMetaType_List_QualifiedName static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaQualifiedName>>())
+#define QMetaType_List_LocalizedText static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaLocalizedText>>())
+#define QMetaType_List_DataType      static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaDataType     >>())
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-#define QMetaType_TimeZone                static_cast<QMetaType::Type>(qMetaTypeId<QTimeZone>())
-#define QMetaType_ChangeStructureDataType static_cast<QMetaType::Type>(qMetaTypeId<QUaChangeStructureDataType>())
+#define QMetaType_TimeZone                     static_cast<QMetaType::Type>(qMetaTypeId<QTimeZone>())
+#define QMetaType_ChangeStructureDataType      static_cast<QMetaType::Type>(qMetaTypeId<QUaChangeStructureDataType>())
+#define QMetaType_List_ChangeStructureDataType static_cast<QMetaType::Type>(qMetaTypeId<QUaChangesList>())
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 class QUaDataType
@@ -578,29 +600,29 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualN
 	return inStream;
 }
 
-struct QUaChangeStructureDataType
+class QUaChangeStructureDataType
 {
-	enum Verb
-	{
-		NodeAdded        = 1,
-		NodeDeleted      = 2,
-		ReferenceAdded   = 4,
-		ReferenceDeleted = 8,
-		DataTypeChanged  = 16
-	};
+public:
 	QUaChangeStructureDataType();
 	QUaChangeStructureDataType(
-		const QUaNodeId &nodeIdAffected,
-		const QUaNodeId &nodeIdAffectedType,
-		const Verb      &uiVerb
+		const QUaNodeId     &nodeIdAffected,
+		const QUaNodeId     &nodeIdAffectedType,
+		const QUaChangeVerb &uiVerb
 	);
+	QUaChangeStructureDataType(const QString& strChangeStructure);
+
+	operator QString() const;
+
+	QString toString() const;
 
 	QUaNodeId m_nodeIdAffected;
 	QUaNodeId m_nodeIdAffectedType;
 	uchar     m_uiVerb;
+
+private:
+	static QMetaEnum m_metaEnumVerb;
 };
-typedef QUaChangeStructureDataType::Verb QUaChangeVerb;
-typedef QVector<QUaChangeStructureDataType> QUaChangesList;
+typedef QList<QUaChangeStructureDataType> QUaChangesList;
 
 inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStructureDataType& rhs) 
 {
@@ -611,6 +633,8 @@ inline bool operator==(const QUaChangeStructureDataType& lhs, const QUaChangeStr
 
 Q_DECLARE_METATYPE(QUaChangeStructureDataType);
 
+// NOTE : automatic
+//Q_DECLARE_METATYPE(QUaChangesList);
 
 class QUaExclusiveLimitState
 {

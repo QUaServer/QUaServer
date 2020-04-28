@@ -74,7 +74,7 @@ void QUaHistoryBackend::processServerLog(
 QMetaType::Type QUaHistoryBackend::QVariantToQtType(const QVariant& value)
 {
 	return static_cast<QMetaType::Type>(
-		value.type() < 1024 ?
+		value.type() < QMetaType::User ?
 		value.type() :
 		value.userType()
 	);
@@ -84,7 +84,7 @@ void QUaHistoryBackend::fixOutputVariantType(
 	QVariant& value, 
 	const QMetaType::Type& metaType)
 {
-	if (!value.isValid() || value.isNull())
+	if (metaType == QMetaType::UnknownType || !value.isValid() || value.isNull())
 	{
 		return;
 	}
@@ -101,9 +101,22 @@ void QUaHistoryBackend::fixOutputVariantType(
 		value = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC);  // NOTE : expensive if spec not defined
 		return;
 	}
+	if (metaType == QMetaType_StatusCode && value.canConvert(QMetaType::UInt))
+	{
+		uint iStatusCode = value.toUInt();
+		value = QVariant::fromValue(static_cast<QUaStatusCode>(iStatusCode));
+		return;
+	}
 	// generic case
-	Q_ASSERT(value.canConvert(metaType));
-	value.convert(metaType); // 24% expensive to convert QString to QUaNodeId
+	if (!value.canConvert(metaType))
+	{
+		qWarning() << "[OLD TYPE]" << QMetaType::typeName(oldType);  
+		qWarning() << "[NEW TYPE]" << QMetaType::typeName(metaType); 
+		Q_ASSERT_X(false, "QUaHistoryBackend::fixOutputVariantType", "Cannot convert between types.");
+		return;
+	}
+	// NOTE : expensive to convert QString to QUaNodeId
+	value.convert(metaType); 
 }
 
 UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
@@ -1096,8 +1109,10 @@ void QUaHistoryBackend::readEvent(
 				{
 					auto& name = i.key();
 					QVariant& value = i.value();
-					auto& type = fieldInfo[name];
-					QUaHistoryBackend::fixOutputVariantType(value, type); // 30.04 [4.94]
+					// NOTE : use ::value to avoid creating an unwanted entry into m_hashTypeAggregatedVariableChildren
+					auto &type = fieldInfo.value(name, QMetaType::UnknownType); 
+					// NOTE : expensive, e.g. string to QUaNodeId
+					QUaHistoryBackend::fixOutputVariantType(value, type); 
 					++i;
 				}
 			});

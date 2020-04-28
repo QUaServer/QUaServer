@@ -28,11 +28,23 @@ QHash<int, QString> QUaSqliteHistorizer::m_hashTypes = {
 	{QMetaType::QUuid          , "INTEGER"},
 	{QMetaType::QByteArray     , "BLOB"   },
 	{QMetaType::UnknownType    , "TEXT"   },
-	{qMetaTypeId<QUaDataType>(), "INTEGER"},
+	{QMetaType_DataType        , "INTEGER"},
 	{QMetaType_NodeId          , "TEXT"   },
 	{QMetaType_StatusCode      , "TEXT"   },
 	{QMetaType_QualifiedName   , "TEXT"   },
-	{QMetaType_LocalizedText   , "TEXT"   }
+	{QMetaType_LocalizedText   , "TEXT"   },
+	{QMetaType_List_NodeId       , "TEXT"   },
+	{QMetaType_List_StatusCode   , "TEXT"   },
+	{QMetaType_List_QualifiedName, "TEXT"   },
+	{QMetaType_List_LocalizedText, "TEXT"   },
+	{QMetaType_List_DataType     , "TEXT"   }
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	,
+	{QMetaType_TimeZone                    , "TEXT"},
+	{QMetaType_ChangeStructureDataType     , "TEXT"},
+	{QMetaType_List_ChangeStructureDataType, "TEXT"}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
 };
 
 QUaSqliteHistorizer::QUaSqliteHistorizer()
@@ -1640,10 +1652,12 @@ QMetaType::Type QUaSqliteHistorizer::QVariantToQtType(const QVariant& value)
 
 const QString QUaSqliteHistorizer::QtTypeToSqlType(const QMetaType::Type& qtType)
 {
-	Q_ASSERT_X(
-		QUaSqliteHistorizer::m_hashTypes.contains(qtType),
-		"QtTypeToSqlType", "Unknown type."
-	);
+
+	if (!QUaSqliteHistorizer::m_hashTypes.contains(qtType))
+	{
+		qWarning() << "[UNKNOWN TYPE]" << QMetaType::typeName(qtType);
+		Q_ASSERT_X(false, "QUaSqliteHistorizer::QtTypeToSqlType", "Unknown type.");
+	}
 	return QUaSqliteHistorizer::m_hashTypes.value(qtType, "BLOB");
 }
 

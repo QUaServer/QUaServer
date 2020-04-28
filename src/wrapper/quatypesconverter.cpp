@@ -925,7 +925,139 @@ QUaChangeStructureDataType uaVariantToQVariantScalar<QUaChangeStructureDataType,
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
+
+template<typename T>
+inline QString listToString(const QList<T>& list, const QLatin1String& separator = QLatin1String(","))
+{
+	QString retString;
+	auto i = list.begin();
+	while (i != list.end())
+	{
+		retString += *i;
+		++i;
+		if (i == list.end())
+		{
+			break;
+		}
+		retString += separator;
+	}
+	return retString;
+}
+
+template<typename T>
+inline QList<T> stringToList(const QString& string, const QLatin1String& separator = QLatin1String(","))
+{
+	QList<T> retList;
+	auto listChanges = string.split(separator);
+	for (auto& strChange : listChanges)
+	{
+		retList << strChange;
+	}
+	return retList;
+}
 	
+static bool registerCustomTypesRegistered = false;
+void registerCustomTypes()
+{
+	if (registerCustomTypesRegistered)
+	{
+		return;
+	}
+	registerCustomTypesRegistered = true;
+	// Qt Stuff
+	Q_ASSERT(qMetaTypeId<QTimeZone>()        >= QMetaType::User);
+	Q_ASSERT(qMetaTypeId<QUaReferenceType>() >= QMetaType::User);
+	Q_ASSERT(qMetaTypeId<QUaEnumEntry>()     >= QMetaType::User);
+	// data type
+	Q_ASSERT(qMetaTypeId<QUaDataType>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaDataType, QString>([](QUaDataType type) {
+		return type.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaDataType>([](QString strType) {
+		return QUaDataType(strType);
+	});
+	// node id
+	Q_ASSERT(qMetaTypeId<QUaNodeId>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaNodeId, QString>([](QUaNodeId nodeId) {
+		return nodeId.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaNodeId>([](QString strNodeId) {
+		return QUaNodeId(strNodeId);
+	});
+	// node id list
+	Q_ASSERT(qMetaTypeId<QList<QUaNodeId>>() >= QMetaType::User);
+	QMetaType::registerConverter<QList<QUaNodeId>, QString>([](QList<QUaNodeId> listNodeId) {
+		return listToString<QUaNodeId>(listNodeId);
+	});
+	QMetaType::registerConverter<QString, QList<QUaNodeId>>([](QString strNodeIdList) {
+		return stringToList<QUaNodeId>(strNodeIdList);
+	});
+	// status code
+	Q_ASSERT(qMetaTypeId<QUaStatusCode>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaStatusCode, QString>([](QUaStatusCode statusCode) {
+		return statusCode.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaStatusCode>([](QString strStatusCode) {
+		return QUaStatusCode(strStatusCode);
+	});
+	// qualified name
+	Q_ASSERT(qMetaTypeId<QUaQualifiedName>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaQualifiedName, QString>([](QUaQualifiedName qualName) {
+		return qualName.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaQualifiedName>([](QString strQualName) {
+		return QUaQualifiedName(strQualName);
+	});
+	// localized text
+	Q_ASSERT(qMetaTypeId<QUaLocalizedText>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaLocalizedText, QString>([](QUaLocalizedText localText) {
+		return localText.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaLocalizedText>([](QString strLocalText) {
+		return QUaLocalizedText(strLocalText);
+	});
+	// node id list
+	Q_ASSERT(qMetaTypeId<QList<QUaLocalizedText>>() >= QMetaType::User);
+	QMetaType::registerConverter<QList<QUaLocalizedText>, QString>([](QList<QUaLocalizedText> listLocalizedText) {
+		return listToString<QUaLocalizedText>(listLocalizedText, QLatin1String((char *)'\a'));
+	});
+	QMetaType::registerConverter<QString, QList<QUaLocalizedText>>([](QString strLocalizedTextList) {
+		return stringToList<QUaLocalizedText>(strLocalizedTextList, QLatin1String((char*)'\a'));
+	});
+	// exclusive limit transition
+	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitState>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaExclusiveLimitState, QString>([](QUaExclusiveLimitState state) {
+		return state.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaExclusiveLimitState>([](QString strState) {
+		return QUaExclusiveLimitState(strState);
+	});
+	// exclusive limit transition
+	Q_ASSERT(qMetaTypeId<QUaExclusiveLimitTransition>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaExclusiveLimitTransition, QString>([](QUaExclusiveLimitTransition transition) {
+		return transition.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaExclusiveLimitTransition>([](QString strTransition) {
+		return QUaExclusiveLimitTransition(strTransition);
+	});
+	// change structure
+	Q_ASSERT(qMetaTypeId<QUaChangeStructureDataType>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaChangeStructureDataType, QString>([](QUaChangeStructureDataType change) {
+		return change.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaChangeStructureDataType>([](QString strChange) {
+		return QUaChangeStructureDataType(strChange);
+	});
+	// change structure list
+	Q_ASSERT(qMetaTypeId<QUaChangesList>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaChangesList, QString>([](QUaChangesList changeList) {
+		return listToString<QUaChangeStructureDataType>(changeList);
+	});
+	QMetaType::registerConverter<QString, QUaChangesList>([](QString strChange) {
+		return stringToList<QUaChangeStructureDataType>(strChange);
+	});
+}
+
 } // namespace
 
 QT_END_NAMESPACE

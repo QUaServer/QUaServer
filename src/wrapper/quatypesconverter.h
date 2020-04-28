@@ -286,6 +286,8 @@ namespace QUaTypesConverter {
 		Q_ASSERT_X(false, "qtTypeFromCpp", "Unsupported type");
 		return QMetaType::UnknownType;
 	}
+
+	void registerCustomTypes();
 }
 
 QT_END_NAMESPACE

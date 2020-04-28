@@ -8,6 +8,14 @@
 #include <QUaExclusiveLevelAlarm>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
+#ifdef UA_ENABLE_HISTORIZING
+#ifndef SQLITE_HISTORIZER
+#include "./../10_historizing/quainmemoryhistorizer.h"
+#else
+#include "./../10_historizing/quasqlitehistorizer.h"
+#endif // !SQLITE_HISTORIZER
+#endif // UA_ENABLE_HISTORIZING
+
 int main(int argc, char* argv[])
 {
 	QCoreApplication a(argc, argv);
@@ -24,6 +32,30 @@ int main(int argc, char* argv[])
 	});
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
+
+#ifdef UA_ENABLE_HISTORIZING
+#ifndef SQLITE_HISTORIZER
+	// set historizer (must live at least as long as the server)
+	QUaInMemoryHistorizer historizer;
+#else
+	QUaSqliteHistorizer historizer;
+	QQueue<QUaLog> logOut;
+	if (!historizer.setSqliteDbName("history.sqlite", logOut))
+	{
+		for (auto log : logOut)
+		{
+			qDebug() << "[" << log.level << "] :" << log.message;
+		}
+		return -1;
+	}
+	historizer.setTransactionTimeout(2 * 1000); // db transaction every 2 secs
+#endif // !SQLITE_HISTORIZER
+	// set the historizer
+	// NOTE : historizer must live at least as long as server
+	server.setHistorizer(historizer);
+	// enable event history on server node (all events)
+	server.setEventHistoryRead(true);
+#endif // UA_ENABLE_HISTORIZING
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
@@ -45,7 +77,6 @@ int main(int argc, char* argv[])
 	});
 	
 	auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>("level_alarm");
-	level_alarm->Enable();
 	level_alarm->setHighHighLimitRequired(true);
 	level_alarm->setHighLimitRequired(true);
 	level_alarm->setLowLimitRequired(true);
@@ -55,6 +86,7 @@ int main(int argc, char* argv[])
 	level_alarm->setLowLimit(-10.0);
 	level_alarm->setLowLowLimit(-100.0);
 	level_alarm->setInputNode(level);
+	level_alarm->Enable();
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
