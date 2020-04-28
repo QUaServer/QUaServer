@@ -98,6 +98,7 @@ public:
 	QVector<QUaHistoryDataPoint> readHistoryData(
 		const QUaNodeId &nodeId,
 		const QDateTime &timeStart,
+		const quint64   &numPointsOffset,
 		const quint64   &numPointsToRead,
 		QQueue<QUaLog>  &logOut
 	) const;
@@ -167,7 +168,7 @@ private:
 	std::function<bool(const QUaNodeId&, const QDateTime&, QQueue<QUaLog>&)> m_hasTimestamp;
 	std::function<QDateTime(const QUaNodeId&, const QDateTime&, const TimeMatch&, QQueue<QUaLog>&)> m_findTimestamp;
 	std::function<quint64(const QUaNodeId&, const QDateTime&, const QDateTime&, QQueue<QUaLog>&)> m_numDataPointsInRange;
-	std::function<QVector<QUaHistoryDataPoint>(const QUaNodeId&, const QDateTime&, const quint64&, QQueue<QUaLog>&)> m_readHistoryData;
+	std::function<QVector<QUaHistoryDataPoint>(const QUaNodeId&, const QDateTime&, const quint64&, const quint64&, QQueue<QUaLog>&)> m_readHistoryData;
 
 	// event history support
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -333,12 +334,14 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 	m_readHistoryData = [&historizer](
 		const QUaNodeId &nodeId, 
 		const QDateTime &timeStart, 
+		const quint64   &numPointsOffset,
 		const quint64   &numPointsToRead,
 		QQueue<QUaLog>  &logOut
 		) -> QVector<QUaHistoryDataPoint>{
 			return historizer.readHistoryData(
 				nodeId,
 				timeStart,
+				numPointsOffset,
 				numPointsToRead,
 				logOut
 			);

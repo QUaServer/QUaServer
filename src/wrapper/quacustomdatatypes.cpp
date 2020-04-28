@@ -703,12 +703,6 @@ QUaNodeId::QUaNodeId()
 {
 	m_nodeId = UA_NODEID_NULL;
 }
-
-QUaNodeId::~QUaNodeId()
-{
-	this->clear();
-}
-
 QUaNodeId::QUaNodeId(const quint16& index, const quint32& numericId)
 {
 	m_nodeId = UA_NODEID_NULL;
@@ -725,6 +719,7 @@ QUaNodeId::QUaNodeId(const quint16& index, const QString& stringId)
 
 QUaNodeId::QUaNodeId(const quint16& index, const char* stringId)
 {
+	m_nodeId = UA_NODEID_NULL;
 	*this = QUaNodeId(index, QString(stringId));
 }
 
@@ -744,22 +739,31 @@ QUaNodeId::QUaNodeId(const quint16& index, const QByteArray& byteArrayId)
 
 QUaNodeId::QUaNodeId(const QUaNodeId& other)
 {
+	m_nodeId = UA_NODEID_NULL;
 	*this = other;
 }
 
 QUaNodeId::QUaNodeId(const UA_NodeId& uaNodeId)
 {
+	m_nodeId = UA_NODEID_NULL;
 	*this = uaNodeId;
 }
 
 QUaNodeId::QUaNodeId(const QString& strXmlNodeId)
 {
+	m_nodeId = UA_NODEID_NULL;
 	*this = strXmlNodeId;
 }
 
 QUaNodeId::QUaNodeId(const char* strXmlNodeId)
 {
+	m_nodeId = UA_NODEID_NULL;
 	*this = strXmlNodeId;
+}
+
+QUaNodeId::~QUaNodeId()
+{
+	this->clear();
 }
 
 void QUaNodeId::operator=(const UA_NodeId& uaNodeId)

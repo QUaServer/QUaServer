@@ -537,6 +537,7 @@ quint64 QUaSqliteHistorizer::numDataPointsInRange(
 QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 	const QUaNodeId &nodeId,
 	const QDateTime& timeStart,
+	const quint64& numPointsOffset,
 	const quint64& numPointsToRead,
 	QQueue<QUaLog>& logOut)
 {
@@ -568,6 +569,7 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 	QSqlQuery& query = m_dataPrepStmts[nodeId].readHistoryData;
 	query.bindValue(0, timeStart.toMSecsSinceEpoch());
 	query.bindValue(1, numPointsToRead);
+	query.bindValue(2, numPointsOffset);
 	if (!query.exec())
 	{
 		logOut << QUaLog({
@@ -1563,7 +1565,9 @@ bool QUaSqliteHistorizer::dataPrepareAllStmts(
 		"ORDER BY "
 			"p.Time ASC "
 		"LIMIT "
-			":Limit;"
+			":Limit "
+		"OFFSET "
+			":Offset;"
 	).arg(nodeId);
 	if (!this->prepareStmt(query, strStmt, logOut))
 	{

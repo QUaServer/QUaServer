@@ -210,6 +210,7 @@ quint64 QUaInMemoryHistorizer::numDataPointsInRange(
 QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
 	const QUaNodeId &nodeId,
 	const QDateTime& timeStart,
+	const quint64& numPointsOffset,
 	const quint64& numPointsToRead,
 	QQueue<QUaLog>& logOut) const
 {
@@ -229,6 +230,8 @@ QVector<QUaHistoryDataPoint> QUaInMemoryHistorizer::readHistoryData(
 	Q_ASSERT(table.contains(timeStart));
 	// get total range to read
 	auto iterIni = table.find(timeStart);
+	// apply offset
+	iterIni += numPointsOffset;
 	// resize return value accordingly
 	points.resize(numPointsToRead);
 	// copy return data points

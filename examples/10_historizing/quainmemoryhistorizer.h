@@ -71,6 +71,7 @@ public:
 	QVector<QUaHistoryDataPoint> readHistoryData(
 		const QUaNodeId & nodeId,
 		const QDateTime &timeStart,
+		const quint64& numPointsOffset,
 		const quint64   &numPointsToRead,
 		QQueue<QUaLog>  &logOut
 	) const;
