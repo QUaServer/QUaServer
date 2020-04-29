@@ -73,17 +73,17 @@ void QUaBaseEvent::setSourceNode(const QUaNodeId& sourceNodeId)
     {
         // source node must be an event notifier
         obj->setSubscribeToEvents(true);
-        // there is supposed to be a (non-looping) event generation hierarchy
-        // TODO : implement event hierarchy according to Part 3 - 7.x
-        // for now all source nodes are directly event sources of server object directly
-        auto st = UA_Server_addReference(
-            m_qUaServer->m_server,
-            UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER),
-            UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE /*UA_NS0ID_HASNOTIFIER*/),
-            { obj->m_nodeId, UA_STRING_NULL, 0 },
-            true
-        );
-        Q_ASSERT(st == UA_STATUSCODE_GOOD || st == UA_STATUSCODE_BADDUPLICATEREFERENCENOTALLOWED);
+        //// there is supposed to be a (non-looping) event generation hierarchy
+        //// TODO : implement event hierarchy according to Part 3 - 7.x
+        //// for now all source nodes are directly event sources of server object directly
+        //auto st = UA_Server_addReference(
+        //    m_qUaServer->m_server,
+        //    UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER),
+        //    UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE /*UA_NS0ID_HASNOTIFIER*/),
+        //    { obj->m_nodeId, UA_STRING_NULL, 0 },
+        //    true
+        //);
+        //Q_ASSERT(st == UA_STATUSCODE_GOOD || st == UA_STATUSCODE_BADDUPLICATEREFERENCENOTALLOWED);
     }
     Q_ASSERT(
           obj ||

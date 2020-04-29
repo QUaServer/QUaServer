@@ -93,7 +93,11 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	if (m_sourceNode)
 	{
 		// remove reference
-		m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		if (!this->isBranch())
+		{
+			// NOTE : references are RAM hungry and is not worth having them for branches
+			m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		}
 		// remove destroy connections
 		QObject::disconnect(m_sourceDestroyed);
 		QObject::disconnect(m_retainedDestroyed);
@@ -113,7 +117,11 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	if (m_sourceNode)
 	{
 		// add reference
-		m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		if (!this->isBranch())
+		{
+			// NOTE : references are RAM hungry and is not worth having them for branches
+			m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		}
 		// add destroy connection
 		m_sourceDestroyed = QObject::connect(m_sourceNode, &QObject::destroyed, this,
 		[this]() {
@@ -508,9 +516,6 @@ QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
 	branch->setDisplayName(displayName);
 	// A branch is an independent copy of the condition instance state that can change, not typically 
 	// not visible in the Address Space
-	// NOTE : in this implementation I decided to expose to the address space through a non-hierarchical
-	// reference because it is easier for debugging/development puposes. Maybe will change in the future.
-	this->addReference({ "HasBranch", "IsBranchOf" }, branch);
 	Q_ASSERT(!m_branches.contains(branch));
 	m_branches << branch;
 	// remove from internal list if deleted

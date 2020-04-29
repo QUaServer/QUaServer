@@ -35,8 +35,6 @@ int main(int argc, char* argv[])
 
 	// historize events if enabled
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// enable event history on server object
-	server.setEventHistoryRead(true);
 	server.registerType<MyEvent>({ 0, "CustomEventType" });
 	// create event with server as originator
 	auto srvEvt = server.createEvent<MyEvent>();
@@ -46,7 +44,6 @@ int main(int argc, char* argv[])
 	auto obj = objsFolder->addBaseObject("CustomObject", {0, "CustomObject" });
 	// enable event history on custom object
 	obj->setSubscribeToEvents(true);
-	obj->setEventHistoryRead(true);
 	// create custom event with custom object as originator
 	auto objEvt = obj->createEvent<MyEvent>();
 	objEvt->setDisplayName("CustomEvent");
@@ -54,8 +51,12 @@ int main(int argc, char* argv[])
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_HISTORIZING
-#ifndef SQLITE_HISTORIZER
+	// enable event history on server object
+	server.setEventHistoryRead(true);
+	// enable event history on custom object
+	obj->setEventHistoryRead(true);
 	// set historizer (must live at least as long as the server)
+#ifndef SQLITE_HISTORIZER
 	QUaInMemoryHistorizer historizer;
 #else
 	QUaSqliteHistorizer historizer;

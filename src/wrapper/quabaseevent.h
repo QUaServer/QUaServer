@@ -16,9 +16,9 @@ class QUaBaseEvent : public QUaBaseObject
 friend class QUaServer;
 friend class QUaNode;
 friend class QUaBaseObject;
-
+#ifdef UA_ENABLE_HISTORIZING
 	Q_PROPERTY(bool historizing READ historizing WRITE setHistorizing)
-
+#endif // UA_ENABLE_HISTORIZING
 public:
 	// NOTE : Q_INVOKABLE removed on purpose because this class should not be instantiable
 	explicit QUaBaseEvent(

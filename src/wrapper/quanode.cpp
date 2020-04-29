@@ -696,15 +696,15 @@ void QUaNode::addReference(const QUaReferenceType& ref, QUaNode* nodeTarget, con
 	emit nodeTarget->referenceAdded(ref, this, !isForward);
 	// subscribe node destructions
 	QObject::connect(nodeTarget, &QObject::destroyed, this,
-		[this, ref, nodeTarget, isForward]() {
-			// emit event
-			emit this->referenceRemoved(ref, nodeTarget, isForward);
-		});
+	[this, ref, nodeTarget, isForward]() {
+		// emit event
+		emit this->referenceRemoved(ref, nodeTarget, isForward);
+	});
 	QObject::connect(this, &QObject::destroyed, nodeTarget,
-		[this, ref, nodeTarget, isForward]() {
-			// emit event
-			emit nodeTarget->referenceRemoved(ref, this, !isForward);
-		});
+	[this, ref, nodeTarget, isForward]() {
+		// emit event
+		emit nodeTarget->referenceRemoved(ref, this, !isForward);
+	});
 }
 
 void QUaNode::removeReference(const QUaReferenceType& ref, QUaNode* nodeTarget, const bool& isForward/* = true*/)
@@ -1010,6 +1010,7 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	QUaNode* child = QUaNode::getNodeContext(outOptionalNode, server);
 	if (child)
 	{
+		Q_ASSERT(child->parent() == parent);
 		Q_ASSERT(child->browseName() == childName);
 		return child;
 	}
@@ -1145,12 +1146,14 @@ bool QUaNode::userExecutableInternal(const QString & strUserName)
 // NOTE : some code borrowed from UA_Server_addConditionOptionalField
 QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 {
+	// convert browse name to qualified name
+	UA_QualifiedName childName = browseName;
 	// look if optional child really in model
 	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
 	UA_NodeId optionalFieldNodeId = QUaNode::getOptionalChildNodeId(
 		m_qUaServer->m_server, 
 		typeNodeId, 
-		browseName
+		childName
 	);
 	UA_NodeId_clear(&typeNodeId);
 	if (UA_NodeId_isNull(&optionalFieldNodeId))
@@ -1158,10 +1161,10 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 		UA_LOG_WARNING(&m_qUaServer->m_server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Couldn't find optional Field Node in ConditionType. StatusCode %s",
 			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
+		UA_NodeId_clear(&optionalFieldNodeId);
+		UA_QualifiedName_clear(&childName);
 		return nullptr;
 	}
-	// convert browse name to qualified name
-	UA_QualifiedName childName = browseName;
 	// instantiate according to type
 	QUaNode * newInstance = QUaNode::instantiateOptionalChild(
 		m_qUaServer->m_server,
@@ -1170,7 +1173,7 @@ QUaNode* QUaNode::instantiateOptionalChild(const QUaQualifiedName&  browseName)
 		childName
 	);
 	UA_NodeId_clear(&optionalFieldNodeId);
-	UA_QualifiedName_deleteMembers(&childName);
+	UA_QualifiedName_clear(&childName);
 	if (!newInstance)
 	{
 		Q_ASSERT_X(false, "QUaNode::instantiateOptionalChild", "Could not instatiate");
@@ -1205,7 +1208,7 @@ QUaNode* QUaNode::cloneNode(
 )
 {
 	// create new clean instance of the same type
-	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal( // 15.91[%]
+	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal(
 		*this->metaObject(),
 		parentNode,
 		browseName.isEmpty() ? this->browseName() :  browseName,
@@ -1228,7 +1231,7 @@ QUaNode* QUaNode::cloneNode(
 	// serialize this instance to memory
 	QQueue<QUaLog> logOut;
 	QUaInMemorySerializer serializer;
-	this->serialize(serializer, logOut); // 27.27[%]
+	this->serialize(serializer, logOut);
 
 	//// [DEBUG]
 	//serializer.qtDebug(
@@ -1245,7 +1248,7 @@ QUaNode* QUaNode::cloneNode(
 	serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs["browseName"] = 
 		newInstance->browseName().toXmlString();
 	// deserialize to new instance
-	newInstance->deserialize(serializer, logOut); // 34.09[%]
+	newInstance->deserialize(serializer, logOut);
 
 	//// [DEBUG]
 	////serializer.clear();
@@ -1430,7 +1433,7 @@ bool QUaNode::inAddressSpace() const
 	return parent && (parent == m_qUaServer->m_pobjectsFolder || parent->inAddressSpace());
 }
 
-const QMap<QString, QVariant> QUaNode::serializeAttrs() const // 17.02[%]
+const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 {
 	QMap<QString, QVariant> retMap;
 	// first serialize browseName
@@ -1491,7 +1494,7 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 
 void QUaNode::deserializeAttrs(
 	const QMap<QString, QVariant>& attrs, 
-	QQueue<QUaLog>& logOut) // 27.27[%]
+	QQueue<QUaLog>& logOut)
 {
 	QStringList listAttrsNotInProps = attrs.keys();
 	QStringList listPropsNotInAttrs;
