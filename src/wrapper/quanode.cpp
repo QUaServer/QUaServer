@@ -16,8 +16,8 @@
 
 struct QUaInMemorySerializer
 {
-	bool QUaInMemorySerializer::writeInstance(
-		const QString& nodeId,
+	bool QUaInMemorySerializer::writeInstance( // 6.38
+		const QUaNodeId& nodeId,
 		const QString& typeName,
 		const QMap<QString, QVariant>& attrs,
 		const QList<QUaForwardReference>& forwardRefs,
@@ -40,7 +40,7 @@ struct QUaInMemorySerializer
 		return true;
 	};
 	bool QUaInMemorySerializer::readInstance(
-		const QString& nodeId,
+		const QUaNodeId& nodeId,
 		QString& typeName,
 		QMap<QString, QVariant>& attrs,
 		QList<QUaForwardReference>& forwardRefs,
@@ -802,7 +802,18 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 
 	// missing to copy dimenstion size
 	vAttr.arrayDimensionsSize = optionalVariableFieldNode->arrayDimensionsSize;
-	vAttr.arrayDimensions = optionalVariableFieldNode->arrayDimensions;
+	if (vAttr.arrayDimensionsSize > 0)
+	{
+		UA_StatusCode retval = UA_Array_copy(optionalVariableFieldNode->arrayDimensions,
+			optionalVariableFieldNode->arrayDimensionsSize,
+			(void**)&vAttr.arrayDimensions,
+			&UA_TYPES[UA_TYPES_INT32]);
+		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+	}
+	else
+	{
+		vAttr.arrayDimensions = optionalVariableFieldNode->arrayDimensions;
+	}
 
 	/* Get typedefintion */
 	const UA_Node* type = getNodeType(server, (const UA_Node*)optionalVariableFieldNode);
@@ -930,7 +941,7 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	UA_Server* server, 
 	QUaNode * parent,
 	const UA_NodeId& optionalFieldNodeId,
-	const UA_QualifiedName childName)
+	const UA_QualifiedName &childName)
 {
 	UA_NodeId outOptionalNode;
 	UA_NodeId parentNodeId = parent->nodeId();
@@ -985,9 +996,11 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	case UA_NODECLASS_METHOD:
 		// NOTE : use QUaNode::addOptionalMethod instead
 		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+		Q_ASSERT(false);
 		return nullptr;
 	default:
 		UA_NODESTORE_RELEASE(server, optionalFieldNode);
+		Q_ASSERT(false);
 		return nullptr;
 	}
 	// if we reached here, the optional field has been instantiated
@@ -1192,7 +1205,7 @@ QUaNode* QUaNode::cloneNode(
 )
 {
 	// create new clean instance of the same type
-	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal(
+	UA_NodeId newInstanceNodeId = m_qUaServer->createInstanceInternal( // 15.91[%]
 		*this->metaObject(),
 		parentNode,
 		browseName.isEmpty() ? this->browseName() :  browseName,
@@ -1215,7 +1228,7 @@ QUaNode* QUaNode::cloneNode(
 	// serialize this instance to memory
 	QQueue<QUaLog> logOut;
 	QUaInMemorySerializer serializer;
-	this->serialize(serializer, logOut);
+	this->serialize(serializer, logOut); // 27.27[%]
 
 	//// [DEBUG]
 	//serializer.qtDebug(
@@ -1232,7 +1245,7 @@ QUaNode* QUaNode::cloneNode(
 	serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs["browseName"] = 
 		newInstance->browseName().toXmlString();
 	// deserialize to new instance
-	newInstance->deserialize(serializer, logOut);
+	newInstance->deserialize(serializer, logOut); // 34.09[%]
 
 	//// [DEBUG]
 	////serializer.clear();
@@ -1417,7 +1430,7 @@ bool QUaNode::inAddressSpace() const
 	return parent && (parent == m_qUaServer->m_pobjectsFolder || parent->inAddressSpace());
 }
 
-const QMap<QString, QVariant> QUaNode::serializeAttrs() const
+const QMap<QString, QVariant> QUaNode::serializeAttrs() const // 17.02[%]
 {
 	QMap<QString, QVariant> retMap;
 	// first serialize browseName
@@ -1476,7 +1489,9 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 	return retList;
 }
 
-void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaLog>& logOut)
+void QUaNode::deserializeAttrs(
+	const QMap<QString, QVariant>& attrs, 
+	QQueue<QUaLog>& logOut) // 27.27[%]
 {
 	QStringList listAttrsNotInProps = attrs.keys();
 	QStringList listPropsNotInAttrs;
@@ -1526,7 +1541,7 @@ void QUaNode::deserializeAttrs(const QMap<QString, QVariant>& attrs, QQueue<QUaL
 			bool ok = listAttrsNotInProps.removeOne(strPropName);
 			Q_ASSERT(ok);
 			// write property
-			auto val = attrs[strPropName];
+			auto &val = attrs[strPropName]; // 6.34[%]
 			if (val.isValid() && !val.isNull())
 			{
 				ok = metaProperty.write(this, val);

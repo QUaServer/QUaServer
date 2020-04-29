@@ -1122,12 +1122,48 @@ inline bool QUaNode::deserializeInternal(
             // continue next ref child
             continue;
         }
-        // to create new first get metaobject
-        QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
-
-        // TODO : check if browsename is optional child 
-        const UA_NodeId typeId = this->server()->typeIdByMetaObject(metaObject);
-
+        // check if browsename is optional child 
+        //UA_NodeId typeId = QUaNode::typeDefinitionNodeId(m_nodeId, this->server()->m_server);
+        QUaNodeId typeId = this->typeDefinitionNodeId();
+        UA_NodeId uaTypeId = typeId;
+        UA_QualifiedName uaName = browseName;
+        UA_NodeId uaOptionalId = QUaNode::getOptionalChildNodeId(
+            this->server()->m_server,
+            uaTypeId,
+            uaName
+        );
+        if (!UA_NodeId_isNull(&uaOptionalId))
+        {
+            QUaNode* instance = QUaNode::instantiateOptionalChild(
+                this->server()->m_server,
+                this,
+                uaOptionalId,
+                uaName
+            );
+            UA_NodeId_clear(&uaTypeId);
+            UA_QualifiedName_clear(&uaName);
+            UA_NodeId_clear(&uaOptionalId);
+            if (!instance)
+            {
+                return false;
+            }
+            bool ok = instance->deserializeInternal<T>(
+                deserializer,
+                attrs,
+                forwardRefs,
+                nonHierRefs,
+                logOut,
+                instance == m_qUaServer->objectsFolder()
+                );
+            if (!ok)
+            {
+                return ok;
+            }
+            continue;
+        }
+        UA_NodeId_clear(&uaTypeId);
+        UA_QualifiedName_clear(&uaName);
+        UA_NodeId_clear(&uaOptionalId);
         // no existing child matched by browseName, create a new one 
         // but before, check nodeId does not exist
         auto strTargetNodeId = forwRef.targetNodeId;
@@ -1144,6 +1180,8 @@ inline bool QUaNode::deserializeInternal(
             // empty node id means use random node id
             strTargetNodeId.clear();
         }
+        // to create new first get metaobject
+        QMetaObject metaObject = this->server()->getRegisteredMetaObject(typeName);
         // instantiate first in OPC UA
         UA_NodeId newInstanceNodeId = this->server()->createInstanceInternal(
             metaObject, 

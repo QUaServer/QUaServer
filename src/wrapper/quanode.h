@@ -380,7 +380,7 @@ private:
 		UA_Server* server,
 		QUaNode * parent,
 		const UA_NodeId& optionalFieldNodeId,
-		const UA_QualifiedName childName
+		const UA_QualifiedName &childName
 	);
 
 	QSet<UA_NodeId> getRefsInternal(const QUaReferenceType& ref, const bool& isForward = true) const;

@@ -346,7 +346,9 @@ void uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(const QDateTime &value,
 {
 	// OPC-UA part 3, Table C.9
 	const QDateTime uaEpochStart(QDate(1601, 1, 1), QTime(0, 0), Qt::UTC);
-	*ptr = UA_DATETIME_MSEC * (value.toMSecsSinceEpoch() - uaEpochStart.toMSecsSinceEpoch());
+	auto time = value.toMSecsSinceEpoch();
+	auto ref  = uaEpochStart.toMSecsSinceEpoch();
+	*ptr = UA_DATETIME_MSEC * (time - ref); // 4.26
 }
 // specialization (QString)
 template<>
