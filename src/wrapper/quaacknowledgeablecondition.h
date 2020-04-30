@@ -80,11 +80,54 @@ protected:
 
 	// helpers
 
-	// reimplement to define branch delete conditions
-	virtual bool requiresAttention() const;
-	// reimplement to reset type internals (QUaAlarmCondition::Reset)
-	virtual void resetInternals();
+	// reimplement
+	virtual bool requiresAttention() const override;
+	// reimplement
+	virtual void resetInternals() override;
 
+};
+
+class QUaAcknowledgeableConditionBranch : public QUaConditionBranch
+{
+public:
+	QUaAcknowledgeableConditionBranch(
+		QUaCondition* parent,
+		const QUaNodeId& branchId = QUaNodeId()
+	);
+
+	bool acknowledged() const;
+	void setAcknowledged(
+		const bool& acknowledged, 
+		const QUaLocalizedText& comment,
+		const QString& currentUser = QString()
+	);
+
+	bool confirmed() const;
+	void setConfirmed(
+		const bool& confirmed, 
+		const QUaLocalizedText& comment,
+		const QString& currentUser = QString()
+	);
+
+protected:
+	bool m_confirmRequired;
+
+	// reimplement
+	virtual bool requiresAttention() const override;
+
+	// QUaAcknowledgeableCondition
+	static QList<QUaQualifiedName> AckedState;
+	static QList<QUaQualifiedName> AckedState_Id;
+	static QList<QUaQualifiedName> AckedState_FalseState;
+	static QList<QUaQualifiedName> AckedState_TrueState;
+	static QList<QUaQualifiedName> AckedState_TransitionTime;
+	static QList<QUaQualifiedName> ConfirmedState;
+	static QList<QUaQualifiedName> ConfirmedState_Id;
+	static QList<QUaQualifiedName> ConfirmedState_FalseState;
+	static QList<QUaQualifiedName> ConfirmedState_TrueState;
+	static QList<QUaQualifiedName> ConfirmedState_TransitionTime;
+
+	friend QUaAcknowledgeableCondition;
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

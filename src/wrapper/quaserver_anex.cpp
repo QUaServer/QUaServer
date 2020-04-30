@@ -59,8 +59,14 @@ isValidEvent(UA_Server* server, const UA_NodeId* validEventParent,
  * The clause can point to any attribute of nodes. Either a child of the event
  * node and also the event type. */
 UA_StatusCode
-QUaServer_Anex::resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_NodeId* origin,
-    const UA_SimpleAttributeOperand* sao, UA_Variant* value) {
+QUaServer_Anex::resolveSimpleAttributeOperand(
+    UA_Server* server, 
+    UA_Session* session, 
+    const UA_NodeId* origin,
+    const UA_SimpleAttributeOperand* sao, 
+    UA_Variant* value,
+    const QUaSaoCallback& resolveSAOCallback
+) {
     /* Prepare the ReadValueId */
     UA_ReadValueId rvi;
     UA_ReadValueId_init(&rvi);
@@ -82,25 +88,15 @@ QUaServer_Anex::resolveSimpleAttributeOperand(UA_Server* server, UA_Session* ses
             {
                 return UA_STATUSCODE_BADNOTFOUND;
             }
-            auto condition = qobject_cast<QUaCondition*>(static_cast<QObject*>(context));
-            if (!condition)
-            {
-                return UA_STATUSCODE_BADNOTFOUND;
-            }
             UA_NodeId conditionId;
-            if (condition->isBranch())
+            auto condition = qobject_cast<QUaCondition*>(static_cast<QObject*>(context));
+            if (condition)
             {
-                auto mainBranch = condition->mainBranch();
-                Q_ASSERT(mainBranch);
-                if (!mainBranch)
-                {
-                    return UA_STATUSCODE_BADNOTFOUND;
-                }
-                conditionId = mainBranch->nodeId();
+                conditionId = condition->nodeId();
             }
             else
             {
-                conditionId = condition->nodeId();
+                return UA_STATUSCODE_BADNOTFOUND;
             }
             rvi.nodeId = conditionId;
         }
@@ -118,35 +114,47 @@ QUaServer_Anex::resolveSimpleAttributeOperand(UA_Server* server, UA_Session* ses
             *value = v.value;
         return v.status;
     }
-
-    /* Resolve the browse path */
-    UA_BrowsePathResult bpr =
-        browseSimplifiedBrowsePath(server, *origin, sao->browsePathSize, sao->browsePath);
-    if (bpr.targetsSize == 0 && bpr.statusCode == UA_STATUSCODE_GOOD)
-        bpr.statusCode = UA_STATUSCODE_BADNOTFOUND;
-    if (bpr.statusCode != UA_STATUSCODE_GOOD) {
-        UA_StatusCode retval = bpr.statusCode;
-        UA_BrowsePathResult_clear(&bpr);
-        return retval;
+    if (resolveSAOCallback)
+    {
+        *value = resolveSAOCallback(sao);
+        return UA_Variant_isEmpty(value) ? UA_STATUSCODE_BADNOTFOUND : UA_STATUSCODE_GOOD;
     }
+    else
+    {
+        /* Resolve the browse path */
+        UA_BrowsePathResult bpr =
+            browseSimplifiedBrowsePath(server, *origin, sao->browsePathSize, sao->browsePath);
+        if (bpr.targetsSize == 0 && bpr.statusCode == UA_STATUSCODE_GOOD)
+            bpr.statusCode = UA_STATUSCODE_BADNOTFOUND;
+        if (bpr.statusCode != UA_STATUSCODE_GOOD) {
+            UA_StatusCode retval = bpr.statusCode;
+            UA_BrowsePathResult_clear(&bpr);
+            return retval;
+        }
 
-    /* Read the first matching element. Move the value to the output. */
-    rvi.nodeId = bpr.targets[0].targetId.nodeId;
-    UA_DataValue v = UA_Server_readWithSession(server, session, &rvi,
-        UA_TIMESTAMPSTORETURN_NEITHER);
-    if (v.status == UA_STATUSCODE_GOOD && v.hasValue)
-        *value = v.value;
+        /* Read the first matching element. Move the value to the output. */
+        rvi.nodeId = bpr.targets[0].targetId.nodeId;
+        UA_DataValue v = UA_Server_readWithSession(server, session, &rvi,
+            UA_TIMESTAMPSTORETURN_NEITHER);
+        if (v.status == UA_STATUSCODE_GOOD && v.hasValue)
+            *value = v.value;
 
-    UA_BrowsePathResult_clear(&bpr);
-    return v.status;
+        UA_BrowsePathResult_clear(&bpr);
+        return v.status;
+    }
 }
 
 /* Filters the given event with the given filter and writes the results into a
  * notification */
 UA_StatusCode
-QUaServer_Anex::UA_Server_filterEvent(UA_Server* server, UA_Session* session,
-    const UA_NodeId* eventNode, UA_EventFilter* filter,
-    UA_EventNotification* notification) {
+QUaServer_Anex::UA_Server_filterEvent(
+    UA_Server* server, 
+    UA_Session* session,
+    const UA_NodeId* eventNode, 
+    UA_EventFilter* filter,
+    UA_EventNotification* notification,
+    const QUaSaoCallback& resolveSAOCallback
+) {
     if (filter->selectClausesSize == 0)
         return UA_STATUSCODE_BADEVENTFILTERINVALID;
 
@@ -156,7 +164,8 @@ QUaServer_Anex::UA_Server_filterEvent(UA_Server* server, UA_Session* session,
 
     notification->fields.eventFields = (UA_Variant*)
         UA_Array_new(filter->selectClausesSize, &UA_TYPES[UA_TYPES_VARIANT]);
-    if (!notification->fields.eventFields) {
+    if (!notification->fields.eventFields) 
+    {
         /* EventFilterResult currently isn't being used
         UA_EventFiterResult_clear(&notification->result); */
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -181,17 +190,22 @@ QUaServer_Anex::UA_Server_filterEvent(UA_Server* server, UA_Session* session,
     UA_NodeId baseEventTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE);
     for (size_t i = 0; i < filter->selectClausesSize; i++) {
         if (!UA_NodeId_equal(&filter->selectClauses[i].typeDefinitionId, &baseEventTypeId) &&
-            !isValidEvent(server, &filter->selectClauses[i].typeDefinitionId, eventNode)) {
+            !isValidEvent(server, &filter->selectClauses[i].typeDefinitionId, eventNode)) 
+        {
             UA_Variant_init(&notification->fields.eventFields[i]);
             /* EventFilterResult currently isn't being used
             notification->result.selectClauseResults[i] = UA_STATUSCODE_BADTYPEDEFINITIONINVALID; */
             continue;
         }
-
         /* TODO: Put the result into the selectClausResults */
-        QUaServer_Anex::resolveSimpleAttributeOperand(server, session, eventNode,
+        QUaServer_Anex::resolveSimpleAttributeOperand(
+            server, 
+            session, 
+            eventNode,
             &filter->selectClauses[i],
-            &notification->fields.eventFields[i]);
+            &notification->fields.eventFields[i],
+            resolveSAOCallback
+        );
     }
 
     return UA_STATUSCODE_GOOD;
@@ -200,7 +214,12 @@ QUaServer_Anex::UA_Server_filterEvent(UA_Server* server, UA_Session* session,
 /* Filters an event according to the filter specified by mon and then adds it to
  * mons notification queue */
 UA_StatusCode
-QUaServer_Anex::UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon) {
+QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+    UA_Server* server, 
+    const UA_NodeId* event, 
+    UA_MonitoredItem* mon,
+    const QUaSaoCallback& resolveSAOCallback
+) {
     UA_Notification* notification = (UA_Notification*)UA_malloc(sizeof(UA_Notification));
     if (!notification)
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -209,11 +228,15 @@ QUaServer_Anex::UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_Nod
     UA_Subscription* sub = mon->subscription;
     UA_Session* session = sub->session;
 
-
     /* Apply the filter */
-    UA_StatusCode retval =
-        QUaServer_Anex::UA_Server_filterEvent(server, session, event, &mon->filter.eventFilter,
-            &notification->data.event);
+    UA_StatusCode retval = QUaServer_Anex::UA_Server_filterEvent(
+        server, 
+        session, 
+        event, 
+        &mon->filter.eventFilter,
+        &notification->data.event,
+        resolveSAOCallback
+    );
     if (retval != UA_STATUSCODE_GOOD) {
         UA_free(notification);
         return retval;
@@ -234,11 +257,12 @@ static const UA_NodeId emitReferencesRoots[EMIT_REFS_ROOT_COUNT] =
      {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASNOTIFIER}}};
 
 UA_StatusCode
-QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
-    const UA_NodeId origin, UA_ByteString* outEventId,
-    const UA_Boolean deleteEventNode) {
-    Q_UNUSED(outEventId);
-    Q_UNUSED(deleteEventNode);
+QUaServer_Anex::UA_Server_triggerEvent_Modified(
+    UA_Server* server, 
+    const UA_NodeId eventNodeId,
+    const UA_NodeId origin,
+    const QUaSaoCallback& resolveSAOCallback/* = nullptr*/
+) {
     UA_LOCK(server->serviceMutex);
 
 #if UA_LOGLEVEL <= 200
@@ -252,7 +276,8 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
 
     /* Check that the origin node exists */
     const UA_Node* originNode = UA_NODESTORE_GET(server, &origin);
-    if (!originNode) {
+    if (!originNode) 
+    {
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
             "Origin node for event does not exist.");
         UA_UNLOCK(server->serviceMutex);
@@ -261,10 +286,10 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     UA_NODESTORE_RELEASE(server, originNode);
 
     /* Make sure the origin is in the ObjectsFolder (TODO: or in the ViewsFolder) */
-    if (!isNodeInTree(server, &origin, &objectsFolderId,
-        emitReferencesRoots, 2)) { /* Only use Organizes and
-                                    * HasComponent to check if we
-                                    * are below the ObjectsFolder */
+    if (!isNodeInTree(server, &origin, &objectsFolderId, emitReferencesRoots, 2)) 
+    { 
+     /* Only use Organizes and HasComponent to check if we
+        are below the ObjectsFolder */
         UA_LOG_ERROR(&server->config.logger, UA_LOGCATEGORY_USERLAND,
             "Node for event must be in ObjectsFolder!");
         UA_UNLOCK(server->serviceMutex);
@@ -297,7 +322,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     // get event instance
     auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
     Q_ASSERT(event);
-    bool historize = event->historizing();
+    bool historize = event->historizing() && !resolveSAOCallback; // TODO : support branch history
     QList<QUaNodeId> emittersNodeIds;
     auto srv = QUaServer::getServerNodeContext(server);
     Q_ASSERT(srv);
@@ -311,13 +336,15 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     UA_NodeId* emitRefTypes[EMIT_REFS_ROOT_COUNT] = { NULL, NULL, NULL };
     size_t emitRefTypesSize[EMIT_REFS_ROOT_COUNT] = { 0, 0, 0, 0 };
     size_t totalEmitRefTypesSize = 0;
-    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) 
+    {
         retval |= referenceSubtypes(server, &emitReferencesRoots[i],
             &emitRefTypesSize[i], &emitRefTypes[i]);
         totalEmitRefTypesSize += emitRefTypesSize[i];
     }
     UA_STACKARRAY(UA_NodeId, totalEmitRefTypes, totalEmitRefTypesSize);
-    if (retval != UA_STATUSCODE_GOOD) {
+    if (retval != UA_STATUSCODE_GOOD) 
+    {
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
             "Events: Could not create the list of references for event "
             "propagation with StatusCode %s", UA_StatusCode_name(retval));
@@ -336,7 +363,8 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         totalEmitRefTypesSize, totalEmitRefTypes,
         UA_BROWSEDIRECTION_INVERSE, true,
         &emitNodesSize, &emitNodes);
-    if (retval != UA_STATUSCODE_GOOD) {
+    if (retval != UA_STATUSCODE_GOOD) 
+    {
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
             "Events: Could not create the list of nodes listening on the "
             "event with StatusCode %s", UA_StatusCode_name(retval));
@@ -344,7 +372,8 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     }
 
     /* Add the event to the listening MonitoredItems at each relevant node */
-    for (size_t i = 0; i < emitNodesSize; i++) {
+    for (size_t i = 0; i < emitNodesSize; i++) 
+    {
         const UA_ObjectNode* node = (const UA_ObjectNode*)
             UA_NODESTORE_GET(server, &emitNodes[i].nodeId);
         if (!node)
@@ -353,8 +382,14 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
             UA_NODESTORE_RELEASE(server, (const UA_Node*)node);
             continue;
         }
-        for (UA_MonitoredItem* mi = node->monitoredItemQueue; mi != NULL; mi = mi->next) {
-            retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(server, &eventNodeId, mi);
+        for (UA_MonitoredItem* mi = node->monitoredItemQueue; mi != NULL; mi = mi->next) 
+        {
+            retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+                server, 
+                &eventNodeId, 
+                mi,
+                resolveSAOCallback
+            );
             if (retval != UA_STATUSCODE_GOOD) {
                 UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
                     "Events: Could not add the event to a listening node with StatusCode %s",
@@ -391,15 +426,22 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
         while (i != typeData.end())
         {
             auto &name = i.key();
-            auto var = event->browseChild<QUaBaseVariable>(name);
-            ++i;
-            if (!var)
+            if (resolveSAOCallback)
             {
-                // NOTE : we need the empty column for consistent storing of event types
-                eventPoint.fields[name] = QVariant();   
-                continue;
+                //eventPoint.fields[name] = 
             }
-            eventPoint.fields[name] = var->value();
+            else
+                {
+                auto var = event->browseChild<QUaBaseVariable>(name);
+                ++i;
+                if (!var)
+                {
+                    // NOTE : we need the empty column for consistent storing of event types
+                    eventPoint.fields[name] = QVariant();   
+                    continue;
+                }
+                eventPoint.fields[name] = var->value();
+            }
         }
         Q_ASSERT(!eventPoint.fields.contains("EventNodeId"));
         Q_ASSERT(!eventPoint.fields.contains("OriginNodeId"));
@@ -422,7 +464,8 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(UA_Server* server, const UA_Node
     // [MODIFIED] : do not delete node
 
 cleanup:
-    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) 
+    {
         UA_Array_delete(emitRefTypes[i], emitRefTypesSize[i], &UA_TYPES[UA_TYPES_NODEID]);
     }
     UA_Array_delete(emitNodes, emitNodesSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);

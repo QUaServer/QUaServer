@@ -84,18 +84,11 @@ void QUaAcknowledgeableCondition::setAcknowledged(const bool& acknowledged)
 	QString strMessage = tr("Condition %1.").arg(strAckedStateName);
 	if (acknowledged && !this->requiresAttention())
 	{
-		if (this->isBranch())
+		bool hasBranches = this->hasBranches();
+		this->setRetain(hasBranches);
+		if (hasBranches)
 		{
-			this->deleteLater();
-		}
-		else
-		{
-			bool hasBranches = this->hasBranches();
-			this->setRetain(hasBranches);
-			if (hasBranches)
-			{
-				strMessage += tr(" Has branches.");
-			}
+			strMessage += tr(" Has branches.");
 		}
 	}
 	if (m_confirmRequired && !this->confirmed())
@@ -230,18 +223,11 @@ void QUaAcknowledgeableCondition::setConfirmed(const bool& confirmed)
 	QString strMessage = tr("Condition %1.").arg(strConfirmedStateName);
 	if (confirmed && !this->requiresAttention())
 	{
-		if (this->isBranch())
+		bool hasBranches = this->hasBranches();
+		this->setRetain(hasBranches);
+		if (hasBranches)
 		{
-			this->deleteLater();
-		}
-		else
-		{
-			bool hasBranches = this->hasBranches();
-			this->setRetain(hasBranches);
-			if (hasBranches)
-			{
-				strMessage += tr(" Has branches.");
-			}
+			strMessage += tr(" Has branches.");
 		}
 	}
 	// trigger event
@@ -265,14 +251,30 @@ void QUaAcknowledgeableCondition::Acknowledge(QByteArray EventId, QUaLocalizedTe
 	// check given EventId matches, if ampty assume method call on this instance
 	if (!EventId.isEmpty() && EventId != this->eventId())
 	{
-		auto branch = this->branchByEventId<QUaAcknowledgeableCondition>(EventId);
+		auto branch = this->branchByEventId<QUaAcknowledgeableConditionBranch>(EventId);
 		if (branch)
 		{
-			branch->Acknowledge(EventId, Comment);
+			// update user id if applicable
+			auto session = this->currentSession();
+			QString currentUser;
+			if (session)
+			{
+				currentUser = session->userName();
+			}
+			branch->setAcknowledged(true, Comment, currentUser);
+			// if no further attention needed, delete branch
+			if (!branch->requiresAttention())
+			{
+				this->removeBranchByEventId(branch);
+				branch->deleteLater();
+			}
 			return;
 		}
-		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
-		return;
+		// NOTE : code below is correct but sometimes UaExpert goes haywire when
+		//        handling ack for too many alarms and sends a bad EventId for
+		//        main branch
+		//this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
+		//return;
 	}
 	// check already acked
 	if (this->ackedStateId())
@@ -309,14 +311,30 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QUaLocalizedText C
 	// check given EventId matches, if ampty assume method call on this instance
 	if (!EventId.isEmpty() && EventId != this->eventId())
 	{
-		auto branch = this->branchByEventId<QUaAcknowledgeableCondition>(EventId);
+		auto branch = this->branchByEventId<QUaAcknowledgeableConditionBranch>(EventId);
 		if (branch)
 		{
-			branch->Confirm(EventId, Comment);
+			// update user id if applicable
+			auto session = this->currentSession();
+			QString currentUser;
+			if (session)
+			{
+				currentUser = session->userName();
+			}
+			branch->setConfirmed(true, Comment, currentUser);
+			// if no further attention needed, delete branch
+			if (!branch->requiresAttention())
+			{
+				this->removeBranchByEventId(branch);
+				branch->deleteLater();
+			}
 			return;
 		}
-		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
-		return;
+		// NOTE : code below is correct but sometimes UaExpert goes haywire when
+		//        handling ack for too many alarms and sends a bad EventId for
+		//        main branch
+		//this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
+		//return;
 	}
 	// check already confirmed
 	if (this->confirmedStateId())
@@ -374,11 +392,11 @@ bool QUaAcknowledgeableCondition::requiresAttention() const
 	// base implementation
 	bool requiresAttention = QUaCondition::requiresAttention();
 	// check acknowledged
-	requiresAttention = requiresAttention || !this->ackedStateId();
+	requiresAttention = requiresAttention || !this->acknowledged();
 	// check confirmed
 	if (m_confirmRequired)
 	{
-		requiresAttention = requiresAttention || !this->confirmedStateId();
+		requiresAttention = requiresAttention || !this->confirmed();
 	}
 	// return result
 	return requiresAttention;
@@ -428,6 +446,136 @@ QUaTwoStateVariable* QUaAcknowledgeableCondition::getAckedState()
 QUaTwoStateVariable* QUaAcknowledgeableCondition::getConfirmedState()
 {
 	return this->browseChild<QUaTwoStateVariable>("ConfirmedState", true);
+}
+
+/****************************************************************************************
+*/
+
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, "AckedState" } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, "AckedState" },{ 0, "Id"             } }); // [Boolean]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, "AckedState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, "ConfirmedState" } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, "ConfirmedState" },{ 0, "Id"             } }); // [Boolean]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, "ConfirmedState" },{ 0, "TransitionTime" } }); // [UtcTime]
+
+QUaAcknowledgeableConditionBranch::QUaAcknowledgeableConditionBranch(
+	QUaCondition* parent,
+	const QUaNodeId& branchId
+) : QUaConditionBranch(parent, branchId)
+{
+	auto condition = dynamic_cast<QUaAcknowledgeableCondition*>(parent);
+	Q_ASSERT(condition);
+	m_confirmRequired = condition->confirmRequired();
+}
+
+bool QUaAcknowledgeableConditionBranch::acknowledged() const
+{
+	return this->value(QUaAcknowledgeableConditionBranch::AckedState_Id).value<bool>();
+}
+
+void QUaAcknowledgeableConditionBranch::setAcknowledged(
+	const bool& acknowledged, 
+	const QUaLocalizedText& comment,
+	const QString& currentUser/* = QString()*/
+)
+{
+	auto time = QDateTime::currentDateTimeUtc();
+	// set acknowledged
+	this->setValue(QUaAcknowledgeableConditionBranch::AckedState_Id, acknowledged);
+	auto strAckedStateName = acknowledged ?
+		this->value(QUaAcknowledgeableConditionBranch::AckedState_TrueState) :
+		this->value(QUaAcknowledgeableConditionBranch::AckedState_FalseState);
+	this->setValue(
+		QUaAcknowledgeableConditionBranch::AckedState, 
+		strAckedStateName
+	);
+	this->setValue(
+		QUaAcknowledgeableConditionBranch::AckedState_TransitionTime,
+		time
+	);
+	// set comment
+	this->setValue(QUaConditionBranch::Comment, QVariant::fromValue(comment));
+	this->setValue(QUaConditionBranch::Comment_SourceTimestamp, time);
+	// update user that set comment
+	this->setValue(QUaConditionBranch::ClientUserId, currentUser);
+	if (!acknowledged)
+	{
+		return;
+	}
+	QString strMessage = QObject::tr("Branch %1 %2.")
+		.arg(this->branchId())
+		.arg(strAckedStateName.value<QString>());
+	if (m_confirmRequired && !this->confirmed())
+	{
+		strMessage += QObject::tr(" Requires Confirm.");
+	}
+	// trigger event
+	this->setTime(time);
+	this->setMessage(strMessage);
+	this->trigger();
+}
+
+bool QUaAcknowledgeableConditionBranch::confirmed() const
+{
+	Q_ASSERT(m_confirmRequired);
+	return this->value(QUaAcknowledgeableConditionBranch::ConfirmedState_Id).value<bool>();
+}
+
+void QUaAcknowledgeableConditionBranch::setConfirmed(
+	const bool& confirmed, 
+	const QUaLocalizedText& comment,
+	const QString& currentUser/* = QString()*/
+)
+{
+	auto time = QDateTime::currentDateTimeUtc();
+	// set confirmed
+	this->setValue(QUaAcknowledgeableConditionBranch::ConfirmedState_Id, confirmed);
+	auto strConfirmedStateName = confirmed ?
+		this->value(QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState) :
+		this->value(QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState);
+	this->setValue(
+		QUaAcknowledgeableConditionBranch::ConfirmedState,
+		strConfirmedStateName
+	);
+	this->setValue(
+		QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime,
+		time
+	);
+	// set comment
+	this->setValue(QUaConditionBranch::Comment, QVariant::fromValue(comment));
+	this->setValue(QUaConditionBranch::Comment_SourceTimestamp, time);
+	// update user that set comment
+	this->setValue(QUaConditionBranch::ClientUserId, currentUser);
+	if (!confirmed)
+	{
+		return;
+	}
+	QString strMessage = QObject::tr("Branch %1 %2.")
+		.arg(this->branchId())
+		.arg(strConfirmedStateName.value<QString>());
+	// trigger event
+	this->setTime(time);
+	this->setMessage(strMessage);
+	this->trigger();
+}
+
+bool QUaAcknowledgeableConditionBranch::requiresAttention() const
+{
+	// base implementation
+	bool requiresAttention = QUaConditionBranch::requiresAttention();
+	// check acknowledged
+	requiresAttention = requiresAttention || !this->acknowledged();
+	// check confirmed
+	if (m_confirmRequired)
+	{
+		requiresAttention = requiresAttention || !this->confirmed();
+	}
+	// return result
+	return requiresAttention;
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

@@ -20,6 +20,7 @@ class QUaSession;
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 class QUaCondition;
+class QUaConditionBranch;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #include <QUaTypesConverter>
@@ -87,6 +88,7 @@ class QUaNode : public QObject
 #endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	friend class QUaCondition;
+	friend class QUaConditionBranch;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	Q_OBJECT
 

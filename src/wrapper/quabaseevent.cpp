@@ -261,8 +261,7 @@ void QUaBaseEvent::triggerInternal()
         m_qUaServer->m_server,
         m_nodeId,
         m_sourceNodeId,
-        nullptr, /*N/A*/
-        false /*N/A*/
+        nullptr
     );
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
 }

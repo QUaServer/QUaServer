@@ -7,6 +7,7 @@
 
 class QUaTwoStateVariable;
 class QUaConditionVariable;
+class QUaConditionBranch;
 
 class QUaCondition : public QUaBaseEvent
 {
@@ -17,9 +18,8 @@ class QUaCondition : public QUaBaseEvent
 	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain    )
 	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity  )
 
-	Q_PROPERTY(bool    isBranch   READ isBranch   WRITE setIsBranch  )
-
 friend class QUaServer;
+friend class QUaConditionBranch;
 
 public:
 	Q_INVOKABLE explicit QUaCondition(
@@ -112,18 +112,11 @@ public:
 
 	// branches API
 
-	bool isBranch() const;
-	void setIsBranch(const bool& isBranch);
-
-	QUaCondition* mainBranch() const;
-
-	QUaCondition* createBranch(const QUaNodeId& nodeId = QUaNodeId());
-
 	template<typename T>
-	T* createBranch(const QUaNodeId& nodeId = QUaNodeId());
+	T* createBranch(const QUaNodeId& branchId = QUaNodeId());
 
 	// get all branches
-	QList<QUaCondition*> branches() const;
+	QList<QUaConditionBranch*> branches() const;
 
 	template<typename T>
 	QList<T*> branches() const;
@@ -131,10 +124,13 @@ public:
 	bool hasBranches() const;
 
 	// get branch by EventId (OPC UA Methods can be called by EventId)
-	QUaCondition* branchByEventId(const QByteArray& EventId) const;
+	QUaConditionBranch* branchByEventId(const QByteArray& eventId) const;
 
 	template<typename T>
 	T* branchByEventId(const QByteArray& EventId) const;
+
+	// remove from list only, do not delete
+	void removeBranchByEventId(QUaConditionBranch* branch);
 
 signals:
 	void conditionEnabled();
@@ -178,7 +174,7 @@ protected:
 
 	// reimplement to define minimu trigger conditions
 	virtual bool shouldTrigger() const override;
-	// reimplement to define branch creation / deletion conditions
+	// reimplement to define retain and branch creation
 	virtual bool requiresAttention() const;
 	// reimplement to reset type internals (QUaAlarmCondition::Reset)
 	virtual void resetInternals();
@@ -188,8 +184,7 @@ private:
 	QMetaObject::Connection m_sourceDestroyed;
 	QMetaObject::Connection m_retainedDestroyed;
 
-	bool m_isBranch;
-	QSet<QUaCondition*> m_branches;
+	QList<QUaConditionBranch*> m_branches;
 
 	//
 	static UA_StatusCode ConditionRefresh(
@@ -229,16 +224,18 @@ private:
 };
 
 template<typename T>
-inline T* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
+inline T* QUaCondition::createBranch(const QUaNodeId& branchId/* = ""*/)
 {
-	return qobject_cast<T*>(this->createBranch(nodeId));
+	auto branch = new T(this, branchId);
+	m_branches << branch;
+	return branch;
 }
 
 template<typename T>
 inline QList<T*> QUaCondition::branches() const
 {
 	QList<T*> retBranches;
-	for (auto branch : this->branches())
+	for (auto branch : m_branches)
 	{
 		auto specialized = qobject_cast<T*>(branch);
 		if (!specialized)
@@ -253,8 +250,105 @@ inline QList<T*> QUaCondition::branches() const
 template<typename T>
 inline T* QUaCondition::branchByEventId(const QByteArray& EventId) const
 {
-	return qobject_cast<T*>(this->branchByEventId(EventId));
+	return dynamic_cast<T*>(this->branchByEventId(EventId));
 }
+
+// NOTE : to support branches, a simplified copy of the condition at a certain
+// point in time is stored in the QUaConditionBranch class.
+// This class provides mechanisms for triggering events for the branch and 
+// accessing and changing the values stored in the branch.
+// The derived classes of QUaConditionBranch are only meant to provide syntactic
+// sugar around the ::value and ::setValue methods to access relevant fields.
+// For example, the QUaAcknowledgeableConditionBranch derived class should provide
+// helper methods to change the Acked or Confirmed state of the branch: All these
+// helper methods will use the underlying ::value and ::setValue methods anyways
+class QUaConditionBranch
+{
+public:
+	QUaConditionBranch(
+		QUaCondition* parent, 
+		const QUaNodeId& branchId = QUaNodeId()
+	);
+	~QUaConditionBranch();
+
+	void deleteLater();
+
+	// Common API
+
+	QVariant value(const QList<QUaQualifiedName>& browsePath) const;
+	void     setValue(const QList<QUaQualifiedName>& browsePath, const QVariant& value);
+
+	// Event specific API
+
+	void trigger();
+
+	QByteArray eventId() const;
+	void setEventId(const QByteArray& eventId);
+
+	void setMessage(const QUaLocalizedText& message);
+
+	void setTime(const QDateTime& time);
+
+	// Event specific API
+
+	QUaNodeId branchId() const;
+	void setBranchId(const QUaNodeId& branchId);
+
+	void setRetain(const bool& retain);
+
+	void setComment(
+		const QUaLocalizedText& comment, 
+		const QString& currentUser = QString()
+	);
+
+protected:
+	QUaCondition* m_parent;
+
+	struct QUaBranchNode
+	{
+		inline QVariant value() const
+		{
+			return m_isVariable ? m_value : QVariant::fromValue(m_nodeId);
+		}
+		inline void setValue(const QVariant& value)
+		{
+			m_isVariable ? m_value = value : m_nodeId = value.value<QUaNodeId>();
+		}
+
+		bool m_isVariable : 1;
+		QUaNodeId m_nodeId;
+		QVariant  m_value;
+		QHash<QUaQualifiedName, QUaBranchNode> m_children;
+	};
+
+	QUaBranchNode m_root;
+
+	void addChildren(QUaNode* node, QUaBranchNode& branchNode);
+
+	static QList<QUaQualifiedName> saoToBrowsePath(const UA_SimpleAttributeOperand* sao);
+
+	// QUaBaseEvent
+	static QList<QUaQualifiedName> EventId;
+	static QList<QUaQualifiedName> Message;
+	static QList<QUaQualifiedName> Time;
+	static QList<QUaQualifiedName> ClientUserId;
+	// QUaCondition
+	static QList<QUaQualifiedName> BranchId;
+	static QList<QUaQualifiedName> Retain;
+	static QList<QUaQualifiedName> EnabledState;
+	static QList<QUaQualifiedName> EnabledState_Id;
+	static QList<QUaQualifiedName> EnabledState_FalseState;
+	static QList<QUaQualifiedName> EnabledState_TrueState;
+	static QList<QUaQualifiedName> EnabledState_TransitionTime;
+	static QList<QUaQualifiedName> Comment;
+	static QList<QUaQualifiedName> Comment_SourceTimestamp;
+	// setClientUserId
+
+	// reimplement to define retain and branch creation
+	virtual bool requiresAttention() const;
+
+	friend class QUaCondition;
+};
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

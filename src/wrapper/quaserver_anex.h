@@ -764,24 +764,42 @@ class QUaServer_Anex
 #endif // UA_ENABLE_HISTORIZING
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     friend class QUaCondition;
+    friend class QUaConditionBranch;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-    static UA_StatusCode
-        resolveSimpleAttributeOperand(UA_Server* server, UA_Session* session, const UA_NodeId* origin,
-            const UA_SimpleAttributeOperand* sao, UA_Variant* value);
+    typedef std::function<UA_Variant(const UA_SimpleAttributeOperand*)> QUaSaoCallback;
 
-    static UA_StatusCode
-    UA_Event_addEventToMonitoredItem(UA_Server* server, const UA_NodeId* event, UA_MonitoredItem* mon);
+    static UA_StatusCode resolveSimpleAttributeOperand(
+        UA_Server* server, 
+        UA_Session* session, 
+        const UA_NodeId* origin,
+        const UA_SimpleAttributeOperand* sao, 
+        UA_Variant* value,
+        const QUaSaoCallback& resolveSAOCallback
+    );
 
-    static UA_StatusCode
-    UA_Server_filterEvent(UA_Server* server, UA_Session* session,
-        const UA_NodeId* eventNode, UA_EventFilter* filter,
-        UA_EventNotification* notification);
+    static UA_StatusCode UA_Server_filterEvent(
+        UA_Server* server, 
+        UA_Session* session,
+        const UA_NodeId* eventNode, 
+        UA_EventFilter* filter,
+        UA_EventNotification* notification,
+        const QUaSaoCallback& resolveSAOCallback
+    );
 
-    static UA_StatusCode
-    UA_Server_triggerEvent_Modified(UA_Server* server, const UA_NodeId eventNodeId,
-        const UA_NodeId origin, UA_ByteString* outEventId,
-        const UA_Boolean deleteEventNode);
+    static UA_StatusCode UA_Event_addEventToMonitoredItem(
+        UA_Server* server, 
+        const UA_NodeId* event, 
+        UA_MonitoredItem* mon,
+        const QUaSaoCallback& resolveSAOCallback
+    );
+
+    static UA_StatusCode UA_Server_triggerEvent_Modified(
+        UA_Server* server,
+        const UA_NodeId eventNodeId,
+        const UA_NodeId origin,
+        const QUaSaoCallback& resolveSAOCallback = nullptr
+    );
 };
 
 

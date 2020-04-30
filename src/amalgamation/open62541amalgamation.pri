@@ -6,18 +6,22 @@
 	# Options
 	ua_namespace_full {
 		UA_NAMESPACE = "-DUA_NAMESPACE_ZERO=FULL"
+		message("Enabled ua_namespace_full.")
 	}
 	ua_events {
 		UA_NAMESPACE = "-DUA_NAMESPACE_ZERO=FULL"
 		UA_EVENTS    = "-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON"
+		message("Enabled ua_events.")
 	}
 	ua_alarms_conditions {
 		UA_NAMESPACE = "-DUA_NAMESPACE_ZERO=FULL"
 		UA_EVENTS    = "-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON"
 		UA_ALARMS    = "-DUA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS=ON"
+		message("Enabled ua_alarms_conditions.")
 	}
 	ua_historizing {
 		UA_HISTORIZING = "-DUA_ENABLE_HISTORIZING=ON"
+		message("Enabled ua_historizing.")
 	}
 	# Paths
 	OPEN62541_PATH       = $$PWD/../../depends/open62541.git

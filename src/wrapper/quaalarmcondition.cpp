@@ -164,71 +164,60 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 		this->activeStateFalseState();
 	this->setActiveStateCurrentStateName(strActiveStateName);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());	
-	// special logic for main branch
-	if (!this->isBranch())
+
+	// if active have to retain and reset acknowledged and confirmed
+	if (active)
 	{
-		// if active have to retain and reset acknowledged and confirmed
-		if (active)
+		this->setRetain(true);
+		// reset aknowledged
+		this->setAckedStateCurrentStateName(this->ackedStateFalseState());
+		this->setAckedStateId(false);
+		this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
+		// reset confirmed
+		if (this->confirmRequired())
 		{
-			this->setRetain(true);
-			// reset aknowledged
-			this->setAckedStateCurrentStateName(this->ackedStateFalseState());
-			this->setAckedStateId(false);
-			this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
-			// reset confirmed
-			if (this->confirmRequired())
-			{
-				this->setConfirmedStateCurrentStateName(this->confirmedStateFalseState());
-				this->setConfirmedStateId(false);
-				this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
-			}
-			this->setMessage(
-				strMessageAppend.isEmpty() ?
-				tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName) :
-				tr("Alarm %1. Requires Acknowledge. %2").arg(strActiveStateName).arg(strMessageAppend)
-			);
+			this->setConfirmedStateCurrentStateName(this->confirmedStateFalseState());
+			this->setConfirmedStateId(false);
+			this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
 		}
-		else
-		{
-			QString strMessage = tr("Alarm %1.").arg(strActiveStateName);
-			if (this->requiresAttention())
-			{
-				// create branch
-				this->createBranch<QUaAlarmCondition>();
-				this->setRetain(true);
-				if (!this->acknowledged())
-				{
-					strMessage += tr(" Requires Acknowledge.");
-				}
-				else if (m_confirmRequired && !this->confirmed())
-				{
-					strMessage += tr(" Requires Confirm.");
-				}
-				strMessage += tr(" Has branches.");
-			}
-			else
-			{
-				bool hasBranches = this->hasBranches();
-				this->setRetain(hasBranches);
-				if (hasBranches)
-				{
-					strMessage += tr(" Has branches.");
-				}
-			}
-			if (!strMessageAppend.isEmpty())
-			{
-				strMessage += tr(" %1").arg(strMessageAppend);
-			}
-			this->setMessage(strMessage);
-		}
+		this->setMessage(
+			strMessageAppend.isEmpty() ?
+			tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName) :
+			tr("Alarm %1. Requires Acknowledge. %2").arg(strActiveStateName).arg(strMessageAppend)
+		);
 	}
 	else
 	{
-		this->setMessage(
-			strMessageAppend.isEmpty() ?
-			tr("Alarm %1.").arg(strActiveStateName) :
-			tr("Alarm %1. %2").arg(strActiveStateName).arg(strMessageAppend)
-		);
+		QString strMessage = tr("Alarm %1.").arg(strActiveStateName);
+		if (this->requiresAttention())
+		{
+			// create branch
+			this->createBranch<QUaAlarmConditionBranch>();
+			this->setRetain(true);
+			if (!this->acknowledged())
+			{
+				strMessage += tr(" Requires Acknowledge.");
+			}
+			else if (m_confirmRequired && !this->confirmed())
+			{
+				strMessage += tr(" Requires Confirm.");
+			}
+			strMessage += tr(" Has branches.");
+		}
+		else
+		{
+			bool hasBranches = this->hasBranches();
+			this->setRetain(hasBranches);
+			if (hasBranches)
+			{
+				strMessage += tr(" Has branches.");
+			}
+		}
+		if (!strMessageAppend.isEmpty())
+		{
+			strMessage += tr(" %1").arg(strMessageAppend);
+		}
+		this->setMessage(strMessage);
 	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
@@ -284,6 +273,43 @@ void QUaAlarmCondition::resetInternals()
 	this->setActiveStateCurrentStateName(tr("Inactive"));
 	this->setActiveStateId(false);
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
+}
+/***************************************************************************************
+
+		this->setMessage(
+			strMessageAppend.isEmpty() ?
+			tr("Alarm %1.").arg(strActiveStateName) :
+			tr("Alarm %1. %2").arg(strActiveStateName).arg(strMessageAppend)
+		);
+*/
+
+QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState               ({ { 0, "ActiveState" } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, "ActiveState" },{ 0, "Id"             } }); // [Boolean]
+QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, "ActiveState" },{ 0, "TransitionTime" } }); // [UtcTime]
+
+QUaAlarmConditionBranch::QUaAlarmConditionBranch(
+	QUaCondition* parent,
+	const QUaNodeId& branchId
+) : QUaAcknowledgeableConditionBranch(parent, branchId)
+{
+	
+}
+
+bool QUaAlarmConditionBranch::active() const
+{
+	return this->value(QUaAlarmConditionBranch::ActiveState_Id).value<bool>();
+}
+
+bool QUaAlarmConditionBranch::requiresAttention() const
+{
+	// base implementation
+	bool requiresAttention = QUaAcknowledgeableConditionBranch::requiresAttention();
+	// if active
+	requiresAttention = requiresAttention || this->active();
+	// return result
+	return requiresAttention;
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

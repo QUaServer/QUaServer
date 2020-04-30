@@ -39,6 +39,7 @@ class QUaServer : public QObject
     friend class QUaStateVariable;
     friend class QUaTwoStateVariable;
     friend class QUaCondition;
+    friend class QUaConditionBranch;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #ifdef UA_ENABLE_HISTORIZING
     friend class QUaHistoryBackend;

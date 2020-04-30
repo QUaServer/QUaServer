@@ -16,7 +16,7 @@
 
 struct QUaInMemorySerializer
 {
-	bool QUaInMemorySerializer::writeInstance( // 6.38
+	bool QUaInMemorySerializer::writeInstance(
 		const QUaNodeId& nodeId,
 		const QString& typeName,
 		const QMap<QString, QVariant>& attrs,
@@ -113,9 +113,6 @@ QUaNode::QUaNode(
 	Q_CHECK_PTR(server);
 	Q_CHECK_PTR(server->m_newNodeNodeId);
 	Q_CHECK_PTR(server->m_newNodeMetaObject);
-	// NOTE : thes ecan be nullptr because during deserialization we bind children manually
-	//Q_CHECK_PTR(server->m_newNodeMandatoryChildren);
-	//Q_CHECK_PTR(server->m_newNodeOptionalChildren);
 	const UA_NodeId   &nodeId     = *server->m_newNodeNodeId;
 	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
 	QString strClassName = QString(metaObject.className());

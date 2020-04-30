@@ -16,7 +16,6 @@ QUaCondition::QUaCondition(
 ) : QUaBaseEvent(server)
 {
 	m_sourceNode = nullptr;
-	m_isBranch   = false;
 	// force some non-qt datatypes
 	this->getConditionClassId()->setDataType(QMetaType_NodeId);	// NodeId
 	this->getBranchId()->setDataType(QMetaType_NodeId);	        // NodeId
@@ -45,36 +44,20 @@ QUaCondition::~QUaCondition()
 	QObject::disconnect(m_sourceDestroyed);
 	// NOTE : do not disconnect m_retainedDestroyed, else it will not be called
 	
-	// trigger last event so clients can remove branch from alarm display 
+	// delete branches
+	std::for_each(m_branches.begin(), m_branches.end(),
+	[](QUaConditionBranch* branch) {
+		delete branch;
+	});
+	m_branches.clear();
+	// trigger last event so clients can remove from alarm display 
 	this->setRetain(false);
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setTime(time);
 	this->setReceiveTime(time);
-	this->setMessage(tr("%1 %2 deleted.")
-		.arg(this->isBranch() ? tr("Branch") : tr("Condition"))
+	this->setMessage(tr("Condition %1 deleted.")
 		.arg(this->displayName().text()));
 	this->trigger();
-	// if branch remove qt parent so marked as not in browse tree, no model change event
-	if (this->isBranch())
-	{
-		this->setParent(nullptr);
-	}
-}
-
-bool QUaCondition::isBranch() const
-{
-	return m_isBranch;
-}
-
-void QUaCondition::setIsBranch(const bool& isBranch)
-{
-	m_isBranch = isBranch;
-}
-
-QUaCondition* QUaCondition::mainBranch() const
-{
-	Q_ASSERT_X(this->isBranch(), "QUaCondition::mainBranch", "Only brached have a main branch");
-	return qobject_cast<QUaCondition*>(this->parent());
 }
 
 void QUaCondition::setDisplayName(const QUaLocalizedText& displayName)
@@ -92,12 +75,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	bool isRetained = this->retain();
 	if (m_sourceNode)
 	{
-		// remove reference
-		if (!this->isBranch())
-		{
-			// NOTE : references are RAM hungry and is not worth having them for branches
-			m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
-		}
+		m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
 		// remove destroy connections
 		QObject::disconnect(m_sourceDestroyed);
 		QObject::disconnect(m_retainedDestroyed);
@@ -116,12 +94,8 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	m_sourceNode = QUaNode::getNodeContext(m_sourceNodeId, m_qUaServer->m_server);
 	if (m_sourceNode)
 	{
-		// add reference
-		if (!this->isBranch())
-		{
-			// NOTE : references are RAM hungry and is not worth having them for branches
-			m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
-		}
+		// NOTE : references are RAM hungry and is not worth having them for branches
+		m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
 		// add destroy connection
 		m_sourceDestroyed = QObject::connect(m_sourceNode, &QObject::destroyed, this,
 		[this]() {
@@ -236,12 +210,9 @@ void QUaCondition::setRetain(const bool& retain)
 	// update internal value
 	this->getRetain()->setValue(retain);
 	// update all branches if this is main branch
-	if (!this->isBranch())
+	for (auto branch : this->branches())
 	{
-		for (auto branch : this->branches())
-		{
-			branch->setRetain(retain);
-		}
+		branch->setRetain(retain);
 	}
 	// update source
 	if (!m_sourceNode)
@@ -314,14 +285,6 @@ void QUaCondition::setEnabled(const bool& enabled)
 	this->setEnabledStateTransitionTime(this->getEnabledState()->serverTimestamp());
 	// handle retain
 	this->setRetain(enabled ? this->requiresAttention() : false);
-	// handle branches
-	if (!this->isBranch())
-	{
-		for (auto branch : this->branches())
-		{
-			branch->setEnabled(enabled);
-		}
-	}
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
 	this->setTime(time);
@@ -478,7 +441,14 @@ void QUaCondition::AddComment(QByteArray EventId, QUaLocalizedText Comment)
 		auto branch = this->branchByEventId(EventId);
 		if (branch)
 		{
-			branch->AddComment(EventId, Comment);
+			// update user id if applicable
+			auto session = this->currentSession();
+			QString currentUser;
+			if (session)
+			{
+				currentUser = session->userName();
+			}
+			branch->setComment(Comment, currentUser);
 			return;
 		}
 		this->setMethodReturnStatusCode(UA_STATUSCODE_BADEVENTIDUNKNOWN);
@@ -490,95 +460,45 @@ void QUaCondition::AddComment(QByteArray EventId, QUaLocalizedText Comment)
 	emit this->addedComment(Comment);
 }
 
-QUaCondition* QUaCondition::createBranch(const QUaNodeId& nodeId/* = ""*/)
+QList<QUaConditionBranch*> QUaCondition::branches() const
 {
-	// Are branches of branches supported?
-	Q_ASSERT_X(!this->isBranch(), "QUaCondition::createBranch", "Only main branch can created branches");
-	if (this->isBranch())
-	{
-		return nullptr;
-	}
-	// branches have to hierarchical parent, so browse name is not really relevant
-	QUaQualifiedName browseName = this->browseName();
-	browseName.setName(tr("%1_branch")
-		.arg(browseName.name())
-	);
-	// NOTE : must pass nullptr as parent because cloneNode uses the
-	//        serialization API which recurses all children and if this
-	//        has new branch as children, when deserializing it will deserialize
-	//        the branch with a branch which will have a branch and so on...
-	auto branch = qobject_cast<QUaCondition*>(this->cloneNode(nullptr, browseName, nodeId));
-	branch->setParent(this); // set qt parent for memory management
-	branch->setIsBranch(true);
-	branch->setBranchId(branch->nodeId());
-	QUaLocalizedText displayName = tr("%1_branch_%2").arg(this->browseName().name()).arg(branch->nodeId());
-	// overwritten setDisplayName also sets condition name
-	branch->setDisplayName(displayName);
-	// A branch is an independent copy of the condition instance state that can change, not typically 
-	// not visible in the Address Space
-	Q_ASSERT(!m_branches.contains(branch));
-	m_branches << branch;
-	// remove from internal list if deleted
-	QObject::connect(branch, &QObject::destroyed, this,
-	[this, branch]() {
-		m_branches.remove(branch);
-		// update retain flag on main branch is there are no more branches
-		if (this->hasBranches())
-		{
-			return;
-		}
-		// TODO : implement better, maybe use inheritance?
-		QString strMessage;
-		if (this->requiresAttention())
-		{
-			strMessage = this->message().text();
-			strMessage.remove(" Has branches.");
-		}
-		else
-		{
-			strMessage = tr("Condition no longer of interest.");
-		}
-		this->setMessage(strMessage);
-		this->setRetain(this->requiresAttention());
-		this->trigger();
-	});
-	// trigger first event so clients can add branch to alarm display 
-	branch->setMessage(tr("Previous state requires attention. Branch %1 created.").arg(displayName.text()));
-	branch->trigger();
-	return branch;
-}
-
-QList<QUaCondition*> QUaCondition::branches() const
-{
-	return m_branches.toList();
+	return m_branches;
 }
 
 bool QUaCondition::hasBranches() const
 {
-	Q_ASSERT_X(!this->isBranch(), "QUaCondition::hasBranches", "Only main branch can have branches");
-	return this->branches().count() > 0;
+	return m_branches.count() > 0;
 }
 
-QUaCondition* QUaCondition::branchByEventId(const QByteArray& EventId) const
+QUaConditionBranch* QUaCondition::branchByEventId(const QByteArray& eventId) const
 {
 	auto res = std::find_if(m_branches.begin(), m_branches.end(),
-	[&EventId](QUaCondition* branch) {
-		return branch->eventId() == EventId;
+	[&eventId](QUaConditionBranch* branch) {
+		return branch->eventId() == eventId;
 	});
 	return res == m_branches.end() ? nullptr : *res;
+}
+
+void QUaCondition::removeBranchByEventId(QUaConditionBranch* branch)
+{
+	m_branches.removeOne(branch);
+	if (m_branches.count() > 0)
+	{
+		return;
+	}
+	bool requiresAttention = this->requiresAttention();
+	this->setMessage(requiresAttention ?
+		tr("Condition still requires attention.") :
+		tr("Condition no longer of interest.")
+	);
+	this->setRetain(requiresAttention);
+	this->trigger();
 }
 
 bool QUaCondition::shouldTrigger() const
 {
 	bool baseTrigger = QUaBaseEvent::shouldTrigger();
 	bool isEnabled   = this->enabledStateId();
-	// branch can only trigger if main condition is enabled
-	if (this->isBranch())
-	{
-		auto mainBranch = this->mainBranch();
-		Q_ASSERT(mainBranch);
-		isEnabled = mainBranch->enabledStateId();;
-	}
 	return baseTrigger && isEnabled;
 }
 
@@ -787,7 +707,12 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshStartEvent->setSourceName(sourceDisplayName);
 	srv->m_refreshStartEvent->setMessage(tr("Start refresh for source %1 [%2].").arg(sourceDisplayName).arg(sourceNodeId));
-	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshStartEvent->m_nodeId, monitoredItem);
+	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+		srv->m_server, 
+		&srv->m_refreshStartEvent->m_nodeId, 
+		monitoredItem, 
+		nullptr
+	);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	/* 2. refresh (see 5.5.7)*/
 	for (auto condition : conditions)
@@ -797,15 +722,250 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 		{
 			continue;
 		}
-		retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &condition->m_nodeId, monitoredItem);
+		retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+			srv->m_server, 
+			&condition->m_nodeId, 
+			monitoredItem, 
+			nullptr
+		);
 		Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+		// add branches if any
+		for (auto &branch : condition->branches())
+		{
+			retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+				srv->m_server, 
+				&condition->m_nodeId, 
+				monitoredItem, 
+				[branch](const UA_SimpleAttributeOperand* sao) -> UA_Variant
+				{
+					auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
+					auto value = branch->value(browsePath);
+					return QUaTypesConverter::uaVariantFromQVariant(value);
+				}
+			);
+			Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+		}
 	}
 	/* 3. trigger RefreshEndEvent*/
 	srv->m_refreshEndEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshEndEvent->setSourceName(sourceDisplayName);
 	srv->m_refreshEndEvent->setMessage(tr("End refresh for source %1 [%2].").arg(sourceDisplayName).arg(sourceNodeId));
-	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(srv->m_server, &srv->m_refreshEndEvent->m_nodeId, monitoredItem);
+	retval = QUaServer_Anex::UA_Event_addEventToMonitoredItem(
+		srv->m_server, 
+		&srv->m_refreshEndEvent->m_nodeId, 
+		monitoredItem, 
+		nullptr
+	);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
+}
+
+/****************************************************************************************
+*/
+
+// QUaBaseEvent
+QList<QUaQualifiedName> QUaConditionBranch::EventId     ({ { 0, "EventId"      } }); // [ByteString]
+QList<QUaQualifiedName> QUaConditionBranch::Message     ({ { 0, "Message"      } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaConditionBranch::Time        ({ { 0, "Time"         } }); // [UtcTime]
+QList<QUaQualifiedName> QUaConditionBranch::ClientUserId({ { 0, "ClientUserId" } }); // [String]
+// QUaCondition
+QList<QUaQualifiedName> QUaConditionBranch::BranchId({ { 0, "BranchId" } }); // [NodeId]
+QList<QUaQualifiedName> QUaConditionBranch::Retain  ({ { 0, "Retain"   } }); // [Boolean]
+QList<QUaQualifiedName> QUaConditionBranch::EnabledState               ({ { 0, "EnabledState" } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaConditionBranch::EnabledState_Id            ({ { 0, "EnabledState" },{ 0, "Id"             } }); // [Boolean]
+QList<QUaQualifiedName> QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaConditionBranch::EnabledState_TransitionTime({ { 0, "EnabledState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QList<QUaQualifiedName> QUaConditionBranch::Comment                ({ { 0, "Comment" } }); // [LocalizedText]
+QList<QUaQualifiedName> QUaConditionBranch::Comment_SourceTimestamp({ { 0, "Comment" },{0, "SourceTimestamp"} }); // [UtcTime]
+
+QUaConditionBranch::QUaConditionBranch(QUaCondition* parent, const QUaNodeId& branchId/* = QUaNodeId()*/)
+{
+	Q_ASSERT(parent);
+	// copy necessary trigger variables
+	m_parent = parent;
+	// copy tree : start with root
+	m_root.m_isVariable = false;
+	m_root.m_nodeId = parent->nodeId();
+	this->addChildren(parent, m_root);
+	// set branch id
+	this->setBranchId(branchId.isNull() ? QUaNodeId(0, UA_UInt32_random()) : branchId);
+	// trigger first event so clients can add branch to alarm display 
+	this->setMessage(
+		QObject::tr(
+			"Previous state requires attention. "
+			"Created branch %1 for %2."
+		).arg(this->branchId()).arg(parent->displayName().text())
+	);
+	this->trigger();
+}
+
+QUaConditionBranch::~QUaConditionBranch()
+{
+	// trigger last event so clients can remove from alarm display 
+	this->setRetain(false);
+	auto time = QDateTime::currentDateTimeUtc();
+	this->setTime(time);
+	this->setMessage(QObject::tr("Branch %1 deleted.")
+		.arg(this->branchId()));
+	this->trigger();
+}
+
+void QUaConditionBranch::deleteLater()
+{
+	m_parent->m_qUaServer->
+	m_changeEventSignaler.execLater([this]() {
+		delete this;
+	});
+}
+
+QVariant QUaConditionBranch::value(const QList<QUaQualifiedName>& browsePath) const
+{
+	QUaBranchNode* node = &(const_cast<QUaConditionBranch*>(this)->m_root);
+	for (auto& browseName : browsePath)
+	{
+		node = node->m_children.contains(browseName) ?
+			&node->m_children[browseName] :
+			nullptr;
+		// NOTE : this can happen for optional fileds that are not present
+		//        for example Condirmed optional fields in Acked conditions
+		if (!node)
+		{
+			return QVariant();
+		}
+	}
+	return node->value();
+}
+
+void QUaConditionBranch::setValue(const QList<QUaQualifiedName>& browsePath, const QVariant& value)
+{
+	QUaBranchNode * node = &m_root;
+	for (auto &browseName : browsePath)
+	{
+		node = node->m_children.contains(browseName) ? 
+			&node->m_children[browseName] : 
+			nullptr;
+		Q_ASSERT_X(node, "QUaConditionBranch::value", "Invalid browse path");
+		if (!node)
+		{
+			return;
+		}
+	}
+	node->setValue(value);
+}
+
+void QUaConditionBranch::trigger()
+{
+	// set evend id
+	this->setEventId(QUaBaseEvent::generateEventId());
+	// trigger base condition with special callback
+	auto st = QUaServer_Anex::UA_Server_triggerEvent_Modified(
+		m_parent->server()->m_server,
+		m_parent->m_nodeId,
+		m_parent->m_sourceNodeId,
+		[this](const UA_SimpleAttributeOperand* sao) -> UA_Variant
+		{
+			auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
+			auto value = this->value(browsePath);
+			return QUaTypesConverter::uaVariantFromQVariant(value);
+		}
+	);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+}
+
+QByteArray QUaConditionBranch::eventId() const
+{
+	return this->value(QUaConditionBranch::EventId).value<QByteArray>();
+}
+
+void QUaConditionBranch::setEventId(const QByteArray& eventId)
+{
+	this->setValue(QUaConditionBranch::EventId, eventId);
+}
+
+void QUaConditionBranch::setMessage(const QUaLocalizedText& message)
+{
+	this->setValue(QUaConditionBranch::Message, QVariant::fromValue(message));
+}
+
+void QUaConditionBranch::setTime(const QDateTime& time)
+{
+	this->setValue(QUaConditionBranch::Time, time);
+}
+
+QUaNodeId QUaConditionBranch::branchId() const
+{
+	return this->value(QUaConditionBranch::BranchId).value<QUaNodeId>();
+}
+
+void QUaConditionBranch::setBranchId(const QUaNodeId& branchId)
+{
+	this->setValue(QUaConditionBranch::BranchId, QVariant::fromValue(branchId));
+}
+
+void QUaConditionBranch::setRetain(const bool& retain)
+{
+	this->setValue(QUaConditionBranch::Retain, retain);
+}
+
+void QUaConditionBranch::setComment(const QUaLocalizedText& comment, const QString& currentUser)
+{
+	auto time = QDateTime::currentDateTimeUtc();
+	// set comment
+	this->setValue(QUaConditionBranch::Comment, QVariant::fromValue(comment));
+	this->setValue(QUaConditionBranch::Comment_SourceTimestamp, time);
+	// update user that set comment
+	this->setValue(QUaConditionBranch::ClientUserId, currentUser);
+	// any change to comment, severity and quality will cause event.	
+	this->setTime(time);
+	this->setMessage(
+		currentUser.isEmpty() ?
+		QObject::tr("A comment was added to branch %1.").arg(this->branchId()) :
+		QObject::tr("A comment was added to branch %1 by %2.").arg(this->branchId()).arg(currentUser)
+	);
+	this->trigger();
+}
+
+void QUaConditionBranch::addChildren(QUaNode* node, QUaBranchNode& branchNode)
+{
+	// leaves
+	for (auto prop : node->browseChildren<QUaProperty>())
+	{
+		auto &branchNodeProp = branchNode.m_children[prop->browseName()];
+		branchNodeProp.m_isVariable = true;
+		branchNodeProp.m_value = prop->value();
+		// no children
+	}
+	// variables
+	for (auto var : node->browseChildren<QUaBaseDataVariable>())
+	{
+		auto& branchNodeVar = branchNode.m_children[var->browseName()];
+		branchNodeVar.m_isVariable = true;
+		branchNodeVar.m_value = var->value();
+		this->addChildren(var, branchNodeVar);
+	}
+	// objects
+	for (auto obj : node->browseChildren<QUaBaseObject>())
+	{
+		auto& branchNodeObj = branchNode.m_children[obj->browseName()];
+		branchNodeObj.m_isVariable = false;
+		branchNodeObj.m_nodeId = obj->nodeId();
+		this->addChildren(obj, branchNodeObj);
+	}
+}
+
+QList<QUaQualifiedName> QUaConditionBranch::saoToBrowsePath(const UA_SimpleAttributeOperand* sao)
+{
+	QList<QUaQualifiedName> browsePath;
+	for (size_t i = 0; i < sao->browsePathSize; i++)
+	{
+		browsePath << sao->browsePath[i];
+	}
+	return browsePath;
+}
+
+bool QUaConditionBranch::requiresAttention() const
+{
+	return false;
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

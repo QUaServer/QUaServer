@@ -123,6 +123,31 @@ protected:
 	virtual void resetInternals();
 };
 
+class QUaAlarmConditionBranch : public QUaAcknowledgeableConditionBranch
+{
+public:
+	QUaAlarmConditionBranch(
+		QUaCondition* parent,
+		const QUaNodeId& branchId = QUaNodeId()
+	);
+
+	bool active() const;
+
+protected:
+
+	// reimplement
+	virtual bool requiresAttention() const override;
+
+	// QUaAlarmCondition
+	static QList<QUaQualifiedName> ActiveState;
+	static QList<QUaQualifiedName> ActiveState_Id;
+	static QList<QUaQualifiedName> ActiveState_FalseState;
+	static QList<QUaQualifiedName> ActiveState_TrueState;
+	static QList<QUaQualifiedName> ActiveState_TransitionTime;
+
+	friend QUaAlarmCondition;
+};
+
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
 #endif // QUAALARMCONDITION_H
