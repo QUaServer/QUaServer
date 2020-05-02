@@ -275,8 +275,8 @@ public:
 
 	// Common API
 
-	QVariant value(const QList<QUaQualifiedName>& browsePath) const;
-	void     setValue(const QList<QUaQualifiedName>& browsePath, const QVariant& value);
+	QVariant value(const QUaBrowsePath& browsePath) const;
+	void     setValue(const QUaBrowsePath& browsePath, const QVariant& value);
 
 	// Event specific API
 
@@ -325,23 +325,21 @@ protected:
 
 	void addChildren(QUaNode* node, QUaBranchNode& branchNode);
 
-	static QList<QUaQualifiedName> saoToBrowsePath(const UA_SimpleAttributeOperand* sao);
-
 	// QUaBaseEvent
-	static QList<QUaQualifiedName> EventId;
-	static QList<QUaQualifiedName> Message;
-	static QList<QUaQualifiedName> Time;
-	static QList<QUaQualifiedName> ClientUserId;
+	static QUaBrowsePath EventId;
+	static QUaBrowsePath Message;
+	static QUaBrowsePath Time;
+	static QUaBrowsePath ClientUserId;
 	// QUaCondition
-	static QList<QUaQualifiedName> BranchId;
-	static QList<QUaQualifiedName> Retain;
-	static QList<QUaQualifiedName> EnabledState;
-	static QList<QUaQualifiedName> EnabledState_Id;
-	static QList<QUaQualifiedName> EnabledState_FalseState;
-	static QList<QUaQualifiedName> EnabledState_TrueState;
-	static QList<QUaQualifiedName> EnabledState_TransitionTime;
-	static QList<QUaQualifiedName> Comment;
-	static QList<QUaQualifiedName> Comment_SourceTimestamp;
+	static QUaBrowsePath BranchId;
+	static QUaBrowsePath Retain;
+	static QUaBrowsePath EnabledState;
+	static QUaBrowsePath EnabledState_Id;
+	static QUaBrowsePath EnabledState_FalseState;
+	static QUaBrowsePath EnabledState_TrueState;
+	static QUaBrowsePath EnabledState_TransitionTime;
+	static QUaBrowsePath Comment;
+	static QUaBrowsePath Comment_SourceTimestamp;
 	// setClientUserId
 
 	// reimplement to define retain and branch creation

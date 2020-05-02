@@ -1914,9 +1914,9 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	// needed to store historic events in a consistent way
 	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
 	{
-		Q_ASSERT(!m_hashTypeAggregatedVariableChildren.contains(typeNodeId));
-		m_hashTypeAggregatedVariableChildren[typeNodeId] =
-			QUaNode::getTypeAggregatedVariableChildrenData(
+		Q_ASSERT(!m_hashTypeVars.contains(typeNodeId));
+		m_hashTypeVars[typeNodeId] =
+			QUaNode::getTypeVars(
 				typeNodeId, 
 				this->m_server
 			);
@@ -2798,7 +2798,7 @@ bool QUaServer::isTypeNameRegistered(const QString& strTypeName) const
 	return m_mapTypes.contains(strTypeName);
 }
 
-QUaNode * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const
+QUaNode * QUaServer::browsePath(const QUaBrowsePath& browsePath) const
 {
 	if (browsePath.count() <= 0)
 	{

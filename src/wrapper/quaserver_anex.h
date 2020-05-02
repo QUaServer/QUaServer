@@ -767,7 +767,7 @@ class QUaServer_Anex
     friend class QUaConditionBranch;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
-    typedef std::function<QVariant(const QList<QUaQualifiedName> &)> QUaSaoCallback;
+    typedef std::function<QVariant(const QUaBrowsePath&)> QUaSaoCallback;
 
     static UA_StatusCode resolveSimpleAttributeOperand(
         UA_Server* server, 

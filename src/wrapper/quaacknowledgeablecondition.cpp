@@ -451,16 +451,16 @@ QUaTwoStateVariable* QUaAcknowledgeableCondition::getConfirmedState()
 /****************************************************************************************
 */
 
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, "AckedState" } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, "AckedState" },{ 0, "Id"             } }); // [Boolean]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, "AckedState" },{ 0, "TransitionTime" } }); // [UtcTime]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, "ConfirmedState" } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, "ConfirmedState" },{ 0, "Id"             } }); // [Boolean]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, "ConfirmedState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, "AckedState" } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, "AckedState" },{ 0, "Id"             } }); // [Boolean]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, "AckedState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, "ConfirmedState" } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, "ConfirmedState" },{ 0, "Id"             } }); // [Boolean]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, "ConfirmedState" },{ 0, "TransitionTime" } }); // [UtcTime]
 
 QUaAcknowledgeableConditionBranch::QUaAcknowledgeableConditionBranch(
 	QUaCondition* parent,

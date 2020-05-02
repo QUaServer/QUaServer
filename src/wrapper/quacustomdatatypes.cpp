@@ -494,6 +494,44 @@ QUaQualifiedName QUaQualifiedName::fromUaQualifiedName(const UA_QualifiedName& u
 	return QUaQualifiedName(uaQualName);
 }
 
+QUaBrowsePath QUaQualifiedName::saoToBrowsePath(const UA_SimpleAttributeOperand* sao)
+{
+	QUaBrowsePath browsePath;
+	for (size_t i = 0; i < sao->browsePathSize; i++)
+	{
+		browsePath << sao->browsePath[i];
+	}
+	return browsePath;
+}
+
+QString QUaQualifiedName::reduceXml(const QUaBrowsePath& browsePath)
+{
+	QString strRet;
+	if (browsePath.count() == 1)
+	{
+		return browsePath.first().toXmlString();
+	}
+	std::for_each(browsePath.begin(), browsePath.end(),
+	[&strRet](const auto& browseName) {
+		strRet += "/" + browseName.toXmlString();
+	});
+	return strRet;
+}
+
+QString QUaQualifiedName::reduceName(const QUaBrowsePath& browsePath)
+{
+	if (browsePath.count() == 1)
+	{
+		return browsePath.first().name();
+	}
+	QString strRet;
+	std::for_each(browsePath.begin(), browsePath.end(),
+	[&strRet](const auto& browseName) {
+		strRet += "/" + browseName.name();
+	});
+	return strRet;
+}
+
 QMetaEnum QUaChangeStructureDataType::m_metaEnumVerb = QMetaEnum::fromType<QUa::ChangeVerb>();
 
 QUaChangeStructureDataType::QUaChangeStructureDataType()

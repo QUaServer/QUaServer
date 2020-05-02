@@ -736,7 +736,7 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 				srv->m_server, 
 				&condition->m_nodeId, 
 				monitoredItem, 
-				[branch](const QList<QUaQualifiedName>& browsePath) -> QVariant
+				[branch](const QUaBrowsePath& browsePath) -> QVariant
 				{
 					return branch->value(browsePath);
 				}
@@ -761,20 +761,20 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 */
 
 // QUaBaseEvent
-QList<QUaQualifiedName> QUaConditionBranch::EventId     ({ { 0, "EventId"      } }); // [ByteString]
-QList<QUaQualifiedName> QUaConditionBranch::Message     ({ { 0, "Message"      } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaConditionBranch::Time        ({ { 0, "Time"         } }); // [UtcTime]
-QList<QUaQualifiedName> QUaConditionBranch::ClientUserId({ { 0, "ClientUserId" } }); // [String]
+QUaBrowsePath QUaConditionBranch::EventId     ({ { 0, "EventId"      } }); // [ByteString]
+QUaBrowsePath QUaConditionBranch::Message     ({ { 0, "Message"      } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::Time        ({ { 0, "Time"         } }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::ClientUserId({ { 0, "ClientUserId" } }); // [String]
 // QUaCondition
-QList<QUaQualifiedName> QUaConditionBranch::BranchId({ { 0, "BranchId" } }); // [NodeId]
-QList<QUaQualifiedName> QUaConditionBranch::Retain  ({ { 0, "Retain"   } }); // [Boolean]
-QList<QUaQualifiedName> QUaConditionBranch::EnabledState               ({ { 0, "EnabledState" } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaConditionBranch::EnabledState_Id            ({ { 0, "EnabledState" },{ 0, "Id"             } }); // [Boolean]
-QList<QUaQualifiedName> QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaConditionBranch::EnabledState_TransitionTime({ { 0, "EnabledState" },{ 0, "TransitionTime" } }); // [UtcTime]
-QList<QUaQualifiedName> QUaConditionBranch::Comment                ({ { 0, "Comment" } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaConditionBranch::Comment_SourceTimestamp({ { 0, "Comment" },{0, "SourceTimestamp"} }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::BranchId({ { 0, "BranchId" } }); // [NodeId]
+QUaBrowsePath QUaConditionBranch::Retain  ({ { 0, "Retain"   } }); // [Boolean]
+QUaBrowsePath QUaConditionBranch::EnabledState               ({ { 0, "EnabledState" } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::EnabledState_Id            ({ { 0, "EnabledState" },{ 0, "Id"             } }); // [Boolean]
+QUaBrowsePath QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::EnabledState_TransitionTime({ { 0, "EnabledState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::Comment                ({ { 0, "Comment" } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::Comment_SourceTimestamp({ { 0, "Comment" },{0, "SourceTimestamp"} }); // [UtcTime]
 
 QUaConditionBranch::QUaConditionBranch(QUaCondition* parent, const QUaNodeId& branchId/* = QUaNodeId()*/)
 {
@@ -816,7 +816,7 @@ void QUaConditionBranch::deleteLater()
 	});
 }
 
-QVariant QUaConditionBranch::value(const QList<QUaQualifiedName>& browsePath) const
+QVariant QUaConditionBranch::value(const QUaBrowsePath& browsePath) const
 {
 	// NOTE : need non-const reference else const [] hash operator will be used
 	// creating a new QUaBranchNode instance instead of accessing existing one
@@ -836,7 +836,7 @@ QVariant QUaConditionBranch::value(const QList<QUaQualifiedName>& browsePath) co
 	return node->value();
 }
 
-void QUaConditionBranch::setValue(const QList<QUaQualifiedName>& browsePath, const QVariant& value)
+void QUaConditionBranch::setValue(const QUaBrowsePath& browsePath, const QVariant& value)
 {
 	QUaBranchNode * node = &m_root;
 	for (auto &browseName : browsePath)
@@ -862,7 +862,7 @@ void QUaConditionBranch::trigger()
 		m_parent->server()->m_server,
 		m_parent->m_nodeId,
 		m_parent->m_sourceNodeId,
-		[this](const QList<QUaQualifiedName>& browsePath) -> QVariant
+		[this](const QUaBrowsePath& browsePath) -> QVariant
 		{
 			return this->value(browsePath);
 		}
@@ -949,16 +949,6 @@ void QUaConditionBranch::addChildren(QUaNode* node, QUaBranchNode& branchNode)
 		branchNodeObj.m_nodeId = obj->nodeId();
 		this->addChildren(obj, branchNodeObj);
 	}
-}
-
-QList<QUaQualifiedName> QUaConditionBranch::saoToBrowsePath(const UA_SimpleAttributeOperand* sao)
-{
-	QList<QUaQualifiedName> browsePath;
-	for (size_t i = 0; i < sao->browsePathSize; i++)
-	{
-		browsePath << sao->browsePath[i];
-	}
-	return browsePath;
 }
 
 bool QUaConditionBranch::requiresAttention() const

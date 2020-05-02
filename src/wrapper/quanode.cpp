@@ -73,14 +73,14 @@ struct QUaInMemorySerializer
 		auto listNodeIds = m_hashNodeTreeData.keys();
 		std::sort(listNodeIds.begin(), listNodeIds.end(),
 		[this, server](const QUaNodeId& nodeId1, const QUaNodeId& nodeId2) -> bool {
-			QString browse1 = QUaQualifiedName::reduce(server->nodeById(nodeId1)->nodeBrowsePath());
-			QString browse2 = QUaQualifiedName::reduce(server->nodeById(nodeId2)->nodeBrowsePath());
+			QString browse1 = QUaQualifiedName::reduceXml(server->nodeById(nodeId1)->nodeBrowsePath());
+			QString browse2 = QUaQualifiedName::reduceXml(server->nodeById(nodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
 		});
 		for (auto nodeId : listNodeIds)
 		{
 			QUaNode* node = server->nodeById(nodeId);
-			QString browse = QUaQualifiedName::reduce(node->nodeBrowsePath());
+			QString browse = QUaQualifiedName::reduceXml(node->nodeBrowsePath());
 			qDebug() << QString("%1 [%2] (%3)")
 				.arg(browse)
 				.arg(nodeId)
@@ -598,7 +598,7 @@ bool QUaNode::hasChild(const QUaQualifiedName &browseName)
 	return this->browseChild(browseName);
 }
 
-QUaNode * QUaNode::browsePath(const QUaQualifiedNameList& browsePath) const
+QUaNode * QUaNode::browsePath(const QUaBrowsePath& browsePath) const
 {
 	QUaNode * currNode = const_cast<QUaNode *>(this);
 	for (auto browseName : browsePath)
@@ -612,13 +612,13 @@ QUaNode * QUaNode::browsePath(const QUaQualifiedNameList& browsePath) const
 	return currNode;
 }
 
-QUaQualifiedNameList QUaNode::nodeBrowsePath() const
+QUaBrowsePath QUaNode::nodeBrowsePath() const
 {
 	// get parents browse path and then attach current browse name
 	// stop recursion if current node is ObjectsFolder
 	if (this == m_qUaServer->objectsFolder())
 	{
-		return QUaQualifiedNameList() << this->browseName();
+		return QUaBrowsePath() << this->browseName();
 	}
 #ifdef QT_DEBUG 
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
@@ -630,7 +630,7 @@ QUaQualifiedNameList QUaNode::nodeBrowsePath() const
 #endif // !UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	if (!parent)
 	{
-		return QUaQualifiedNameList() << m_qUaServer->objectsFolder()->browseName() << this->browseName();
+		return QUaBrowsePath() << m_qUaServer->objectsFolder()->browseName() << this->browseName();
 	}
 #else
 	QUaNode* parent = static_cast<QUaNode*>(this->parent());
@@ -1748,11 +1748,11 @@ QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Se
 	return retListMethods;
 }
 
-QUaNode::QUaEventFieldMetaData QUaNode::getTypeAggregatedVariableChildrenData(
+QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 	const QUaNodeId& typeNodeId, 
 	UA_Server* server)
 {
-	QSet<QUaQualifiedName> alreadyAdded;
+	QSet<QUaBrowsePath> alreadyAdded;
 	QUaEventFieldMetaData retNames;
 	UA_NodeId typeUaNodeId = typeNodeId;
 	// look for children starting from this type of to base object type
@@ -1774,7 +1774,8 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeAggregatedVariableChildrenData(
 			}
 			// ignore if browse name does not match
 			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, server);
-			if (alreadyAdded.contains(childBrowseName))
+			QUaBrowsePath browsePath = QUaBrowsePath() << childBrowseName;
+			if (alreadyAdded.contains(browsePath))
 			{
 				continue;
 			}
@@ -1798,17 +1799,17 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeAggregatedVariableChildrenData(
 			if (outValueRank != UA_VALUERANK_SCALAR)
 			{
 				Q_ASSERT_X(outValueRank != UA_VALUERANK_ANY, 
-					"QUaNode::getTypeAggregatedVariableChildrenData", 
+					"QUaNode::getTypeVars", 
 					"Not Supported!");
 				auto byteType = QString("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
 				qType = static_cast<QMetaType::Type>(QMetaType::type(byteType.data()));
 				Q_ASSERT(qType != QMetaType::UnknownType);
 			}
 			// add to return list
-			Q_ASSERT(!retNames.contains(childBrowseName.name()));
-			retNames[childBrowseName.name()] = qType;
+			Q_ASSERT(!retNames.contains(browsePath));
+			retNames[browsePath] = qType;
 			// add to already read
-			alreadyAdded << childBrowseName;
+			alreadyAdded << browsePath;
 		}
 		// cleanup
 		for (auto childNodeId : childrenNodeIds)

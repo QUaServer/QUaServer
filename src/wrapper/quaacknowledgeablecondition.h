@@ -116,16 +116,16 @@ protected:
 	virtual bool requiresAttention() const override;
 
 	// QUaAcknowledgeableCondition
-	static QList<QUaQualifiedName> AckedState;
-	static QList<QUaQualifiedName> AckedState_Id;
-	static QList<QUaQualifiedName> AckedState_FalseState;
-	static QList<QUaQualifiedName> AckedState_TrueState;
-	static QList<QUaQualifiedName> AckedState_TransitionTime;
-	static QList<QUaQualifiedName> ConfirmedState;
-	static QList<QUaQualifiedName> ConfirmedState_Id;
-	static QList<QUaQualifiedName> ConfirmedState_FalseState;
-	static QList<QUaQualifiedName> ConfirmedState_TrueState;
-	static QList<QUaQualifiedName> ConfirmedState_TransitionTime;
+	static QUaBrowsePath AckedState;
+	static QUaBrowsePath AckedState_Id;
+	static QUaBrowsePath AckedState_FalseState;
+	static QUaBrowsePath AckedState_TrueState;
+	static QUaBrowsePath AckedState_TransitionTime;
+	static QUaBrowsePath ConfirmedState;
+	static QUaBrowsePath ConfirmedState_Id;
+	static QUaBrowsePath ConfirmedState_FalseState;
+	static QUaBrowsePath ConfirmedState_TrueState;
+	static QUaBrowsePath ConfirmedState_TransitionTime;
 
 	friend QUaAcknowledgeableCondition;
 };

@@ -267,7 +267,8 @@ bool QUaInMemoryHistorizer::writeHistoryEventsOfType(
 	// timestamp cannot be used because there can be multiple
 	// events for the same timestamp
 	Q_ASSERT(emittersNodeIds.count() > 0);
-	if (!eventPoint.fields.contains("EventId"))
+	const static auto eventIdPath = QUaBrowsePath() << QUaQualifiedName(0, "EventId");
+	if (!eventPoint.fields.contains(eventIdPath))
 	{
 		logOut << QUaLog({
 			QObject::tr("Could not find mandatory (unique) EventId field in event %1.")
@@ -277,7 +278,7 @@ bool QUaInMemoryHistorizer::writeHistoryEventsOfType(
 		});
 		return false;
 	}
-	QByteArray byteEventId = eventPoint.fields["EventId"].value<QByteArray>();
+	QByteArray byteEventId = eventPoint.fields[eventIdPath].value<QByteArray>();
 	uint intEventKey = qHash(byteEventId);
 	if (m_eventTypeDatabase[eventTypeNodeId].contains(intEventKey))
 	{

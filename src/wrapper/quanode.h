@@ -192,12 +192,12 @@ public:
 	bool hasChild(const QUaQualifiedName& browseName);
 
 	template<typename T>
-	T* browsePath(const QUaQualifiedNameList& browsePath) const;
+	T* browsePath(const QUaBrowsePath& browsePath) const;
 	// specialization
-	QUaNode* browsePath(const QUaQualifiedNameList& browsePath) const;
+	QUaNode* browsePath(const QUaBrowsePath& browsePath) const;
 
 	// get node's browse path starting from ObjectsFolder
-	QUaQualifiedNameList nodeBrowsePath() const;
+	QUaBrowsePath nodeBrowsePath() const;
 
 	// Reference API
 
@@ -339,8 +339,8 @@ private:
 	//        decided to make key QString because use of QUaQualifiedName is more expensive for hash
 	//        puposes. This might be an issue if there are two fields with same name but different
 	//        namespace
-	typedef QHash<QString, QUaDataType> QUaEventFieldMetaData;
-	static QUaEventFieldMetaData getTypeAggregatedVariableChildrenData(
+	typedef QHash<QUaBrowsePath, QUaDataType> QUaEventFieldMetaData;
+	static QUaEventFieldMetaData getTypeVars(
 		const QUaNodeId& typeNodeId,
 		UA_Server* server
 	);
@@ -471,7 +471,7 @@ inline T* QUaNode::browseChild(
 }
 
 template<typename T>
-inline T* QUaNode::browsePath(const QUaQualifiedNameList& browsePath) const
+inline T* QUaNode::browsePath(const QUaBrowsePath& browsePath) const
 {
 	return qobject_cast<T*>(this->browsePath(browsePath));
 }

@@ -275,19 +275,13 @@ void QUaAlarmCondition::resetInternals()
 	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());
 }
 /***************************************************************************************
-
-		this->setMessage(
-			strMessageAppend.isEmpty() ?
-			tr("Alarm %1.").arg(strActiveStateName) :
-			tr("Alarm %1. %2").arg(strActiveStateName).arg(strMessageAppend)
-		);
 */
 
-QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState               ({ { 0, "ActiveState" } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, "ActiveState" },{ 0, "Id"             } }); // [Boolean]
-QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QList<QUaQualifiedName> QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, "ActiveState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState               ({ { 0, "ActiveState" } }); // [LocalizedText]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, "ActiveState" },{ 0, "Id"             } }); // [Boolean]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, "ActiveState" },{ 0, "TransitionTime" } }); // [UtcTime]
 
 QUaAlarmConditionBranch::QUaAlarmConditionBranch(
 	QUaCondition* parent,

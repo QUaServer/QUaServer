@@ -116,7 +116,7 @@ QUaServer_Anex::resolveSimpleAttributeOperand(
     }
     if (resolveSAOCallback)
     {
-        auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
+        auto browsePath = QUaQualifiedName::saoToBrowsePath(sao);
         *value = QUaTypesConverter::uaVariantFromQVariant(resolveSAOCallback(browsePath));
         return UA_Variant_isEmpty(value) ? UA_STATUSCODE_BADNOTFOUND : UA_STATUSCODE_GOOD;
     }
@@ -419,10 +419,10 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
     {
         // get event type node id
         QUaNodeId eventTypeNodeId = event->typeDefinitionNodeId();
-        Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
+        Q_ASSERT(srv->m_hashTypeVars.contains(eventTypeNodeId));
         // populate history point
         QUaHistoryEventPoint eventPoint;
-        auto& typeData = srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId];
+        auto& typeData = srv->m_hashTypeVars[eventTypeNodeId];
         auto i = typeData.begin();
         while (i != typeData.end())
         {
@@ -431,13 +431,12 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
             if (resolveSAOCallback)
             {
                 eventPoint.fields[name] = resolveSAOCallback(
-                    QList<QUaQualifiedName>() << name
+                    QUaBrowsePath() << name
                 );
             }
             else
-                {
-                auto var = event->browseChild<QUaBaseVariable>(name);
-                
+            {
+                auto var = event->browsePath<QUaBaseVariable>(name);
                 if (!var)
                 {
                     // NOTE : we need the empty column for consistent storing of event types
@@ -447,11 +446,13 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
                 eventPoint.fields[name] = var->value();
             }
         }
-        Q_ASSERT(!eventPoint.fields.contains("EventNodeId"));
-        Q_ASSERT(!eventPoint.fields.contains("OriginNodeId"));
+        const static auto eventNodeIdPath      = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");
+        const static auto originatorNodeIdPath = QUaBrowsePath() << QUaQualifiedName(0, "OriginNodeId");
+        Q_ASSERT(!eventPoint.fields.contains(eventNodeIdPath));
+        Q_ASSERT(!eventPoint.fields.contains(originatorNodeIdPath));
         // add event node id and origin node id
-        eventPoint.fields["EventNodeId" ] = QVariant::fromValue(QUaNodeId(eventNodeId));
-        eventPoint.fields["OriginNodeId"] = QVariant::fromValue(QUaNodeId(origin));
+        eventPoint.fields[eventNodeIdPath] = QVariant::fromValue(QUaNodeId(eventNodeId));
+        eventPoint.fields[originatorNodeIdPath] = QVariant::fromValue(QUaNodeId(origin));
         // add timestamp
         eventPoint.timestamp = event->time();
         // store

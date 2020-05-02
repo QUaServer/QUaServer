@@ -178,9 +178,9 @@ public:
 	// (* actually browses using QObject tree)
 
 	template<typename T>
-	T* browsePath(const QUaQualifiedNameList &browsePath) const;
+	T* browsePath(const QUaBrowsePath& browsePath) const;
 	// specialization
-	QUaNode * browsePath(const QUaQualifiedNameList &browsePath) const;
+	QUaNode * browsePath(const QUaBrowsePath& browsePath) const;
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// Events API
@@ -324,7 +324,7 @@ private:
 	void addChange(const QUaChangeStructureDataType& change);
     // mandatory and optional variable children browsenames for event type definition
     // need this to store historic events in a consistent way, ignoring manually added children
-    QHash<QUaNodeId, QUaNode::QUaEventFieldMetaData> m_hashTypeAggregatedVariableChildren;
+    QHash<QUaNodeId, QUaNode::QUaEventFieldMetaData> m_hashTypeVars;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -724,7 +724,7 @@ inline T * QUaServer::nodeById(const QUaNodeId &nodeId)
 }
 
 template<typename T>
-inline T * QUaServer::browsePath(const QUaQualifiedNameList& browsePath) const
+inline T * QUaServer::browsePath(const QUaBrowsePath& browsePath) const
 {
 	return qobject_cast<T*>(this->browsePath(browsePath));
 }

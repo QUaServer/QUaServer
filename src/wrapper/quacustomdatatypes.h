@@ -558,16 +558,13 @@ public:
 	static QUaQualifiedName fromXmlString(const QString& strXmlQualName);
 	static QUaQualifiedName fromUaQualifiedName(const UA_QualifiedName& uaQualName);
 
-	typedef QList<QUaQualifiedName> QUaQualifiedNameList;
-	inline static QString reduce(const QUaQualifiedNameList& browsePath)
-	{
-		QString strRet;
-		std::for_each(browsePath.begin(), browsePath.end(),
-		[&strRet](const QUaQualifiedName& browseName) {
-			strRet += browseName.toXmlString() + "/";
-		});
-		return strRet;
-	}
+	typedef QList<QUaQualifiedName> QUaBrowsePath;
+
+	static QUaBrowsePath saoToBrowsePath(const UA_SimpleAttributeOperand* sao);
+
+	static QString reduceXml(const QUaBrowsePath& browsePath);
+
+	static QString reduceName(const QUaBrowsePath& browsePath);
 
 private:
 	quint16 m_namespace;
@@ -578,8 +575,6 @@ private:
 };
 
 Q_DECLARE_METATYPE(QUaQualifiedName);
-
-typedef QList<QUaQualifiedName> QUaQualifiedNameList;
 
 inline uint qHash(const QUaQualifiedName& key, uint seed)
 {
@@ -598,6 +593,18 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualN
 	inStream >> outQualName.m_namespace;
 	inStream >> outQualName.m_name;
 	return inStream;
+}
+
+typedef QList<QUaQualifiedName> QUaBrowsePath;
+
+inline uint qHash(const QUaBrowsePath& key, uint seed)
+{
+	uint outKey = 0;
+	for (const auto& elem : key)
+	{
+		outKey = outKey ^ qHash(elem, seed);
+	}
+	return outKey;
 }
 
 class QUaChangeStructureDataType

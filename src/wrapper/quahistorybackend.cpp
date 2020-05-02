@@ -934,17 +934,17 @@ void QUaHistoryBackend::readEvent(
 	QDateTime timeEnd   = endTimestamp   == LLONG_MAX ? QDateTime() : QUaTypesConverter::uaVariantToQVariantScalar<QDateTime, UA_DateTime>(&endTimestamp);
 	// get qualnames for columns in advance
 	size_t numCols = historyReadDetails->filter.selectClausesSize;
-	QVector<QString> colNames;
-	colNames.resize(static_cast<int>(numCols));
+	QList<QUaBrowsePath> colBrowsePaths;
 	for (size_t col = 0; col < numCols; ++col)
 	{
 		auto sao = &historyReadDetails->filter.selectClauses[col];
 		if (sao->browsePathSize == 0)
 		{
-			colNames[static_cast<int>(col)] = "EventNodeId";
+			const static auto eventNodeIdPath = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");
+			colBrowsePaths << eventNodeIdPath;
 			continue;
 		}
-		colNames[static_cast<int>(col)] = QUaTypesConverter::uaStringToQString(sao->browsePath->name);
+		colBrowsePaths << QUaQualifiedName::saoToBrowsePath(sao);
 	}
 	// loop all emitter nodes for which event history was requested
 	for (size_t ithNode = 0; ithNode < nodesToReadSize; ++ithNode) 
@@ -1061,7 +1061,8 @@ void QUaHistoryBackend::readEvent(
 				continue;
 			}
 			// limit
-			totalToReadForThisType = (std::min)(totalToReadForThisType, totalToReadInThisCall);
+			Q_ASSERT(totalToReadInThisCall > totalAlreadyReadInThisCall);
+			totalToReadForThisType = (std::min)(totalToReadForThisType, totalToReadInThisCall - totalAlreadyReadInThisCall);
 			Q_ASSERT(totalToReadForThisType > 0);
 			// read output for current event type
 			auto eventsOfType = srv->m_historBackend.readHistoryEventsOfType(
@@ -1101,17 +1102,17 @@ void QUaHistoryBackend::readEvent(
 				queryData.remove(eventTypeNodeId);
 			}
 			// if the user returned non-matching qvariant types, they need fixing
-			Q_ASSERT(srv->m_hashTypeAggregatedVariableChildren.contains(eventTypeNodeId));
-			auto& fieldInfo = srv->m_hashTypeAggregatedVariableChildren[eventTypeNodeId];
+			Q_ASSERT(srv->m_hashTypeVars.contains(eventTypeNodeId));
+			auto& fieldInfo = srv->m_hashTypeVars[eventTypeNodeId];
 			std::for_each(eventsOfType.begin(), eventsOfType.end(), [&fieldInfo](QUaHistoryEventPoint &point) {
 				auto i = point.fields.begin();
 				while (i != point.fields.end())
 				{
 					auto& name = i.key();
 					QVariant& value = i.value();
-					// NOTE : use ::value to avoid creating an unwanted entry into m_hashTypeAggregatedVariableChildren
+					// NOTE : use ::value to avoid creating an unwanted entry into m_hashTypeVars
 					auto &type = fieldInfo.value(name, QMetaType::UnknownType); 
-					// NOTE : expensive, e.g. string to QUaNodeId
+					// NOTE : expensive, e.g. QString to QUaNodeId
 					QUaHistoryBackend::fixOutputVariantType(value, type); 
 					++i;
 				}
@@ -1145,11 +1146,11 @@ void QUaHistoryBackend::readEvent(
 				UA_Array_new(numCols, &UA_TYPES[UA_TYPES_VARIANT]);
 			for (size_t col = 0; col < numCols; ++col)
 			{
-				QString& colName = colNames[static_cast<int>(col)];
-				if (iterRow->fields.contains(colName))
+				auto& colPath = colBrowsePaths[static_cast<int>(col)];
+				if (iterRow->fields.contains(colPath))
 				{
 					historyData[ithNode]->events[row].eventFields[col] = 
-						QUaTypesConverter::uaVariantFromQVariant(iterRow->fields[colName]);
+						QUaTypesConverter::uaVariantFromQVariant(iterRow->fields[colPath]);
 				}
 				else
 				{

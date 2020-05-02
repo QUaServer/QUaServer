@@ -139,11 +139,11 @@ protected:
 	virtual bool requiresAttention() const override;
 
 	// QUaAlarmCondition
-	static QList<QUaQualifiedName> ActiveState;
-	static QList<QUaQualifiedName> ActiveState_Id;
-	static QList<QUaQualifiedName> ActiveState_FalseState;
-	static QList<QUaQualifiedName> ActiveState_TrueState;
-	static QList<QUaQualifiedName> ActiveState_TransitionTime;
+	static QUaBrowsePath ActiveState;
+	static QUaBrowsePath ActiveState_Id;
+	static QUaBrowsePath ActiveState_FalseState;
+	static QUaBrowsePath ActiveState_TrueState;
+	static QUaBrowsePath ActiveState_TransitionTime;
 
 	friend QUaAlarmCondition;
 };

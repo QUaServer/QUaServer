@@ -22,7 +22,7 @@ struct QUaHistoryDataPoint
 struct QUaHistoryEventPoint
 {
 	QDateTime timestamp;
-	QHash<QString, QVariant> fields;
+	QHash<QUaBrowsePath, QVariant> fields;
 };
 
 class QUaHistoryBackend
