@@ -348,6 +348,7 @@ protected:
 	virtual bool requiresAttention() const;
 
 	friend class QUaCondition;
+	friend class QUaServer_Anex;
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

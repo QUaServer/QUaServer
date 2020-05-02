@@ -736,11 +736,9 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 				srv->m_server, 
 				&condition->m_nodeId, 
 				monitoredItem, 
-				[branch](const UA_SimpleAttributeOperand* sao) -> UA_Variant
+				[branch](const QList<QUaQualifiedName>& browsePath) -> QVariant
 				{
-					auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
-					auto value = branch->value(browsePath);
-					return QUaTypesConverter::uaVariantFromQVariant(value);
+					return branch->value(browsePath);
 				}
 			);
 			Q_ASSERT(retval == UA_STATUSCODE_GOOD);
@@ -820,6 +818,8 @@ void QUaConditionBranch::deleteLater()
 
 QVariant QUaConditionBranch::value(const QList<QUaQualifiedName>& browsePath) const
 {
+	// NOTE : need non-const reference else const [] hash operator will be used
+	// creating a new QUaBranchNode instance instead of accessing existing one
 	QUaBranchNode* node = &(const_cast<QUaConditionBranch*>(this)->m_root);
 	for (auto& browseName : browsePath)
 	{
@@ -862,11 +862,9 @@ void QUaConditionBranch::trigger()
 		m_parent->server()->m_server,
 		m_parent->m_nodeId,
 		m_parent->m_sourceNodeId,
-		[this](const UA_SimpleAttributeOperand* sao) -> UA_Variant
+		[this](const QList<QUaQualifiedName>& browsePath) -> QVariant
 		{
-			auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
-			auto value = this->value(browsePath);
-			return QUaTypesConverter::uaVariantFromQVariant(value);
+			return this->value(browsePath);
 		}
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);

@@ -16,6 +16,8 @@
 #endif // !SQLITE_HISTORIZER
 #endif // UA_ENABLE_HISTORIZING
 
+#include <QElapsedTimer>
+
 int main(int argc, char* argv[])
 {
 	QCoreApplication a(argc, argv);
@@ -89,6 +91,28 @@ int main(int argc, char* argv[])
 	level_alarm->Enable();
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+	source->addMethod("Test", [level](qint64 iters) {
+		QElapsedTimer timer, total;
+		total.start();
+		qint64 mean = 0;
+		for (qint64 i = 0; i < iters; i++)
+		{
+			timer.restart();
+
+			level->setValue(11);
+			emit level->valueChanged(11);
+			level->setValue(0);
+			emit level->valueChanged(0);
+
+			mean += timer.elapsed();
+		}
+
+		qDebug() << "[TOTAL]" << total.elapsed() << "[ms]";
+		auto meandbl = mean / (double)iters;
+		qDebug() << "[MEAN]" << meandbl << "[ms]";
+		return meandbl;
+	});
 
 	server.start();
 

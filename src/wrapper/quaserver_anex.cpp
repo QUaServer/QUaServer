@@ -116,7 +116,8 @@ QUaServer_Anex::resolveSimpleAttributeOperand(
     }
     if (resolveSAOCallback)
     {
-        *value = resolveSAOCallback(sao);
+        auto browsePath = QUaConditionBranch::saoToBrowsePath(sao);
+        *value = QUaTypesConverter::uaVariantFromQVariant(resolveSAOCallback(browsePath));
         return UA_Variant_isEmpty(value) ? UA_STATUSCODE_BADNOTFOUND : UA_STATUSCODE_GOOD;
     }
     else
@@ -322,7 +323,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
     // get event instance
     auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
     Q_ASSERT(event);
-    bool historize = event->historizing() && !resolveSAOCallback; // TODO : support branch history
+    bool historize = event->historizing();
     QList<QUaNodeId> emittersNodeIds;
     auto srv = QUaServer::getServerNodeContext(server);
     Q_ASSERT(srv);
@@ -426,14 +427,17 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
         while (i != typeData.end())
         {
             auto &name = i.key();
+            ++i;
             if (resolveSAOCallback)
             {
-                //eventPoint.fields[name] = 
+                eventPoint.fields[name] = resolveSAOCallback(
+                    QList<QUaQualifiedName>() << name
+                );
             }
             else
                 {
                 auto var = event->browseChild<QUaBaseVariable>(name);
-                ++i;
+                
                 if (!var)
                 {
                     // NOTE : we need the empty column for consistent storing of event types
