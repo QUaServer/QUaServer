@@ -1764,45 +1764,6 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
 		   !UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
-		// NOTE : stack overflow
-		//// object children
-		//auto objsNodeIds = QUaNode::getChildrenNodeIds(
-		//	typeUaNodeId,
-		//	server,
-		//	UA_NODECLASS_OBJECT
-		//);
-		//for (auto objNodeId : objsNodeIds)
-		//{
-		//	// only children that have a modelling rule
-		//	UA_NodeId modellingRule = QUaNode::getModellingRule(objNodeId, server);
-		//	if (UA_NodeId_isNull(&modellingRule))
-		//	{
-		//		continue;
-		//	}
-		//	// recurse object's children
-		//	UA_NodeId childTypeId = QUaNode::typeDefinitionNodeId(objNodeId, server);
-		//	auto childrenVars = QUaNode::getTypeVars(childTypeId, server);
-		//	UA_NodeId_clear(&childTypeId);
-		//	// prepend parent browse name and add to return list
-		//	QUaQualifiedName browseName = QUaNode::getBrowseName(objNodeId, server);
-		//	QUaEventFieldMetaDataIter i = childrenVars.begin();
-		//	while (i != childrenVars.end())
-		//	{
-		//		QUaBrowsePath browsePath = i.key();
-		//		browsePath.prepend(browseName);
-		//		// add to return list
-		//		Q_ASSERT(!retNames.contains(browsePath));
-		//		retNames[browsePath] = i.value();
-		//		// add to already read
-		//		alreadyAdded << browsePath;
-		//		i++;
-		//	}
-		//}
-		//// cleanup
-		//for (auto objNodeId : objsNodeIds)
-		//{
-		//	UA_NodeId_clear(&objNodeId);
-		//}
 		// variable children
 		auto varsNodeIds = QUaNode::getChildrenNodeIds(
 			typeUaNodeId, 
@@ -1855,7 +1816,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			retNames[browsePath] = qType;
 			// add to already read
 			alreadyAdded << browsePath;
-			// recurse variables's children
+			// recurse variables's children (e.g. to get Id of two state variables)
 			UA_NodeId childTypeId = QUaNode::typeDefinitionNodeId(varNodeId, server);
 			auto childrenVars = QUaNode::getTypeVars(childTypeId, server);
 			UA_NodeId_clear(&childTypeId);

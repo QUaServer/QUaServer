@@ -308,15 +308,13 @@ protected:
 	{
 		inline QVariant value() const
 		{
-			return m_isVariable ? m_value : QVariant::fromValue(m_nodeId);
+			return m_value;
 		}
 		inline void setValue(const QVariant& value)
 		{
-			m_isVariable ? m_value = value : m_nodeId = value.value<QUaNodeId>();
+			m_value = value;
 		}
-
-		bool m_isVariable : 1;
-		QUaNodeId m_nodeId;
+		// NOTE : according to spec server could also support attrs other than values
 		QVariant  m_value;
 		QHash<QUaQualifiedName, QUaBranchNode> m_children;
 	};

@@ -782,8 +782,6 @@ QUaConditionBranch::QUaConditionBranch(QUaCondition* parent, const QUaNodeId& br
 	// copy necessary trigger variables
 	m_parent = parent;
 	// copy tree : start with root
-	m_root.m_isVariable = false;
-	m_root.m_nodeId = parent->nodeId();
 	this->addChildren(parent, m_root);
 	// set branch id
 	this->setBranchId(branchId.isNull() ? QUaNodeId(0, UA_UInt32_random()) : branchId);
@@ -929,7 +927,6 @@ void QUaConditionBranch::addChildren(QUaNode* node, QUaBranchNode& branchNode)
 	for (auto prop : node->browseChildren<QUaProperty>())
 	{
 		auto &branchNodeProp = branchNode.m_children[prop->browseName()];
-		branchNodeProp.m_isVariable = true;
 		branchNodeProp.m_value = prop->value();
 		// no children
 	}
@@ -937,17 +934,8 @@ void QUaConditionBranch::addChildren(QUaNode* node, QUaBranchNode& branchNode)
 	for (auto var : node->browseChildren<QUaBaseDataVariable>())
 	{
 		auto& branchNodeVar = branchNode.m_children[var->browseName()];
-		branchNodeVar.m_isVariable = true;
 		branchNodeVar.m_value = var->value();
 		this->addChildren(var, branchNodeVar);
-	}
-	// objects
-	for (auto obj : node->browseChildren<QUaBaseObject>())
-	{
-		auto& branchNodeObj = branchNode.m_children[obj->browseName()];
-		branchNodeObj.m_isVariable = false;
-		branchNodeObj.m_nodeId = obj->nodeId();
-		this->addChildren(obj, branchNodeObj);
 	}
 }
 
