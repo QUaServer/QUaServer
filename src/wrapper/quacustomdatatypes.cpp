@@ -379,23 +379,24 @@ void QUaQualifiedName::operator=(const UA_QualifiedName& uaQualName)
 void QUaQualifiedName::operator=(const QString& strXmlQualName)
 {
 	m_namespace = 0;
-	m_name = strXmlQualName;
-	QStringList components = strXmlQualName.split(QLatin1String(";"));
+	auto components = QStringRef(&strXmlQualName).split(QLatin1String(";"));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
 		// if no valid xml format, assume ns = 0 and given string is name
+		m_name = strXmlQualName;
 		return;
 	}
 	// check if valid namespace found, else assume ns = 0 and given string is name
 	quint16 new_ns;
 	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
 	{
-		QString strNs = components.at(0).split(QLatin1String("ns=")).last();
+		auto strNs = components.at(0).split(QLatin1String("ns=")).last();
 		bool success = false;
-		uint ns = components.at(0).midRef(3).toString().toUInt(&success);
+		uint ns = components.at(0).mid(3).toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
 		{
+			m_name = strXmlQualName;
 			return;
 		}
 		new_ns = ns;
@@ -407,6 +408,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		!strLast.contains(QLatin1String("g=")) &&
 		!strLast.contains(QLatin1String("b=")))
 	{
+		m_name = strXmlQualName;
 		return;
 	}
 	auto lastParts = strLast.split(QLatin1String("="));
@@ -416,8 +418,8 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		lastParts.size() == 1 ?
 		QString() : // NOTE : possible that just "s="
 		lastParts.size() == 2 ?
-		lastParts.last() :
-		lastParts.mid(1).join(QLatin1String("="));
+		lastParts.last().toString() :
+		lastParts.at(1).toString();
 }
 
 void QUaQualifiedName::operator=(const char* strXmlQualName)
@@ -570,18 +572,18 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeStructure)
 {
-	QStringList components = strChangeStructure.split(QLatin1String("|"));
+	auto components = QStringRef(&strChangeStructure).split(QLatin1String("|"));
 	if (components.count() == 0)
 	{
 		return;
 	}
 	if (components.count() >= 1)
 	{
-		m_nodeIdAffected = components.at(0);
+		m_nodeIdAffected = components.at(0).toString();
 	}
 	if (components.count() >= 2)
 	{
-		m_nodeIdAffectedType = components.at(1);
+		m_nodeIdAffectedType = components.at(1).toString();;
 	}
 	if (components.count() >= 3)
 	{
@@ -703,12 +705,12 @@ void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
 	m_locale = QString();
-	m_text   = strXmlLocalizedText;
-	QStringList components = strXmlLocalizedText.split(QLatin1String(";"));
+	auto components = QStringRef(&strXmlLocalizedText).split(QLatin1String(";"));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
 		// if no valid xml format, assume no-locale, and given string is text
+		m_text = strXmlLocalizedText;
 		return;
 	}
 	// check if valid locale found, else assume no-locale
@@ -718,16 +720,18 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 		auto partsLocale = components.at(0).split(QLatin1String("="));
 		if (partsLocale.size() < 2)
 		{
+			m_text = strXmlLocalizedText;
 			return;
 		}
 		new_locale = 
 			partsLocale.size() == 2 ?
-			partsLocale.last() :
-			partsLocale.join(QLatin1String("="));
+			partsLocale.last().toString() :
+			partsLocale.at(1).toString();
 	}
 	// check if valid text found, else assume no-locale and given string is name
 	if (!components.last().contains(QLatin1String("t=")))
 	{
+		m_text = strXmlLocalizedText;
 		return;
 	}
 	auto partsText = components.last().split(QLatin1String("="));
@@ -737,8 +741,8 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 		partsText.size() == 1 ?
 		QString() : // NOTE : possible that just "t="
 		partsText.size() == 2 ?
-		partsText.last() :
-		partsText.mid(1).join(QLatin1String("="));
+		partsText.last().toString() :
+		partsText.at(1).toString();
 }
 
 void QUaLocalizedText::operator=(const char* strXmlLocalizedText)

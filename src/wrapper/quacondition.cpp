@@ -29,7 +29,7 @@ QUaCondition::QUaCondition(
 	);
 	// set default : display name of BaseConditionClassType
 	// NOTE : ConditionClasses not supported yet
-	this->setConditionClassName("BaseConditionClass");
+	//this->setConditionClassName("BaseConditionClass");
 	// set default : ConditionType browse name
 	this->setConditionName(this->displayName());
 	// set default : retain false
