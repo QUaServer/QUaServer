@@ -474,9 +474,11 @@ QVector<QUaHistoryEventPoint> QUaInMemoryHistorizer::readHistoryEventsOfType(
 	const QDateTime &timeStart,
 	const quint64   &numPointsOffset,
 	const quint64   &numPointsToRead,
+	const QList<QUaBrowsePath>& columnsToRead,
 	QQueue<QUaLog>  &logOut
 )
 {
+	Q_UNUSED(columnsToRead);
 	auto points = QVector<QUaHistoryEventPoint>();
 	if (!m_eventEmitterDatabase.contains(emitterNodeId))
 	{

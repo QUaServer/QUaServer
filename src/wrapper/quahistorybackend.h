@@ -142,6 +142,7 @@ public:
 		const QDateTime &timeStart,
 		const quint64   &numPointsOffset,
 		const quint64   &numPointsToRead,
+		const QList<QUaBrowsePath> &columnsToRead,
 		QQueue<QUaLog>  &logOut
 	);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -202,6 +203,7 @@ private:
 		const QDateTime &,
 		const quint64   &,
 		const quint64   &,
+		const QList<QUaBrowsePath> &,
 		QQueue<QUaLog>  &
 	)> m_readHistoryEventsOfType;
 
@@ -413,6 +415,7 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 		const QDateTime &timeStart,
 		const quint64   &numPointsOffset,
 		const quint64   &numPointsToRead,
+		const QList<QUaBrowsePath> &columnsToRead,
 		QQueue<QUaLog>  &logOut
 	) -> QVector<QUaHistoryEventPoint>
 	{
@@ -422,6 +425,7 @@ inline void QUaHistoryBackend::setHistorizer(T& historizer)
 			timeStart,
 			numPointsOffset,
 			numPointsToRead,
+			columnsToRead,
 			logOut
 		);
 	};

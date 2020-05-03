@@ -1085,6 +1085,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 	const QDateTime &timeStart,
 	const quint64   &numPointsOffset,
 	const quint64   &numPointsToRead,
+	const QList<QUaBrowsePath> &columnsToRead,
 	QQueue<QUaLog>  &logOut
 )
 {
@@ -1154,6 +1155,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 	Q_ASSERT(outEventTypeKey >= 0);
 	Q_ASSERT(timeStart.isValid());
 	QSqlQuery query(db);
+
 	// get column names
 	QString strStmt = QString(
 		"SELECT c.name FROM pragma_table_info(\"%1\") c;"
@@ -1175,16 +1177,39 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 			});
 		return points;
 	}
-	// read results
-	QHash<QString, int> tableCols;
+	// read column names results
+	QSet<QString> tableCols;
 	while (query.next())
 	{
-		tableCols[query.value(0).toString()] = -1;
+		tableCols << query.value(0).toString();
 	}
-	Q_ASSERT(tableCols.size() > 1);
+	// get requested column names to read
+	QHash<QString, int> colsToIndexes;
+	QHash<QString, const QUaBrowsePath *> colsToPaths;
+	QString strColumns;
+	auto iCol = columnsToRead.begin();
+	while(iCol != columnsToRead.end())
+	{
+		QString strColName = QUaQualifiedName::reduceName(*iCol, "_");
+		// ignore if eventid or if requested column does not exist in table
+		if (strColName == QLatin1String("EventId") ||
+			!tableCols.contains(strColName))
+		{
+			++iCol;
+			continue;
+		}
+		colsToIndexes[strColName] = -1;
+		colsToPaths[strColName] = &(*iCol);
+		strColumns += strColName;
+		if (++iCol == columnsToRead.end())
+		{
+			continue;
+		}
+		strColumns += ", ";
+	}
 	// prepared statement for num points in range
 	strStmt = QString(
-		"SELECT * FROM \"%1\" t "
+		"SELECT %4 FROM \"%1\" t "
 		"INNER JOIN ("
 			"SELECT "
 				"EventId "
@@ -1198,7 +1223,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 				"e.Time ASC LIMIT :Limit OFFSET :Offset"
 		") e "
 		"ON t.\"%1\" = e.EventId;"
-	).arg(eventTypeNodeId).arg(emitterNodeId).arg(outEventTypeKey);
+	).arg(eventTypeNodeId).arg(emitterNodeId).arg(outEventTypeKey).arg(strColumns);
 	if (!this->prepareStmt(query, strStmt, logOut))
 	{
 		return points;
@@ -1221,8 +1246,8 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 		return points;
 	}
 	// get column indexes
-	auto i = tableCols.begin();
-	while (i != tableCols.end())
+	auto i = colsToIndexes.begin();
+	while (i != colsToIndexes.end())
 	{
 		auto& name  = i.key();
 		auto& index = i.value();
@@ -1230,31 +1255,31 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 		Q_ASSERT(index >= 0);
 		++i;
 	}
-	// read results
+	// read row results
+	points.resize(numPointsToRead);
+	int pointIndex = 0;
 	static const QString strTimeColName("Time");
-	QUaBrowsePath tmpPath = QUaBrowsePath () << QUaQualifiedName(0, "");
-	while (query.next())
+	while (query.next() && pointIndex < numPointsToRead)
 	{
-		qulonglong iTime = query.value(tableCols[strTimeColName]).toULongLong();
-		QDateTime timestamp = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC); // NOTE : expensive if spec not defined
-		// insert point
-		points << QUaHistoryEventPoint({
-			timestamp,
-			QHash<QUaBrowsePath, QVariant>()
-		});
-		int pointIndex = points.size() - 1;
+		qulonglong iTime = query.value(colsToIndexes[strTimeColName]).toULongLong();
+		// NOTE : expensive if time spec (Qt::UTC) not defined
+		points[pointIndex].timestamp = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC);
 		auto& fields = points[pointIndex].fields;
-		// loop fields
-		i = tableCols.begin();
-		while (i != tableCols.end())
+		// populate fields
+		i = colsToIndexes.begin();
+		while (i != colsToIndexes.end())
 		{
 			auto& name  = i.key();
 			auto& index = i.value();
-			// do not create a new QUaBrowsePath() everytime, better reuse one
-			tmpPath[0].setName(name);
-			fields.insert(tmpPath, query.value(index));
+			// expand browse path from string
+			fields.insert(
+				*colsToPaths[name],
+				query.value(index)
+			);
 			++i;
 		}
+		// next row
+		pointIndex++;
 	}
 	return points;
 }
@@ -1716,7 +1741,7 @@ bool QUaSqliteHistorizer::createEventTypeTable(
 		auto& name  = i.key();
 		auto& value = i.value();
 		strStmt += QString("[%1] %2")
-			.arg(QUaQualifiedName::reduceName(name))
+			.arg(QUaQualifiedName::reduceName(name, "_"))
 			.arg(
 				QUaSqliteHistorizer::QtTypeToSqlType(QUaSqliteHistorizer::QVariantToQtType(value)));
 		if (i.hasNext())
@@ -1763,7 +1788,7 @@ bool QUaSqliteHistorizer::eventTypePrepareStmt(
 		i.next();
 		auto& name = i.key();
 		strStmt += QString("%1")
-			.arg(QUaQualifiedName::reduceName(name));
+			.arg(QUaQualifiedName::reduceName(name, "_"));
 		if (i.hasNext())
 		{
 			strStmt += ", ";
@@ -1777,7 +1802,7 @@ bool QUaSqliteHistorizer::eventTypePrepareStmt(
 		i.next();
 		auto& name = i.key();
 		strStmt += QString(":%1")
-			.arg(QUaQualifiedName::reduceName(name));
+			.arg(QUaQualifiedName::reduceName(name, "_"));
 		if (i.hasNext())
 		{
 			strStmt += ", ";
@@ -2017,9 +2042,8 @@ bool QUaSqliteHistorizer::insertEventPoint(
 		auto& name = i.key();
 		auto& value = i.value();
 		auto type = QUaSqliteHistorizer::QVariantToQtType(value);
-		// TODO : maybe use a hash to use ::bindValue with index instead of placeholder
 		query.bindValue(
-			QString(":%1").arg(QUaQualifiedName::reduceName(name)),
+			QString(":%1").arg(QUaQualifiedName::reduceName(name, "_")),
 			type == QMetaType::UChar ? 
 				value.toUInt() : 
 			type == QMetaType::QDateTime ?

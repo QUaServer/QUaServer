@@ -428,23 +428,23 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
         {
             auto &name = i.key();
             ++i;
+            QVariant value;
             if (resolveSAOCallback)
             {
-                eventPoint.fields[name] = resolveSAOCallback(
+                value = resolveSAOCallback(
                     QUaBrowsePath() << name
                 );
             }
             else
             {
                 auto var = event->browsePath<QUaBaseVariable>(name);
-                if (!var)
-                {
-                    // NOTE : we need the empty column for consistent storing of event types
-                    eventPoint.fields[name] = QVariant();   
-                    continue;
-                }
-                eventPoint.fields[name] = var->value();
+                value = var ? var->value() : QVariant();
             }
+            if (!value.isValid())
+            {
+                continue;
+            }
+            eventPoint.fields[name] = value;
         }
         const static auto eventNodeIdPath      = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");
         const static auto originatorNodeIdPath = QUaBrowsePath() << QUaQualifiedName(0, "OriginNodeId");

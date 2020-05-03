@@ -518,18 +518,37 @@ QString QUaQualifiedName::reduceXml(const QUaBrowsePath& browsePath)
 	return strRet;
 }
 
-QString QUaQualifiedName::reduceName(const QUaBrowsePath& browsePath)
+QString QUaQualifiedName::reduceName(
+	const QUaBrowsePath& browsePath, 
+	const QString& separator/* = QString("/")*/
+)
 {
 	if (browsePath.count() == 1)
 	{
 		return browsePath.first().name();
 	}
 	QString strRet;
-	std::for_each(browsePath.begin(), browsePath.end(),
-	[&strRet](const auto& browseName) {
-		strRet += "/" + browseName.name();
-	});
+	auto it = browsePath.begin();
+	while (it != browsePath.end())
+	{
+		strRet += it->name();
+		if (++it != browsePath.end())
+		{
+			strRet += separator;
+		}
+	}
 	return strRet;
+}
+
+QUaBrowsePath QUaQualifiedName::expandName(const QString& strPath, const QString& separator)
+{
+	QUaBrowsePath retPath;
+	auto parts = QStringRef(&strPath).split(separator);
+	for (int i = 0; i < parts.count(); i++)
+	{
+		retPath << QUaQualifiedName(0, parts[i].toString());
+	}
+	return retPath;
 }
 
 QMetaEnum QUaChangeStructureDataType::m_metaEnumVerb = QMetaEnum::fromType<QUa::ChangeVerb>();

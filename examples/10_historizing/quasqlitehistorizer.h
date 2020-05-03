@@ -133,6 +133,7 @@ public:
 		const QDateTime &timeStart,
 		const quint64   &numPointsOffset,
 		const quint64   &numPointsToRead,
+		const QList<QUaBrowsePath> &columnsToRead,
 		QQueue<QUaLog>  &logOut
 	);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

@@ -860,6 +860,7 @@ QVector<QUaHistoryEventPoint> QUaHistoryBackend::readHistoryEventsOfType(
 	const QDateTime &timeStart,
 	const quint64   &numPointsOffset,
 	const quint64   &numPointsToRead,
+	const QList<QUaBrowsePath> &columnsToRead,
 	QQueue<QUaLog>  &logOut
 )
 {
@@ -873,6 +874,7 @@ QVector<QUaHistoryEventPoint> QUaHistoryBackend::readHistoryEventsOfType(
 		timeStart,
 		numPointsOffset,
 		numPointsToRead,
+		columnsToRead,
 		logOut
 	);
 }
@@ -1071,6 +1073,7 @@ void QUaHistoryBackend::readEvent(
 				queryData[eventTypeNodeId].m_timeStartExisting,
 				queryData[eventTypeNodeId].m_numEventsAlreadyRead, // offset
 				totalToReadForThisType,
+				colBrowsePaths,
 				logOut
 			);
 			Q_ASSERT_X(

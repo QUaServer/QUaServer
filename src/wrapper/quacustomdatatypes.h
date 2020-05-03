@@ -564,7 +564,8 @@ public:
 
 	static QString reduceXml(const QUaBrowsePath& browsePath);
 
-	static QString reduceName(const QUaBrowsePath& browsePath);
+	static QString reduceName(const QUaBrowsePath& browsePath, const QString& separator = "/");
+	static QUaBrowsePath expandName(const QString& strPath, const QString& separator = "/");
 
 private:
 	quint16 m_namespace;

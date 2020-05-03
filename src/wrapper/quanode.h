@@ -340,6 +340,7 @@ private:
 	//        puposes. This might be an issue if there are two fields with same name but different
 	//        namespace
 	typedef QHash<QUaBrowsePath, QUaDataType> QUaEventFieldMetaData;
+	typedef QHash<QUaBrowsePath, QUaDataType>::iterator QUaEventFieldMetaDataIter;
 	static QUaEventFieldMetaData getTypeVars(
 		const QUaNodeId& typeNodeId,
 		UA_Server* server

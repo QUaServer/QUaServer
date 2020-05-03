@@ -562,13 +562,17 @@ QUaNode* QUaNode::browseChild(
 	const bool& instantiateOptional/* = false*/)
 {
 	// first check cache
-	QUaNode* child = m_browseCache.value(browseName, nullptr);
-	if (child)
+	QUaNode* child = nullptr;
+	if (m_browseCache.contains(browseName))
 	{
-		return child;
+		child = m_browseCache.value(browseName);
+		if (child || !instantiateOptional)
+		{
+			return child;
+		}
 	}
 	// TODO : check if new open62541 tree-based lookup implementation is faster
-	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly);
+	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly); // 18.72%
 	if (child)
 	{
 		m_browseCache[browseName] = child;
@@ -579,6 +583,7 @@ QUaNode* QUaNode::browseChild(
 	}
 	if (!instantiateOptional)
 	{
+		m_browseCache[browseName] = nullptr;
 		return nullptr;
 	}
 	child = this->instantiateOptionalChild(browseName);
@@ -1759,29 +1764,69 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
 		   !UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
 	{
-		// NOTE : only variable children that have a modelling rule
-		auto childrenNodeIds = QUaNode::getChildrenNodeIds(
+		// NOTE : stack overflow
+		//// object children
+		//auto objsNodeIds = QUaNode::getChildrenNodeIds(
+		//	typeUaNodeId,
+		//	server,
+		//	UA_NODECLASS_OBJECT
+		//);
+		//for (auto objNodeId : objsNodeIds)
+		//{
+		//	// only children that have a modelling rule
+		//	UA_NodeId modellingRule = QUaNode::getModellingRule(objNodeId, server);
+		//	if (UA_NodeId_isNull(&modellingRule))
+		//	{
+		//		continue;
+		//	}
+		//	// recurse object's children
+		//	UA_NodeId childTypeId = QUaNode::typeDefinitionNodeId(objNodeId, server);
+		//	auto childrenVars = QUaNode::getTypeVars(childTypeId, server);
+		//	UA_NodeId_clear(&childTypeId);
+		//	// prepend parent browse name and add to return list
+		//	QUaQualifiedName browseName = QUaNode::getBrowseName(objNodeId, server);
+		//	QUaEventFieldMetaDataIter i = childrenVars.begin();
+		//	while (i != childrenVars.end())
+		//	{
+		//		QUaBrowsePath browsePath = i.key();
+		//		browsePath.prepend(browseName);
+		//		// add to return list
+		//		Q_ASSERT(!retNames.contains(browsePath));
+		//		retNames[browsePath] = i.value();
+		//		// add to already read
+		//		alreadyAdded << browsePath;
+		//		i++;
+		//	}
+		//}
+		//// cleanup
+		//for (auto objNodeId : objsNodeIds)
+		//{
+		//	UA_NodeId_clear(&objNodeId);
+		//}
+		// variable children
+		auto varsNodeIds = QUaNode::getChildrenNodeIds(
 			typeUaNodeId, 
 			server,
 			UA_NODECLASS_VARIABLE
 		);
-		for (auto childNodeId : childrenNodeIds)
+		for (auto varNodeId : varsNodeIds)
 		{
-			UA_NodeId modellingRule = QUaNode::getModellingRule(childNodeId, server);
+			// only children that have a modelling rule
+			UA_NodeId modellingRule = QUaNode::getModellingRule(varNodeId, server);
 			if (UA_NodeId_isNull(&modellingRule))
 			{
 				continue;
 			}
-			// ignore if browse name does not match
-			QUaQualifiedName childBrowseName = QUaNode::getBrowseName(childNodeId, server);
-			QUaBrowsePath browsePath = QUaBrowsePath() << childBrowseName;
+			// ignore if browse path already added
+			QUaQualifiedName browseName = QUaNode::getBrowseName(varNodeId, server);
+			QUaBrowsePath browsePath = QUaBrowsePath() << browseName;
 			if (alreadyAdded.contains(browsePath))
 			{
 				continue;
 			}
 			// read type
 			UA_NodeId outDataType;
-			auto st = UA_Server_readDataType(server, childNodeId, &outDataType);
+			auto st = UA_Server_readDataType(server, varNodeId, &outDataType);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			QMetaType::Type qType = QUaDataType::qTypeByNodeId(outDataType);
@@ -1793,7 +1838,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			}
 			// read valueRank
 			qint32 outValueRank;
-			st = UA_Server_readValueRank(server, childNodeId, &outValueRank);
+			st = UA_Server_readValueRank(server, varNodeId, &outValueRank);
 			Q_ASSERT(st == UA_STATUSCODE_GOOD);
 			Q_UNUSED(st);
 			if (outValueRank != UA_VALUERANK_SCALAR)
@@ -1810,11 +1855,28 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			retNames[browsePath] = qType;
 			// add to already read
 			alreadyAdded << browsePath;
+			// recurse variables's children
+			UA_NodeId childTypeId = QUaNode::typeDefinitionNodeId(varNodeId, server);
+			auto childrenVars = QUaNode::getTypeVars(childTypeId, server);
+			UA_NodeId_clear(&childTypeId);
+			// prepend parent browse name and add to return list
+			QUaEventFieldMetaDataIter i = childrenVars.begin();
+			while (i != childrenVars.end())
+			{
+				QUaBrowsePath browsePath = i.key();
+				browsePath.prepend(browseName);
+				// add to return list
+				Q_ASSERT(!retNames.contains(browsePath));
+				retNames[browsePath] = i.value();
+				// add to already read
+				alreadyAdded << browsePath;
+				i++;
+			}
 		}
 		// cleanup
-		for (auto childNodeId : childrenNodeIds)
+		for (auto varNodeId : varsNodeIds)
 		{
-			UA_NodeId_clear(&childNodeId);
+			UA_NodeId_clear(&varNodeId);
 		}
 		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeUaNodeId, server);
 		UA_NodeId_clear(&typeUaNodeId);

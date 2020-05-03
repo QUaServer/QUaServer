@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 	// NOTE : historizer must live at least as long as server
 	server.setHistorizer(historizer);
 	// enable event history on server node (all events)
-	server.setEventHistoryRead(true);
+	//server.setEventHistoryRead(true);
 #endif // UA_ENABLE_HISTORIZING
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
