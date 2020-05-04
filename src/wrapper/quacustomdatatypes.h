@@ -577,6 +577,11 @@ private:
 
 Q_DECLARE_METATYPE(QUaQualifiedName);
 
+inline uint qHash(const QUaQualifiedName& key)
+{
+	return qHash(key.name(), key.namespaceIndex());
+}
+
 inline uint qHash(const QUaQualifiedName& key, uint seed)
 {
 	return qHash(key.name(), seed) ^ key.namespaceIndex();
@@ -597,6 +602,16 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualN
 }
 
 typedef QList<QUaQualifiedName> QUaBrowsePath;
+
+inline uint qHash(const QUaBrowsePath& key)
+{
+	uint outKey = 0;
+	for (const auto& elem : key)
+	{
+		outKey = outKey ^ qHash(elem);
+	}
+	return outKey;
+}
 
 inline uint qHash(const QUaBrowsePath& key, uint seed)
 {

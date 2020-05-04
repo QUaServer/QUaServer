@@ -18,6 +18,12 @@ class QUaCondition : public QUaBaseEvent
 	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain    )
 	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity  )
 
+	Q_PROPERTY(quint32 branchQueueSize READ branchQueueSize WRITE setBranchQueueSize)
+
+#ifdef UA_ENABLE_HISTORIZING
+	Q_PROPERTY(bool historizingBranches READ historizingBranches WRITE setHistorizingBranches)
+#endif // UA_ENABLE_HISTORIZING
+
 friend class QUaServer;
 friend class QUaConditionBranch;
 
@@ -112,6 +118,14 @@ public:
 
 	// branches API
 
+	quint32 branchQueueSize() const;
+	void setBranchQueueSize(const quint32& branchQueueSize);
+
+#ifdef UA_ENABLE_HISTORIZING
+	bool historizingBranches() const;
+	void setHistorizingBranches(const bool& historizingBranches);
+#endif // UA_ENABLE_HISTORIZING
+
 	template<typename T>
 	T* createBranch(const QUaNodeId& branchId = QUaNodeId());
 
@@ -183,10 +197,12 @@ private:
 	QUaNode * m_sourceNode;
 	QMetaObject::Connection m_sourceDestroyed;
 	QMetaObject::Connection m_retainedDestroyed;
+	quint32 m_branchQueueSize;
+	QQueue<QUaConditionBranch*> m_branches;
+#ifdef UA_ENABLE_HISTORIZING
+	bool m_historizingBranches;
+#endif // UA_ENABLE_HISTORIZING
 
-	QList<QUaConditionBranch*> m_branches;
-
-	//
 	static UA_StatusCode ConditionRefresh(
 		UA_Server*        server,
 		const UA_NodeId*  sessionId,
@@ -226,6 +242,14 @@ private:
 template<typename T>
 inline T* QUaCondition::createBranch(const QUaNodeId& branchId/* = ""*/)
 {
+	if (m_branchQueueSize == 0)
+	{
+		return nullptr;
+	}
+	while (m_branches.count() >= static_cast<int>(m_branchQueueSize))
+	{
+		m_branches.dequeue()->deleteLater();
+	}
 	auto branch = new T(this, branchId);
 	m_branches << branch;
 	return branch;
@@ -303,25 +327,9 @@ public:
 
 protected:
 	QUaCondition* m_parent;
+	QHash<uint, QVariant> m_values;
 
-	struct QUaBranchNode
-	{
-		inline QVariant value() const
-		{
-			return m_value;
-		}
-		inline void setValue(const QVariant& value)
-		{
-			m_value = value;
-		}
-		// NOTE : according to spec server could also support attrs other than values
-		QVariant  m_value;
-		QHash<QUaQualifiedName, QUaBranchNode> m_children;
-	};
-
-	QUaBranchNode m_root;
-
-	void addChildren(QUaNode* node, QUaBranchNode& branchNode);
+	void addChildren(QUaNode* node, const QUaBrowsePath& browsePath = QUaBrowsePath());
 
 	// QUaBaseEvent
 	static QUaBrowsePath EventId;
@@ -333,8 +341,8 @@ protected:
 	static QUaBrowsePath Retain;
 	static QUaBrowsePath EnabledState;
 	static QUaBrowsePath EnabledState_Id;
-	static QUaBrowsePath EnabledState_FalseState;
-	static QUaBrowsePath EnabledState_TrueState;
+	//static QUaBrowsePath EnabledState_FalseState;
+	//static QUaBrowsePath EnabledState_TrueState;
 	static QUaBrowsePath EnabledState_TransitionTime;
 	static QUaBrowsePath Comment;
 	static QUaBrowsePath Comment_SourceTimestamp;

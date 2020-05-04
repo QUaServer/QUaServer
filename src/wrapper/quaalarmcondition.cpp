@@ -158,13 +158,13 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 		return;
 	}
 	// activate or deactivate
-	this->setActiveStateId(active);
 	auto strActiveStateName = active ?
 		this->activeStateTrueState() :
 		this->activeStateFalseState();
+	auto time = QDateTime::currentDateTimeUtc();
+	this->setActiveStateId(active);
 	this->setActiveStateCurrentStateName(strActiveStateName);
-	this->setActiveStateTransitionTime(this->getActiveState()->serverTimestamp());	
-
+	this->setActiveStateTransitionTime(time);
 	// if active have to retain and reset acknowledged and confirmed
 	if (active)
 	{
@@ -192,7 +192,7 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 		if (this->requiresAttention())
 		{
 			// create branch
-			this->createBranch<QUaAlarmConditionBranch>();
+			auto branch = this->createBranch<QUaAlarmConditionBranch>();
 			this->setRetain(true);
 			if (!this->acknowledged())
 			{
@@ -202,7 +202,10 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 			{
 				strMessage += tr(" Requires Confirm.");
 			}
-			strMessage += tr(" Has branches.");
+			if (branch)
+			{
+				strMessage += tr(" Has branches.");
+			}
 		}
 		else
 		{
@@ -220,7 +223,6 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 		this->setMessage(strMessage);
 	}
 	// trigger event
-	auto time = QDateTime::currentDateTimeUtc();
 	this->setTime(time);
 	this->setReceiveTime(time);
 	// NOTE : message set according to situation
@@ -279,8 +281,8 @@ void QUaAlarmCondition::resetInternals()
 
 QUaBrowsePath QUaAlarmConditionBranch::ActiveState               ({ { 0, "ActiveState" } }); // [LocalizedText]
 QUaBrowsePath QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, "ActiveState" },{ 0, "Id"             } }); // [Boolean]
-QUaBrowsePath QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
+//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
+//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
 QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, "ActiveState" },{ 0, "TransitionTime" } }); // [UtcTime]
 
 QUaAlarmConditionBranch::QUaAlarmConditionBranch(

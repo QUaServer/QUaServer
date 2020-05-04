@@ -88,7 +88,26 @@ int main(int argc, char* argv[])
 	level_alarm->setLowLimit(-10.0);
 	level_alarm->setLowLowLimit(-100.0);
 	level_alarm->setInputNode(level);
+	//level_alarm->setBranchQueueSize(10);
+#ifdef UA_ENABLE_HISTORIZING
+	//level_alarm->setHistorizingBranches(true);
+#endif // UA_ENABLE_HISTORIZING
 	level_alarm->Enable();
+
+	for (size_t i = 0; i < 1000; i++)
+	{
+		auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>(QObject::tr("level_alarm_%1").arg(i));
+		level_alarm->setHighHighLimitRequired(true);
+		level_alarm->setHighLimitRequired(true);
+		level_alarm->setLowLimitRequired(true);
+		level_alarm->setLowLowLimitRequired(true);
+		level_alarm->setHighHighLimit(100.0);
+		level_alarm->setHighLimit(10.0);
+		level_alarm->setLowLimit(-10.0);
+		level_alarm->setLowLowLimit(-100.0);
+		level_alarm->setInputNode(level);
+		level_alarm->Enable();
+	}
 	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

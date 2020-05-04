@@ -12,6 +12,7 @@ class QUaAcknowledgeableCondition : public QUaCondition
 	Q_PROPERTY(bool confirmRequired READ confirmRequired WRITE setConfirmRequired)
 
 friend class QUaServer;
+friend class QUaAcknowledgeableConditionBranch;
 
 public:
 	Q_INVOKABLE explicit QUaAcknowledgeableCondition(
@@ -85,6 +86,11 @@ protected:
 	// reimplement
 	virtual void resetInternals() override;
 
+	static QUaLocalizedText m_ackedStateTrueState;
+	static QUaLocalizedText m_ackedStateFalseState;
+	static QUaLocalizedText m_confirmedStateTrueState;
+	static QUaLocalizedText m_confirmedStateFalseState;
+
 };
 
 class QUaAcknowledgeableConditionBranch : public QUaConditionBranch
@@ -118,13 +124,13 @@ protected:
 	// QUaAcknowledgeableCondition
 	static QUaBrowsePath AckedState;
 	static QUaBrowsePath AckedState_Id;
-	static QUaBrowsePath AckedState_FalseState;
-	static QUaBrowsePath AckedState_TrueState;
+	//static QUaBrowsePath AckedState_FalseState;
+	//static QUaBrowsePath AckedState_TrueState;
 	static QUaBrowsePath AckedState_TransitionTime;
 	static QUaBrowsePath ConfirmedState;
 	static QUaBrowsePath ConfirmedState_Id;
-	static QUaBrowsePath ConfirmedState_FalseState;
-	static QUaBrowsePath ConfirmedState_TrueState;
+	//static QUaBrowsePath ConfirmedState_FalseState;
+	//static QUaBrowsePath ConfirmedState_TrueState;
 	static QUaBrowsePath ConfirmedState_TransitionTime;
 
 	friend QUaAcknowledgeableCondition;

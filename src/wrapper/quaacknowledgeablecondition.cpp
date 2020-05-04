@@ -360,12 +360,17 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QUaLocalizedText C
 	this->setConfirmed(true);
 }
 
+QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateTrueState      = {0, QObject::tr("Acknowledged")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateFalseState     = {0, QObject::tr("Unacknowledged")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateTrueState  = {0, QObject::tr("Confirmed")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateFalseState = {0, QObject::tr("Unconfirmed")};
+
 void QUaAcknowledgeableCondition::resetInternals()
 {
 	QUaCondition::resetInternals();
 	// set default : Unacknowledged state
-	this->setAckedStateFalseState(tr("Unacknowledged"));
-	this->setAckedStateTrueState(tr("Acknowledged"));
+	this->setAckedStateFalseState(m_ackedStateFalseState);
+	this->setAckedStateTrueState(m_ackedStateTrueState);
 	this->setAckedStateCurrentStateName(this->ackedStateTrueState());
 	this->setAckedStateId(true);
 	this->setAckedStateTransitionTime(this->getAckedState()->serverTimestamp());
@@ -375,8 +380,8 @@ void QUaAcknowledgeableCondition::resetInternals()
 		return;
 	}
 	// initialize and set defaults
-	this->setConfirmedStateFalseState(tr("Unconfirmed"));
-	this->setConfirmedStateTrueState(tr("Confirmed"));
+	this->setConfirmedStateFalseState(m_confirmedStateFalseState);
+	this->setConfirmedStateTrueState(m_confirmedStateTrueState);
 	this->setConfirmedStateCurrentStateName(this->confirmedStateTrueState());
 	this->setConfirmedStateId(true);
 	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
@@ -431,8 +436,8 @@ void QUaAcknowledgeableCondition::setConfirmRequired(const bool& confirmRequired
 		return;
 	}
 	// initialize and set defaults
-	this->setConfirmedStateFalseState(tr("Unconfirmed"));
-	this->setConfirmedStateTrueState(tr("Confirmed"));
+	this->setConfirmedStateFalseState(m_confirmedStateFalseState);
+	this->setConfirmedStateTrueState(m_confirmedStateTrueState);
 	this->setConfirmedStateCurrentStateName(this->confirmedStateTrueState());
 	this->setConfirmedStateId(true);
 	this->setConfirmedStateTransitionTime(this->getConfirmedState()->serverTimestamp());
@@ -453,13 +458,13 @@ QUaTwoStateVariable* QUaAcknowledgeableCondition::getConfirmedState()
 
 QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, "AckedState" } }); // [LocalizedText]
 QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, "AckedState" },{ 0, "Id"             } }); // [Boolean]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
 QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, "AckedState" },{ 0, "TransitionTime" } }); // [UtcTime]
 QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, "ConfirmedState" } }); // [LocalizedText]
 QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, "ConfirmedState" },{ 0, "Id"             } }); // [Boolean]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
 QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, "ConfirmedState" },{ 0, "TransitionTime" } }); // [UtcTime]
 
 QUaAcknowledgeableConditionBranch::QUaAcknowledgeableConditionBranch(
@@ -487,8 +492,8 @@ void QUaAcknowledgeableConditionBranch::setAcknowledged(
 	// set acknowledged
 	this->setValue(QUaAcknowledgeableConditionBranch::AckedState_Id, acknowledged);
 	auto strAckedStateName = acknowledged ?
-		this->value(QUaAcknowledgeableConditionBranch::AckedState_TrueState) :
-		this->value(QUaAcknowledgeableConditionBranch::AckedState_FalseState);
+		QVariant::fromValue(QUaAcknowledgeableCondition::m_ackedStateTrueState ) :
+		QVariant::fromValue(QUaAcknowledgeableCondition::m_ackedStateFalseState);
 	this->setValue(
 		QUaAcknowledgeableConditionBranch::AckedState, 
 		strAckedStateName
@@ -514,7 +519,7 @@ void QUaAcknowledgeableConditionBranch::setAcknowledged(
 		strMessage += QObject::tr(" Requires Confirm.");
 	}
 	// trigger event
-	this->setTime(time);
+	// NOTE : do not set time
 	this->setMessage(strMessage);
 	this->trigger();
 }
@@ -535,8 +540,8 @@ void QUaAcknowledgeableConditionBranch::setConfirmed(
 	// set confirmed
 	this->setValue(QUaAcknowledgeableConditionBranch::ConfirmedState_Id, confirmed);
 	auto strConfirmedStateName = confirmed ?
-		this->value(QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState) :
-		this->value(QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState);
+		QVariant::fromValue(QUaAcknowledgeableCondition::m_confirmedStateTrueState) :
+		QVariant::fromValue(QUaAcknowledgeableCondition::m_confirmedStateFalseState);
 	this->setValue(
 		QUaAcknowledgeableConditionBranch::ConfirmedState,
 		strConfirmedStateName
@@ -558,7 +563,7 @@ void QUaAcknowledgeableConditionBranch::setConfirmed(
 		.arg(this->branchId())
 		.arg(strConfirmedStateName.value<QString>());
 	// trigger event
-	this->setTime(time);
+	// NOTE : do not set time
 	this->setMessage(strMessage);
 	this->trigger();
 }

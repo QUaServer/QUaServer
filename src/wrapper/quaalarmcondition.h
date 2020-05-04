@@ -141,8 +141,8 @@ protected:
 	// QUaAlarmCondition
 	static QUaBrowsePath ActiveState;
 	static QUaBrowsePath ActiveState_Id;
-	static QUaBrowsePath ActiveState_FalseState;
-	static QUaBrowsePath ActiveState_TrueState;
+	//static QUaBrowsePath ActiveState_FalseState;
+	//static QUaBrowsePath ActiveState_TrueState;
 	static QUaBrowsePath ActiveState_TransitionTime;
 
 	friend QUaAlarmCondition;

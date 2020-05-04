@@ -324,6 +324,12 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
     auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
     Q_ASSERT(event);
     bool historize = event->historizing();
+    if (resolveSAOCallback)
+    {
+        auto condition = qobject_cast<QUaCondition*>(event);
+        Q_ASSERT(condition);
+        historize = historize && condition->historizingBranches();
+    }
     QList<QUaNodeId> emittersNodeIds;
     auto srv = QUaServer::getServerNodeContext(server);
     Q_ASSERT(srv);
@@ -440,10 +446,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
                 auto var = event->browsePath<QUaBaseVariable>(name);
                 value = var ? var->value() : QVariant();
             }
-            if (!value.isValid())
-            {
-                continue;
-            }
+            // NOTE : do not if (!value.isValid()), else banchId column will not be created
             eventPoint.fields[name] = value;
         }
         const static auto eventNodeIdPath      = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");

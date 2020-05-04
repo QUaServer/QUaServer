@@ -1152,12 +1152,13 @@ void QUaHistoryBackend::readEvent(
 				auto& colPath = colBrowsePaths[static_cast<int>(col)];
 				if (iterRow->fields.contains(colPath))
 				{
+					auto& value = iterRow->fields[colPath];
+					if (!value.isValid())
+					{
+						continue;
+					}
 					historyData[ithNode]->events[row].eventFields[col] = 
-						QUaTypesConverter::uaVariantFromQVariant(iterRow->fields[colPath]);
-				}
-				else
-				{
-					UA_Variant_init(&historyData[ithNode]->events[row].eventFields[col]);
+						QUaTypesConverter::uaVariantFromQVariant(value);
 				}
 			}
 			// inc row

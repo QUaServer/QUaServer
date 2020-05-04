@@ -1735,16 +1735,18 @@ bool QUaSqliteHistorizer::createEventTypeTable(
 			"[%1] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
 	).arg(eventTypeNodeId);
 	// add columns
-	QHashIterator<QUaBrowsePath, QVariant> i(eventPoint.fields);
-	while (i.hasNext()) {
-		i.next();
-		auto& name  = i.key();
-		auto& value = i.value();
+	auto listColumns = eventPoint.fields.keys();
+	std::sort(listColumns.begin(), listColumns.end());
+	auto i = listColumns.begin();
+	while (i != listColumns.end())
+	{
+		auto& name  = *i;
+		auto& value = eventPoint.fields[name];
 		strStmt += QString("[%1] %2")
 			.arg(QUaQualifiedName::reduceName(name, "_"))
 			.arg(
 				QUaSqliteHistorizer::QtTypeToSqlType(QUaSqliteHistorizer::QVariantToQtType(value)));
-		if (i.hasNext())
+		if (++i != listColumns.end())
 		{
 			strStmt += ", ";
 		}
@@ -2041,6 +2043,10 @@ bool QUaSqliteHistorizer::insertEventPoint(
 		i.next();
 		auto& name = i.key();
 		auto& value = i.value();
+		if (!value.isValid())
+		{
+			continue;
+		}
 		auto type = QUaSqliteHistorizer::QVariantToQtType(value);
 		query.bindValue(
 			QString(":%1").arg(QUaQualifiedName::reduceName(name, "_")),

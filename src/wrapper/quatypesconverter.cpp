@@ -234,6 +234,12 @@ const UA_DataType * uaTypeFromQType(const QMetaType::Type & type)
 
 UA_Variant uaVariantFromQVariant(const QVariant & var)
 {
+	if (!var.isValid())
+	{
+		UA_Variant var;
+		UA_Variant_init(&var);
+		return var;
+	}
 	// TODO : support multidimentional arrays
 	QMetaType::Type qtType = QMetaType::UnknownType;
 	const UA_DataType * uaType = nullptr;

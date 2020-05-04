@@ -16,17 +16,21 @@ QUaCondition::QUaCondition(
 ) : QUaBaseEvent(server)
 {
 	m_sourceNode = nullptr;
+	m_branchQueueSize = 0;
+#ifdef UA_ENABLE_HISTORIZING
+	m_historizingBranches = false;
+#endif // UA_ENABLE_HISTORIZING
 	// force some non-qt datatypes
-	this->getConditionClassId()->setDataType(QMetaType_NodeId);	// NodeId
-	this->getBranchId()->setDataType(QMetaType_NodeId);	        // NodeId
+	//this->getConditionClassId()->setDataType(QMetaType_NodeId);	// NodeId
+	//this->getBranchId()->setDataType(QMetaType_NodeId);	        // NodeId
 	this->getQuality()->setDataType(QMetaType_StatusCode);	    // StatusCode
 	// set default : BaseConditionClassType node id
 	// NOTE : ConditionClasses not supported yet
-	this->setConditionClassId(
-		QUaTypesConverter::nodeIdToQString(
-			UA_NODEID_NUMERIC(0, UA_NS0ID_BASECONDITIONCLASSTYPE)
-		)
-	);
+	//this->setConditionClassId(
+	//	QUaTypesConverter::nodeIdToQString(
+	//		UA_NODEID_NUMERIC(0, UA_NS0ID_BASECONDITIONCLASSTYPE)
+	//	)
+	//);
 	// set default : display name of BaseConditionClassType
 	// NOTE : ConditionClasses not supported yet
 	//this->setConditionClassName("BaseConditionClass");
@@ -460,6 +464,28 @@ void QUaCondition::AddComment(QByteArray EventId, QUaLocalizedText Comment)
 	emit this->addedComment(Comment);
 }
 
+quint32 QUaCondition::branchQueueSize() const
+{
+	return m_branchQueueSize;
+}
+
+void QUaCondition::setBranchQueueSize(const quint32& branchQueueSize)
+{
+	m_branchQueueSize = branchQueueSize;
+}
+
+#ifdef UA_ENABLE_HISTORIZING
+bool QUaCondition::historizingBranches() const
+{
+	return m_historizingBranches;
+}
+
+void QUaCondition::setHistorizingBranches(const bool& historizingBranches)
+{
+	m_historizingBranches = historizingBranches;
+}
+#endif // UA_ENABLE_HISTORIZING
+
 QList<QUaConditionBranch*> QUaCondition::branches() const
 {
 	return m_branches;
@@ -770,8 +796,8 @@ QUaBrowsePath QUaConditionBranch::BranchId({ { 0, "BranchId" } }); // [NodeId]
 QUaBrowsePath QUaConditionBranch::Retain  ({ { 0, "Retain"   } }); // [Boolean]
 QUaBrowsePath QUaConditionBranch::EnabledState               ({ { 0, "EnabledState" } }); // [LocalizedText]
 QUaBrowsePath QUaConditionBranch::EnabledState_Id            ({ { 0, "EnabledState" },{ 0, "Id"             } }); // [Boolean]
-QUaBrowsePath QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
-QUaBrowsePath QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
+//QUaBrowsePath QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
+//QUaBrowsePath QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
 QUaBrowsePath QUaConditionBranch::EnabledState_TransitionTime({ { 0, "EnabledState" },{ 0, "TransitionTime" } }); // [UtcTime]
 QUaBrowsePath QUaConditionBranch::Comment                ({ { 0, "Comment" } }); // [LocalizedText]
 QUaBrowsePath QUaConditionBranch::Comment_SourceTimestamp({ { 0, "Comment" },{0, "SourceTimestamp"} }); // [UtcTime]
@@ -782,16 +808,10 @@ QUaConditionBranch::QUaConditionBranch(QUaCondition* parent, const QUaNodeId& br
 	// copy necessary trigger variables
 	m_parent = parent;
 	// copy tree : start with root
-	this->addChildren(parent, m_root);
+	this->addChildren(parent);
 	// set branch id
 	this->setBranchId(branchId.isNull() ? QUaNodeId(0, UA_UInt32_random()) : branchId);
 	// trigger first event so clients can add branch to alarm display 
-	this->setMessage(
-		QObject::tr(
-			"Previous state requires attention. "
-			"Created branch %1 for %2."
-		).arg(this->branchId()).arg(parent->displayName().text())
-	);
 	this->trigger();
 }
 
@@ -799,10 +819,8 @@ QUaConditionBranch::~QUaConditionBranch()
 {
 	// trigger last event so clients can remove from alarm display 
 	this->setRetain(false);
-	auto time = QDateTime::currentDateTimeUtc();
-	this->setTime(time);
-	this->setMessage(QObject::tr("Branch %1 deleted.")
-		.arg(this->branchId()));
+	this->setMessage(QObject::tr("Branch deleted."));
+	// TODO : if delete because out of queue then auto ack and confirm?
 	this->trigger();
 }
 
@@ -816,39 +834,17 @@ void QUaConditionBranch::deleteLater()
 
 QVariant QUaConditionBranch::value(const QUaBrowsePath& browsePath) const
 {
-	// NOTE : need non-const reference else const [] hash operator will be used
-	// creating a new QUaBranchNode instance instead of accessing existing one
-	QUaBranchNode* node = &(const_cast<QUaConditionBranch*>(this)->m_root);
-	for (auto& browseName : browsePath)
-	{
-		node = node->m_children.contains(browseName) ?
-			&node->m_children[browseName] :
-			nullptr;
-		// NOTE : this can happen for optional fileds that are not present
-		//        for example Condirmed optional fields in Acked conditions
-		if (!node)
-		{
-			return QVariant();
-		}
-	}
-	return node->value();
+	uint key = qHash(browsePath);
+	// NOTE : possible 
+	//Q_ASSERT(m_values.contains(key));
+	return m_values.value(key, QVariant());
 }
 
 void QUaConditionBranch::setValue(const QUaBrowsePath& browsePath, const QVariant& value)
 {
-	QUaBranchNode * node = &m_root;
-	for (auto &browseName : browsePath)
-	{
-		node = node->m_children.contains(browseName) ? 
-			&node->m_children[browseName] : 
-			nullptr;
-		Q_ASSERT_X(node, "QUaConditionBranch::value", "Invalid browse path");
-		if (!node)
-		{
-			return;
-		}
-	}
-	node->setValue(value);
+	uint key = qHash(browsePath);
+	Q_ASSERT(m_values.contains(key));
+	m_values[key] = value;
 }
 
 void QUaConditionBranch::trigger()
@@ -912,30 +908,45 @@ void QUaConditionBranch::setComment(const QUaLocalizedText& comment, const QStri
 	// update user that set comment
 	this->setValue(QUaConditionBranch::ClientUserId, currentUser);
 	// any change to comment, severity and quality will cause event.	
-	this->setTime(time);
-	this->setMessage(
-		currentUser.isEmpty() ?
-		QObject::tr("A comment was added to branch %1.").arg(this->branchId()) :
-		QObject::tr("A comment was added to branch %1 by %2.").arg(this->branchId()).arg(currentUser)
-	);
+	// NOTE : do not set time
 	this->trigger();
 }
 
-void QUaConditionBranch::addChildren(QUaNode* node, QUaBranchNode& branchNode)
+QSet<QUaQualifiedName> ignoreSet = QSet<QUaQualifiedName>()
+<< QUaQualifiedName( 0, "FalseState" )
+<< QUaQualifiedName( 0, "TrueState"  );
+
+void QUaConditionBranch::addChildren(QUaNode* node, const QUaBrowsePath& browsePath/* = QUaBrowsePath()*/)
 {
 	// leaves
 	for (auto prop : node->browseChildren<QUaProperty>())
 	{
-		auto &branchNodeProp = branchNode.m_children[prop->browseName()];
-		branchNodeProp.m_value = prop->value();
+		auto browseName = prop->browseName();
+		if (ignoreSet.contains(browseName))
+		{
+			continue;
+		}
+		auto newBrowsePath = browsePath + QUaBrowsePath() << browseName;
+		//qDebug() << QUaQualifiedName::reduceName(newBrowsePath);
+		uint key = qHash(newBrowsePath);
+		Q_ASSERT(!m_values.contains(key));
+		m_values[key] = prop->value();
 		// no children
 	}
 	// variables
 	for (auto var : node->browseChildren<QUaBaseDataVariable>())
 	{
-		auto& branchNodeVar = branchNode.m_children[var->browseName()];
-		branchNodeVar.m_value = var->value();
-		this->addChildren(var, branchNodeVar);
+		auto browseName = var->browseName();
+		if (ignoreSet.contains(browseName))
+		{
+			continue;
+		}
+		auto newBrowsePath = browsePath + QUaBrowsePath() << browseName;
+		//qDebug() << QUaQualifiedName::reduceName(newBrowsePath);
+		uint key = qHash(newBrowsePath);
+		Q_ASSERT(!m_values.contains(key));
+		m_values[key] = var->value();
+		this->addChildren(var, newBrowsePath);
 	}
 }
 
