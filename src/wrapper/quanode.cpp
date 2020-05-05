@@ -183,6 +183,12 @@ QUaNode::QUaNode(
 		// assign C++ parent
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(browseName);
+		Q_ASSERT(!this->browseChild(browseName));
+		uint key = qHash(browseName);
+		m_browseCache[key] = nodeInstance;
+		QObject::connect(nodeInstance, &QObject::destroyed, this, [this, key]() {
+			m_browseCache.remove(key);
+		});
 		// [NOTE] writing a pointer value to a Q_PROPERTY did not work, 
 		//        eventhough there appear to be some success cases on the internet
 		//        so in the end we have to query children by object name
@@ -202,6 +208,12 @@ QUaNode::QUaNode(
 		// assign C++ parent
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(browseName);
+		Q_ASSERT(!this->browseChild(browseName));
+		uint key = qHash(browseName);
+		m_browseCache[key] = nodeInstance;
+		QObject::connect(nodeInstance, &QObject::destroyed, this, [this, key]() {
+			m_browseCache.remove(key);
+		});
 	}
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
@@ -563,43 +575,29 @@ QUaNode* QUaNode::browseChild(
 {
 	// first check cache
 	QUaNode* child = nullptr;
-	if (m_browseCache.contains(browseName))
+	uint key = qHash(browseName);
+	if (m_browseCache.contains(key))
 	{
-		child = m_browseCache.value(browseName);
+		child = m_browseCache.value(key);
 		if (child || !instantiateOptional)
 		{
 			return child;
 		}
 	}
-	// TODO : check if new open62541 tree-based lookup implementation is faster
-	child = this->findChild<QUaNode*>(browseName, Qt::FindDirectChildrenOnly); // 18.72%
-	if (child)
-	{
-		m_browseCache[browseName] = child;
-		QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
-			m_browseCache.remove(browseName);
-		});	
-		return child;
-	}
 	if (!instantiateOptional)
 	{
-		m_browseCache[browseName] = nullptr;
+		m_browseCache[key] = nullptr;
 		return nullptr;
 	}
 	child = this->instantiateOptionalChild(browseName);
 	Q_ASSERT_X(child, "QUaNode::browseChild", "TODO : error log");
-	if (child)
-	{
-		m_browseCache[browseName] = child;
-		QObject::connect(child, &QObject::destroyed, this, [this, browseName]() {
-			m_browseCache.remove(browseName);
-		});	
-	}
 	return child;
 }
 
 bool QUaNode::hasChild(const QUaQualifiedName &browseName)
 {
+	// NOTE : do not use m_browseCache.contains because maybe we tested if existed
+	//        and cached a nullptr. This will giv a false positive
 	return this->browseChild(browseName);
 }
 
@@ -1057,8 +1055,15 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	Q_UNUSED(st);
 	newInstance->m_nodeId = outOptionalNode;
 	// need to set parent and browse name
+	auto browseName = QUaQualifiedName(childName);
 	newInstance->setParent(parent);
-	newInstance->setObjectName(QUaQualifiedName(childName));
+	newInstance->setObjectName(browseName);
+	Q_ASSERT(!parent->browseChild(browseName));
+	uint key = qHash(browseName);
+	parent->m_browseCache[key] = newInstance;
+	QObject::connect(newInstance, &QObject::destroyed, parent, [parent, key]() {
+		parent->m_browseCache.remove(key);
+	});
 	// emit child added to parent
 	emit parent->childAdded(newInstance);
 	// success
@@ -1431,6 +1436,10 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 
 bool QUaNode::inAddressSpace() const
 {
+	if (this == m_qUaServer->m_pobjectsFolder)
+	{
+		return true;
+	}
 	QUaNode* parent = qobject_cast<QUaNode*>(this->parent());
 	return parent && (parent == m_qUaServer->m_pobjectsFolder || parent->inAddressSpace());
 }

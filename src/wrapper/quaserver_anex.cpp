@@ -159,6 +159,12 @@ QUaServer_Anex::UA_Server_filterEvent(
     if (filter->selectClausesSize == 0)
         return UA_STATUSCODE_BADEVENTFILTERINVALID;
 
+    UA_StatusCode retVal = UA_Server_evaluateWhereClauseContentFilter(
+        server, eventNode, &filter->whereClause);
+    if (retVal != UA_STATUSCODE_GOOD)
+    {
+        return retVal;
+    }
     UA_EventFieldList_init(&notification->fields);
     /* EventFilterResult isn't being used currently
     UA_EventFilterResult_init(&notification->result); */
@@ -238,6 +244,11 @@ QUaServer_Anex::UA_Event_addEventToMonitoredItem(
         &notification->data.event,
         resolveSAOCallback
     );
+    if (retval == UA_STATUSCODE_BADNOMATCH)
+    {
+        UA_free(notification);
+        return UA_STATUSCODE_GOOD;
+    }
     if (retval != UA_STATUSCODE_GOOD) {
         UA_free(notification);
         return retval;

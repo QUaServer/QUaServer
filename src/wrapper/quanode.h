@@ -318,8 +318,11 @@ private:
 	// with new open62541, browseName is inmutable and reading it is kind of expensive
 	QUaQualifiedName m_browseName;
 	// browse hierarchical children cache
+	// NOTE : use uint as key because is cheaper to cache in QObject::destroyed
+	// lambda callback than the browseName. We need to cache because by the time the
+	// QUaNode destructor is called, the browseName is already unavailable from open62541
 	// TODO : consider removing after testing new open62541 tree implementation
-	QHash<QUaQualifiedName, QUaNode*> m_browseCache;
+	QHash<uint, QUaNode*> m_browseCache;
 
 	// Static Helpers
 

@@ -35,9 +35,50 @@ int main(int argc, char* argv[])
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+	// OffNormal Alarm Example
+
+	auto motionSensor = objsFolder->addChild<QUaBaseObject>("motionSensor");
+
+	auto moving = motionSensor->addBaseDataVariable("moving");
+	moving->setWriteAccess(true);
+	moving->setDataType(QMetaType::Bool);
+	moving->setValue(false);
+
+	auto motionAlarm = motionSensor->addChild<QUaOffNormalAlarm>("alarm");
+	motionAlarm->setConditionName("Motion Sensor Alarm");
+	motionAlarm->setInputNode(moving);
+	motionAlarm->setNormalValue(false);
+	motionAlarm->setConfirmRequired(true);
+
+	// Level Alarm Example
+
+	auto levelSensor = objsFolder->addChild<QUaBaseObject>("levelSensor");
+
+	auto level = levelSensor->addBaseDataVariable("level");
+	level->setWriteAccess(true);
+	level->setDataType(QMetaType::Double);
+	level->setValue(0.0);
+	
+	auto levelAlarm = levelSensor->addChild<QUaExclusiveLevelAlarm>("alarm");
+	levelAlarm->setConditionName("Level Sensor Alarm");
+	levelAlarm->setInputNode(level);
+
+	levelAlarm->setHighLimitRequired(true);
+	levelAlarm->setLowLimitRequired(true);
+	levelAlarm->setHighLimit(10.0);
+	levelAlarm->setLowLimit(-10.0);
+
+	// Branches 
+	
+	// uncomment to support branches
+	//motionAlarm->setBranchQueueSize(10);
+	//levelAlarm->setBranchQueueSize(10);
+
 #ifdef UA_ENABLE_HISTORIZING
 #ifndef SQLITE_HISTORIZER
-	// set historizer (must live at least as long as the server)
+// set historizer (must live at least as long as the server)
 	QUaInMemoryHistorizer historizer;
 #else
 	QUaSqliteHistorizer historizer;
@@ -52,86 +93,23 @@ int main(int argc, char* argv[])
 	}
 	historizer.setTransactionTimeout(2 * 1000); // db transaction every 2 secs
 #endif // !SQLITE_HISTORIZER
+
 	// set the historizer
 	// NOTE : historizer must live at least as long as server
 	server.setHistorizer(historizer);
+	// enable event history on specific emitter nodes
+	motionSensor->setEventHistoryRead(true);
+	levelSensor->setEventHistoryRead(true);
 	// enable event history on server node (all events)
-	//server.setEventHistoryRead(true);
+	server.setEventHistoryRead(true);
+
+	// uncomment to support historizing branches
+	//motionAlarm->setHistorizingBranches(true);
+	//levelAlarm->setHistorizingBranches(true);
+
 #endif // UA_ENABLE_HISTORIZING
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-
-	auto source = objsFolder->addChild<QUaBaseObject>("source");
-
-	auto offnormal_alarm = source->addChild<QUaOffNormalAlarm>("offnormal_alarm");
-	offnormal_alarm->setConfirmRequired(true);
-	offnormal_alarm->Enable();
-	offnormal_alarm->addMethod("setActive", [offnormal_alarm](bool active) {
-		offnormal_alarm->setActive(active);
-	});
-
-	auto level = source->addBaseDataVariable("level");
-	level->setValue(0.0);
-	level->setDataType(QMetaType::Double);
-	source->addMethod("setLevel", [level](double levelValue) {
-		level->setValue(levelValue);
-		emit level->valueChanged(levelValue);
-	});
-	
-	auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>("level_alarm");
-	level_alarm->setHighHighLimitRequired(true);
-	level_alarm->setHighLimitRequired(true);
-	level_alarm->setLowLimitRequired(true);
-	level_alarm->setLowLowLimitRequired(true);
-	level_alarm->setHighHighLimit(100.0);
-	level_alarm->setHighLimit(10.0);
-	level_alarm->setLowLimit(-10.0);
-	level_alarm->setLowLowLimit(-100.0);
-	level_alarm->setInputNode(level);
-	//level_alarm->setBranchQueueSize(10);
-#ifdef UA_ENABLE_HISTORIZING
-	//level_alarm->setHistorizingBranches(true);
-#endif // UA_ENABLE_HISTORIZING
-	level_alarm->Enable();
-
-	for (size_t i = 0; i < 1000; i++)
-	{
-		auto level_alarm = source->addChild<QUaExclusiveLevelAlarm>(QObject::tr("level_alarm_%1").arg(i));
-		level_alarm->setHighHighLimitRequired(true);
-		level_alarm->setHighLimitRequired(true);
-		level_alarm->setLowLimitRequired(true);
-		level_alarm->setLowLowLimitRequired(true);
-		level_alarm->setHighHighLimit(100.0);
-		level_alarm->setHighLimit(10.0);
-		level_alarm->setLowLimit(-10.0);
-		level_alarm->setLowLowLimit(-100.0);
-		level_alarm->setInputNode(level);
-		level_alarm->Enable();
-	}
-	
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-
-	source->addMethod("Test", [level](qint64 iters) {
-		QElapsedTimer timer, total;
-		total.start();
-		qint64 mean = 0;
-		for (qint64 i = 0; i < iters; i++)
-		{
-			timer.restart();
-
-			level->setValue(11);
-			emit level->valueChanged(11);
-			level->setValue(0);
-			emit level->valueChanged(0);
-
-			mean += timer.elapsed();
-		}
-
-		qDebug() << "[TOTAL]" << total.elapsed() << "[ms]";
-		auto meandbl = mean / (double)iters;
-		qDebug() << "[MEAN]" << meandbl << "[ms]";
-		return meandbl;
-	});
 
 	server.start();
 

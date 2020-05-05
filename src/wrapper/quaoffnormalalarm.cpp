@@ -11,6 +11,36 @@ QUaOffNormalAlarm::QUaOffNormalAlarm(
 	
 }
 
+void QUaOffNormalAlarm::setInputNode(QUaBaseVariable* inputNode)
+{
+	// call base implementation
+	QUaAlarmCondition::setInputNode(inputNode);
+	if (!inputNode)
+	{
+		return;
+	}
+	// subscribe to value changes
+	m_connections <<
+	QObject::connect(m_inputNode, &QUaBaseVariable::valueChanged, this,
+	[this](const QVariant& value) {
+		if (!m_normalValue.isValid())
+		{
+			return;
+		}
+		this->setActive(value != m_normalValue);
+	});
+}
+
+QVariant QUaOffNormalAlarm::normalValue() const
+{
+	return m_normalValue;
+}
+
+void QUaOffNormalAlarm::setNormalValue(const QVariant& normalValue)
+{
+	m_normalValue = normalValue;
+}
+
 QUaNodeId QUaOffNormalAlarm::normalState() const
 {
 	return const_cast<QUaOffNormalAlarm*>(this)->getNormalState()->value<QUaNodeId>();

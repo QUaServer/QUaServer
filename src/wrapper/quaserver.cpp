@@ -235,8 +235,15 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 	UA_NodeId directParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
 	if (parentContext && UA_NodeId_equal(&topBoundParentNodeId, &directParentNodeId))
 	{
+		auto browseName = QUaNode::getBrowseName(*nodeId, server->m_server);
 		newInstance->setParent(parentContext);
-		newInstance->setObjectName(QUaNode::getBrowseName(*nodeId, server->m_server));
+		newInstance->setObjectName(browseName);
+		Q_ASSERT(!parentContext->browseChild(browseName));
+		uint key = qHash(browseName);
+		parentContext->m_browseCache[key] = newInstance;
+		QObject::connect(newInstance, &QObject::destroyed, parentContext, [parentContext, key]() {
+			parentContext->m_browseCache.remove(key);
+		});	
 		// emit child added to parent
 		emit parentContext->childAdded(newInstance);
 	}
@@ -1376,8 +1383,7 @@ UA_Logger QUaServer::getLogger()
 				return;
 			}
 			vsprintf(srv->m_logBuffer.data(), msg, args);
-			// [FIX] do not convert QBytearray to QString to avoid overhead
-			//QString strMessage = QString::fromUtf8(srv->m_logBuffer);
+			// NOTE : do not convert QBytearray to QString to avoid overhead
 			emit srv->logMessage({
 				srv->m_logBuffer,
 				static_cast<QUaLogLevel>(level),
@@ -1552,12 +1558,13 @@ void QUaServer::start()
 		if (!m_running) { return; }
 		// iterate and restart
 		m_iterWaitTimer.stop();
-		UA_UInt16 msToWait = UA_Server_run_iterate(m_server, true);
-		msToWait = (std::min)(msToWait, static_cast<UA_UInt16>(0.25 * msToWait));
-		m_iterWaitTimer.start(msToWait);
+		// NOTE : any other delay or not waitInternal make subscribing to
+		//        events painfully slow
+		UA_Server_run_iterate(m_server, true);
+		m_iterWaitTimer.start(0);
 	}, Qt::QueuedConnection);
 	// start iterations
-	m_iterWaitTimer.start(1);
+	m_iterWaitTimer.start(0);
 	// emit event
 	emit this->isRunningChanged(m_running);
 }

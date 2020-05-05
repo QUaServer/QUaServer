@@ -26,12 +26,6 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	{
 		return;
 	}
-	// do not emit if value change is internal
-	if (var->m_bInternalWrite)
-	{
-		var->m_bInternalWrite = false;
-		return;
-	}
 	// get server
 	void* serverContext = nullptr;
 	auto st = UA_Server_getNodeContext(server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), &serverContext);
@@ -44,32 +38,46 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	auto srv = static_cast<QUaServer*>(serverContext);
 #endif // QT_DEBUG 
 	// check session (triggering events create internal writes with no session)
-	//Q_ASSERT(srv->m_hashSessions.contains(*sessionId));
+	// NOTE : sometimes happens that !srv->m_hashSessions.contains(*sessionId)
 	srv->m_currentSession = srv->m_hashSessions.contains(*sessionId) ?
 		srv->m_hashSessions[*sessionId] : nullptr;
-	// emit value changed
-	emit var->valueChanged(var->value());
-	// emit status changed
-	if (data->hasStatus)
+	// do not process if nobody listening
+	static const QMetaMethod valueSignal = QMetaMethod::fromSignal(&QUaBaseVariable::valueChanged);
+	if (var->isSignalConnected(valueSignal))
 	{
-		emit var->statusCodeChanged(QUaStatusCode(data->status));
+		// emit value changed
+		emit var->valueChanged(var->value(), !var->m_bInternalWrite);
 	}
-	// emit source timestamp changed
-	if (data->hasSourceTimestamp)
+	// do not process if nobody listening
+	static const QMetaMethod statusSignal = QMetaMethod::fromSignal(&QUaBaseVariable::statusCodeChanged);
+	if (data->hasStatus && var->isSignalConnected(statusSignal))
 	{
+		// emit status changed
+		emit var->statusCodeChanged(QUaStatusCode(data->status), !var->m_bInternalWrite);
+	}
+	// do not process if nobody listening
+	static const QMetaMethod sourceSignal = QMetaMethod::fromSignal(&QUaBaseVariable::sourceTimestampChanged);
+	if (data->hasSourceTimestamp && var->isSignalConnected(sourceSignal))
+	{
+		// emit source timestamp changed
 		emit var->sourceTimestampChanged(
 			QUaTypesConverter::uaVariantToQVariantScalar
-				<QDateTime, UA_DateTime>(&data->sourceTimestamp)
+				<QDateTime, UA_DateTime>(&data->sourceTimestamp), 
+			!var->m_bInternalWrite
 		);
 	}
-	// emit server timestamp changed
-	if (data->hasServerTimestamp)
+	// do not process if nobody listening
+	static const QMetaMethod serverSignal = QMetaMethod::fromSignal(&QUaBaseVariable::serverTimestampChanged);
+	if (data->hasServerTimestamp && var->isSignalConnected(serverSignal))
 	{
+		// emit server timestamp changed
 		emit var->serverTimestampChanged(
 			QUaTypesConverter::uaVariantToQVariantScalar
-				<QDateTime, UA_DateTime>(&data->serverTimestamp)
+				<QDateTime, UA_DateTime>(&data->serverTimestamp),
+			!var->m_bInternalWrite
 		);
 	}
+	var->m_bInternalWrite = false;
 }
 
 // [STATIC]

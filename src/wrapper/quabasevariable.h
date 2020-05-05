@@ -171,10 +171,10 @@ public:
 	static QVector<quint32>  GetArrayDimensionsFromQVariant(const QVariant &varValue);
 
 signals:
-	void valueChanged          (const QVariant&      value          );
-	void statusCodeChanged     (const QUaStatusCode& statusCode     );
-	void sourceTimestampChanged(const QDateTime&     sourceTimestamp);
-	void serverTimestampChanged(const QDateTime&     serverTimestamp);
+	void valueChanged          (const QVariant&      value          , const bool &networkChange);
+	void statusCodeChanged     (const QUaStatusCode& statusCode     , const bool &networkChange);
+	void sourceTimestampChanged(const QDateTime&     sourceTimestamp, const bool &networkChange);
+	void serverTimestampChanged(const QDateTime&     serverTimestamp, const bool &networkChange);
 	void valueRankChanged      (const quint32&       valueRank      );
 
 protected:

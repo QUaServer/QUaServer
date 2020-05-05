@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
 	/*
 	// It is possible to provide a custom callback to validate the user and password
-	// send by the client. The implementation below is the default implementation of not defined.
+	// send by the client. The implementation below is the default implementation.
 	// Overwriting this callback can be used to obtain a hash of the password sent by the client and
 	// compare it to a locally stored hash. In this way we avoid storing user's passwords which
 	// is considered an insecure practice. A function pointer can also be used as validation callback.

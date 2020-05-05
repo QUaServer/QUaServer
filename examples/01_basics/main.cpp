@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
 	QUaProperty         * prop   = subvar->addProperty("prop");
 
 	// browse nested children by passing a list of browse names to the (relative) browsePath method
-	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj") == subobj);
-	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var") == var);
-	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var" << "subvar") == subvar);
-	Q_ASSERT(obj->browsePath(QUaQualifiedNameList() << "subobj" << "var" << "subvar" << "prop") == prop);
+	Q_ASSERT(obj->browsePath(QUaBrowsePath() << "subobj") == subobj);
+	Q_ASSERT(obj->browsePath(QUaBrowsePath() << "subobj" << "var") == var);
+	Q_ASSERT(obj->browsePath(QUaBrowsePath() << "subobj" << "var" << "subvar") == subvar);
+	Q_ASSERT(obj->browsePath(QUaBrowsePath() << "subobj" << "var" << "subvar" << "prop") == prop);
 	// browse from server by passing the (absolute) browse of the node (starting at ObjectsFolder)
 	Q_ASSERT(server.browsePath(subobj->nodeBrowsePath()) == subobj);
 	Q_ASSERT(server.browsePath(var   ->nodeBrowsePath()) == var   );

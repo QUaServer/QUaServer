@@ -33,28 +33,7 @@ int main(int argc, char* argv[])
 
 	QUaFolderObject* objsFolder = server.objectsFolder();
 
-	// historize events if enabled
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	server.registerType<MyEvent>({ 0, "CustomEventType" });
-	// create event with server as originator
-	auto srvEvt = server.createEvent<MyEvent>();
-	srvEvt->setDisplayName("ServerEvent");
-	srvEvt->setSourceName("Server");
-	// create cusotm object to trigger a custom event
-	auto obj = objsFolder->addBaseObject("CustomObject", {0, "CustomObject" });
-	// enable event history on custom object
-	obj->setSubscribeToEvents(true);
-	// create custom event with custom object as originator
-	auto objEvt = obj->createEvent<MyEvent>();
-	objEvt->setDisplayName("CustomEvent");
-	objEvt->setSourceName("CustomObject");
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-
 #ifdef UA_ENABLE_HISTORIZING
-	// enable event history on server object
-	server.setEventHistoryRead(true);
-	// enable event history on custom object
-	obj->setEventHistoryRead(true);
 	// set historizer (must live at least as long as the server)
 #ifndef SQLITE_HISTORIZER
 	QUaInMemoryHistorizer historizer;
@@ -94,6 +73,23 @@ int main(int argc, char* argv[])
 	timerVars.start(500);
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	server.registerType<MyEvent>({ 0, "CustomEventType" });
+	// create event with server as originator
+	auto srvEvt = server.createEvent<MyEvent>();
+	srvEvt->setDisplayName("ServerEvent");
+	srvEvt->setSourceName("Server");
+	// create cusotm object to trigger a custom event
+	auto obj = objsFolder->addBaseObject("CustomObject", { 0, "CustomObject" });
+	// enable event history on custom object
+	obj->setSubscribeToEvents(true);
+	// create custom event with custom object as originator
+	auto objEvt = obj->createEvent<MyEvent>();
+	objEvt->setDisplayName("CustomEvent");
+	objEvt->setSourceName("CustomObject");
+	// enable event history on server object
+	server.setEventHistoryRead(true);
+	// enable event history on custom object
+	obj->setEventHistoryRead(true);
 	QTimer timerEvts;
 	QObject::connect(&timerVars, &QTimer::timeout, srvEvt, 
 	[srvEvt, objEvt]() {
@@ -109,12 +105,6 @@ int main(int argc, char* argv[])
 		objEvt->setMessage(QObject::tr("An event occured in the object %1").arg(counter));
 		objEvt->setTime(time);
 		objEvt->setReceiveTime(time);
-		objEvt->trigger();
-		// 
-		objEvt->setMessage(QObject::tr("An event occured in the object %1 XXX").arg(counter));
-		objEvt->trigger();
-		// 
-		objEvt->setMessage(QObject::tr("An event occured in the object %1 YYY").arg(counter));
 		objEvt->trigger();
 	});	
 	// trigger event every second

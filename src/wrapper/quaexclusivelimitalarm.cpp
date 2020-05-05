@@ -61,17 +61,26 @@ void QUaExclusiveLimitAlarm::setExclusiveLimitState(const QUaExclusiveLimitState
 	if (oldState == QUa::ExclusiveLimitState::None &&
 		exclusiveLimitState != QUa::ExclusiveLimitState::None)
 	{
-		this->setActive(true, tr("%1 limit violated.").arg(exclusiveLimitState.toString()));
+		this->setActive(
+			true, 
+			tr("%1 limit violation.").arg(exclusiveLimitState.toString())
+		);
 	}
 	else if (oldState != QUa::ExclusiveLimitState::None &&
 		exclusiveLimitState == QUa::ExclusiveLimitState::None)
 	{
-		this->setActive(false);
+		this->setActive(
+			false, 
+			this->requiresAttention() ? 
+				tr("%1 limit violation.").arg(oldState.toString()) :
+				QString()
+		);
 	}
 	else
 	{
 		Q_ASSERT(this->active());
 		QString strMessage = tr("Alarm %1.").arg(this->activeStateTrueState());
+		strMessage += tr(" %2 limit violation.").arg(exclusiveLimitState.toString());
 		if (!this->acknowledged())
 		{
 			strMessage += tr(" Requires Acknowledge.");
@@ -80,7 +89,6 @@ void QUaExclusiveLimitAlarm::setExclusiveLimitState(const QUaExclusiveLimitState
 		{
 			strMessage += tr(" Requires Confirm.");
 		}
-		strMessage += tr(" %2 limit violated.").arg(exclusiveLimitState.toString());
 		this->setMessage(strMessage);
 		// trigger event
 		auto time = QDateTime::currentDateTimeUtc();

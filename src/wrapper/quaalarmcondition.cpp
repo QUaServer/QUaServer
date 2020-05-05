@@ -183,12 +183,14 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 		this->setMessage(
 			strMessageAppend.isEmpty() ?
 			tr("Alarm %1. Requires Acknowledge.").arg(strActiveStateName) :
-			tr("Alarm %1. Requires Acknowledge. %2").arg(strActiveStateName).arg(strMessageAppend)
+			tr("Alarm %1. %2 Requires Acknowledge.").arg(strActiveStateName).arg(strMessageAppend)
 		);
 	}
 	else
 	{
-		QString strMessage = tr("Alarm %1.").arg(strActiveStateName);
+		QString strMessage = strMessageAppend.isEmpty() ? 
+			tr("Alarm %1.").arg(strActiveStateName) :
+			tr("Alarm %1. %2").arg(strActiveStateName).arg(strMessageAppend);
 		if (this->requiresAttention())
 		{
 			// create branch
@@ -215,10 +217,6 @@ void QUaAlarmCondition::setActive(const bool& active, const QString& strMessageA
 			{
 				strMessage += tr(" Has branches.");
 			}
-		}
-		if (!strMessageAppend.isEmpty())
-		{
-			strMessage += tr(" %1").arg(strMessageAppend);
 		}
 		this->setMessage(strMessage);
 	}

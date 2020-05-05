@@ -755,6 +755,13 @@ extern "C"
 UA_MonitoredItem *
 UA_Subscription_getMonitoredItem(UA_Subscription * sub, UA_UInt32 monitoredItemId);
 
+extern "C"
+UA_StatusCode
+UA_Server_evaluateWhereClauseContentFilter(
+    UA_Server * server,
+    const UA_NodeId * eventNode,
+    const UA_ContentFilter * contentFilter);
+
 class QUaServer_Anex
 {
     friend class QUaServer;
