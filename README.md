@@ -14,11 +14,61 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 To test a *QUaServer* based application it is recommended to use the [UA Expert](https://www.unified-automation.com/downloads/opc-ua-clients.html) OPC UA Client.
 
+## Table of Contents  
+
+* [Include](#Include)
+
+How to include QUaServer in your Qt project.
+
+* [Basics](#Basics)
+
+How to create object and variable instances and set their attributes.
+
+* [Methods](#Methods)
+
+How to create methods on the server than can be remotelly called from any client.
+
+* [References](#References)
+
+How to create *non-hierarchical* references between nodes and browse such relations.
+
+* [Types](#Types)
+
+How to create custom object and variable types.
+
+* [Server](#Server)
+
+How to customize the server's properties.
+
+* [Users](#Users)
+
+How to implement access control for the server based on user permissions.
+
+* [Encryption](#Encryption)
+
+How to enable and configure secure encrypten communication between the server and clients.
+
+* [Events](#Events)
+
+How to create and emit custom events.
+
+* [Serialization](#Serialization)
+
+How to serialize and deserialize the server address space to and from disk.
+
+* [Historizing](#Historizing)
+
+How to enable and store historical data and historical events.
+
+* [Alarms](#Alarms)
+
+How to create server alarms and conditions.
+
 ---
 
 ## Include
 
-This library requires at least `Qt 5.7` or higher and `C++ 11`.
+This library requires at least `Qt 5.9` or higher and `C++ 11`.
 
 To use *QUaServer*, first a copy of the *open62541* shared library is needed. The [open62541 repo](https://github.com/open62541/open62541) is included in this project as a **git submodule** ([`./depends/open62541.git`](./depends/open62541.git)). So don't forget to clone this repository **recursively**, or run `git submodule update --init --recursive` after cloning this repo.
 
@@ -118,10 +168,14 @@ int main(int argc, char *argv[])
 	QUaFolderObject * objsFolder = server.objectsFolder();
 
 	// add some instances to the objects folder
-	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
-	QUaProperty         * varProp     = objsFolder->addProperty();
-	QUaBaseObject       * objBase     = objsFolder->addBaseObject();
-	QUaFolderObject     * objFolder   = objsFolder->addFolderObject();
+	QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable("my_variable");
+	QUaProperty         * varProp     = objsFolder->addProperty("my_property");
+	QUaBaseObject       * objBase     = objsFolder->addBaseObject("my_object");
+	QUaFolderObject     * objFolder   = objsFolder->addFolderObject("my_folder");
+
+	// set values to variables
+	varBaseData->setValue(1);
+	varProp->setValue("hola");
 
 	server.start();
 
@@ -131,47 +185,25 @@ int main(int argc, char *argv[])
 
 Instances must only be added using the *QUaServer* API, by using the following methods:
 
-* `addProperty` : Adds a `QUaProperty` instance. *Properties* are the **leaves** of the Address Space tree and cannot have other children. They are used to charaterise what its parent represents and their value do not change often. For example, an *engineering unit* or a *brand name*.
+* `addProperty` : Adds a `QUaProperty` instance. [*Properties*](https://reference.opcfoundation.org/v104/Core/docs/Part3/4.4.2/) are the **leaves** of the Address Space tree and cannot have other children. They are used to charaterise what its parent represents and their value do not change often. For example, an *engineering unit* or a *brand name*.
 
-* `addBaseDataVariable` : Adds a `QUaBaseDataVariable` instance. *BaseDataVariables* are used to hold data which might change often and can have children (*Objects*, *Properties*, other *BaseDataVariables*). An example is the *current value* of a temperature sensor.
+* `addBaseDataVariable` : Adds a `QUaBaseDataVariable` instance. [*BaseDataVariables*](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.6.4/) are used to hold data which might change often and can have children (*Objects*, *Properties*, other *BaseDataVariables*). An example is the *current value* of a temperature sensor.
 
-* `addBaseObject` : Adds a `QUaBaseObject` instance. `BaseObjects` can have children and are used to organize other *Objects*, *Properties*, *BaseDataVariables*, etc. The purpose of objects is to **model** a real device. For example a temperature sensor which has *engineering unit* and *brand name* as properties and *current value* as a variable.
+* `addBaseObject` : Adds a `QUaBaseObject` instance. [*BaseObjects*](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.5.1/) can have children and are used to organize other *Objects*, *Properties*, *BaseDataVariables*, etc. The purpose of objects is to **model** a real device. For example a temperature sensor which has *engineering unit* and *brand name* as properties and *current value* as a variable.
 
-* `addFolderObject` : Adds a `QUaFolderObject` instance. `FolderObjects` derive from `BaseObjects` and can do the same, but are typically use to organize a collection of objects. The so called **Objects Folder** is a `QUaFolderObject` instance that always exists on the server to serve as a container for all the user instances.
+* `addFolderObject` : Adds a `QUaFolderObject` instance. [*FolderObjects*](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.5.3/) derive from *BaseObjects* and can do the same, but are typically use to organize a collection of objects. The so called **Objects Folder** is a `QUaFolderObject` instance that always exists on the server to serve as a container for all the user instances.
 
-Once connected to the server, the address space should look something like this:
-
-<p align="center">
-  <img src="./res/img/01_basics_01.jpg">
-</p>
-
-Note that some instances seen to be added but they have no name. To fix this, the `DisplayName` needs to be set:
-
-```c++
-QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
-varBaseData->setDisplayName("my_variable");
-varBaseData->setValue(1);
-
-QUaProperty * varProp = objsFolder->addProperty();
-varProp->setDisplayName("my_property");
-varProp->setValue("hola");
-
-QUaBaseObject * objBase = objsFolder->addBaseObject();
-objBase->setDisplayName("my_object");
-
-QUaFolderObject * objFolder = objsFolder->addFolderObject();
-objFolder->setDisplayName("my_folder");
-```
-
-For the `varBaseData` and `varProp` instances, also the `Value` is set, which not only defines their intial values but also their `DataType`.
-
-Now the address space should look something like this: 
+Once connected to the server, the [address space](https://reference.opcfoundation.org/v104/Core/docs/Part1/6.3.4/) should look something like this:
 
 <p align="center">
   <img src="./res/img/01_basics_02.jpg">
 </p>
 
-The `DisplayName`, `Value` and `DataType` are **OPC Attributes**. Depending on the type of the instance (*Properties*, *BaseDataVariables*, etc.) it is possible to set different attributes. All OPC instance types derive from the **Node** type. Similarly, in *QUaServer*, all the types derive directly or indirectly from the C++ `QUaNode` abstract class. 
+The string argument passed to these methods defines both the node's initial [`DisplayName`](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.2.5/) and [`BrowseName`](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.2.4/). The `DisplayName` is the name that is displayed to the user by client applications, it should be a human-friendly name. The `BrowseName` is the name that is used programmatically by client applications to find children nodes easily in hierarchical node structures. The `BrowseName` is **inmutable** once a node instance has been created, and must be **unique** with respect to its parent, so one parent node cannot have multiple children with the same `BrowseName`. The `DisplayName` has no restrictions, so it can be changed programmatically.
+
+The `Value` is also set for the variables defined in the example above. The `DataType` of the `Value` is inferred automatically by `QUaServer`, but it can also be set explicitly as it will be shown later.
+
+The `DisplayName`, `BrowseName`, `Value` and `DataType` are [**OPC Attributes**](https://reference.opcfoundation.org/v104/Robotics/docs/3.4.3/). Depending on the type of the instance (*Properties*, *BaseDataVariables*, etc.) it is possible to set different attributes. All OPC instance types derive from the [**Node**](https://reference.opcfoundation.org/v104/Core/docs/Part3/4.3.1/) type. Similarly, in *QUaServer*, all the types derive directly or indirectly from the C++ `QUaNode` abstract class. 
 
 The *QUaServer* API allows to read and write the instances attributes with the following methods:
 
@@ -180,26 +212,28 @@ The *QUaServer* API allows to read and write the instances attributes with the f
 The *QUaNode* API provides the following methods to access attributes:
 
 ```c++
-QString displayName   () const;
-void    setDisplayName(const QString &displayName);
-QString description   () const;
-void    setDescription(const QString &description);
+QUaLocalizedText displayName   () const;
+void             setDisplayName(const QUaLocalizedText &displayName);
+
+QUaLocalizedText description   () const;
+void             setDescription(const QUaLocalizedText &description);
+
 quint32 writeMask     () const;
 void    setWriteMask  (const quint32 &writeMask);
 
-QString nodeId        () const;
-QString nodeClass     () const;
+QUaNodeId nodeId() const;
 
-QString browseName    () const;
-void    setBrowseName (const QString &browseName);
+QString nodeClass() const;
+
+QUaQualifiedName browseName() const;
 ```
 
-The `nodeId()` method gives the [string *XML notation* of the OPC NodeId](http://documentation.unified-automation.com/uasdkhp/1.0.0/html/_l2_ua_node_ids.html), which is a unique identifier of the node.
+The `nodeId()` method returns an object containing the [**NodeId**](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.2.2/), which is a unique identifier of the node. This is the only **unique** identifier of a node within a server, because neither the `BrowseName` nor `DisplayName` attributes are unique.
 
-By default the NodeId is assigned automatically by the *open62541* library. It is possible to define a custom NodeId when creating an instance by passing the string *XML notation* as an argument to the respective method. If the NodeId is invalid or already exists, creating the instance will fail returning `nullptr`. For example:
+By default a random `NodeId` is assigned automatically when creating a node instance. It is possible to define a custom `NodeId` upon instantiation by passing the string *XML notation* as the *second* argument to the respective method. If the NodeId is invalid or already exists, creating the instance will fail returning `nullptr`. For example:
 
 ```c++
-QUaProperty * varProp = objsFolder->addProperty("ns=1;s=my_prop");
+QUaProperty * varProp = objsFolder->addProperty("my_property", "ns=1;s=my_prop");
 if(!varProp)
 {
 	qDebug() << "Creating instance failed!";
@@ -209,10 +243,9 @@ if(!varProp)
 To notify changes, the *QUaNode* API provides the following *Qt signals*:
 
 ```c++
-void displayNameChanged(const QString &displayName);
-void descriptionChanged(const QString &description);
-void writeMaskChanged  (const quint32 &writeMask  );
-void browseNameChanged (const QString &browseName );
+void displayNameChanged(const QUaLocalizedText &displayName);
+void descriptionChanged(const QUaLocalizedText &description);
+void writeMaskChanged  (const quint32 &writeMask);
 ```
 
 Furthermore, the API also notifies when a child is added to an *QUaBaseObject* or *QUaBaseDataVariable* instance:
@@ -221,14 +254,23 @@ Furthermore, the API also notifies when a child is added to an *QUaBaseObject* o
 void childAdded(QUaNode * childNode);
 ```
 
-
 ### For Variable Types
 
-Both `QUaBaseDataVariable` and `QUaProperty` derive from the abstract C++ class `QUaBaseVariable` which provides the following methods to access attributes:
+Both `QUaBaseDataVariable` and `QUaProperty` derive from the abstract C++ class `QUaBaseVariable` which provides the following methods to access the variable's [**attributes**](https://reference.opcfoundation.org/v104/Core/docs/Part3/5.6.2/):
 
 ```c++
 QVariant          value() const;
 void              setValue(const QVariant &value);
+
+QDateTime         sourceTimestamp() const;
+void              setSourceTimestamp(const QDateTime& sourceTimestamp);
+
+QDateTime         serverTimestamp() const;
+void              setServerTimestamp(const QDateTime& serverTimestamp);
+
+QUaStatusCode     statusCode() const;
+void              setStatusCode(const QUaStatusCode& statusCode);
+
 QMetaType::Type   dataType() const;
 void              setDataType(const QMetaType::Type &dataType);
 
@@ -244,7 +286,18 @@ void              setMinimumSamplingInterval(const double &minimumSamplingInterv
 bool              historizing() const;
 ```
 
-The `setDataType()` can be used to *force* a data type on the variable value. The following [Qt types](https://doc.qt.io/qt-5/qmetatype.html#Type-enum) are supported:
+The `value`, `sourceTimestamp`, `serverTimestamp` and `statusCode` can be set in a single call by using the `setValue` overload:
+
+```c++
+void setValue(
+	const QVariant &value, 
+	const QUaStatusCode   &statusCode,
+	const QDateTime       &sourceTimestamp,
+	const QDateTime       &serverTimestamp
+);
+```
+
+The `setDataType()` can be used to *force* a data type on the variable value. The following [Qt types](https://doc.qt.io/qt-5/qmetatype.html#Type-enum) are supported, as well as their `QList<T>` and `QVector<T>` types:
 
 ```c++
 QMetaType::Bool
@@ -285,13 +338,15 @@ QUaBaseDataVariable * varBaseData = objsFolder->addBaseDataVariable();
 varBaseData->setWriteAccess(true);
 ```
 
-When a variable is written from a client, on the server notifications are provided by the `void QUaBaseVariable::valueChanged(const QVariant &value)` Qt signal.
+When a variable is written from a client, on the server notifications are provided by the `void QUaBaseVariable::valueChanged(const QVariant &value, const bool &networkChange)` Qt signal.
 
 ```c++
-QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value) {
-	qDebug() << "New value :" << value;
+QObject::connect(varBaseData, &QUaBaseDataVariable::valueChanged, [](const QVariant &value, const bool &networkChange) {
+	qDebug() << "New value :" << value << (networkChange ? "(Network)" : "(Server Logic)");
 });
 ```
+
+The `networkChange` argument specifies if the value was changed though the network by an OPC client or if the value change was performed programmatically by internal the server logic.
 
 ### For Object Types
 
@@ -299,11 +354,11 @@ The API provides the following methods to access attributes:
 
 ```c++
 quint8 eventNotifier() const;
-void setEventNotifier(const quint8 &eventNotifier);
+void   setEventNotifier(const quint8 &eventNotifier);
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-void setEventNotifierSubscribeToEvents();
-void setEventNotifierNone();
+bool subscribeToEvents() const;
+void setSubscribeToEvents(const bool& subscribeToEvents);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 ```
 
@@ -418,11 +473,9 @@ The *QUaServer* API also allows to create **custom** *NonHierarchicalReferences*
 
 ```c++
 // create sensor
-QUaBaseObject * objSensor1 = objsFolder->addBaseObject();
-objSensor1->setDisplayName("TempSensor1");
+QUaBaseObject * objSensor1 = objsFolder->addBaseObject("TempSensor1");
 // create supplier
-QUaBaseObject * objSupl1 = objsFolder->addBaseObject();
-objSupl1->setDisplayName("Mouser");
+QUaBaseObject * objSupl1 = objsFolder->addBaseObject("Mouser");
 // create reference
 server.registerReference({ "Supplies", "IsSuppliedBy" });
 objSupl1->addReference({ "Supplies", "IsSuppliedBy" }, objSensor1);
@@ -580,8 +633,7 @@ int main(int argc, char *argv[])
 	server.registerType<TemperatureSensor>();
 
 	// create new type instance
-	auto sensor1 = objsFolder->addChild<TemperatureSensor>();
-	sensor1->setDisplayName("Sensor1");
+	auto sensor1 = objsFolder->addChild<TemperatureSensor>("Sensor1");
 
 	server.start();
 
@@ -645,43 +697,40 @@ TemperatureSensor::TemperatureSensor(QUaServer *server)
 
 QUaProperty * TemperatureSensor::model()
 {
-	return this->findChild<QUaProperty*>("model");
+	return this->browseChild<QUaProperty>("model");
 }
 
 QUaProperty * TemperatureSensor::brand()
 {
-	return this->findChild<QUaProperty*>("brand");
+	return this->browseChild<QUaProperty>("brand");
 }
 
 QUaProperty * TemperatureSensor::units()
 {
-	return this->findChild<QUaProperty*>("units");
+	return this->browseChild<QUaProperty>("units");
 }
 
 QUaBaseDataVariable * TemperatureSensor::status()
 {
-	return this->findChild<QUaBaseDataVariable*>("status");
+	return this->browseChild<QUaBaseDataVariable>("status");
 }
 
 QUaBaseDataVariable * TemperatureSensor::currentValue()
 {
-	return this->findChild<QUaBaseDataVariable*>("currentValue");
+	return this->browseChild<QUaBaseDataVariable>("currentValue");
 }
 ```
 
-Be **careful** when using the [`findChild` method](https://doc.qt.io/Qt-5/qobject.html#findChild) to provide the correct [QObject name](https://doc.qt.io/Qt-5/qobject.html#objectName-prop), otherwise a null reference can be returned from any of the getter methods.
+Be **careful** when using the `browseChild` to provide the correct `BrowseName`, otherwise a null reference can be returned from any of the getter methods.
 
 Note that in the *TemperatureSensor* constructor it is possible to already make use of the children instances and define some default values for them.
 
 Now it is possible to create any number of *TemperatureSensor* instances and their children will be created and attached to them automatically.
 
 ```c++
-auto sensor1 = objsFolder->addChild<TemperatureSensor>();
-sensor1->setDisplayName("Sensor1");
-auto sensor2 = objsFolder->addChild<TemperatureSensor>();
-sensor2->setDisplayName("Sensor2");
-auto sensor3 = objsFolder->addChild<TemperatureSensor>();
-sensor3->setDisplayName("Sensor3");
+auto sensor1 = objsFolder->addChild<TemperatureSensor>("Sensor1");
+auto sensor2 = objsFolder->addChild<TemperatureSensor>("Sensor2");
+auto sensor3 = objsFolder->addChild<TemperatureSensor>("Sensor3");
 ```
 
 <p align="center">
@@ -1009,12 +1058,10 @@ Having a list of login credentials does not only limit access to the server, but
 QUaFolderObject * objsFolder = server.objectsFolder();
 // NOTE : the variables need to be overall writable
 //        user-level access is defined later
-auto var1 = objsFolder->addProperty();
-var1->setDisplayName("var1");
+auto var1 = objsFolder->addProperty("var1");
 var1->setWriteAccess(true);
 var1->setValue(123);
-auto var2 = objsFolder->addProperty();
-var2->setDisplayName("var2");
+auto var2 = objsFolder->addProperty("var2");
 var2->setWriteAccess(true);
 var2->setValue(1.23);
 
@@ -1063,14 +1110,11 @@ Write to node 'NS0|Numeric|762789430' failed [ret = BadUserAccessDenied]
 The user-level access control is implemeted in a **cascading** fashion, meaning that if a variable does not have an specific *UserAccessLevelCallback* defined, then it looks if the parent has one and so on. If no node has a *UserAccessLevelCallback* defined then all access is granted. For example:
 
 ```c++
-auto * obj = objsFolder->addBaseObject();
-obj->setDisplayName("obj");
+auto * obj = objsFolder->addBaseObject("obj");
 
-auto * subobj = obj->addBaseObject();
-subobj->setDisplayName("subobj");
+auto * subobj = obj->addBaseObject("subobj");
 
-auto subsubvar = subobj->addProperty();
-subsubvar->setDisplayName("subsubvar");
+auto subsubvar = subobj->addProperty("subsubvar");
 subsubvar->setWriteAccess(true);
 subsubvar->setValue("hola");
 
@@ -1194,10 +1238,8 @@ QUaAccessLevel juanCanWrite(const QString &strUserName)
 
 // ...
 
-auto custom1 = objsFolder->addChild<CustomVar>();
-custom1->setDisplayName("custom1");
-auto custom2 = objsFolder->addChild<CustomVar>();
-custom2->setDisplayName("custom2");
+auto custom1 = objsFolder->addChild<CustomVar>("custom1");
+auto custom2 = objsFolder->addChild<CustomVar>("custom2");
 
 // Set specific callbacks
 custom1->varFoo()->setUserAccessLevelCallback(&juanCanWrite);
@@ -1301,9 +1343,7 @@ Build and test the encryption example in [./examples/07_encryption](./examples/0
 
 ## Events
 
-At the time of writing, events are considered an `EXPERIMENTAL` feature in the *open62541* library, therefore the same applies for *QUaServer*. Please use with caution.
-
-To use events, the amalgamation included in this repository is not going to be useful. It is necessary to create a new amalgamation from the *open62541* source code that supports events. This can be done by building it with the following commands:
+To use events, it is necessary to create a new amalgamation from the *open62541* source code that supports events. This can be done by building it with the following commands:
 
 ```bash
 cd ./depends/open62541.git
@@ -1314,9 +1354,9 @@ cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPT
 
 * The `-DUA_NAMESPACE_ZERO=FULL` option is needed because by default *open62541* does not include the complete address space of the OPC UA standard in order to reduce binary size. But to support events, it is actually necessary to have the `FULL` address space available in the server application.
 
-* The `-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON` is the flag that enabled events, and that is marked as **experimental**.
+* The `-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON` is the flag that enables events.
 
-Build the library, and afterwards replace [./src/amalgamation/open62541.h](./src/amalgamation/open62541.h) and [./src/amalgamation/open62541.c](./src/amalgamation/open62541.c). Notice that the amalgamation files are considerably larger than the previous ones because now they contain the full address space.
+Note that the amalgamation files are now considerably larger because now they contain the full default OPC UA address space.
 
 Now build the library using the Qt project included in this repo:
 
@@ -1383,7 +1423,7 @@ MyEvent::MyEvent(QUaServer *server)
 
 The same rules apply as when subtyping *Objects* or *Variables* (see the *Types* section).
 
-Events must have an **originator** node, which can be any object in the address space that allows to subscribe to events. This is defined in the `EventNotifier` attribute which can be accesed through the `QUaBaseObject` API:
+Events must have an **originator** node, which can be any object in the address space that allows to subscribe to events. This is defined in the [`EventNotifier`](https://reference.opcfoundation.org/v104/Core/docs/Part3/8.59/) attribute which can be accesed through the `QUaBaseObject` API:
 
 ```c++
 quint8 eventNotifier() const;
@@ -1393,11 +1433,11 @@ void setEventNotifier(const quint8 &eventNotifier);
 The value should be an enumeration, but to simplify the usage, there are a couple of helper methods:
 
 ```c++
-void setEventNotifierSubscribeToEvents();
-void setEventNotifierNone();
+bool subscribeToEvents() const;
+void setSubscribeToEvents(const bool& subscribeToEvents);
 ```
 
-The `setEventNotifierSubscribeToEvents()` enables events for the object while `setEventNotifierNone()` disables them. By default events are **disabled** for all objects. Except for the **Server Object**.
+The `setSubscribeToEvents(true)` enables events for the object while `setSubscribeToEvents(false)` disables them. By default events are **disabled** for all objects. Except for the [**Server Object**](https://reference.opcfoundation.org/v104/Core/docs/Part5/8.3.2/).
 
 If there is an event which does not originate from any object, then is necessary to use the *Server Object* to create and trigger the event. An event is instantiated using the `createEvent<T>()` method:
 
@@ -1405,7 +1445,9 @@ If there is an event which does not originate from any object, then is necessary
 auto event = server.createEvent<MyEvent>();
 ```
 
-Once an event is created, some variables can be set to define the event information. This is provided by the inherited `QUaBaseEvent` API:
+Note that for events there is no need to define a `BrowseName` upon instantiation, that is because events are not normally exposed in the address space (with the exception of Alarms and Conditions).
+
+Once an event is created, some [event variables](https://reference.opcfoundation.org/v104/Core/ObjectTypes/BaseEventType/) can be set to define the event information. This is provided by the inherited `QUaBaseEvent` API:
 
 ```c++
 QString sourceName() const;
@@ -1463,12 +1505,10 @@ If it is desired to trigger events with an specific object as originator, simply
 
 ```c++
 QUaFolderObject * objsFolder = server.objectsFolder();
-auto obj = objsFolder->addBaseObject();
-obj->setDisplayName("obj");
-obj->setBrowseName ("obj");
+auto obj = objsFolder->addBaseObject("obj");
 
 // Enable object for events
-obj->setEventNotifierSubscribeToEvents();
+obj->setSubscribeToEvents(true);
 // Create event with object as originator
 auto obj_event = obj->createEvent<MyEvent>();
 ```
@@ -1497,9 +1537,7 @@ objsFolder->addMethod("CreateVariable", [objsFolder](QString strVariableName) {
 	{
 		return QString("Error : Variable %1 already exists.").arg(strVariableName);
 	}
-	auto newVar = objsFolder->addBaseDataVariable();
-	newVar->setBrowseName(strVariableName);
-	newVar->setDisplayName(strVariableName);
+	auto newVar = objsFolder->addBaseDataVariable(strVariableName);
 	return QString("Success : Variable %1 created.").arg(strVariableName);
 });
 
@@ -1532,7 +1570,7 @@ Where `T` is any C++ *type* implementing the following interface:
 ```c++
 // required API for QUaNode::serialize
 bool writeInstance(
-	const QString& nodeId,
+	const QUaNodeId& nodeId,
 	const QString& typeName,
 	const QMap<QString, QVariant>& attrs,
 	const QList<QUaForwardReference>& forwardRefs,
@@ -1609,7 +1647,7 @@ Where `T` is any C++ *type* implementing the following interface:
 ```c++
 // required API for QUaNode::deserialize
 bool readInstance(
-	const QString &nodeId,
+	const QUaNodeId &nodeId,
 	const QString &typeName,
 	QMap<QString, QVariant> &attrs,
 	QList<QUaForwardReference> &forwardRefs,
@@ -1659,7 +1697,7 @@ Build and test the events example in [./examples/09_serialization](./examples/09
 
 ## Historizing
 
-The *QUaServer* supports storing *histrical data* and exposing it through the *HistoryRead* service.
+The *QUaServer* supports storing *histrical data* and *historical events*, exposing them through the [*HistoryRead* service](https://reference.opcfoundation.org/v104/Core/docs/Part4/5.10.3/).
 
 To enable this functionality, build the library using the Qt project included in this repo using the `ua_historizing` configuration flag:
 
@@ -1691,30 +1729,32 @@ template<typename T>
 bool setHistorizer(T& historizer);
 ```
 
-Where `T` is any C++ *type* implementing the following interface:
+### Historizing Data
+
+To historize data, the historizer `T` can be any C++ *type* implementing the following interface:
 
 ```c++
 // required API for QUaServer::setHistorizer
 // write data point to backend, return true on success
 bool writeHistoryData(
-	const QString &strNodeId,
+	const QUaNodeId &nodeId,
 	const QUaHistoryDataPoint &dataPoint,
-	QQueue<QUaLog> &logOut
+	QQueue<QUaLog>  &logOut
 );
 // required API for QUaServer::setHistorizer
 // update an existing node's data point in backend, return true on success
 bool updateHistoryData(
-	const QString   &strNodeId, 
+	const QUaNodeId &nodeId, 
 	const QUaHistoryDataPoint &dataPoint,
-	QQueue<QUaLog> &logOut
+	QQueue<QUaLog>  &logOut
 );
 // required API for QUaServer::setHistorizer
 // remove an existing node's data points within a range, return true on success
 bool removeHistoryData(
-	const QString   &strNodeId,
-	const QDateTime &timeStart,
-	const QDateTime &timeEnd,
-	QQueue<QUaLog>  &logOut
+	cconst QUaNodeId &nodeId, 
+	const QDateTime  &timeStart,
+	const QDateTime  &timeEnd,
+	QQueue<QUaLog>   &logOut
 ); 
 // required API for QUaServer::setHistorizer
 // return the timestamp of the first sample available for the given node
@@ -1725,8 +1765,8 @@ QDateTime firstTimestamp(
 // required API for QUaServer::setHistorizer
 // return the timestamp of the latest sample available for the given node
 QDateTime lastTimestamp(
-	const QString  &strNodeId,
-	QQueue<QUaLog> &logOut
+	const QUaNodeId &nodeId, 
+	QQueue<QUaLog>  &logOut
 ) const;
 // required API for QUaServer::setHistorizer
 // return true if given timestamp is available for the given node
@@ -1738,7 +1778,7 @@ bool hasTimestamp(
 // required API for QUaServer::setHistorizer
 // return a timestamp matching the criteria for the given node
 QDateTime findTimestamp(
-	const QString   &strNodeId,
+	const QUaNodeId &nodeId, 
 	const QDateTime &timestamp,
 	const QUaHistoryBackend::TimeMatch& match,
 	QQueue<QUaLog>  &logOut
@@ -1746,16 +1786,18 @@ QDateTime findTimestamp(
 // required API for QUaServer::setHistorizer
 // return the number for data points within a time range for the given node
 quint64 numDataPointsInRange(
-	const QString   &strNodeId,
+	const QUaNodeId &nodeId, 
 	const QDateTime &timeStart,
 	const QDateTime &timeEnd,
 	QQueue<QUaLog>  &logOut
 ) const;
 // required API for QUaServer::setHistorizer
-// return the numPointsToRead data points for the given node from the given start time
+// return the numPointsToRead data points for the given node
+// starting from the numPointsOffset offset after given start time (pagination)
 QVector<QUaHistoryDataPoint> readHistoryData(
-	const QString   &strNodeId,
+	const QUaNodeId &nodeId, 
 	const QDateTime &timeStart,
+	const quint64   &numPointsOffset,
 	const quint64   &numPointsToRead,
 	QQueue<QUaLog>  &logOut
 ) const;
@@ -1765,7 +1807,7 @@ To allow **storing** data it is only necessary to implement `writeHistoryData`, 
 
 Implementing only `writeHistoryData`, means clients won't be able to access the historcal data remotely yet, for that it is necessary to implement more methods of the API, as explained further below.
 
-To *store* the data, the API passes the *NodeId* (`const QString &strNodeId`) of the variable to be historized.
+To *store* the data, the API passes the *NodeId* (`const QUaNodeId &nodeId`) of the variable to be historized.
 
 The `QUaHistoryDataPoint` structure (`const QUaHistoryDataPoint &dataPoint`) provides the information that needs to be stored:
 
@@ -1841,7 +1883,7 @@ SELECT COUNT(*) FROM ":NodeId" p WHERE p.Time >= :TimeStart AND p.Time <= :TimeE
 For `readHistoryData`:
 
 ```sql
-SELECT p.Time, p.Value, p.Status FROM":NodeId" p WHERE p.Time >= :Time ORDER BY p.Time ASC LIMIT :Limit;
+SELECT p.Time, p.Value, p.Status FROM":NodeId" p WHERE p.Time >= :Time ORDER BY p.Time ASC LIMIT :Limit OFFSET :Offset;
 ```
 
 To allow *modifying* historical data, the `updateHistoryData` and `removeHistoryData` should be implemented accordingly.
@@ -1850,9 +1892,7 @@ Finally, to historize a variable, the `QUaBaseVariable::setHistorizing(const boo
 
 ```c++
 // create int variable
-auto varInt = objsFolder->addBaseDataVariable("ns=1;s=MyInt");
-varInt->setDisplayName("MyInt");
-varInt->setBrowseName("MyInt");
+auto varInt = objsFolder->addBaseDataVariable("MyInt", "ns=0;s=MyInt");
 varInt->setValue(0);
 // NOTE : must enable historizing for each variable
 varInt->setHistorizing(true);
@@ -1861,13 +1901,304 @@ varInt->setReadHistoryAccess(true);
 
 Similarly, to allow clients to modify the historical data, the `QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)` method should be called.
 
-The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data storage in memory, while the [`quasqlitehistorizer.cpp`](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical data storage using *Sqlite*.
+### Historizing Events
 
-Note that these examples are provided for illustration purposes only and not for production. The user is encouraged to implement (and if possible, share) their own historizer implementations.
+Historizing events is only possible if the `QUaServer` project is compiled using the `CONFIG+=ua_events` flag. See the *Events* section of this document for more information.
+
+To historize events, the historizer `T` can be any C++ *type* implementing the following interface:
+
+```c++
+// write a event's data to backend
+bool writeHistoryEventsOfType(
+	const QUaNodeId            &eventTypeNodeId,
+	const QList<QUaNodeId>     &emittersNodeIds,
+	const QUaHistoryEventPoint &eventPoint,
+	QQueue<QUaLog>             &logOut
+);
+// get event types (node ids) for which there are events stored for the given emitter
+QVector<QUaNodeId> eventTypesOfEmitter(
+	const QUaNodeId &emitterNodeId,
+	QQueue<QUaLog>  &logOut
+);
+// find a timestamp matching the criteria for the emitter and event type
+QDateTime findTimestampEventOfType(
+	const QUaNodeId                    &emitterNodeId,
+	const QUaNodeId                    &eventTypeNodeId,
+	const QDateTime                    &timestamp,
+	const QUaHistoryBackend::TimeMatch &match,
+	QQueue<QUaLog>                     &logOut
+);
+// get the number for events within a time range for the given emitter and event type
+quint64 numEventsOfTypeInRange(
+	const QUaNodeId &emitterNodeId,
+	const QUaNodeId &eventTypeNodeId,
+	const QDateTime &timeStart,
+	const QDateTime &timeEnd,
+	QQueue<QUaLog>  &logOut
+);
+// return the numPointsToRead events for the given emitter and event type,
+// starting from the numPointsOffset offset after given start time (pagination)
+QVector<QUaHistoryEventPoint> readHistoryEventsOfType(
+	const QUaNodeId &emitterNodeId,
+	const QUaNodeId &eventTypeNodeId,
+	const QDateTime &timeStart,
+	const quint64   &numPointsOffset,
+	const quint64   &numPointsToRead,
+	const QList<QUaBrowsePath> &columnsToRead,
+	QQueue<QUaLog>  &logOut
+);
+```
+
+To allow **storing** events it is only necessary to implement `writeHistoryEventsOfType`, while the other methods can return default values. The events will be saved to whatever media it is desired. 
+
+Implementing only `writeHistoryEventsOfType`, means clients won't be able to access the historcal events remotely yet, for that it is necessary to implement more methods of the API, as explained further below.
+
+To *store* the events, the API passes the *NodeId* (`const QUaNodeId &eventTypeNodeId`) of the **event type** to be historized, a list of *emitter* nodeIds and the event data.
+
+The `QUaHistoryEventPoint` structure provides the information that needs to be stored:
+
+```c++
+struct QUaHistoryEventPoint
+{
+	QDateTime timestamp;
+	QHash<QUaBrowsePath, QVariant> fields;
+};
+```
+
+Historizing events is slightly more complicated than historizing data. Mainly because *historical data* has always the same struture (`{timestamp, value, status}`), while *event data* changes depending on the *event type*, and there can be any number of event types, including the custom ones. 
+
+Another complication is that in OPC UA, the same event can be *emitted* or *notified* by different objects (objects that are not necessarily be the event's `SourceNode`) according to a [*Event Refereneces*](https://reference.opcfoundation.org/v104/Core/docs/Part3/7.18/) organization defined by the OPC specification. So when the event history is queried for a *notifier* node, all the events that were emitted by this node must be retrieved. This relation is specified by the `const QList<QUaNodeId> &emittersNodeIds` argument in the `writeHistoryEventsOfType` historic API method.
+
+Whatever storage media is chosen, events must be *queriable* first by *EventType*, then by *Emitter*, and finally by *Timestamp*. 
+
+For example, if a `SQL` database is chosen for storage, one approach is to create one table for each *EventType*. Each table having a fixed number of columns according to the fixed amout of event fields an *EventType* has. The `const QUaHistoryEventPoint &eventPoint` argument if the `writeHistoryEventsOfType` API method is always guaranteed to contain the same event fields for a given type. So the `QUaHistoryEventPoint::fields` information can be used to create the *EventType* tables.
+
+```sql
+CREATE TABLE ":EventTypeNodeId" ( :EventFieldNames :EventFieldTypes );
+```
+
+Then create one able to store the *EventType* table names, to be able to relate them to a unique index.
+
+```sql
+CREATE TABLE "EventTypeTableNames"
+(
+	[EventTypeTableNames] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	[TableName] TEXT NOT NULL
+);
+```
+
+To speed up queries, it is recommended to create an *index* over the *TableName* column.
+
+Then a table per *Emitter* can be created with fixed a number of columns that help query and relate to the events stored in the *EventType* tables.
+
+```sql
+CREATE TABLE ":EmitterNodeId"
+(
+	[:EmitterNodeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	[Time] INTEGER NOT NULL,      -- to be able to query emitter's events by time range
+	[EventType] INTEGER NOT NULL, -- index of EventTypeTableNames table
+	[EventId] INTEGER NOT NULL    -- index of event in its EventType table
+);
+```
+
+To speed up queries, it is recommended to create an *index* over the *Time* and *EventType* columns.
+
+```sql
+CREATE INDEX ":EmitterNodeId_Time_EventType" ON ":EmitterNodeId" (Time, EventType);
+```
+
+Then the procedure to store an event when the `writeHistoryEventsOfType` API method is called would be:
+
+* Insert new event in its *EventType* table, return new event's *EventType* key.
+
+* Check if the (*EventType*) *TableName* already in the *EventTypeTableNames* table else insert it, fetch the *EventTypeTableNames* key.
+
+* Insert the key of the new event and event type in each emitter table.
+
+Then the rest of the API to query the event history could be imlpemented as follows:
+
+For `eventTypesOfEmitter`:
+
+```sql
+SELECT n.TableName FROM EventTypeTableNames n 
+INNER JOIN 
+(
+	SELECT DISTINCT EventType FROM ":EmitterNodeId"
+) e
+ON n.EventTypeTableNames = e.EventType
+```
+
+For `findTimestampEventOfType`:
+
+```sql
+-- from above
+SELECT e.Time FROM ":EmitterNodeId" e WHERE e.Time >= :Time AND e.EventType = :EventTypeKey ORDER BY e.Time ASC LIMIT 1;
+-- from below
+SELECT e.Time FROM ":EmitterNodeId" e WHERE e.Time < :Time AND e.EventType = :EventTypeKey ORDER BY e.Time DESC LIMIT 1;
+```
+
+For `numEventsOfTypeInRange`:
+
+```sql
+SELECT COUNT(*) FROM ":EmitterNodeId" e WHERE e.Time >= :TimeStart AND e.Time <= :TimeEnd AND e.EventType = :EventTypeKey ORDER BY e.Time ASC;
+```
+
+For `readHistoryEventsOfType` :
+
+```sql
+SELECT * FROM ":EventTypeNodeId" t 
+INNER JOIN 
+(
+	SELECT EventId FROM ":EmitterNodeId" e WHERE e.Time >= :TimeStart AND e.EventType = :EventTypeKey ORDER BY e.Time ASC LIMIT :Limit OFFSET :Offset
+) e
+ON t.EventTypeNodeId = e.EventId;
+```
 
 ### Historizing Example
 
+The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data and event storage in memory, while the [`quasqlitehistorizer.cpp`](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical storage using *Sqlite*.
+
+Note that these examples are provided for illustration purposes only and not for production. The user is encouraged to implement (and if possible, share) their own historizer implementations.
+
 Build and test the historizing example in [./examples/10_historizing](./examples/10_historizing/main.cpp) to learn more.
+
+---
+
+## Alarms
+
+At the time of writing, alarms and conditions are considered an `EXPERIMENTAL` feature in the *open62541* library, therefore the same applies for *QUaServer*. Please use with caution.
+
+To use alarms and conditions, it is necessary to create a new amalgamation from the *open62541* source code that supports alarms. This can be done by building it with the following commands:
+
+```bash
+cd ./depends/open62541.git
+mkdir build; cd build
+# Adjust your Cmake generator accordingly
+cmake -DUA_ENABLE_AMALGAMATION=ON -DUA_NAMESPACE_ZERO=FULL -DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON -DUA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS=ON .. -G "Visual Studio 15 2017 Win64"
+```
+
+* The `-DUA_NAMESPACE_ZERO=FULL` option is needed because by default *open62541* does not include the complete address space of the OPC UA standard in order to reduce binary size. But to support events, it is actually necessary to have the `FULL` address space available in the server application.
+
+* The `-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON` is the flag that enables events.
+
+* The `-DUA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS=ON` is the flag that enables alarms and conditions.
+
+Note that the amalgamation files are now considerably larger because now they contain the full default OPC UA address space.
+
+Now build the library using the Qt project included in this repo:
+
+```bash
+cd ./src/amalgamation
+# Windows
+qmake "CONFIG+=ua_alarms_conditions" -tp vc amalgamation.pro
+msbuild open62541.vcxproj
+# Linux
+qmake "CONFIG+=ua_alarms_conditions" amalgamation.pro
+make all
+```
+
+To update the examples to support events:
+
+```bash
+# Windows
+qmake "CONFIG+=ua_alarms_conditions" -r -tp vc examples.pro
+msbuild examples.sln
+# Linux
+qmake "CONFIG+=ua_alarms_conditions" -r examples.pro
+make all
+```
+
+After running `qmake` it is often necessary to **rebuild** the application to avoid *missing symbols* errors.
+
+Two types of alarms are available out of the box by the `QUaServer` API:
+
+* `QUaOffNormalAlarm` : Used for alarms based on discrete values. Useful not only for alarms based on *boolean* values, but also any other discrete values such as *integers*.
+
+* `QUaExclusiveLevelAlarm` : Used for alarms based in continuous numeric values. It provides automatic level checking.
+
+### QUaOffNormalAlarm
+
+To create a `QUaOffNormalAlarm`, the first step is to create an object that will be the `SourceNode` of the events triggered by the alarm. Clients will be then able to subscribe to events emitted by this object in order to track the alarm state.
+
+```c++
+auto motionSensor = objsFolder->addChild<QUaBaseObject>("motionSensor");
+```
+
+Then a variable is needed that will provide the discrete value that the alarm will monitor. Any variable that contains a discrete value can be used.
+
+```c++
+auto moving = motionSensor->addBaseDataVariable("moving");
+moving->setWriteAccess(true);
+moving->setDataType(QMetaType::Bool);
+moving->setValue(false);
+```
+
+Finally the `QUaOffNormalAlarm` can be created based on its `SourceNode`, setting the variable with the discrete value as an `InputNode` and defining what the *Normal Value* of the `InputNode` should be.
+
+```c++
+auto motionAlarm = motionSensor->addChild<QUaOffNormalAlarm>("alarm");
+motionAlarm->setConditionName("Motion Sensor Alarm");
+motionAlarm->setInputNode(moving);
+motionAlarm->setNormalValue(false);
+motionAlarm->setConfirmRequired(true);
+```
+
+For the alarm to start generating events, first it has to be **enabled**. This can be done by calling the `Enable` method of the alarm object through the network using an OPC client or programmatically using the C++ `Enable()` method.
+
+### QUaExclusiveLevelAlarm
+
+To create a `QUaExclusiveLevelAlarm`, the first step is to create an object that will be the `SourceNode` of the events triggered by the alarm. Clients will be then able to subscribe to events emitted by this object in order to track the alarm state.
+
+```c++
+auto levelSensor = objsFolder->addChild<QUaBaseObject>("levelSensor");
+```
+
+Then a variable is needed that will provide the continuous value that the alarm will monitor. Any variable that contains a continuous value can be used.
+
+```c++
+auto level = levelSensor->addBaseDataVariable("level");
+level->setWriteAccess(true);
+level->setDataType(QMetaType::Double);
+level->setValue(0.0);
+```
+
+Then the `QUaExclusiveLevelAlarm` can be created based on its `SourceNode`, setting the variable with the continuous value as an `InputNode`. 
+
+```c++
+auto levelAlarm = levelSensor->addChild<QUaExclusiveLevelAlarm>("alarm");
+levelAlarm->setConditionName("Level Sensor Alarm");
+levelAlarm->setInputNode(level);
+
+levelAlarm->setHighLimitRequired(true);
+levelAlarm->setLowLimitRequired(true);
+levelAlarm->setHighLimit(10.0);
+levelAlarm->setLowLimit(-10.0);
+```
+
+By default the `QUaExclusiveLevelAlarm` does not monitor any limits, so they have to be required explicitly using the `QUaExclusiveLevelAlarm` API:
+
+```c++
+// to enabled the monitoring of specific limits
+void setHighHighLimitRequired(const bool& highHighLimitRequired);
+void setHighLimitRequired    (const bool& highLimitRequired    );
+void setLowLimitRequired     (const bool& lowLimitRequired     );
+void setLowLowLimitRequired  (const bool& lowLowLimitRequired  );
+
+// to define the limits
+double highHighLimit() const;
+void setHighHighLimit(const double& highHighLimit);
+
+double highLimit() const;
+void setHighLimit(const double& highLimit);
+
+double lowLimit() const;
+void setLowLimit(const double& lowLimit);
+
+double lowLowLimit() const;
+void setLowLowLimit(const double& lowLowLimit);
+```
+
+For the alarm to start generating events, first it has to be **enabled**. This can be done by calling the `Enable` method of the alarm object through the network using an OPC client or programmatically using the C++ `Enable()` method.
 
 ---
 
