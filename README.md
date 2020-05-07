@@ -46,7 +46,7 @@ How to implement access control for the server based on user permissions.
 
 * [Encryption](#Encryption)
 
-How to enable and configure secure encrypten communication between the server and clients.
+How to enable and configure secure encrypted communication between the server and clients.
 
 * [Events](#Events)
 
@@ -1901,6 +1901,10 @@ varInt->setReadHistoryAccess(true);
 
 Similarly, to allow clients to modify the historical data, the `QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)` method should be called.
 
+<p align="center">
+  <img src="./res/img/10_historizing_01_data.gif">
+</p>
+
 ### Historizing Events
 
 Historizing events is only possible if the `QUaServer` project is compiled using the `CONFIG+=ua_events` flag. See the *Events* section of this document for more information.
@@ -2054,6 +2058,10 @@ INNER JOIN
 ON t.EventTypeNodeId = e.EventId;
 ```
 
+<p align="center">
+  <img src="./res/img/10_historizing_02_events.gif">
+</p>
+
 ### Historizing Example
 
 The [`quainmemoryhistorizer.cpp`](./examples/10_historizing/quainmemoryhistorizer.cpp) file shows an example of historical data and event storage in memory, while the [`quasqlitehistorizer.cpp`](./examples/10_historizing/quasqlitehistorizer.cpp) file shows an example of historical storage using *Sqlite*.
@@ -2145,6 +2153,10 @@ motionAlarm->setConfirmRequired(true);
 
 For the alarm to start generating events, first it has to be **enabled**. This can be done by calling the `Enable` method of the alarm object through the network using an OPC client or programmatically using the C++ `Enable()` method.
 
+<p align="center">
+  <img src="./res/img/11_alarms_01_offnormal.gif">
+</p>
+
 ### QUaExclusiveLevelAlarm
 
 To create a `QUaExclusiveLevelAlarm`, the first step is to create an object that will be the `SourceNode` of the events triggered by the alarm. Clients will be then able to subscribe to events emitted by this object in order to track the alarm state.
@@ -2199,6 +2211,26 @@ void setLowLowLimit(const double& lowLowLimit);
 ```
 
 For the alarm to start generating events, first it has to be **enabled**. This can be done by calling the `Enable` method of the alarm object through the network using an OPC client or programmatically using the C++ `Enable()` method.
+
+<p align="center">
+  <img src="./res/img/11_alarms_02_level.gif">
+</p>
+
+### Branches
+
+Support for [branches](https://reference.opcfoundation.org/v104/Core/docs/Part9/5.5.3/) in `QUaServer` is disabled by default. To enable branches call the `setBranchQueueSize` method with a value larger than `0`. This will create a branch queue in the alarm which will keep the given number of branches in memory. If more branches are created than the size of the queue, the oldest branch will be deleted automatically to avoid memory saturation.
+
+```c++
+motionAlarm->setBranchQueueSize(10);
+levelAlarm->setBranchQueueSize(10);
+```
+
+Historizing of branches is also disabled by default, to enable it, call the `setHistorizingBranches` method with a `true` value.
+
+```c++
+motionAlarm->setHistorizingBranches(true);
+levelAlarm->setHistorizingBranches(true);
+```
 
 ---
 
