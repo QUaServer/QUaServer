@@ -420,6 +420,15 @@ void UA_Server_deleteSecureChannels(UA_Server* server);
 extern "C"
 void removeSecureChannel(UA_Server * server, channel_entry * entry, UA_DiagnosticEvent event);
 
+extern "C"
+void UA_Server_cleanupTimedOutSecureChannels(UA_Server* server, UA_DateTime nowMonotonic);
+
+extern "C"
+void UA_Discovery_cleanupTimedOut(UA_Server * server, UA_DateTime nowMonotonic);
+
+extern "C"
+void UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue * wq);
+
 /*********************************************************************************************
 Copied from open62541, to be able to implement:
 

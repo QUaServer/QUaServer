@@ -1406,7 +1406,6 @@ QUaServer::~QUaServer()
 	{
 		delete this->children().at(0);
 	}
-
 	// cleanup open62541
 	UA_Server_delete(this->m_server);
 }
@@ -1579,14 +1578,17 @@ void QUaServer::stop()
 	m_iterWaitTimer.stop();
 	m_iterWaitTimer.disconnect();
 	UA_Server_run_shutdown(m_server);
-	// [FIX] remove channels and sessions
-	// NOTE : cannot use UA_Server_cleanupSessions because it only removed timedout sessions
-	session_list_entry* current, * temp;
-	LIST_FOREACH_SAFE(current, &m_server->sessions, pointers, temp) {
-		UA_Server_removeSession(m_server, current, UA_DIAGNOSTICEVENT_CLOSE);
-	}
-	// void UA_Server_deleteSecureChannels(UA_Server * server);
-	UA_Server_deleteSecureChannels(m_server);
+	// [FIX] force remove channels and sessions
+	// NOTE : cannot use UA_Server_cleanup because it only removes timedout sessions
+	auto nowMonotonic = (std::numeric_limits<int64_t>::max)();
+	UA_Server_cleanupSessions(m_server, nowMonotonic);
+	UA_Server_cleanupTimedOutSecureChannels(m_server, nowMonotonic);
+#ifdef UA_ENABLE_DISCOVERY
+	UA_Discovery_cleanupTimedOut(m_server, nowMonotonic);
+#endif
+	// NOTE : need to clean delayed callbacks or they will try to cleanup timed out
+	// channels and sessions upon restart resulting in crash
+	UA_WorkQueue_manuallyProcessDelayed(&m_server->workQueue);
 	// emit event
 	emit this->isRunningChanged(m_running);
 }
