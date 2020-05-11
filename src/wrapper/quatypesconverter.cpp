@@ -218,7 +218,6 @@ bool isSupportedQType(const QMetaType::Type & type)
 	}
 	// NOTE : need to support QMetaType::Void for methods return value
 	bool supported = type == QMetaType::Void || QUaDataType::isSupportedQType(type);
-	Q_ASSERT_X(supported, "uaTypeNodeIdFromQType", "Unsupported datatype");
 	return supported;
 }
 
