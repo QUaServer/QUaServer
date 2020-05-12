@@ -440,6 +440,16 @@ private:
         void            **nodeContext
     );
 
+    static UA_StatusCode generateChildNodeId(
+        UA_Server       *server,
+        const UA_NodeId *sessionId, 
+        void            *sessionContext,
+        const UA_NodeId *sourceNodeId,
+        const UA_NodeId *targetParentNodeId,
+        const UA_NodeId *referenceTypeId,
+        UA_NodeId       *targetNodeId
+    );
+
 	static UA_StatusCode uaConstructor(
         QUaServer         *server,
         const UA_NodeId   *nodeId, 

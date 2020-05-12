@@ -277,6 +277,7 @@ public:
 	bool deserialize(T& deserializer, QQueue<QUaLog>& logOut);
 
 	// Clone API
+
 	QUaNode* cloneNode(
 		QUaNode* parentNode = nullptr,
 		const QUaQualifiedName& browseName = QUaQualifiedName(),

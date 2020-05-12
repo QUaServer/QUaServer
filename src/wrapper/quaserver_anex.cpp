@@ -335,12 +335,14 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
     auto event = qobject_cast<QUaBaseEvent*>(QUaNode::getNodeContext(eventNodeId, server));
     Q_ASSERT(event);
     bool historize = event->historizing();
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     if (resolveSAOCallback)
     {
         auto condition = qobject_cast<QUaCondition*>(event);
         Q_ASSERT(condition);
         historize = historize && condition->historizingBranches();
     }
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     QList<QUaNodeId> emittersNodeIds;
     auto srv = QUaServer::getServerNodeContext(server);
     Q_ASSERT(srv);

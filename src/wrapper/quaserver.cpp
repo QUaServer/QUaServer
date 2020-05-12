@@ -159,10 +159,45 @@ void QUaServer::uaDestructor(UA_Server       * server,
 	UA_NodeId_clear(&parentNodeId);
 }
 
-UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
-	                                   const UA_NodeId   * nodeId, 
-	                                   void             ** nodeContext,
-	                                   const QMetaObject & metaObject)
+// try to make instance declaration nodeIds a little more predictable
+UA_StatusCode QUaServer::generateChildNodeId(
+	UA_Server       *server, 
+	const UA_NodeId *sessionId, 
+	void            *sessionContext, 
+	const UA_NodeId *sourceNodeId, 
+	const UA_NodeId *targetParentNodeId, 
+	const UA_NodeId *referenceTypeId, 
+	UA_NodeId       *targetNodeId)
+{
+	Q_UNUSED(sessionId);
+	Q_UNUSED(sessionContext);
+	Q_UNUSED(referenceTypeId);
+	// read browse name
+	UA_QualifiedName outBrowseName;
+	auto st = UA_Server_readBrowseName(server, *sourceNodeId, &outBrowseName);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	Q_UNUSED(st);
+	// get parent node id hash
+	uint parentHash = qHash(*targetParentNodeId, targetParentNodeId->namespaceIndex);
+	// get child browse name hash
+	uint childNameHash = qHash(
+		QByteArray::fromRawData((const char*)outBrowseName.name.data, static_cast<int>(outBrowseName.name.length)),
+			outBrowseName.namespaceIndex
+		);
+	// new node id is combination of both
+	targetNodeId->identifierType = UA_NODEIDTYPE_NUMERIC;
+	targetNodeId->identifier.numeric = parentHash ^ childNameHash;
+	// cleanup
+	UA_QualifiedName_clear(&outBrowseName);
+	return UA_STATUSCODE_GOOD;
+}
+
+UA_StatusCode QUaServer::uaConstructor(
+	QUaServer         *server,
+	const UA_NodeId   *nodeId, 
+	void             **nodeContext,
+	const QMetaObject &metaObject
+)
 {
 	// get parent node id
 	UA_NodeId topBoundParentNodeId = QUaNode::getParentNodeId(*nodeId, server->m_server);
@@ -254,17 +289,19 @@ UA_StatusCode QUaServer::uaConstructor(QUaServer         * server,
 }
 
 // [STATIC]
-UA_StatusCode QUaServer::methodCallback(UA_Server        * server,
-	                                    const UA_NodeId  * sessionId, 
-	                                    void             * sessionContext, 
-	                                    const UA_NodeId  * methodId, 
-	                                    void             * methodContext, 
-	                                    const UA_NodeId  * objectId, 
-	                                    void             * objectContext, 
-	                                    size_t             inputSize, 
-	                                    const UA_Variant * input, 
-	                                    size_t             outputSize, 
-	                                    UA_Variant       * output)
+UA_StatusCode QUaServer::methodCallback(
+	UA_Server        *server,
+	const UA_NodeId  *sessionId, 
+	void             *sessionContext, 
+	const UA_NodeId  *methodId, 
+	void             *methodContext, 
+	const UA_NodeId  *objectId, 
+	void             *objectContext, 
+	size_t            inputSize, 
+	const UA_Variant *input, 
+	size_t            outputSize, 
+	UA_Variant       *output
+)
 {
 	Q_UNUSED(server        );
 	Q_UNUSED(sessionContext);
@@ -1148,6 +1185,10 @@ void QUaServer::resetConfig()
 #ifdef UA_ENABLE_HISTORIZING
 	config->historyDatabase = m_historDatabase;
 #endif // UA_ENABLE_HISTORIZING
+
+	// custom instance declaration NodeId mechanism
+	config->nodeLifecycle.generateChildNodeId = &QUaServer::generateChildNodeId;
+
 	Q_UNUSED(st);
 }
 
@@ -1652,9 +1693,8 @@ void QUaServer::registerTypeInternal(
 		return;
 	}
 	// create new type browse name
-	// TODO : use QUaQualifiedName?
 	UA_QualifiedName browseName;
-	browseName.namespaceIndex = 1;
+	browseName.namespaceIndex = 0;
 	browseName.name = QUaTypesConverter::uaStringFromQString(strClassName);
 	// check if base class is registered
 	QString strBaseClassName = QString(metaObject.superClass()->className());
@@ -2740,7 +2780,7 @@ bool QUaServer::registerReferenceType(const QUaReferenceType& refType, const QUa
 	QByteArray byteInverseName = refType.strInverseName.toUtf8();
 	// TODO : Use QUaQualifiedName, but then need to change how refsare serialized
 	UA_QualifiedName browseName;
-	browseName.namespaceIndex = 1;
+	browseName.namespaceIndex = 0;
 	browseName.name = QUaTypesConverter::uaStringFromQString(refType.strForwardName);
 	// setup new ref type attributes
 	UA_ReferenceTypeAttributes refattr = UA_ReferenceTypeAttributes_default;
