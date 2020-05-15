@@ -253,17 +253,6 @@ typedef struct {
 //        TAILQ_LAST in QUaServer::newSession
 TAILQ_HEAD(channel_list, channel_entry);
 
-typedef enum {
-    UA_SECURECHANNELSTATE_FRESH,
-    UA_SECURECHANNELSTATE_HEL_SENT,
-    UA_SECURECHANNELSTATE_HEL_RECEIVED,
-    UA_SECURECHANNELSTATE_ACK_SENT,
-    UA_SECURECHANNELSTATE_ACK_RECEIVED,
-    UA_SECURECHANNELSTATE_OPN_SENT,
-    UA_SECURECHANNELSTATE_OPEN,
-    UA_SECURECHANNELSTATE_CLOSED
-} UA_SecureChannelState;
-
 typedef TAILQ_HEAD(UA_MessageQueue, UA_Message) UA_MessageQueue;
 
 struct UA_SecureChannel {

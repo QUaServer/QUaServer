@@ -139,6 +139,7 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 	{
 	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
 	{
+		// return closest key from above or last one if out of range
 		if (table.contains(timestamp) &&
 			table.constFind(timestamp) + 1 != table.end())
 		{
@@ -148,14 +149,16 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 		}
 		else
 		{
-			// return closest key from above or last one if out of range
+			// return the first element in [first,last) which compares greater than val
 			auto iter = std::upper_bound(table.keyBegin(), table.keyEnd(), timestamp);
-			time = iter == table.keyEnd() ? table.lastKey() : *iter;
+			// if out of range, return invalid
+			time = iter == table.keyEnd() ? QDateTime() : *iter;
 		}
 	}
 	break;
 	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
 	{
+		// return closest key from below or invalid if out of range
 		if (table.contains(timestamp) &&
 			table.constFind(timestamp) != table.begin())
 		{
@@ -165,10 +168,12 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 		}
 		else
 		{
-			// return closest key from below or last one if out of range
-			Q_ASSERT(timestamp <= *table.keyBegin());
+			// return the first element in [first,last) which does not compare less than val
 			auto iter = std::lower_bound(table.keyBegin(), table.keyEnd(), timestamp);
-			time = iter == table.keyEnd() ? table.lastKey() : *iter;
+			// need the one before, or out of range if lower_bound returns begin
+			iter = iter == table.keyBegin() ? table.keyEnd() : --iter;
+			// if out of range, return invalid
+			time = iter == table.keyEnd() ? QDateTime() : *iter;
 		}
 	}
 	break;

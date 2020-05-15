@@ -299,15 +299,17 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		case MATCH_EQUAL_OR_AFTER:
 		case MATCH_AFTER:
 		{
-			// contains(timestamp) is handled before, so closest from above
-			match = TimeMatch::ClosestFromAbove;
+			// NOTE : inverted because we want points inside range, not outside
+			// contains(timestamp) is handled before, so closest
+			match = TimeMatch::ClosestFromBelow;
 		}
 		break;
 		case MATCH_EQUAL_OR_BEFORE:
 		case MATCH_BEFORE:
 		{
-			// contains(timestamp) is handled before, so closest from below
-			match = TimeMatch::ClosestFromBelow;
+			// NOTE : inverted because we want points inside range, not outside
+			// contains(timestamp) is handled before, so closest
+			match = TimeMatch::ClosestFromAbove;
 		}
 		break;
 		default:
