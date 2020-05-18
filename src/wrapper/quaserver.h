@@ -608,6 +608,18 @@ inline void QUaServer::registerSpecificationType(const UA_NodeId& typeNodeId, co
     m_hashMetaObjects.insert(QString(metaObject.className()), metaObject);
     // register for default mandatory children and so on
     this->registerTypeDefaults(typeNodeId, metaObject);
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    // needed to store historic events in a consistent way
+    if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+    {
+        Q_ASSERT(!m_hashTypeVars.contains(typeNodeId));
+        m_hashTypeVars[typeNodeId] =
+            QUaNode::getTypeVars(
+                typeNodeId,
+                this->m_server
+            );
+    }
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
     // set node context only if instatiable
     if (abstract)
     {

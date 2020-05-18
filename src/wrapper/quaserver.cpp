@@ -1777,12 +1777,25 @@ void QUaServer::registerTypeInternal(
 	// register meta-enums
 	this->registerMetaEnums(metaObject);
 	// register meta-properties
+	// NOTE : this can be recursive if property type has not been yet registered
 	this->addMetaProperties(metaObject);
 	// register meta-methods (only if object class, or NOT variable class)
 	if (!metaObject.inherits(&QUaBaseDataVariable::staticMetaObject))
 	{
 		this->addMetaMethods(metaObject);
 	}
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// needed to store historic events in a consistent way
+	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
+	{
+		Q_ASSERT(!m_hashTypeVars.contains(newTypeNodeId));
+		m_hashTypeVars[newTypeNodeId] =
+			QUaNode::getTypeVars(
+				newTypeNodeId,
+				this->m_server
+			);
+	}
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
@@ -1959,18 +1972,6 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	{
 		UA_NodeId_clear(&methNodeId);
 	}
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	// needed to store historic events in a consistent way
-	if (metaObject.inherits(&QUaBaseEvent::staticMetaObject))
-	{
-		Q_ASSERT(!m_hashTypeVars.contains(typeNodeId));
-		m_hashTypeVars[typeNodeId] =
-			QUaNode::getTypeVars(
-				typeNodeId, 
-				this->m_server
-			);
-	}
-#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 }
 
 void QUaServer::registerMetaEnums(const QMetaObject& metaObject)
@@ -2301,7 +2302,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 #ifdef QT_DEBUG 
 			QUaBaseObject* object = qobject_cast<QUaBaseObject*>(static_cast<QObject*>(objectContext));
 			Q_ASSERT_X(object,
-				"QUaServer::registerTypeDefaults",
+				"QUaServer::addMetaMethods",
 				"Cannot call method on invalid C++ object.");
 #else
 			QUaBaseObject* object = static_cast<QUaBaseObject*>(objectContext);

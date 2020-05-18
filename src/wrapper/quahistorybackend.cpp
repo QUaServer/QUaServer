@@ -110,9 +110,9 @@ void QUaHistoryBackend::fixOutputVariantType(
 	// generic case
 	if (!value.canConvert(metaType))
 	{
-		qWarning() << "[OLD TYPE]" << QMetaType::typeName(oldType);  
-		qWarning() << "[NEW TYPE]" << QMetaType::typeName(metaType); 
-		Q_ASSERT_X(false, "QUaHistoryBackend::fixOutputVariantType", "Cannot convert between types.");
+		//qWarning() << "[OLD TYPE]" << QMetaType::typeName(oldType);  
+		//qWarning() << "[NEW TYPE]" << QMetaType::typeName(metaType); 
+		//Q_ASSERT_X(false, "QUaHistoryBackend::fixOutputVariantType", "Cannot convert between types.");
 		return;
 	}
 	// NOTE : expensive to convert QString to QUaNodeId
