@@ -130,11 +130,26 @@ namespace QUa
 	};
 	Q_ENUM_NS(ChangeVerb)
 }
-typedef QUa::LogLevel    QUaLogLevel;
+typedef QUa::LogLevel QUaLogLevel;
+inline uint qHash(const QUaLogLevel& key, uint seed)
+{
+	return qHash(static_cast<int>(key), seed);
+}
 typedef QUa::LogCategory QUaLogCategory;
-typedef QUa::Status      QUaStatus;
-
-typedef QUa::ChangeVerb  QUaChangeVerb;
+inline uint qHash(const QUaLogCategory& key, uint seed)
+{
+	return qHash(static_cast<int>(key), seed);
+}
+typedef QUa::Status QUaStatus;
+inline uint qHash(const QUaStatus& key, uint seed)
+{
+	return qHash(static_cast<int>(key), seed);
+}
+typedef QUa::ChangeVerb QUaChangeVerb;
+inline uint qHash(const QUaChangeVerb& key, uint seed)
+{
+	return qHash(static_cast<int>(key), seed);
+}
 
 struct QUaLog
 {
@@ -323,12 +338,6 @@ private:
 };
 
 Q_DECLARE_METATYPE(QUaDataType);
-
-inline uint qHash(const QUaStatus& key, uint seed)
-{
-	Q_UNUSED(seed);
-	return static_cast<uint>(key);
-}
 
 class QUaStatusCode
 {

@@ -264,9 +264,6 @@ signals:
     void clientConnected   (const QUaSession * session);
     void clientDisconnected(const QUaSession * session);
 
-	// NOTE : private signal
-	void iterateServer(QPrivateSignal);
-
 public slots:
 	
 
