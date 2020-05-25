@@ -189,6 +189,12 @@ UA_StatusCode QUaServer::generateChildNodeId(
 	targetNodeId->identifier.numeric = parentHash ^ childNameHash;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
+	// check 
+	auto qserver = QUaServer::getServerNodeContext(server);
+	while (qserver->isNodeIdUsed(*targetNodeId))
+	{
+		targetNodeId->identifier.numeric = targetNodeId->identifier.numeric ^ childNameHash;
+	}
 	return UA_STATUSCODE_GOOD;
 }
 
