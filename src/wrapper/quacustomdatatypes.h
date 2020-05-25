@@ -9,6 +9,7 @@
 #include <QTimeZone>
 #include <QQueue>
 #include <QDataStream>
+#include <QMetaEnum>
 #include <QDebug>
 
 #include <open62541.h>
@@ -162,9 +163,59 @@ struct QUaLog
 	QUaLogLevel    level;
 	QUaLogCategory category;
 	QDateTime      timestamp;
+	
+	static QMetaEnum m_metaEnumCategory;
+	static QMetaEnum m_metaEnumLevel;
+	template<typename T>
+	static QString toString(
+		const T& log, 
+		const QString &separator = ", ",
+		const QString &timeFormat = "dd.MM.yyyy hh:mm:ss.zzz",
+		const QString &lineFormat = "%1%5%2%5%3%5%4"
+	);
 };
 Q_DECLARE_METATYPE(QUaLog);
 
+template<typename T>
+inline QString QUaLog::toString(
+	const T& logs, 
+	const QString& separator,
+	const QString& timeFormat,
+	const QString& lineFormat
+)
+{
+	QString strOut;
+	auto iter = logs.begin();
+	while (iter != logs.end())
+	{
+		auto& log = *iter;
+		strOut += QUaLog::toString(log, separator, timeFormat, lineFormat);
+		if (++iter != logs.end())
+		{
+			strOut += "\n";
+		}
+	}
+	return strOut;
+}
+
+template<>
+inline QString QUaLog::toString(
+	const QUaLog& log, 
+	const QString& separator,
+	const QString& timeFormat,
+	const QString& lineFormat
+)
+{
+	QString strTime  = log.timestamp.toLocalTime().toString(timeFormat);
+	QString strLevel = QUaLog::m_metaEnumLevel.valueToKey(static_cast<int>(log.level));
+	QString strCateg = QUaLog::m_metaEnumCategory.valueToKey(static_cast<int>(log.category));
+	return lineFormat
+		.arg(strTime)
+		.arg(strLevel)
+		.arg(strCateg)
+		.arg(QString(log.message))
+		.arg(separator);
+}
 
 union QUaWriteMask
 {
@@ -928,3 +979,4 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaEventHistoryQueryData& 
 
 
 #endif // QUACUSTOMDATATYPES_H
+

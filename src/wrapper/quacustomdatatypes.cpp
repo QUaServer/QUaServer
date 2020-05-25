@@ -2,8 +2,6 @@
 
 #include <QUaTypesConverter>
 
-#include<QMetaEnum>
-
 /* NOTE : for registering new custom types wrapping open62541 types follow steps below:
 - Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
 - Add constructors, equality operators converting the underlying type, string for serializaton
@@ -1264,4 +1262,24 @@ QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromUaByt
 	return QUaEventHistoryQueryData::ContinuationFromByteArray(
 		QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&uaByteArray)
 	);
+}
+
+QMetaEnum QUaLog::m_metaEnumCategory = QMetaEnum::fromType<QUa::LogCategory>();
+QMetaEnum QUaLog::m_metaEnumLevel = QMetaEnum::fromType<QUa::LogLevel>();
+
+QUaLog::QUaLog()
+{
+	// default constructor required by Qt
+	message = QByteArray();
+	timestamp = QDateTime::currentDateTimeUtc();
+}
+
+QUaLog::QUaLog(const QString& strMessage,
+	const QUaLogLevel& logLevel,
+	const QUaLogCategory& logCategory)
+{
+	message = strMessage.toUtf8();
+	level = logLevel;
+	category = logCategory;
+	timestamp = QDateTime::currentDateTimeUtc();
 }

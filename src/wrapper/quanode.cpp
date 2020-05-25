@@ -1951,20 +1951,3 @@ QDebug operator<<(QDebug debug, const QUaReferenceType& refType)
 	debug.nospace() << '{' << refType.strForwardName << ", " << refType.strInverseName << '}';
 	return debug;
 }
-
-QUaLog::QUaLog()
-{
-	// default constructor required by Qt
-	message   = QByteArray();
-	timestamp = QDateTime::currentDateTimeUtc();
-}
-
-QUaLog::QUaLog(const QString        & strMessage,
-	           const QUaLogLevel    & logLevel, 
-	           const QUaLogCategory & logCategory)
-{
-	message   = strMessage.toUtf8();
-	level     = logLevel;
-	category  = logCategory;
-	timestamp = QDateTime::currentDateTimeUtc();
-}
