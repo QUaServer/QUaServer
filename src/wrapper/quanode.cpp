@@ -1813,9 +1813,13 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			Q_UNUSED(st);
 			if (outValueRank != UA_VALUERANK_SCALAR)
 			{
-				Q_ASSERT_X(outValueRank != UA_VALUERANK_ANY, 
-					"QUaNode::getTypeVars", 
-					"Not Supported!");
+				//Q_ASSERT_X(outValueRank == UA_VALUERANK_ANY, 
+				//	"QUaNode::getTypeVars", 
+				//	"Not Supported!");
+				if (outValueRank != UA_VALUERANK_ANY)
+				{
+					qWarning() << "WARNING : unsupported rank" << outValueRank << "for event field" << QUaQualifiedName::reduceName(browsePath);
+				}
 				auto byteType = QString("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
 				qType = static_cast<QMetaType::Type>(QMetaType::type(byteType.data()));
 				Q_ASSERT(qType != QMetaType::UnknownType);
