@@ -6,9 +6,12 @@ CONFIG -= flat
 
 INCLUDEPATH += $$PWD/
 
-LANGUAGE = C++
-CONFIG += precompile_header
-PRECOMPILED_HEADER = $$PWD/pch_open62541.h
+!ua_no_pch {
+    message("Enabled precompile header.")
+    LANGUAGE = C++
+    CONFIG += precompile_header
+    PRECOMPILED_HEADER = $$PWD/pch_open62541.h
+}
 
 SOURCES += \
     $$PWD/quaserver.cpp \
