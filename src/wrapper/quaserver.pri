@@ -11,6 +11,16 @@ INCLUDEPATH += $$PWD/
     LANGUAGE = C++
     CONFIG += precompile_header
     PRECOMPILED_HEADER = $$PWD/pch_open62541.h
+    DEFINES += UA_PCH
+    ua_events || ua_alarms_conditions {
+        DEFINES += UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    }
+    ua_historizing {
+        DEFINES += UA_ENABLE_HISTORIZING
+    }
+    ua_alarms_conditions {
+        DEFINES += UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    }
 }
 
 SOURCES += \

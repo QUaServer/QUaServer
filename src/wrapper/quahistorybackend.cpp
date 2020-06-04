@@ -662,6 +662,11 @@ bool QUaHistoryBackend::writeHistoryData(
 {
 	if (!m_writeHistoryData)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_writeHistoryData(nodeId, dataPoint, logOut);
@@ -674,6 +679,11 @@ bool QUaHistoryBackend::updateHistoryData(
 {
 	if (!m_updateHistoryData)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_updateHistoryData(nodeId, dataPoint, logOut);
@@ -687,6 +697,11 @@ bool QUaHistoryBackend::removeHistoryData(
 {
 	if (!m_removeHistoryData)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_removeHistoryData(nodeId, timeStart, timeEnd, logOut);
@@ -699,6 +714,11 @@ QDateTime QUaHistoryBackend::firstTimestamp(
 {
 	if (!m_firstTimestamp)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_firstTimestamp(nodeId, logOut);
@@ -711,6 +731,11 @@ QDateTime QUaHistoryBackend::lastTimestamp(
 {
 	if (!m_lastTimestamp)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_lastTimestamp(nodeId, logOut);
@@ -724,6 +749,11 @@ bool QUaHistoryBackend::hasTimestamp(
 {
 	if (!m_hasTimestamp)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_hasTimestamp(nodeId, timestamp, logOut);
@@ -738,6 +768,11 @@ QDateTime QUaHistoryBackend::findTimestamp(
 {
 	if (!m_findTimestamp)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_findTimestamp(nodeId, timestamp, match, logOut);
@@ -752,6 +787,11 @@ quint64 QUaHistoryBackend::numDataPointsInRange(
 {
 	if (!m_numDataPointsInRange)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return 0;
 	}
 	return m_numDataPointsInRange(nodeId, timeStart, timeEnd, logOut);
@@ -767,6 +807,11 @@ QUaHistoryBackend::readHistoryData(
 {
 	if (!m_readHistoryData)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QVector<QUaHistoryDataPoint>();
 	}
 	return m_readHistoryData(
@@ -789,6 +834,11 @@ bool QUaHistoryBackend::writeHistoryEventsOfType(
 {
 	if (!m_writeHistoryEventsOfType)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return m_writeHistoryEventsOfType(
@@ -806,6 +856,11 @@ QVector<QUaNodeId> QUaHistoryBackend::eventTypesOfEmitter(
 {
 	if (!m_eventTypesOfEmitter)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QVector<QUaNodeId>();
 	}
 	return m_eventTypesOfEmitter(
@@ -824,6 +879,11 @@ QDateTime QUaHistoryBackend::findTimestampEventOfType(
 {
 	if (!m_findTimestampEventOfType)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QDateTime();
 	}
 	return m_findTimestampEventOfType(
@@ -845,6 +905,11 @@ quint64 QUaHistoryBackend::numEventsOfTypeInRange(
 {
 	if (!m_numEventsOfTypeInRange)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return 0;
 	}
 	return m_numEventsOfTypeInRange(
@@ -868,6 +933,11 @@ QVector<QUaHistoryEventPoint> QUaHistoryBackend::readHistoryEventsOfType(
 {
 	if (!m_readHistoryEventsOfType)
 	{
+		logOut << QUaLog({
+			QObject::tr("Historizing enabled, but historized not set."),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return QVector<QUaHistoryEventPoint>();
 	}
 	return m_readHistoryEventsOfType(

@@ -12,7 +12,9 @@
 #include <QMetaEnum>
 #include <QDebug>
 
+#ifndef UA_PCH
 #include <open62541.h>
+#endif // !UA_PCH
 
 class QUaNode;
 

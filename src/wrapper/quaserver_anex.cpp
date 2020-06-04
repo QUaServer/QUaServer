@@ -472,13 +472,13 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
         // add timestamp
         eventPoint.timestamp = event->time();
         // store
-        bool ok = QUaHistoryBackend::setEvent(
+        /*bool ok = */QUaHistoryBackend::setEvent(
             srv,
             eventTypeNodeId,
             emittersNodeIds,
             eventPoint
         );
-        Q_ASSERT(ok);
+        //NOTE : can fail due to historizer not set, which is acceptable Q_ASSERT(ok);
     }
 #endif // UA_ENABLE_HISTORIZING
 
