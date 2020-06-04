@@ -54,6 +54,11 @@ QUaCondition::~QUaCondition()
 		delete branch;
 	});
 	m_branches.clear();
+	// do not trigger if server is being destroyed
+	if (m_qUaServer->m_beingDestroyed)
+	{
+		return;
+	}
 	// trigger last event so clients can remove from alarm display 
 	this->setRetain(false);
 	auto time = QDateTime::currentDateTimeUtc();

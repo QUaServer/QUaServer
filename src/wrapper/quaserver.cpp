@@ -970,6 +970,7 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	: QObject(parent)
 {
 	// defaults
+	m_beingDestroyed = false;
 	m_port = 4840;
 	m_anonymousLoginAllowed = true;
 	m_byteCertificate = QByteArray();
@@ -1444,6 +1445,7 @@ UA_Logger QUaServer::getLogger()
 
 QUaServer::~QUaServer()
 {
+	m_beingDestroyed = true;
 	// stop if running
 	this->stop();
 	// [FIX] : QObject children destructors were called after this one

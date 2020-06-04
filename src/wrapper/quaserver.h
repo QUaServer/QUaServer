@@ -279,6 +279,7 @@ private:
 	bool                    m_anonymousLoginAllowed;
 	QUaFolderObject       * m_pobjectsFolder;
 	QByteArray              m_logBuffer;
+    bool                    m_beingDestroyed;
 
 #ifdef UA_ENABLE_ENCRYPTION
 	QByteArray m_bytePrivateKey;
