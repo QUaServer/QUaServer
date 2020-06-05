@@ -223,6 +223,8 @@ void QUaCondition::setRetain(const bool& retain)
 	{
 		branch->setRetain(retain);
 	}
+	// emit change
+	emit this->retainChanged();
 	// update source
 	if (!m_sourceNode)
 	{
@@ -282,6 +284,10 @@ bool QUaCondition::enabled() const
 
 void QUaCondition::setEnabled(const bool& enabled)
 {
+	if (enabled == this->enabled())
+	{
+		return;
+	}
 	// set enable id
 	this->setEnabledStateId(enabled);
 	// update current state name
@@ -300,6 +306,15 @@ void QUaCondition::setEnabled(const bool& enabled)
 	this->setReceiveTime(time);
 	this->setMessage(tr("Condition %1.").arg(currStateName));
 	this->trigger();
+	// emit qt signal
+	if (enabled)
+	{
+		emit this->conditionEnabled();
+	}
+	else
+	{
+		emit this->conditionDisabled();
+	}
 }
 
 QDateTime QUaCondition::enabledStateTransitionTime() const
@@ -362,10 +377,16 @@ void QUaCondition::setLastSeverity(const quint16& lastSeverity)
 
 void QUaCondition::setSeverity(const quint16& intSeverity)
 {
+	if (intSeverity == this->severity())
+	{
+		return;
+	}
 	// set last severity before writing new
 	this->setLastSeverity(this->severity());
 	// set new severity
 	QUaBaseEvent::setSeverity(intSeverity);
+	// emit change
+	emit this->severityChanged();
 	// any change to comment, severity and quality will cause event.
 	// trigger event
 	auto time = QDateTime::currentDateTimeUtc();
@@ -418,8 +439,6 @@ void QUaCondition::Enable()
 	}
 	// change EnabledState to Enabled and trigger event
 	this->setEnabled(true);
-	// emit qt signal
-	emit this->conditionEnabled();
 }
 
 void QUaCondition::Disable()
@@ -432,8 +451,6 @@ void QUaCondition::Disable()
 	}
 	// change EnabledState to Disabled and trigger event
 	this->setEnabled(false);
-	// emit qt signal
-	emit this->conditionDisabled();
 }
 
 void QUaCondition::AddComment(QByteArray EventId, QUaLocalizedText Comment)

@@ -45,6 +45,8 @@ protected:
 	bool isExclusiveLimitStateAllowed(const QUaExclusiveLimitState& exclusiveLimitState);
 
 	void processInputNodeValue(const double& value);
+
+	void forceActiveStateRecalculation();
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS

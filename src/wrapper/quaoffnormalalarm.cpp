@@ -38,7 +38,17 @@ QVariant QUaOffNormalAlarm::normalValue() const
 
 void QUaOffNormalAlarm::setNormalValue(const QVariant& normalValue)
 {
+	if (normalValue == this->normalValue())
+	{
+		return;
+	}
 	m_normalValue = normalValue;
+	// trigger active state recalculation
+	if (!m_inputNode)
+	{
+		return;
+	}
+	emit m_inputNode->valueChanged(m_inputNode->value(), false);
 }
 
 QUaNodeId QUaOffNormalAlarm::normalState() const

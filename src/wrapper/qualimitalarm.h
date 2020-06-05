@@ -73,6 +73,19 @@ public:
 	double baseLowLowLimit() const;
 	void setBaseLowLowLimit(const double& baseLowLowLimit);
 
+signals:
+	void highHighLimitRequiredChanged();
+	void highHighLimitChanged();
+
+	void highLimitRequiredChanged();
+	void highLimitChanged();
+
+	void lowLimitRequiredChanged();
+	void lowLimitChanged();
+
+	void lowLowLimitRequiredChanged();
+	void lowLowLimitChanged();
+
 protected:
 	// helpers
 	bool baseHighHighLimitRequired() const;

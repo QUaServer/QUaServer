@@ -36,7 +36,12 @@ void QUaLimitAlarm::setHighHighLimit(const double& highHighLimit)
 	{
 		return;
 	}
+	if (highHighLimit == this->highHighLimit())
+	{
+		return;
+	}
 	this->getHighHighLimit()->setValue(highHighLimit);
+	emit this->highHighLimitChanged();
 }
 
 double QUaLimitAlarm::highLimit() const
@@ -56,7 +61,12 @@ void QUaLimitAlarm::setHighLimit(const double& highLimit)
 	{
 		return;
 	}
+	if (highLimit == this->highLimit())
+	{
+		return;
+	}
 	this->getHighLimit()->setValue(highLimit);
+	emit this->highLimitChanged();
 }
 
 double QUaLimitAlarm::lowLimit() const
@@ -76,7 +86,12 @@ void QUaLimitAlarm::setLowLimit(const double& lowLimit)
 	{
 		return;
 	}
+	if (lowLimit == this->lowLimit())
+	{
+		return;
+	}
 	this->getLowLimit()->setValue(lowLimit);
+	emit this->lowLimitChanged();
 }
 
 double QUaLimitAlarm::lowLowLimit() const
@@ -96,11 +111,13 @@ void QUaLimitAlarm::setLowLowLimit(const double& lowLowLimit)
 	{
 		return;
 	}
+	if (lowLowLimit == this->lowLowLimit())
+	{
+		return;
+	}
 	this->getLowLowLimit()->setValue(lowLowLimit);
+	emit this->lowLowLimitChanged();
 }
-
-
-
 
 bool QUaLimitAlarm::adaptiveAlarmingSupported() const
 {
@@ -195,9 +212,6 @@ void QUaLimitAlarm::setBaseLowLowLimit(const double& baseLowLowLimit)
 	this->getBaseLowLowLimit()->setValue(baseLowLowLimit);
 }
 
-
-
-
 bool QUaLimitAlarm::highHighLimitRequired() const
 {
 	return m_highHighLimitRequired;
@@ -232,6 +246,8 @@ void QUaLimitAlarm::setHighHighLimitRequired(const bool& highHighLimitRequired)
 	{
 		this->setBaseHighHighLimitRequired(m_highHighLimitRequired);
 	}
+	// notify change
+	emit this->highHighLimitRequiredChanged();
 }
 
 bool QUaLimitAlarm::highLimitRequired() const
@@ -268,6 +284,8 @@ void QUaLimitAlarm::setHighLimitRequired(const bool& highLimitRequired)
 	{
 		this->setBaseHighLimitRequired(m_highLimitRequired);
 	}
+	// notify change
+	emit this->highLimitRequiredChanged();
 }
 
 bool QUaLimitAlarm::lowLimitRequired() const
@@ -304,6 +322,8 @@ void QUaLimitAlarm::setLowLimitRequired(const bool& lowLimitRequired)
 	{
 		this->setBaseLowLimitRequired(m_lowLimitRequired);
 	}
+	// notify change
+	emit this->lowLimitRequiredChanged();
 }
 
 bool QUaLimitAlarm::lowLowLimitRequired() const
@@ -340,6 +360,8 @@ void QUaLimitAlarm::setLowLowLimitRequired(const bool& lowLowLimitRequired)
 	{
 		this->setBaseLowLowLimitRequired(m_lowLowLimitRequired);
 	}
+	// notify change
+	emit this->lowLowLimitRequiredChanged();
 }
 
 bool QUaLimitAlarm::baseHighHighLimitRequired() const

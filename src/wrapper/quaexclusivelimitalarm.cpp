@@ -17,6 +17,39 @@ QUaExclusiveLimitAlarm::QUaExclusiveLimitAlarm(
 	);
 	// support optional last transtion
 	machine->lastTransition();
+	// subscribe to limit changes to force alarm recalculation
+	QObject::connect(this, &QUaLimitAlarm::highHighLimitRequiredChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::highHighLimitChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::highLimitRequiredChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::highLimitChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::lowLimitRequiredChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::lowLimitChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::lowLowLimitRequiredChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
+	QObject::connect(this, &QUaLimitAlarm::lowLowLimitChanged, this,
+		[this]() {
+			this->forceActiveStateRecalculation();
+		});
 }
 
 void QUaExclusiveLimitAlarm::setInputNode(QUaBaseVariable* inputNode)
@@ -146,6 +179,15 @@ void QUaExclusiveLimitAlarm::processInputNodeValue(const double& value)
 	this->setExclusiveLimitState(newState);
 }
 
+void QUaExclusiveLimitAlarm::forceActiveStateRecalculation()
+{
+	if (!m_inputNode)
+	{
+		return;
+	}
+	emit m_inputNode->valueChanged(m_inputNode->value(), false);
+}
+
 void QUaExclusiveLimitAlarm::setHighHighLimitRequired(const bool& highHighLimitRequired)
 {
 	// call base class implementation
@@ -182,7 +224,6 @@ void QUaExclusiveLimitAlarm::setLowLowLimitRequired(const bool& lowLowLimitRequi
 	auto machine = this->getLimitState();
 	machine->setLowLowLimitRequired(lowLowLimitRequired);
 }
-
 
 QUaExclusiveLimitStateMachine* QUaExclusiveLimitAlarm::getLimitState()
 {

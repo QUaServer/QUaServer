@@ -15,8 +15,8 @@ class QUaCondition : public QUaBaseEvent
 
 	// NOTE : any property that has special logic should be made a writable metaproperty to deserialize properly
 	Q_PROPERTY(QString sourceNode READ sourceNode WRITE setSourceNode)
-	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain    )
-	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity  )
+	Q_PROPERTY(bool    retain     READ retain     WRITE setRetain     NOTIFY retainChanged)
+	Q_PROPERTY(quint16 severity   READ severity   WRITE setSeverity   NOTIFY severityChanged)
 
 	Q_PROPERTY(quint32 branchQueueSize READ branchQueueSize WRITE setBranchQueueSize)
 
@@ -152,6 +152,10 @@ signals:
 	void conditionDisabled();
 
 	void addedComment(const QString& comment);
+
+	void retainChanged();
+
+	void severityChanged();
 
 	// TODO : branchCreated
 
