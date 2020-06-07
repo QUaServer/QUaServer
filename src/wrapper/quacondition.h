@@ -243,6 +243,84 @@ private:
 
 };
 
+// NOTE : to support branches, a simplified copy of the condition at a certain
+// point in time is stored in the QUaConditionBranch class.
+// This class provides mechanisms for triggering events for the branch and
+// accessing and changing the values stored in the branch.
+// The derived classes of QUaConditionBranch are only meant to provide syntactic
+// sugar around the ::value and ::setValue methods to access relevant fields.
+// For example, the QUaAcknowledgeableConditionBranch derived class should provide
+// helper methods to change the Acked or Confirmed state of the branch: All these
+// helper methods will use the underlying ::value and ::setValue methods anyways
+class QUaConditionBranch
+{
+public:
+    QUaConditionBranch(
+        QUaCondition* parent,
+        const QUaNodeId& branchId = QUaNodeId()
+    );
+    ~QUaConditionBranch();
+
+    void deleteLater();
+
+    // Common API
+
+    QVariant value(const QUaBrowsePath& browsePath) const;
+    void     setValue(const QUaBrowsePath& browsePath, const QVariant& value);
+
+    // Event specific API
+
+    void trigger();
+
+    QByteArray eventId() const;
+    void setEventId(const QByteArray& eventId);
+
+    void setMessage(const QUaLocalizedText& message);
+
+    void setTime(const QDateTime& time);
+
+    // Event specific API
+
+    QUaNodeId branchId() const;
+    void setBranchId(const QUaNodeId& branchId);
+
+    void setRetain(const bool& retain);
+
+    void setComment(
+        const QUaLocalizedText& comment,
+        const QString& currentUser = QString()
+    );
+
+protected:
+    QUaCondition* m_parent;
+    QHash<uint, QVariant> m_values;
+
+    void addChildren(QUaNode* node, const QUaBrowsePath& browsePath = QUaBrowsePath());
+
+    // QUaBaseEvent
+    static QUaBrowsePath EventId;
+    static QUaBrowsePath Message;
+    static QUaBrowsePath Time;
+    static QUaBrowsePath ClientUserId;
+    // QUaCondition
+    static QUaBrowsePath BranchId;
+    static QUaBrowsePath Retain;
+    static QUaBrowsePath EnabledState;
+    static QUaBrowsePath EnabledState_Id;
+    //static QUaBrowsePath EnabledState_FalseState;
+    //static QUaBrowsePath EnabledState_TrueState;
+    static QUaBrowsePath EnabledState_TransitionTime;
+    static QUaBrowsePath Comment;
+    static QUaBrowsePath Comment_SourceTimestamp;
+    // setClientUserId
+
+    // reimplement to define retain and branch creation
+    virtual bool requiresAttention() const;
+
+    friend class QUaCondition;
+    friend class QUaServer_Anex;
+};
+
 template<typename T>
 inline T* QUaCondition::createBranch(const QUaNodeId& branchId/* = ""*/)
 {
@@ -280,84 +358,6 @@ inline T* QUaCondition::branchByEventId(const QByteArray& EventId) const
 {
 	return dynamic_cast<T*>(this->branchByEventId(EventId));
 }
-
-// NOTE : to support branches, a simplified copy of the condition at a certain
-// point in time is stored in the QUaConditionBranch class.
-// This class provides mechanisms for triggering events for the branch and 
-// accessing and changing the values stored in the branch.
-// The derived classes of QUaConditionBranch are only meant to provide syntactic
-// sugar around the ::value and ::setValue methods to access relevant fields.
-// For example, the QUaAcknowledgeableConditionBranch derived class should provide
-// helper methods to change the Acked or Confirmed state of the branch: All these
-// helper methods will use the underlying ::value and ::setValue methods anyways
-class QUaConditionBranch
-{
-public:
-	QUaConditionBranch(
-		QUaCondition* parent, 
-		const QUaNodeId& branchId = QUaNodeId()
-	);
-	~QUaConditionBranch();
-
-	void deleteLater();
-
-	// Common API
-
-	QVariant value(const QUaBrowsePath& browsePath) const;
-	void     setValue(const QUaBrowsePath& browsePath, const QVariant& value);
-
-	// Event specific API
-
-	void trigger();
-
-	QByteArray eventId() const;
-	void setEventId(const QByteArray& eventId);
-
-	void setMessage(const QUaLocalizedText& message);
-
-	void setTime(const QDateTime& time);
-
-	// Event specific API
-
-	QUaNodeId branchId() const;
-	void setBranchId(const QUaNodeId& branchId);
-
-	void setRetain(const bool& retain);
-
-	void setComment(
-		const QUaLocalizedText& comment, 
-		const QString& currentUser = QString()
-	);
-
-protected:
-	QUaCondition* m_parent;
-	QHash<uint, QVariant> m_values;
-
-	void addChildren(QUaNode* node, const QUaBrowsePath& browsePath = QUaBrowsePath());
-
-	// QUaBaseEvent
-	static QUaBrowsePath EventId;
-	static QUaBrowsePath Message;
-	static QUaBrowsePath Time;
-	static QUaBrowsePath ClientUserId;
-	// QUaCondition
-	static QUaBrowsePath BranchId;
-	static QUaBrowsePath Retain;
-	static QUaBrowsePath EnabledState;
-	static QUaBrowsePath EnabledState_Id;
-	//static QUaBrowsePath EnabledState_FalseState;
-	//static QUaBrowsePath EnabledState_TrueState;
-	static QUaBrowsePath EnabledState_TransitionTime;
-	static QUaBrowsePath Comment;
-	static QUaBrowsePath Comment_SourceTimestamp;
-	// setClientUserId
-
-	// reimplement to define retain and branch creation
-	virtual bool requiresAttention() const;
-
-	friend class QUaCondition;
-	friend class QUaServer_Anex;
-};
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 

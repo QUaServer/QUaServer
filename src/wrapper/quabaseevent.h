@@ -7,8 +7,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-#include <QUaProperty>
-
 class QUaBaseEvent : public QUaBaseObject
 {
     Q_OBJECT
@@ -16,6 +14,9 @@ class QUaBaseEvent : public QUaBaseObject
 friend class QUaServer;
 friend class QUaNode;
 friend class QUaBaseObject;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+friend class QUaConditionBranch;
+#endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #ifdef UA_ENABLE_HISTORIZING
 	Q_PROPERTY(bool historizing READ historizing WRITE setHistorizing)
 #endif // UA_ENABLE_HISTORIZING

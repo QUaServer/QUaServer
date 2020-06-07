@@ -207,7 +207,7 @@ private:
 		QQueue<QUaLog>  &
 	)> m_readHistoryEventsOfType;
 
-	static bool QUaHistoryBackend::setEvent(
+    static bool setEvent(
 		QUaServer*                  server,
 		const QUaNodeId&            eventTypeNodeId,
 		const QList<QUaNodeId>&     emittersNodeIds,

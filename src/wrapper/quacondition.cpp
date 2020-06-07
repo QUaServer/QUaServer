@@ -164,10 +164,11 @@ void QUaCondition::setConditionClassName(const QUaLocalizedText& conditionClassN
 {
 	this->getConditionClassName()->setValue(conditionClassName);
 }
+
 // TODO : implement condition classes
 QList<QUaNodeId> QUaCondition::conditionSubClassId() const
 {
-	return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value<QList<QUaNodeId>>();
+    return const_cast<QUaCondition*>(this)->getConditionSubClassId()->value<QList<QUaNodeId>>();
 }
 // TODO : implement condition classes
 void QUaCondition::setConditionSubClassId(const QList<QUaNodeId>& conditionSubClassId)
@@ -728,7 +729,8 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 {
 	QUaNode* node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, srv->m_server);
 	// NOTE : clients can still have in their subscriptions node ids that have been deleted
-	if (!node && !UA_NodeId_equal(&monitoredItem->monitoredNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)))
+    static UA_NodeId server = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
+    if (!node && !UA_NodeId_equal(&monitoredItem->monitoredNodeId, &server))
 	{
 		// TODO : log error message
 		return;
@@ -749,8 +751,8 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 	}
 	// NOTE : need to send RefreshStartEvent and RefreshEndEvent for each monitored item even if no retained conditions
 	UA_StatusCode retval;
-	QString sourceNodeId = node ? node->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
-	QString sourceDisplayName = node ? node->displayName() : tr("Server");
+    QString sourceNodeId = node ? QString(node->nodeId()) : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER));
+    QString sourceDisplayName = node ? QString(node->displayName()) : tr("Server");
 	/* 1. trigger RefreshStartEvent */
 	srv->m_refreshStartEvent->setSourceNode(sourceNodeId);
 	srv->m_refreshStartEvent->setSourceName(sourceDisplayName);

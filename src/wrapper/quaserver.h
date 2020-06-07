@@ -12,7 +12,7 @@
 #include <QUaBaseObject>
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-class QUaBaseEvent;
+#include <QUaBaseEvent>
 class QUaGeneralModelChangeEvent;
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

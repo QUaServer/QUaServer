@@ -1914,8 +1914,10 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		return;
 	}
 	// copy mandatory from parent type, unless base type
-	if (UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)) ||
-		UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)))
+    static UA_NodeId baseObjType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+    static UA_NodeId baseVarType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE);
+    if (UA_NodeId_equal(&typeNodeId, &baseVarType) ||
+        UA_NodeId_equal(&typeNodeId, &baseObjType))
 	{
 		m_hashMandatoryChildren[typeNodeId] = QSet<QUaQualifiedName>();
 		return;

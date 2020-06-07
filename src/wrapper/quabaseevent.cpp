@@ -2,8 +2,6 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-#include <QUaServer>
-
 #include "quaserver_anex.h"
 
 QUaBaseEvent::QUaBaseEvent(

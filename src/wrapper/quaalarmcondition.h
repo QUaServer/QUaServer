@@ -5,6 +5,8 @@
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
+class QUaBaseVariable;
+
 class QUaAlarmCondition : public QUaAcknowledgeableCondition
 {
     Q_OBJECT

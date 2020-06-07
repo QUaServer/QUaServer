@@ -238,7 +238,6 @@ QString QUaDataType::stringByQType(const QMetaType::Type& type)
 
 QMetaEnum QUaStatusCode::m_metaEnum = QMetaEnum::fromType<QUa::Status>();
 
-// init static hash
 QHash<QUaStatus, QString> QUaStatusCode::m_descriptions =
 []() -> QHash<QUaStatus, QString> {
 	QHash<QUaStatus, QString> retHash;
@@ -317,9 +316,9 @@ QUaStatusCode::operator QString() const
 	return QString(code);
 }
 
-bool QUaStatusCode::operator==(const QUaStatus& uaStatus)
+bool QUaStatusCode::operator==(const QUaStatus& uaStatus) const
 {
-	return m_status == uaStatus;
+    return m_status == uaStatus;
 }
 
 void QUaStatusCode::operator=(const QString& strStatus)
@@ -514,7 +513,7 @@ QString QUaQualifiedName::reduceXml(const QUaBrowsePath& browsePath)
 		return browsePath.first().toXmlString();
 	}
 	std::for_each(browsePath.begin(), browsePath.end(),
-	[&strRet](const auto& browseName) {
+    [&strRet](const QUaQualifiedName& browseName) {
 		strRet += "/" + browseName.toXmlString();
 	});
 	return strRet;
@@ -1282,4 +1281,10 @@ QUaLog::QUaLog(const QString& strMessage,
 	level = logLevel;
 	category = logCategory;
 	timestamp = QDateTime::currentDateTimeUtc();
+}
+
+uint QUa::qHash(const QUa::Status &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
 }

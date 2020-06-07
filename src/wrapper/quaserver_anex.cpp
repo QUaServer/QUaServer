@@ -368,7 +368,14 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
             "Events: Could not create the list of references for event "
             "propagation with StatusCode %s", UA_StatusCode_name(retval));
-        goto cleanup;
+        //goto cleanup;
+        for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++)
+        {
+            UA_Array_delete(emitRefTypes[i], emitRefTypesSize[i], &UA_TYPES[UA_TYPES_NODEID]);
+        }
+        UA_Array_delete(emitNodes, emitNodesSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
+        UA_UNLOCK(server->serviceMutex);
+        return retval;
     }
 
     size_t currIndex = 0;
@@ -388,7 +395,14 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
         UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_SERVER,
             "Events: Could not create the list of nodes listening on the "
             "event with StatusCode %s", UA_StatusCode_name(retval));
-        goto cleanup;
+        //goto cleanup;
+        for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++)
+        {
+            UA_Array_delete(emitRefTypes[i], emitRefTypesSize[i], &UA_TYPES[UA_TYPES_NODEID]);
+        }
+        UA_Array_delete(emitNodes, emitNodesSize, &UA_TYPES[UA_TYPES_EXPANDEDNODEID]);
+        UA_UNLOCK(server->serviceMutex);
+        return retval;
     }
 
     /* Add the event to the listening MonitoredItems at each relevant node */
@@ -484,8 +498,8 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
 
     // [MODIFIED] : do not delete node
 
-cleanup:
-    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) 
+//cleanup:
+    for (size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++)
     {
         UA_Array_delete(emitRefTypes[i], emitRefTypesSize[i], &UA_TYPES[UA_TYPES_NODEID]);
     }

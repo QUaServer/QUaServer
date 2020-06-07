@@ -16,7 +16,7 @@
 
 struct QUaInMemorySerializer
 {
-	bool QUaInMemorySerializer::writeInstance(
+    bool writeInstance(
 		const QUaNodeId& nodeId,
 		const QString& typeName,
 		const QMap<QString, QVariant>& attrs,
@@ -39,7 +39,7 @@ struct QUaInMemorySerializer
 		};
 		return true;
 	};
-	bool QUaInMemorySerializer::readInstance(
+    bool readInstance(
 		const QUaNodeId& nodeId,
 		QString& typeName,
 		QMap<QString, QVariant>& attrs,
@@ -63,11 +63,11 @@ struct QUaInMemorySerializer
 		forwardRefs = data.forwardRefs;
 		return true;
 	};
-	void QUaInMemorySerializer::clear()
+    void clear()
 	{
 		m_hashNodeTreeData.clear();
 	};
-	void QUaInMemorySerializer::qtDebug(QUaServer * server, const QString &header)
+    void qtDebug(QUaServer * server, const QString &header)
 	{
 		qDebug() << header;
 		auto listNodeIds = m_hashNodeTreeData.keys();
@@ -254,8 +254,8 @@ QUaNode::~QUaNode()
 	if (parent && parent->inAddressSpace())
 	{
 		m_qUaServer->addChange({
-			parent ? parent->nodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
-			parent ? parent->typeDefinitionNodeId() : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
+            parent ? QString(parent->nodeId()) : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER)),
+            parent ? QString(parent->typeDefinitionNodeId()) : QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERTYPE)),
 			QUaChangeVerb::ReferenceDeleted // UaExpert does not recognize QUaChangeVerb::NodeAdded
 		});	
 	}
@@ -896,8 +896,10 @@ UA_NodeId QUaNode::getOptionalChildNodeId(
 	UA_NodeId_copy(&typeNodeIdIn, &typeNodeId);
 	QUaQualifiedName browseName(browseNameIn);
 	// look for optional child starting from this type of to base object type
-	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
-		!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
+    static UA_NodeId baseObjType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+    static UA_NodeId baseVarType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE);
+    while (!UA_NodeId_equal(&typeNodeId, &baseObjType) &&
+        !UA_NodeId_equal(&typeNodeId, &baseVarType))
 	{
 		auto childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, server);
 		for (auto childNodeId : childrenNodeIds)
@@ -1314,7 +1316,8 @@ bool QUaNode::addOptionalMethod(const QUaQualifiedName& methodName)
 	UA_NodeId typeNodeId = QUaNode::typeDefinitionNodeId(m_nodeId, m_qUaServer->m_server);
 	UA_NodeId methodNodeId = UA_NODEID_NULL;
 	// look for optional method starting from this type of to base object type
-	while (!UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)))
+    static UA_NodeId baseObjType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+    while (!UA_NodeId_equal(&typeNodeId, &baseObjType))
 		{
 		// get all ua methods of TYPE
 		auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
@@ -1701,13 +1704,15 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
 			// ignore modelling rules
+            static UA_NodeId ruleMandatory = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY);
+            static UA_NodeId ruleOptional  = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL);
             if (UA_NodeId_equal(
 					&rDesc.nodeId.nodeId, 
-					&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY)
+                    &ruleMandatory
 				) ||
 				UA_NodeId_equal(
 					&rDesc.nodeId.nodeId,
-					&UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL)
+                    &ruleOptional
 				))
 			{
 				continue;
@@ -1770,8 +1775,10 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 	QUaEventFieldMetaData retNames;
 	UA_NodeId typeUaNodeId = typeNodeId;
 	// look for children starting from this type of to base object type
-	while (!UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE)) &&
-		   !UA_NodeId_equal(&typeUaNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE)))
+    static UA_NodeId baseObjType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+    static UA_NodeId baseVarType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE);
+    while (!UA_NodeId_equal(&typeUaNodeId, &baseObjType) &&
+           !UA_NodeId_equal(&typeUaNodeId, &baseVarType))
 	{
 		// variable children
 		auto varsNodeIds = QUaNode::getChildrenNodeIds(
@@ -1919,14 +1926,16 @@ UA_NodeId QUaNode::getModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 
 bool QUaNode::hasMandatoryModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
+    static UA_NodeId ruleMandatory = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY);
 	UA_NodeId modellingRule = QUaNode::getModellingRule(nodeId, server);
-	return UA_NodeId_equal(&modellingRule, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_MANDATORY));
+    return UA_NodeId_equal(&modellingRule, &ruleMandatory);
 }
 
 bool QUaNode::hasOptionalModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
+    static UA_NodeId ruleOptional  = UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL);
 	UA_NodeId modellingRule = QUaNode::getModellingRule(nodeId, server);
-	return UA_NodeId_equal(&modellingRule, &UA_NODEID_NUMERIC(0, UA_NS0ID_MODELLINGRULE_OPTIONAL));
+    return UA_NodeId_equal(&modellingRule, &ruleOptional);
 }
 
 int QUaNode::getPropsOffsetHelper(const QMetaObject & metaObject)
