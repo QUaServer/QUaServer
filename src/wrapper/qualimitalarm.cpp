@@ -241,6 +241,8 @@ void QUaLimitAlarm::setHighHighLimitRequired(const bool& highHighLimitRequired)
 	highHighLimit = this->browseChild<QUaProperty>("HighHighLimit", true);
 	Q_CHECK_PTR(highHighLimit);
 	Q_UNUSED(highHighLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	highHighLimit->setValue(+std::numeric_limits<double>::infinity());
 	// allow base limits of currently (un)supported limits
 	if (m_adaptiveAlarmingSupported)
 	{
@@ -279,6 +281,8 @@ void QUaLimitAlarm::setHighLimitRequired(const bool& highLimitRequired)
 	highLimit = this->browseChild<QUaProperty>("HighLimit", true);
 	Q_CHECK_PTR(highLimit);
 	Q_UNUSED(highLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	highLimit->setValue(+std::numeric_limits<double>::infinity());
 	// allow/disallow base limits of currently (un)supported limits
 	if (m_adaptiveAlarmingSupported)
 	{
@@ -317,6 +321,8 @@ void QUaLimitAlarm::setLowLimitRequired(const bool& lowLimitRequired)
 	lowLimit = this->browseChild<QUaProperty>("LowLimit", true);
 	Q_CHECK_PTR(lowLimit);
 	Q_UNUSED(lowLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	lowLimit->setValue(-std::numeric_limits<double>::infinity());
 	// allow/disallow base limits of currently (un)supported limits
 	if (m_adaptiveAlarmingSupported)
 	{
@@ -355,6 +361,8 @@ void QUaLimitAlarm::setLowLowLimitRequired(const bool& lowLowLimitRequired)
 	lowLowLimit = this->browseChild<QUaProperty>("LowLowLimit", true);
 	Q_CHECK_PTR(lowLowLimit);
 	Q_UNUSED(lowLowLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	lowLowLimit->setValue(-std::numeric_limits<double>::infinity());
 	// allow/disallow base limits of currently (un)supported limits
 	if (m_adaptiveAlarmingSupported)
 	{
@@ -419,6 +427,8 @@ void QUaLimitAlarm::setBaseHighHighLimitRequired(const bool& baseHighHighLimitRe
 	baseHighHighLimit = this->browseChild<QUaProperty>("BaseHighHighLimit", true);
 	Q_CHECK_PTR(baseHighHighLimit);
 	Q_UNUSED(baseHighHighLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	baseHighHighLimit->setValue(+std::numeric_limits<double>::infinity());
 }
 
 bool QUaLimitAlarm::baseHighLimitRequired() const
@@ -450,6 +460,8 @@ void QUaLimitAlarm::setBaseHighLimitRequired(const bool& baseHighLimitRequired)
 	baseHighLimit = this->browseChild<QUaProperty>("BaseHighLimit", true);
 	Q_CHECK_PTR(baseHighLimit);
 	Q_UNUSED(baseHighLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	baseHighLimit->setValue(+std::numeric_limits<double>::infinity());
 }
 
 bool QUaLimitAlarm::baseLowLimitRequired() const
@@ -481,6 +493,8 @@ void QUaLimitAlarm::setBaseLowLimitRequired(const bool& baseLowLimitRequired)
 	baseLowLimit = this->browseChild<QUaProperty>("BaseLowLimit", true);
 	Q_CHECK_PTR(baseLowLimit);
 	Q_UNUSED(baseLowLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	baseLowLimit->setValue(-std::numeric_limits<double>::infinity());
 }
 
 bool QUaLimitAlarm::baseLowLowLimitRequired() const
@@ -512,6 +526,8 @@ void QUaLimitAlarm::setBaseLowLowLimitRequired(const bool& baseLowLowLimitRequir
 	baseLowLowLimit = this->browseChild<QUaProperty>("BaseLowLowLimit", true);
 	Q_CHECK_PTR(baseLowLowLimit);
 	Q_UNUSED(baseLowLowLimit);
+	// NOTE : set default value, no event to avoid recomputing active state
+	baseLowLowLimit->setValue(-std::numeric_limits<double>::infinity());
 }
 
 QUaProperty* QUaLimitAlarm::getHighHighLimit()
@@ -551,7 +567,7 @@ QUaProperty* QUaLimitAlarm::getBaseLowLimit()
 
 QUaProperty* QUaLimitAlarm::getBaseLowLowLimit()
 {
-	return this->browseChild<QUaProperty>("BaseLowLowLimit", true);
+	return this->browseChild<QUaProperty>("BaseLowLowLimit");
 }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
