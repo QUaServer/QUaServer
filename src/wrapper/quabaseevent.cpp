@@ -262,6 +262,11 @@ void QUaBaseEvent::triggerInternal()
         nullptr
     );
     Q_ASSERT(st == UA_STATUSCODE_GOOD);
+    if (st != UA_STATUSCODE_GOOD)
+    {
+        return;
+    }
+    emit this->triggered();
 }
 
 bool QUaBaseEvent::shouldTrigger() const

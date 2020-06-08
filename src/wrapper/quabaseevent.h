@@ -75,6 +75,9 @@ public:
 	void setHistorizing(const bool& historizing);
 #endif // UA_ENABLE_HISTORIZING
 
+signals:
+	void triggered();
+
 protected:
 #ifdef UA_ENABLE_HISTORIZING
 	bool m_historizing;
