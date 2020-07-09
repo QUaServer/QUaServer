@@ -91,18 +91,20 @@
 	    # Find platform
 		contains(QT_ARCH, i386) {
 			message("Platform Detected : 32 bits")
-			PLATFORM = "Win32"	
+			PLATFORM = "Win32"
+			MS_PLATFORM = "/p:Platform=Win32"
 		}
 		contains(QT_ARCH, x86_64) {
 			message("Platform Detected : 64 bits")
-			PLATFORM = "x64"			
+			PLATFORM = "x64"	
+			MS_PLATFORM = ""		
 		}
 		isEmpty(PLATFORM) {
 			error("Non compatible platform $${QT_ARCH} to generate open62541 amalgamation.")
 		}
 		# Generate CMake project
 		PROJECT_CREATED = FALSE
-		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM}"): PROJECT_CREATED = TRUE
+		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
 		equals(BUILD_CREATED, TRUE) {
 			message("CMake generate open62541 successful.")
 		}
@@ -111,7 +113,7 @@
 		}
 		# Build Visual Studio project
 		PROJECT_BUILT = FALSE
-		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541.sln"): PROJECT_BUILT = TRUE
+		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541.sln $${MS_PLATFORM}"): PROJECT_BUILT = TRUE
 		equals(BUILD_CREATED, TRUE) {
 			message("Open62541 build successful.")
 		}
