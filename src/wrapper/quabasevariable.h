@@ -137,7 +137,7 @@ public:
 	bool              historizing() const;
 #ifdef UA_ENABLE_HISTORIZING
 	void              setHistorizing(const bool & historizing);
-
+	// Limit history data response blocks (paging). Hardcoded minimum is 50 samples.
 	quint64 maxHistoryDataResponseSize() const;
 	void    setMaxHistoryDataResponseSize(const quint64& maxHistoryDataResponseSize);
 #endif // UA_ENABLE_HISTORIZING

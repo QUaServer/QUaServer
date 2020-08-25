@@ -473,7 +473,7 @@ QUaServer_Anex::UA_Server_triggerEvent_Modified(
                 auto var = event->browsePath<QUaBaseVariable>(name);
                 value = var ? var->value() : QVariant();
             }
-            // NOTE : do not if (!value.isValid()), else banchId column will not be created
+            // NOTE : do not if (!value.isValid()), else branchId column will not be created
             eventPoint.fields[name] = value;
         }
         const static auto eventNodeIdPath      = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");

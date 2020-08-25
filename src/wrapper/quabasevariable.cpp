@@ -3,7 +3,8 @@
 #include "quaserver_anex.h"
 #include <QUaBaseDataVariable>
 
-// [STATIC]
+// [STATIC] : always called by open62541 library after a write, used by QUaServer 
+// to emit signals and to make differentiation between network or programmatic value change
 void QUaBaseVariable::onWrite(UA_Server             *server, 
 		                      const UA_NodeId       *sessionId,
 		                      void                  *sessionContext, 
@@ -80,7 +81,9 @@ void QUaBaseVariable::onWrite(UA_Server             *server,
 	var->m_bInternalWrite = false;
 }
 
-// [STATIC]
+// [STATIC] : Optionally set be the user (m_readCallback). Called before a value is requested by open62541.
+// Use case is when the value is computed base don other values and it makes sense to only
+// compute it when requested
 void QUaBaseVariable::onRead(
 	UA_Server             *server, 
 	const UA_NodeId       *sessionId,
@@ -880,7 +883,6 @@ void QUaBaseVariable::setHistorizing(const bool& historizing)
 	// setup historizing 
 	UA_HistorizingNodeIdSettings setting;
 	setting.historizingBackend         = QUaHistoryBackend::m_historUaBackend;
-	// TODO : make magic number for maxHistoryDataResponseSize configurable? Maybe as global on the server?
 	setting.maxHistoryDataResponseSize = m_maxHistoryDataResponseSize; // max size client can ask for
 	setting.historizingUpdateStrategy  = UA_HISTORIZINGUPDATESTRATEGY_VALUESET; // when value updated or polling
 	st = gathering.registerNodeId(m_qUaServer->m_server, gathering.context, &m_nodeId, setting);
@@ -889,7 +891,7 @@ void QUaBaseVariable::setHistorizing(const bool& historizing)
 }
 quint64 QUaBaseVariable::maxHistoryDataResponseSize() const
 {
-	return quint64();
+	return m_maxHistoryDataResponseSize;
 }
 void QUaBaseVariable::setMaxHistoryDataResponseSize(const quint64& maxHistoryDataResponseSize)
 {
