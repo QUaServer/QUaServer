@@ -10,6 +10,7 @@ QUaAlarmCondition::QUaAlarmCondition(
 	QUaServer *server
 ) : QUaAcknowledgeableCondition(server)
 {
+	m_inputNode = nullptr;
 	// resue rest of defaults 
 	this->resetInternals();
 }
