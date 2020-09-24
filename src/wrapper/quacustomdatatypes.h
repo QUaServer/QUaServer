@@ -11,7 +11,7 @@
 #include <QDataStream>
 #include <QMetaEnum>
 #include <QDebug>
-#ifndef UA_PCH
+#if !defined(UA_PCH) || defined(Q_OS_LINUX)
 #include <open62541.h>
 #endif // !UA_PCH
 
@@ -88,6 +88,7 @@ enum class LogLevel {
     Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
 };
 Q_ENUM_NS(LogLevel)
+uint qHash(const LogLevel& key, uint seed = 0);
 
 enum class LogCategory {
     Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
@@ -102,6 +103,7 @@ enum class LogCategory {
     Application
 };
 Q_ENUM_NS(LogCategory)
+uint qHash(const LogCategory& key, uint seed = 0);
 
 enum class ExclusiveLimitState {
     None     = 0,
@@ -112,6 +114,7 @@ enum class ExclusiveLimitState {
     LowLow   = 4
 };
 Q_ENUM_NS(ExclusiveLimitState)
+uint qHash(const ExclusiveLimitState& key, uint seed = 0);
 
 enum class ExclusiveLimitTransition {
     None           = 0,
@@ -122,6 +125,7 @@ enum class ExclusiveLimitTransition {
     LowToLowLow    = 4
 };
 Q_ENUM_NS(ExclusiveLimitTransition)
+uint qHash(const ExclusiveLimitTransition& key, uint seed = 0);
 
 enum class ChangeVerb
 {
@@ -132,28 +136,14 @@ enum class ChangeVerb
     DataTypeChanged  = 16
 };
 Q_ENUM_NS(ChangeVerb)
+uint qHash(const ChangeVerb& key, uint seed = 0);
 }
-typedef QUa::LogLevel QUaLogLevel;
-inline uint qHash(const QUaLogLevel& key, uint seed = 0)
-{
-    return qHash(static_cast<int>(key), seed);
-}
+
+typedef QUa::LogLevel    QUaLogLevel;
 typedef QUa::LogCategory QUaLogCategory;
-inline uint qHash(const QUaLogCategory& key, uint seed = 0)
-{
-    return qHash(static_cast<int>(key), seed);
-}
-typedef QUa::Status QUaStatus;
-// NOTE : gcc does not like this, need to be inside namespace
-//inline uint qHash(const QUaStatus& key, uint seed = 0)
-//{
-//    return qHash(static_cast<int>(key), seed);
-//}
-typedef QUa::ChangeVerb QUaChangeVerb;
-inline uint qHash(const QUaChangeVerb& key, uint seed = 0)
-{
-    return qHash(static_cast<int>(key), seed);
-}
+typedef QUa::Status      QUaStatus;
+typedef QUa::ChangeVerb  QUaChangeVerb;
+
 
 struct QUaLog
 {

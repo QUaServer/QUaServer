@@ -1283,7 +1283,37 @@ QUaLog::QUaLog(const QString& strMessage,
 	timestamp = QDateTime::currentDateTimeUtc();
 }
 
-uint QUa::qHash(const QUa::Status &key, uint seed)
+uint QUa::qHash(const Status &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
+}
+
+uint QUa::qHash(const LogLevel &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
+}
+
+uint QUa::qHash(const LogCategory &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
+}
+
+uint QUa::qHash(const ExclusiveLimitState &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
+}
+
+uint QUa::qHash(const ExclusiveLimitTransition &key, uint seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<uint>(key);
+}
+
+uint QUa::qHash(const ChangeVerb &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
