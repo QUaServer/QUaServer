@@ -8,6 +8,20 @@
 		UA_NAMESPACE = "-DUA_NAMESPACE_ZERO=FULL"
 		message("Enabled ua_namespace_full.")
 	}
+	ua_encryption {
+		# build encryption mbedtls dependency
+		include($$PWD/open62541encryption.pri)
+		# configure open62541 to use mbedtls
+		MBEDTLS_PATH = $$PWD/../../depends/mbedtls.git
+		MBEDTLS_INCLUDE_DIRS = "-DMBEDTLS_INCLUDE_DIRS=$${MBEDTLS_PATH}/include"
+		CONFIG(debug, debug|release) {
+			MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Debug"
+		} else {
+			MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Release"
+		}	
+		UA_ENCRYPTION = "-DUA_ENABLE_ENCRYPTION_MBEDTLS=ON $${MBEDTLS_INCLUDE_DIRS} $${MBEDTLS_FOLDER_LIBRARY}"
+		message("Enabled ua_encryption (mbedtls).")
+	}
 	ua_events {
 		UA_NAMESPACE = "-DUA_NAMESPACE_ZERO=FULL"
 		UA_EVENTS    = "-DUA_ENABLE_SUBSCRIPTIONS_EVENTS=ON"
@@ -104,7 +118,7 @@
 		}
 		# Generate CMake project
 		PROJECT_CREATED = FALSE
-		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
+		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
 		equals(BUILD_CREATED, TRUE) {
 			message("CMake generate open62541 successful.")
 		}
@@ -183,7 +197,7 @@
 		}
 		# Generate CMake project
 		PROJECT_CREATED = FALSE
-		system("cmake $${OPEN62541_PATH} -B$${OPEN62541_BUILD_PATH} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING}"): PROJECT_CREATED = TRUE
+		system("cmake $${OPEN62541_PATH} -B$${OPEN62541_BUILD_PATH} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING}"): PROJECT_CREATED = TRUE
 		equals(BUILD_CREATED, TRUE) {
 			message("CMake generate open62541 successful.")
 		}

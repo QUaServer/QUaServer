@@ -1138,14 +1138,18 @@ void QUaServer::resetConfig()
 			nullptr,
 			0
 		);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
 	}
 	else
 	{
 		// create config with port and certificate only (no encryption)
 		auto st = UA_ServerConfig_setMinimal(config, m_port, ptrCert);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
 	}
 #endif
-	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	
 	// setup logger
 	config->logger = this->getLogger();
 
@@ -1182,7 +1186,7 @@ void QUaServer::resetConfig()
 	// NOTE : use about updating config->applicationDescription.
 	//        In UA_ServerConfig_new_customBuffer we have
 	//        conf->endpointsSize = 1;
-	st = UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
+	auto st = UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// setup server limits
 
@@ -1585,13 +1589,13 @@ void QUaServer::setBuildNumber(const QString& strBuildNumber)
 	emit this->buildNumberChanged(strBuildNumber);
 }
 
-void QUaServer::start()
+bool QUaServer::start()
 {
 	// NOTE : we must define port and other server params upon instantiation, 
 	//        because rest of API assumes m_server is valid
 	if (m_running)
 	{
-		return;
+		return true;
 	}
 	// reset config before starting
 	this->resetConfig();
@@ -1599,6 +1603,10 @@ void QUaServer::start()
 	auto st = UA_Server_run_startup(m_server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	if (st != UA_STATUSCODE_GOOD)
+	{
+		return false;
+	}
 	m_running = true;
 	QObject::connect(&m_iterWaitTimer, &QTimer::timeout, this,
 	[this]() {
@@ -1615,6 +1623,7 @@ void QUaServer::start()
 	m_iterWaitTimer.start(0);
 	// emit event
 	emit this->isRunningChanged(m_running);
+	return true;
 }
 
 void QUaServer::stop()
@@ -2584,15 +2593,6 @@ void QUaServer::registerEnum(const QString& strEnumName, const QUaEnumMap& enumM
 		NULL,
 		NULL);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// add new enum strings (enum options)
-	UA_VariableAttributes pattr = UA_VariableAttributes_default;
-	pattr.description = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
-	pattr.displayName = UA_LOCALIZEDTEXT((char*)(""), (char*)("EnumStrings"));
-	pattr.dataType = UA_TYPES[UA_TYPES_LOCALIZEDTEXT].typeId;
-	UA_UInt32 arrayDimensions[1] = { 0 };
-	pattr.valueRank = 1;
-	pattr.arrayDimensionsSize = 1;
-	pattr.arrayDimensions = arrayDimensions;
 	// create vector of enum values
 	QVector<QOpcUaEnumValue> vectEnumValues;
 	QMapIterator<QUaEnumKey, QUaEnumEntry> i(enumMap);

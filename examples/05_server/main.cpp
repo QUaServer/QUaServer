@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
 	QUaServer server;
 
 	// Logging
-
 	QObject::connect(&server, &QUaServer::logMessage,
     [](const QUaLog &log) {
         qDebug() << "[" << log.level << "] :" << log.message;

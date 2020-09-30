@@ -20,19 +20,22 @@ int main(int argc, char *argv[])
 	privServer.setFileName("server.key.der");
 	Q_ASSERT(privServer.exists());
 	privServer.open(QIODevice::ReadOnly);
-
 	// Instantiate server by passing certificate and key
 	QUaServer server;
 	server.setCertificate(certServer.readAll());
 	server.setPrivateKey (privServer.readAll());
-
 	privServer.close();
 #else
 	QUaServer server;
 	server.setCertificate(certServer.readAll());
 #endif
-
 	certServer.close();
+
+	// Logging
+	QObject::connect(&server, &QUaServer::logMessage,
+	[](const QUaLog& log) {
+		qDebug() << "[" << log.level << "] :" << log.message;
+	});
 	
 	/*
 	Now that communications are encrypted, it is safe to use simple
@@ -42,6 +45,9 @@ int main(int argc, char *argv[])
 	server.setAnonymousLoginAllowed(false);
 	server.addUser("juan", "pass123");
 	server.addUser("john", "qwerty");
+	// IMPORTANT : the ApplicationUri must match the one used to create
+	// the certificate, else the server will fail to start
+	server.setApplicationUri("urn:unconfigured:application");
 
 	server.start();
 

@@ -106,7 +106,7 @@ public:
 
 	// Server LifeCycle API
 
-	void start();
+	bool start();
 	void stop();
 	bool isRunning() const;
 	void setIsRunning(const bool &running); // same as start/stop, just to complete Qt property
@@ -602,8 +602,9 @@ template<typename T>
 inline void QUaServer::registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract/* = false*/)
 {
     auto& metaObject = T::staticMetaObject;
-    m_mapTypes.insert(QString(metaObject.className()), typeNodeId);
-    m_hashMetaObjects.insert(QString(metaObject.className()), metaObject);
+    QString strClassName = QString(metaObject.className());
+    m_mapTypes.insert(strClassName, typeNodeId);
+    m_hashMetaObjects.insert(strClassName, metaObject);
     // register for default mandatory children and so on
     this->registerTypeDefaults(typeNodeId, metaObject);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS

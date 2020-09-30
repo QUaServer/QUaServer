@@ -120,6 +120,22 @@ struct name {                                   \
         ((tvar) = TAILQ_PREV(var, headname, field), 1);		\
         (var) = (tvar))
 
+/*
+ * Singly-linked List definitions.
+ */
+#define SLIST_HEAD(name, type)						\
+struct name {								\
+    struct type *slh_first;	/* first element */			\
+}
+
+#define	SLIST_HEAD_INITIALIZER(head)					\
+    { NULL }
+
+#define SLIST_ENTRY(type)						\
+struct {								\
+    struct type *sle_next;	/* next element */			\
+}
+
 typedef enum {
     UA_SERVERLIFECYCLE_FRESH,
     UA_SERVERLIFECYLE_RUNNING
@@ -128,6 +144,7 @@ typedef enum {
 struct ContinuationPoint;
 
 typedef struct UA_SessionHeader {
+    SLIST_ENTRY(UA_SessionHeader) next;
     UA_NodeId authenticationToken;
     UA_SecureChannel* channel; /* The pointer back to the SecureChannel in the session. */
 } UA_SessionHeader;
@@ -137,23 +154,24 @@ typedef struct {
     UA_ApplicationDescription clientDescription;
     UA_String         sessionName;
     UA_Boolean        activated;
-    void* sessionHandle; // pointer assigned in userland-callback
+    void* sessionHandle; /* pointer assigned in userland-callback */
     UA_NodeId         sessionId;
     UA_UInt32         maxRequestMessageSize;
     UA_UInt32         maxResponseMessageSize;
-    UA_Double         timeout; // [ms]
+    UA_Double         timeout; /* in ms */
     UA_DateTime       validTill;
     UA_ByteString     serverNonce;
-    UA_UInt16 availableContinuationPoints;
+    UA_UInt16         availableContinuationPoints;
     ContinuationPoint* continuationPoints;
 #ifdef UA_ENABLE_SUBSCRIPTIONS
-    UA_UInt32 lastSubscriptionId;
-    UA_UInt32 lastSeenSubscriptionId;
-    LIST_HEAD(UA_ListOfUASubscriptions, UA_Subscription) serverSubscriptions;
-    SIMPLEQ_HEAD(UA_ListOfQueuedPublishResponses, UA_PublishResponseEntry) responseQueue;
-    UA_UInt32        numSubscriptions;
-    UA_UInt32        numPublishReq;
-    size_t           totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
+    TAILQ_HEAD(, UA_Subscription) subscriptions; /* Late subscriptions that do eventually
+                                                  * publish are moved to the tail. So that
+                                                  * other late subscriptions are not
+                                                  * starved. */
+    SIMPLEQ_HEAD(, UA_PublishResponseEntry) responseQueue;
+    UA_UInt32         numSubscriptions;
+    UA_UInt32         numPublishReq;
+    size_t            totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
 #endif
 } UA_Session;
 
@@ -186,9 +204,10 @@ typedef struct UA_TimerIdZip UA_TimerIdZip;
 
 /* Only for a single thread. Protect by a mutex if required. */
 typedef struct {
-    UA_TimerZip root; /* The root of the time-sorted zip tree */
+    UA_TimerZip root;     /* The root of the time-sorted zip tree */
     UA_TimerIdZip idRoot; /* The root of the id-sorted zip tree */
-    UA_UInt64 idCounter;
+    UA_UInt64 idCounter;  /* Generate unique identifiers. Identifiers are always
+                           * above zero. */
 } UA_Timer;
 
 struct UA_WorkQueue {
@@ -215,6 +234,10 @@ struct UA_WorkQueue {
                                             * tried to dispatch callbacks? */
 #endif
 };
+
+/* Callback for RegisterServer. Data is passed from the register call */
+typedef void (*UA_Server_registerServerCallback)(const UA_RegisteredServer* registeredServer,
+    void* data);
 
 typedef struct {
     LIST_HEAD(, periodicServerRegisterCallback_entry) periodicServerRegisterCallbacks;
@@ -255,10 +278,80 @@ TAILQ_HEAD(channel_list, channel_entry);
 
 typedef TAILQ_HEAD(UA_MessageQueue, UA_Message) UA_MessageQueue;
 
+/**
+ * MessageType
+ * ^^^^^^^^^^^
+ * Message Type and whether the message contains an intermediate chunk */
+typedef enum {
+    UA_MESSAGETYPE_ACK = 0x4B4341,
+    UA_MESSAGETYPE_HEL = 0x4C4548,
+    UA_MESSAGETYPE_MSG = 0x47534D,
+    UA_MESSAGETYPE_OPN = 0x4E504F,
+    UA_MESSAGETYPE_CLO = 0x4F4C43,
+    UA_MESSAGETYPE_ERR = 0x525245,
+    UA_MESSAGETYPE_INVALID = 0x0,
+    __UA_MESSAGETYPE_FORCE32BIT = 0x7fffffff
+} UA_MessageType;
+UA_STATIC_ASSERT(sizeof(UA_MessageType) == sizeof(UA_Int32), enum_must_be_32bit);
+
+/**
+ * ChunkType
+ * ^^^^^^^^^
+ * Type of the chunk */
+typedef enum {
+    UA_CHUNKTYPE_FINAL = 0x46000000,
+    UA_CHUNKTYPE_INTERMEDIATE = 0x43000000,
+    UA_CHUNKTYPE_ABORT = 0x41000000,
+    __UA_CHUNKTYPE_FORCE32BIT = 0x7fffffff
+} UA_ChunkType;
+UA_STATIC_ASSERT(sizeof(UA_ChunkType) == sizeof(UA_Int32), enum_must_be_32bit);
+
+/* For chunked requests */
+typedef struct UA_Chunk {
+    SIMPLEQ_ENTRY(UA_Chunk) pointers;
+    UA_ByteString bytes;
+    UA_MessageType messageType;
+    UA_ChunkType chunkType;
+    UA_UInt32 requestId;
+    UA_Boolean copied; /* Do the bytes point to a buffer from the network or was
+                        * memory allocated for the chunk separately */
+} UA_Chunk;
+
+/**
+ * AsymmetricAlgorithmSecurityHeader
+ * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * Asymmetric Security Header */
+typedef struct {
+    UA_ByteString securityPolicyUri;
+    UA_ByteString senderCertificate;
+    UA_ByteString receiverCertificateThumbprint;
+} UA_AsymmetricAlgorithmSecurityHeader;
+
+typedef SIMPLEQ_HEAD(UA_ChunkQueue, UA_Chunk) UA_ChunkQueue;
+
+typedef enum {
+    UA_SECURECHANNELRENEWSTATE_NORMAL,
+
+    /* Client has sent an OPN, but not received a response so far. */
+    UA_SECURECHANNELRENEWSTATE_SENT,
+
+    /* The server waits for the first request with the new token for the rollover.
+     * The new token is stored in the altSecurityToken. The configured local and
+     * remote symmetric encryption keys are the old ones. */
+     UA_SECURECHANNELRENEWSTATE_NEWTOKEN_SERVER,
+
+     /* The client already uses the new token. But he waits for the server to respond
+      * with the new token to complete the rollover. The old token is stored in
+      * altSecurityToken. The local symmetric encryption key is new. The remote
+      * encryption key is the old one. */
+      UA_SECURECHANNELRENEWSTATE_NEWTOKEN_CLIENT
+} UA_SecureChannelRenewState;
+
 struct UA_SecureChannel {
-    UA_SecureChannelState   state;
-    UA_MessageSecurityMode  securityMode;
-    UA_ConnectionConfig     config;
+    UA_SecureChannelState state;
+    UA_SecureChannelRenewState renewState;
+    UA_MessageSecurityMode securityMode;
+    UA_ConnectionConfig config;
 
     /* Rules for revolving the token with a renew OPN request: The client is
      * allowed to accept messages with the old token until the OPN response has
@@ -267,12 +360,11 @@ struct UA_SecureChannel {
      *
      * We recognize whether nextSecurityToken contains a valid next token if the
      * ChannelId is not 0. */
-    UA_ChannelSecurityToken securityToken;     /* Also contains the channelId */
-    UA_ChannelSecurityToken nextSecurityToken; /* Only used by the server. The next token
-                                                * is put here when sending the OPN
-                                                * response. */
+    UA_ChannelSecurityToken securityToken;    /* Also contains the channelId */
+    UA_ChannelSecurityToken altSecurityToken; /* Alternative token for the rollover.
+                                               * See the renewState. */
 
-                                                /* The endpoint and context of the channel */
+                                               /* The endpoint and context of the channel */
     const UA_SecurityPolicy* securityPolicy;
     void* channelContext; /* For interaction with the security policy */
     UA_Connection* connection;
@@ -281,25 +373,37 @@ struct UA_SecureChannel {
     UA_ByteString remoteCertificate;
     UA_Byte remoteCertificateThumbprint[20]; /* The thumbprint of the remote certificate */
 
-    /* Symmetric encryption info */
+    /* Symmetric encryption nonces. These are used to generate the key material
+     * and must not be reused once the keys are in place.
+     *
+     * Nonces are also used during the CreateSession / ActivateSession
+     * handshake. These are not handled here, as the Session handling can
+     * overlap with a RenewSecureChannel. */
     UA_ByteString remoteNonce;
     UA_ByteString localNonce;
 
     UA_UInt32 receiveSequenceNumber;
     UA_UInt32 sendSequenceNumber;
 
-    /* The standard does not forbid a SecureChannel to carry several Sessions.
-     * But this is not supported here. So clients need one SecureChannel for
-     * every Session. */
-    UA_SessionHeader* session;
+    /* Sessions that are bound to the SecureChannel */
+    SLIST_HEAD(, UA_SessionHeader) sessions;
 
+    /* If a buffer is received, first all chunks are put into the completeChunks
+     * queue. Then they are processed in order. This ensures that processing
+     * buffers is reentrant with the correct processing order. (This has lead to
+     * problems in the client in the past.) */
+    UA_ChunkQueue completeChunks; /* Received full chunks that have not been
+                                   * decrypted so far */
+    UA_ChunkQueue decryptedChunks; /* Received chunks that were decrypted but
+                                    * not processed */
+    size_t decryptedChunksCount;
+    size_t decryptedChunksLength;
     UA_ByteString incompleteChunk; /* A half-received chunk (TCP is a
                                     * streaming protocol) is stored here */
-    UA_MessageQueue messages;      /* Received full chunks grouped into the
-                                    * messages */
-    UA_Boolean retryReceived;      /* Processing of received chunks was stopped
-                                    * e.g. after an OPN message. Retry
-                                    * processing remaining chunks. */
+
+    UA_CertificateVerification* certificateVerification;
+    UA_StatusCode(*processOPNHeader)(void* application, UA_SecureChannel* channel,
+        const UA_AsymmetricAlgorithmSecurityHeader* asymHeader);
 };
 
 typedef struct channel_entry {
@@ -352,19 +456,22 @@ struct UA_Server {
     UA_DiscoveryManager discoveryManager;
 #endif
 
-    /* DataChange Subscriptions */
+    /* Subscriptions */
 #ifdef UA_ENABLE_SUBSCRIPTIONS
-    /* Num active subscriptions */
-    UA_UInt32 numSubscriptions;
-    /* Num active monitored items */
-    UA_UInt32 numMonitoredItems;
+    LIST_HEAD(, UA_Subscription) subscriptions; /* All subscriptions in the
+                                                 * server. They may be detached
+                                                 * from a session. */
+    UA_UInt32 lastSubscriptionId; /* To generate unique SubscriptionIds */
+    UA_UInt32 numSubscriptions;   /* Num active subscriptions */
+    UA_UInt32 numMonitoredItems;  /* Num active monitored items */
+
     /* To be cast to UA_LocalMonitoredItem to get the callback and context */
-    LIST_HEAD(LocalMonitoredItems, UA_MonitoredItem) localMonitoredItems;
+    LIST_HEAD(, UA_MonitoredItem) localMonitoredItems;
     UA_UInt32 lastLocalMonitoredItemId;
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-    LIST_HEAD(conditionSourcelisthead, UA_ConditionSource) headConditionSource;
-#endif//UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+# ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+    LIST_HEAD(, UA_ConditionSource) headConditionSource;
+# endif /* UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS */
 
 #endif
 
@@ -531,7 +638,7 @@ QUaNode::instantiateOptionalChild
 
 extern "C"
 const UA_Node *
-getNodeType(UA_Server * server, const UA_Node * node);
+getNodeType(UA_Server * server, const UA_NodeHead * head);
 
 /*********************************************************************************************
 Copied from open62541, to be able to implement:
@@ -544,9 +651,6 @@ UA_StatusCode
 setMethodNode_callback(UA_Server * server,
     const UA_NodeId methodNodeId,
     UA_MethodCallback methodCallback);
-
-
-
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
@@ -594,12 +698,17 @@ struct UA_MonitoredItem {
          * changed at runtime of the MonitoredItem */
         UA_DataChangeFilter dataChangeFilter;
     } filter;
-    UA_Variant lastValue; // TODO: dataEncoding is hardcoded to UA binary
+
+    UA_DataValue lastValue;
 
     /* Sample Callback */
     UA_UInt64 sampleCallbackId;
     UA_ByteString lastSampledValue;
     UA_Boolean sampleCallbackIsRegistered;
+
+    /* Triggering Links */
+    size_t triggeringLinksSize;
+    UA_UInt32* triggeringLinks;
 
     /* Notification Queue */
     NotificationQueue queue;
@@ -612,31 +721,21 @@ struct UA_MonitoredItem {
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     UA_MonitoredItem* next;
 #endif
-
-#ifdef UA_ENABLE_DA
-    UA_StatusCode lastStatus;
-#endif
 };
 
 typedef struct UA_Notification {
-    TAILQ_ENTRY(UA_Notification) listEntry; /* Notification list for the MonitoredItem */
+    TAILQ_ENTRY(UA_Notification) listEntry;   /* Notification list for the MonitoredItem */
     TAILQ_ENTRY(UA_Notification) globalEntry; /* Notification list for the Subscription */
 
-    UA_MonitoredItem* mon;
-
-    /* See the monitoredItemType of the MonitoredItem */
+    UA_MonitoredItem* mon; /* Always set */
+    /* The event field is used if mon->attributeId is the EventNotifier */
     union {
+        UA_MonitoredItemNotification dataChange;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-        UA_EventNotification event;
+        UA_EventFieldList event;
 #endif
-        UA_DataValue value;
     } data;
 } UA_Notification;
-
-extern "C"
-void
-UA_Notification_enqueue(UA_Server* server, UA_Subscription* sub,
-    UA_MonitoredItem* mon, UA_Notification* n);
 
 extern "C"
 UA_StatusCode
@@ -644,16 +743,10 @@ UA_Event_generateEventId(UA_ByteString * generatedId);
 
 extern "C"
 UA_StatusCode
-referenceSubtypes(UA_Server* server, const UA_NodeId* refType,
-    size_t* refTypesSize, UA_NodeId** refTypes);
-
-extern "C"
-UA_StatusCode
-browseRecursive(UA_Server* server,
-    size_t startNodesSize, const UA_NodeId* startNodes,
-    size_t refTypesSize, const UA_NodeId* refTypes,
-    UA_BrowseDirection browseDirection, UA_Boolean includeStartNodes,
-    size_t* resultsSize, UA_ExpandedNodeId** results);
+browseRecursive(UA_Server * server, size_t startNodesSize, const UA_NodeId * startNodes,
+    UA_BrowseDirection browseDirection, const UA_ReferenceTypeSet * refTypes,
+    UA_UInt32 nodeClassMask, UA_Boolean includeStartNodes,
+    size_t * resultsSize, UA_ExpandedNodeId * *results);
 
 extern "C"
 UA_StatusCode
@@ -684,8 +777,8 @@ readWithReadValue(UA_Server * server, const UA_NodeId * nodeId,
 
 extern "C"
 UA_Boolean
-isNodeInTree(UA_Server * server, const UA_NodeId * leafNode, const UA_NodeId * nodeToFind,
-    const UA_NodeId * referenceTypeIds, size_t referenceTypeIdsSize);
+isNodeInTree(UA_Server * server, const UA_NodeId * leafNode,
+    const UA_NodeId * nodeToFind, const UA_ReferenceTypeSet * relevantRefs);
 
 extern "C"
 UA_Subscription *
@@ -704,8 +797,9 @@ typedef TAILQ_HEAD(ListOfNotificationMessages, UA_NotificationMessageEntry) List
 
 struct UA_Subscription {
     UA_DelayedCallback delayedFreePointers;
-    LIST_ENTRY(UA_Subscription) listEntry;
-    UA_Session* session;
+    LIST_ENTRY(UA_Subscription) serverListEntry;
+    TAILQ_ENTRY(UA_Subscription) sessionListEntry; /* Only set if session != NULL */
+    UA_Session* session; /* May be NULL if no session is attached. */
     UA_UInt32 subscriptionId;
 
     /* Settings */
@@ -718,13 +812,15 @@ struct UA_Subscription {
 
     /* Runtime information */
     UA_SubscriptionState state;
+    UA_StatusCode statusChange; /* If set, a notification is generated and the
+                                 * Subscription is deleted within
+                                 * UA_Subscription_publish. */
     UA_UInt32 nextSequenceNumber;
     UA_UInt32 currentKeepAliveCount;
     UA_UInt32 currentLifetimeCount;
 
-    /* Publish Callback */
+    /* Publish Callback. Registered if id > 0. */
     UA_UInt64 publishCallbackId;
-    UA_Boolean publishCallbackIsRegistered;
 
     /* MonitoredItems */
     UA_UInt32 lastMonitoredItemId; /* increase the identifiers */
@@ -736,7 +832,6 @@ struct UA_Subscription {
     UA_UInt32 notificationQueueSize; /* Total queue size */
     UA_UInt32 dataChangeNotifications;
     UA_UInt32 eventNotifications;
-    UA_UInt32 statusChangeNotifications;
 
     /* Notifications to be sent out now (already late). In a regular publish
      * callback, all queued notifications are sent out. In a late publish
@@ -759,6 +854,28 @@ UA_Server_evaluateWhereClauseContentFilter(
     UA_Server * server,
     const UA_NodeId * eventNode,
     const UA_ContentFilter * contentFilter);
+
+extern "C"
+UA_Notification *
+UA_Notification_new(void);
+
+extern "C"
+void
+UA_Notification_delete(UA_Server* server, UA_Notification* n);
+
+extern "C"
+void
+UA_Notification_enqueueAndTrigger(UA_Server* server, UA_Notification* n);
+
+extern "C"
+UA_StatusCode
+referenceTypeIndices(UA_Server* server, const UA_NodeId* refType,
+    UA_ReferenceTypeSet* indices, UA_Boolean includeSubtypes);
+
+extern "C"
+UA_Boolean
+isNodeInTree_singleRef(UA_Server * server, const UA_NodeId * leafNode,
+    const UA_NodeId * nodeToFind, const UA_Byte relevantRefTypeIndex);
 
 class QUaServer_Anex
 {
@@ -784,11 +901,11 @@ class QUaServer_Anex
     );
 
     static UA_StatusCode UA_Server_filterEvent(
-        UA_Server* server, 
+        UA_Server* server,
         UA_Session* session,
-        const UA_NodeId* eventNode, 
+        const UA_NodeId* eventNode,
         UA_EventFilter* filter,
-        UA_EventNotification* notification,
+        UA_EventFieldList* efl,
         const QUaSaoCallback& resolveSAOCallback
     );
 
@@ -807,6 +924,14 @@ class QUaServer_Anex
     );
 };
 
+/* Print a NodeId in logs */
+#define UA_LOG_NODEID_WRAP(LEVEL, NODEID, LOG)       \
+    if(UA_LOGLEVEL <= LEVEL) {                       \
+        UA_String nodeIdStr = UA_STRING_NULL;        \
+        UA_NodeId_print(NODEID, &nodeIdStr);         \
+        LOG;                                         \
+        UA_String_clear(&nodeIdStr);                 \
+    }
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

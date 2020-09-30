@@ -18,8 +18,6 @@ CONFIG(debug, debug|release) {
 
 # generate and copy amalgamation if not exists
 include($$PWD/open62541amalgamation.pri)
-# build encryption dependencies
-include($$PWD/open62541encryption.pri)
 
 INCLUDEPATH += $$PWD
 

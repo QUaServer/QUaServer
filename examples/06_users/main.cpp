@@ -27,6 +27,12 @@ int main(int argc, char *argv[])
 	QCoreApplication a(argc, argv);
 
 	QUaServer server;
+	
+	// Logging
+	QObject::connect(&server, &QUaServer::logMessage,
+		[](const QUaLog& log) {
+			qDebug() << "[" << log.level << "] :" << log.message;
+		});
 
 	/*
 	// It is possible to provide a custom callback to validate the user and password

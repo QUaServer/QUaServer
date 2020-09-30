@@ -482,6 +482,11 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	UA_Server* server
 )
 {
+	// FIX : https://github.com/open62541/open62541/issues/3917
+	if (UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE)))
+	{
+		return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
+	}
 	UA_NodeId retTypeId = UA_NODEID_NULL;
 	// make ua browse
 	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
@@ -492,7 +497,11 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT_X(bRes.statusCode == UA_STATUSCODE_GOOD, "QUaNode::superTypeDefinitionNodeId", "Browsing children failed.");
+	if (bRes.statusCode != UA_STATUSCODE_GOOD)
+	{
+		return retTypeId;
+	}
 	Q_ASSERT(bRes.referencesSize == 1);
 	if (bRes.referencesSize < 1)
 	{
@@ -793,7 +802,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 {
 	UA_VariableAttributes vAttr = UA_VariableAttributes_default;
 	vAttr.valueRank = optionalVariableFieldNode->valueRank;
-	UA_StatusCode retval = UA_LocalizedText_copy(&optionalVariableFieldNode->displayName,
+	UA_StatusCode retval = UA_LocalizedText_copy(&optionalVariableFieldNode->head.displayName,
 		&vAttr.displayName);
 	CONDITION_ASSERT_RETURN_RETVAL(retval, "Copying LocalizedText failed", );
 
@@ -816,7 +825,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 	}
 
 	/* Get typedefintion */
-	const UA_Node* type = getNodeType(server, (const UA_Node*)optionalVariableFieldNode);
+	const UA_Node* type = getNodeType(server, (const UA_NodeHead*)&optionalVariableFieldNode->head);
 	if (!type) {
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Invalid VariableType. StatusCode %s",
@@ -828,7 +837,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 	/* Set referenceType to parent */
 	UA_NodeId referenceToParent;
 	UA_NodeId propertyTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE);
-	if (UA_NodeId_equal(&type->nodeId, &propertyTypeNodeId))
+	if (UA_NodeId_equal(&type->head.nodeId, &propertyTypeNodeId))
 		referenceToParent = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 	else
 		referenceToParent = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
@@ -836,7 +845,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 	/* Set a random unused NodeId with specified Namespace Index*/
 	UA_NodeId optionalVariable = { originNode->namespaceIndex, UA_NODEIDTYPE_NUMERIC, {0} };
 	retval = UA_Server_addVariableNode(server, optionalVariable, *originNode,
-		referenceToParent, *fieldName, type->nodeId,
+		referenceToParent, *fieldName, type->head.nodeId,
 		vAttr, NULL, outOptionalVariable);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	UA_NODESTORE_RELEASE(server, type);
@@ -853,12 +862,12 @@ UA_StatusCode QUaNode::addOptionalObjectField(
 	UA_NodeId* outOptionalObject)
 {
 	UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
-	UA_StatusCode retval = UA_LocalizedText_copy(&optionalObjectFieldNode->displayName,
+	UA_StatusCode retval = UA_LocalizedText_copy(&optionalObjectFieldNode->head.displayName,
 		&oAttr.displayName);
 	CONDITION_ASSERT_RETURN_RETVAL(retval, "Copying LocalizedText failed", );
 
 	/* Get typedefintion */
-	const UA_Node* type = getNodeType(server, (const UA_Node*)optionalObjectFieldNode);
+	const UA_Node* type = getNodeType(server, (const UA_NodeHead*)&optionalObjectFieldNode->head);
 	if (!type) {
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Invalid ObjectType. StatusCode %s",
@@ -870,14 +879,14 @@ UA_StatusCode QUaNode::addOptionalObjectField(
 	/* Set referenceType to parent */
 	UA_NodeId referenceToParent;
 	UA_NodeId propertyTypeNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_PROPERTYTYPE);
-	if (UA_NodeId_equal(&type->nodeId, &propertyTypeNodeId))
+	if (UA_NodeId_equal(&type->head.nodeId, &propertyTypeNodeId))
 		referenceToParent = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 	else
 		referenceToParent = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 
 	UA_NodeId optionalObject = { originNode->namespaceIndex, UA_NODEIDTYPE_NUMERIC, {0} };
 	retval = UA_Server_addObjectNode(server, optionalObject, *originNode,
-		referenceToParent, *fieldName, type->nodeId,
+		referenceToParent, *fieldName, type->head.nodeId,
 		oAttr, NULL, outOptionalObject);
 
 	UA_NODESTORE_RELEASE(server, type);
@@ -949,7 +958,7 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	UA_NodeId parentNodeId = parent->nodeId();
 	// get the internal node
 	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(server, &optionalFieldNodeId);
-	UA_NodeClass nodeClass = optionalFieldNode->nodeClass;
+	UA_NodeClass nodeClass = optionalFieldNode->head.nodeClass;
 	if (optionalFieldNode == NULL)
 	{
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
@@ -1697,7 +1706,11 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(
 	bDesc->resultMask      = UA_BROWSERESULTMASK_NONE; // only need node ids
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
-	assert(bRes.statusCode == UA_STATUSCODE_GOOD);
+	Q_ASSERT_X(bRes.statusCode == UA_STATUSCODE_GOOD, "QUaNode::getChildrenNodeIds", "Browsing children failed.");
+	if (bRes.statusCode != UA_STATUSCODE_GOOD)
+	{
+		return retListChildren;
+	}
 	while (bRes.referencesSize > 0)
 	{
 		for (size_t i = 0; i < bRes.referencesSize; i++)
@@ -1774,7 +1787,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 	QSet<QUaBrowsePath> alreadyAdded;
 	QUaEventFieldMetaData retNames;
 	UA_NodeId typeUaNodeId = typeNodeId;
-	// look for children starting from this type of to base object type
+	// look for children starting from this type up to base object type
     static UA_NodeId baseObjType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
     static UA_NodeId baseVarType = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE);
     while (!UA_NodeId_equal(&typeUaNodeId, &baseObjType) &&
@@ -1857,6 +1870,11 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			UA_NodeId_clear(&varNodeId);
 		}
 		UA_NodeId typeNodeIdNew = QUaNode::superTypeDefinitionNodeId(typeUaNodeId, server);
+		Q_ASSERT_X(!UA_NodeId_isNull(&typeNodeIdNew), "QUaNode::getTypeVars", "Invalid super type NodeId");
+		if (UA_NodeId_isNull(&typeNodeIdNew)) 
+		{
+			break;
+		}
 		UA_NodeId_clear(&typeUaNodeId);
 		UA_NodeId_copy (&typeNodeIdNew, &typeUaNodeId);
 		UA_NodeId_clear(&typeNodeIdNew);
