@@ -483,7 +483,8 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 )
 {
 	// FIX : https://github.com/open62541/open62541/issues/3917
-	if (UA_NodeId_equal(&typeNodeId, &UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE)))
+	static const UA_NodeId baseEvtNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE);
+	if (UA_NodeId_equal(&typeNodeId, &baseEvtNodeId))
 	{
 		return UA_NODEID_NUMERIC(0, UA_NS0ID_BASEOBJECTTYPE);
 	}

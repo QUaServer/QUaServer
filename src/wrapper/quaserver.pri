@@ -25,8 +25,10 @@ INCLUDEPATH += $$PWD/
     ua_alarms_conditions {
         DEFINES += UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     }
-    QMAKE_CXXFLAGS_WARN_ON -= -w14005
-    QMAKE_CXXFLAGS += -wd4005
+    win32 {
+        QMAKE_CXXFLAGS_WARN_ON -= -w14005
+        QMAKE_CXXFLAGS += -wd4005
+    }
 }
 
 SOURCES += \

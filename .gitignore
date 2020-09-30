@@ -621,3 +621,5 @@ compile_commands.json
 /examples/07_encryption/07_encryption
 /examples/08_events/08_events
 /examples/09_serialization/09_serialization
+/examples/10_historizing/10_historizing
+/examples/11_alarms_conditions/11_alarms_conditions

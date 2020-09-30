@@ -14,11 +14,16 @@
 		# configure open62541 to use mbedtls
 		MBEDTLS_PATH = $$PWD/../../depends/mbedtls.git
 		MBEDTLS_INCLUDE_DIRS = "-DMBEDTLS_INCLUDE_DIRS=$${MBEDTLS_PATH}/include"
-		CONFIG(debug, debug|release) {
-			MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Debug"
-		} else {
-			MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Release"
-		}	
+		win32 {
+			CONFIG(debug, debug|release) {
+				MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Debug"
+			} else {
+				MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library/Release"
+			}	
+		}
+		linux-g++ {
+			MBEDTLS_FOLDER_LIBRARY = "-DMBEDTLS_FOLDER_LIBRARY=$${MBEDTLS_PATH}/build/library"
+		}
 		UA_ENCRYPTION = "-DUA_ENABLE_ENCRYPTION_MBEDTLS=ON $${MBEDTLS_INCLUDE_DIRS} $${MBEDTLS_FOLDER_LIBRARY}"
 		message("Enabled ua_encryption (mbedtls).")
 	}
