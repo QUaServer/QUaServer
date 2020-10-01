@@ -137,6 +137,7 @@ public:
 	template<typename T, typename TFunc1>
 	QMetaObject::Connection instanceCreated(typename QtPrivate::FunctionPointer<TFunc1>::Object* pObj,
 		                                    TFunc1 callback);
+
 	// register enum in order to use it as data type
 	template<typename T>
 	void registerEnum(const QUaNodeId &nodeId = QUaNodeId());
@@ -147,6 +148,17 @@ public:
 	void        setEnumMap      (const QString &strEnumName, const QUaEnumMap &enumMap);
 	void        updateEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
 	void        removeEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue);
+
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+    // register option set in order to use it as data type
+    void registerOptionSet(const QString& strOptionSetName, const QUaOptionSetMap& optionSetMap, const QUaNodeId& nodeId = QUaNodeId());
+    // optionset helpers
+    bool            isOptionSetRegistered(const QString& strOptionSetName) const;
+    QUaOptionSetMap optionSetMap         (const QString& strOptionSetName) const;
+    void            setOptionSetMap      (const QString& strOptionSetName, const QUaOptionSetMap& optionSetMap);
+    void            updateOptionSetEntry (const QString& strOptionSetName, const QUaOptionSetBit& optionSetBit, const QUaLocalizedText& optionSetEntry);
+    void            removeOptionSetEntry (const QString& strOptionSetName, const QUaOptionSetBit& optionSetBit);
+#endif
 	
 	// register custom non-hierarchical reference type
 	bool registerReferenceType(const QUaReferenceType &refType, const QUaNodeId& nodeId = "");
@@ -300,6 +312,7 @@ private:
 	QMap <QString         , UA_NodeId    > m_mapTypes;
 	QHash<QString         , QMetaObject  > m_hashMetaObjects;
 	QHash<QString         , UA_NodeId    > m_hashEnums;
+    QHash<QString         , UA_NodeId    > m_hashOptionSets;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;
@@ -368,6 +381,10 @@ private:
 	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId) const;
 	UA_Variant enumValues(const UA_NodeId &enumNodeId) const;
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
+    // optionsets
+    UA_NodeId  optionSetValuesNodeId(const UA_NodeId& optionSetNodeId) const;
+    UA_Variant optionSetValues(const UA_NodeId& optionSetNodeId) const;
+    void       updateOptionSet(const UA_NodeId& optionSetNodeId, const QUaOptionSetMap& optionSetMap);
 	// lifecycle
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
     void registerTypeDefaults (const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
@@ -487,6 +504,8 @@ private:
 
 	static bool isNodeBound(const UA_NodeId &nodeId, UA_Server *server);
 
+	static QUaServer * getServerNodeContext(UA_Server * server);
+
 	struct QOpcUaEnumValue
 	{
 		UA_Int64         Value;
@@ -494,13 +513,18 @@ private:
 		UA_LocalizedText Description;
 	};
 
-	static QUaServer * getServerNodeContext(UA_Server * server);
-
 	static UA_StatusCode addEnumValues(
         UA_Server             *server, 
         UA_NodeId             *parent, 
         const UA_UInt32        numEnumValues, 
         const QOpcUaEnumValue *enumValues
+    );
+
+    static UA_StatusCode addOptionSetValues(
+        UA_Server              *server, 
+        UA_NodeId              *parent, 
+        const UA_UInt32         numOptionSetValues,
+        const QUaLocalizedText *optionSetValues
     );
 
 	static UA_StatusCode activateSession(UA_Server                    *server, 

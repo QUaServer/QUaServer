@@ -670,6 +670,71 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 	Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+bool QUaBaseVariable::setDataTypeOptionSet(const QString& strOptionSetName)
+{
+	// check if exists in server's hash
+	if (!m_qUaServer->m_hashOptionSets.contains(strOptionSetName))
+	{
+		return false;
+	}
+	// get option set nodeId
+	UA_NodeId optionSetTypeNodeId = m_qUaServer->m_hashOptionSets.value(strOptionSetName);
+	// call internal method
+	this->setDataTypeOptionSet(optionSetTypeNodeId);
+	// success
+	return true;
+}
+
+// TODO : update to specific type and handle conversions there
+void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
+{
+	// need to "reset" dataType before setting a new value
+	auto st = UA_Server_writeDataType(m_qUaServer->m_server,
+		m_nodeId,
+		UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	//// get old value
+	//QVariant oldValue = this->value();
+	//// handle array
+	//if (oldValue.canConvert<QVariantList>())
+	//{
+	//	QVariantList listConvValues;
+	//	auto iter = oldValue.value<QSequentialIterable>();
+	//	// get first value if any
+	//	QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant((QVariant::Type)QMetaType::ULongLong);
+	//	// overwrite old value
+	//	oldValue = varFirst;
+	//}
+	//// handle scalar
+	//if (oldValue.canConvert(QMetaType::ULongLong))
+	//{
+	//	// convert in place
+	//	oldValue.convert(QMetaType::ULongLong);
+	//}
+	//else
+	//{
+	//	// else set default value for type
+	//	oldValue = QVariant((QVariant::Type)QMetaType::ULongLong);
+	//}
+	//// set converted or default value
+	//auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+	//m_bInternalWrite = true;
+	//st = this->setValueInternal(tmpVar);
+	//Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	//// clean up
+	//UA_Variant_clear(&tmpVar);
+	// change data type
+	st = UA_Server_writeDataType(m_qUaServer->m_server,
+		m_nodeId,
+		optionSetTypeNodeId);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+	//// update cache
+	//m_dataType = QMetaType::ULongLong;
+	//Q_ASSERT(this->dataTypeInternal() == m_dataType);
+}
+#endif
+
 QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 {
 	Q_CHECK_PTR(m_qUaServer);

@@ -235,6 +235,7 @@ struct UA_WorkQueue {
 #endif
 };
 
+#ifdef UA_ENABLE_DISCOVERY
 /* Callback for RegisterServer. Data is passed from the register call */
 typedef void (*UA_Server_registerServerCallback)(const UA_RegisteredServer* registeredServer,
     void* data);
@@ -271,6 +272,8 @@ typedef struct {
 #  endif
 # endif /* UA_ENABLE_DISCOVERY_MULTICAST */
 } UA_DiscoveryManager;
+
+#endif /* UA_ENABLE_DISCOVERY */
 
 // NOTE : just gave it a name in order to be able to use
 //        TAILQ_LAST in QUaServer::newSession

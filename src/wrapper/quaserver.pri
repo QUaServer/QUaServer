@@ -40,7 +40,9 @@ SOURCES += \
     $$PWD/quabasedatavariable.cpp \
     $$PWD/quabaseobject.cpp \
     $$PWD/quafolderobject.cpp \
-    $$PWD/quacustomdatatypes.cpp
+    $$PWD/quacustomdatatypes.cpp \
+    $$PWD/quaenum.cpp \
+    $$PWD/quaoptionset.cpp
 
 ua_events || ua_alarms_conditions {
     SOURCES += \
@@ -94,7 +96,9 @@ HEADERS += \
     $$PWD/quabasedatavariable.h \
     $$PWD/quabaseobject.h \
     $$PWD/quafolderobject.h \
-    $$PWD/quacustomdatatypes.h
+    $$PWD/quacustomdatatypes.h \
+    $$PWD/quaenum.h \
+    $$PWD/quaoptionset.h
 
 ua_events || ua_alarms_conditions {
     HEADERS += \

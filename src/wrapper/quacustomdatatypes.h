@@ -769,22 +769,9 @@ private:
 Q_DECLARE_METATYPE(QUaExclusiveLimitTransition);
 
 // Enum Stuff
-typedef qint64 QUaEnumKey;
-struct QUaEnumEntry
-{
-    QUaLocalizedText displayName;
-    QUaLocalizedText description;
-};
-Q_DECLARE_METATYPE(QUaEnumEntry);
-inline bool operator==(const QUaEnumEntry& lhs, const QUaEnumEntry& rhs)
-{
-    return lhs.displayName == rhs.displayName && lhs.description == rhs.description;
-}
-typedef QMap<QUaEnumKey, QUaEnumEntry> QUaEnumMap;
-typedef QMapIterator<QUaEnumKey, QUaEnumEntry> QUaEnumMapIter;
-
-// User validation
-typedef std::function<bool(const QString &, const QString &)> QUaValidationCallback;
+#include <QUaEnum>
+// OptionSet Stuff
+#include <QUaOptionSet>
 
 // Class whose only pupose is emit signals
 class QUaSignaler : public QObject

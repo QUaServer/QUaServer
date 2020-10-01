@@ -118,6 +118,9 @@ public:
 	void              setDataTypeEnum();
 	void              setDataTypeEnum(const QMetaEnum &metaEnum);
 	bool              setDataTypeEnum(const QString &strEnumName);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	bool              setDataTypeOptionSet(const QString& strOptionSetName);
+#endif
 	// Read-only, values set automatically when calling setValue
 	// NOTE : includes arrayDimensionsSize
 	qint32            valueRank() const;
@@ -208,6 +211,9 @@ private:
 protected:
 
 	void setDataTypeEnum(const UA_NodeId &enumTypeNodeId);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	void setDataTypeOptionSet(const UA_NodeId &optionSetTypeNodeId);
+#endif
 	QMetaType::Type dataTypeInternal() const;
 	// if T scalar
 	template<typename T>
