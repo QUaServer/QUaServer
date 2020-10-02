@@ -144,7 +144,6 @@ typedef QUa::LogCategory QUaLogCategory;
 typedef QUa::Status      QUaStatus;
 typedef QUa::ChangeVerb  QUaChangeVerb;
 
-
 struct QUaLog
 {
     // default constructor required by Qt
@@ -329,11 +328,11 @@ union QUaEventNotifier
     };
 };
 
-#define QMetaType_NodeId                  static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId       >())
-#define QMetaType_StatusCode              static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode   >())
-#define QMetaType_QualifiedName           static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
-#define QMetaType_LocalizedText           static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
-#define QMetaType_DataType                static_cast<QMetaType::Type>(qMetaTypeId<QUaDataType     >())
+#define QMetaType_NodeId        static_cast<QMetaType::Type>(qMetaTypeId<QUaNodeId       >())
+#define QMetaType_StatusCode    static_cast<QMetaType::Type>(qMetaTypeId<QUaStatusCode   >())
+#define QMetaType_QualifiedName static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
+#define QMetaType_LocalizedText static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
+#define QMetaType_DataType      static_cast<QMetaType::Type>(qMetaTypeId<QUaDataType     >())
 // TODO :image
 //#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
 
@@ -343,6 +342,11 @@ union QUaEventNotifier
 #define QMetaType_List_QualifiedName static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaQualifiedName>>())
 #define QMetaType_List_LocalizedText static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaLocalizedText>>())
 #define QMetaType_List_DataType      static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaDataType     >>())
+
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+#define QMetaType_OptionSet          static_cast<QMetaType::Type>(qMetaTypeId<QUaOptionSet           >())
+#define QMetaType_List_OptionSet     static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaOptionSet>    >())
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 #define QMetaType_TimeZone                     static_cast<QMetaType::Type>(qMetaTypeId<QTimeZone>())
@@ -583,7 +587,6 @@ Q_DECLARE_METATYPE(QUaLocalizedText);
 
 class QUaQualifiedName
 {
-
 public:
     QUaQualifiedName();
     QUaQualifiedName(const quint16 &namespaceIndex, const QString &name);
@@ -679,6 +682,38 @@ inline uint qHash(const QUaBrowsePath& key, uint seed)
     }
     return outKey;
 }
+
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+// NOTE : Currently only support 64bit option sets, might considered templated version in the future
+class QUaOptionSet
+{
+public:
+    QUaOptionSet();
+    QUaOptionSet(const QUaOptionSet& other);
+    QUaOptionSet(const quint64 &values, const quint64 &validBits = 0xFFFFFFFF);
+    QUaOptionSet(const UA_OptionSet& uaOptionSet);
+    QUaOptionSet(const QString& strXmlOptionSet);
+    QUaOptionSet(const char* strXmlOptionSet);
+    operator UA_OptionSet() const; // needs cleanup with UA_OptionSet_clear after use
+    operator QString() const;
+    void operator= (const UA_OptionSet& uaOptionSet);
+    void operator= (const QString& strXmlOptionSet);
+    void operator= (const char* strXmlOptionSet);
+    void operator= (const QUaOptionSet& other);
+    bool operator==(const QUaOptionSet& other) const;
+    bool operator!=(const QUaOptionSet& other) const;
+    bool operator< (const QUaOptionSet& other) const;
+
+    quint64 values() const;
+    quint64 validBits() const;
+
+private:
+    QByteArray m_value;
+    QByteArray m_validBits;
+};
+
+Q_DECLARE_METATYPE(QUaOptionSet);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 
 class QUaChangeStructureDataType
 {

@@ -42,6 +42,9 @@ QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("QUaLocalizedText")          , QMetaType_LocalizedText          },
 	// TODO : image
 	//{QString("QImage")                    , QMetaType_Image                  },
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{QString("QUaOptionSet")              , QMetaType_OptionSet              },
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{QString("QTimeZone")                        , QMetaType_TimeZone               },
 	{QString("QUaChangeStructureDataType")       , QMetaType_ChangeStructureDataType}
@@ -75,6 +78,9 @@ QHash<UA_NodeId, QMetaType::Type> QUaDataType::m_custTypesByNodeId = {
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , QMetaType_LocalizedText          },
 	// TODO : image
 	//{UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , QMetaType_Image                  },
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                   , QMetaType_OptionSet              },
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , QMetaType_TimeZone               },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), QMetaType_ChangeStructureDataType}
@@ -107,6 +113,9 @@ QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
 	{UA_TYPES_LOCALIZEDTEXT               , QMetaType_LocalizedText          },
 	// TODO : image
 	//{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{UA_TYPES_OPTIONSET                   , QMetaType_OptionSet              },
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{UA_TYPES_TIMEZONEDATATYPE            , QMetaType_TimeZone               },
 	{UA_TYPES_MODELCHANGESTRUCTUREDATATYPE, QMetaType_ChangeStructureDataType}
@@ -140,6 +149,9 @@ QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
 	{ QMetaType_LocalizedText           , {QString("QUaLocalizedText")           , UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , &UA_TYPES[UA_TYPES_LOCALIZEDTEXT               ]} },
 	// TODO : image
 	//{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{ QMetaType_OptionSet               , {QString("QUaOptionSet")              , UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                    , &UA_TYPES[UA_TYPES_OPTIONSET                   ]} },
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	{ QMetaType_TimeZone                , {QString("QTimeZone")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE            ]} },
 	{ QMetaType_ChangeStructureDataType , {QString("QUaChangeStructureDataType") , UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), &UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE]} }
@@ -1318,3 +1330,161 @@ uint QUa::qHash(const ChangeVerb &key, uint seed)
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+QUaOptionSet::QUaOptionSet()
+{
+    this->QUaOptionSet::QUaOptionSet(0, 0);
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::QUaOptionSet(const QUaOptionSet& other)
+{
+	Q_ASSERT(other.m_value.size() == 8);
+	Q_ASSERT(other.m_validBits.size() == 8);
+	// use overloaded equality operator
+	*this = other;
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::QUaOptionSet(const quint64& values, const quint64& validBits)
+{
+	QDataStream valueStream(&m_value, QIODevice::WriteOnly | QIODevice::Truncate);
+	valueStream.setVersion(QDataStream::Qt_5_6);
+	valueStream.setByteOrder(QDataStream::BigEndian);
+	valueStream << static_cast<quint64>(values);
+	QDataStream validBitsStream(&m_validBits, QIODevice::WriteOnly | QIODevice::Truncate);
+	validBitsStream.setVersion(QDataStream::Qt_5_6);
+	validBitsStream.setByteOrder(QDataStream::BigEndian);
+	validBitsStream << static_cast<quint64>(validBits);
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::QUaOptionSet(const UA_OptionSet& uaOptionSet)
+{
+	// use overloaded equality operator
+	*this = uaOptionSet;
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::QUaOptionSet(const QString& strXmlOptionSet)
+{
+	// use overloaded equality operator
+	*this = strXmlOptionSet;
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::QUaOptionSet(const char* strXmlOptionSet)
+{
+	// use overloaded equality operator
+	*this = QString(strXmlOptionSet);
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+QUaOptionSet::operator UA_OptionSet() const
+{
+	UA_OptionSet uaOptionSet;
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(m_value    , &uaOptionSet.value);
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(m_validBits, &uaOptionSet.validBits);
+	return uaOptionSet;
+}
+
+QUaOptionSet::operator QString() const
+{
+	return QString("bits=%1;valid=%2").arg(this->values()).arg(this->validBits());
+}
+
+void QUaOptionSet::operator=(const UA_OptionSet& uaOptionSet)
+{
+	m_value     = QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&uaOptionSet.value);
+	m_validBits = QUaTypesConverter::uaVariantToQVariantScalar<QByteArray, UA_ByteString>(&uaOptionSet.validBits);
+	Q_ASSERT(m_value.size() == 8);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+void QUaOptionSet::operator=(const QString& strXmlOptionSet)
+{
+	quint64 values;
+	quint64 validBits;
+	auto components = QStringRef(&strXmlOptionSet).split(QLatin1String(";"));
+	// check if valid xml format
+	if (components.size() != 2)
+	{
+		// if no valid xml format, assume is a number and the number is the values
+		this->QUaOptionSet::QUaOptionSet(strXmlOptionSet.toULongLong());
+		return;
+	}
+	auto firstComp   = components.at(0);
+	auto firstParts  = firstComp.split(QLatin1String("="));
+	auto firstPart   = firstParts.count() > 1 ? firstParts.at(1) : firstParts.at(0);
+	auto secondComp  = components.at(1);
+	auto secondParts = secondComp.split(QLatin1String("="));
+	auto secondPart  = secondParts.count() > 1 ? secondParts.at(1) : secondParts.at(0);
+	if (firstComp.contains(QString("valid")) && firstComp.contains(QString("bits")))
+	{
+		validBits = firstPart.toULongLong();
+		values    = secondPart.toULongLong();
+	}
+	else
+	{
+		values    = firstPart.toULongLong();
+		validBits = secondPart.toULongLong();
+	}
+	this->QUaOptionSet::QUaOptionSet(values, validBits);
+}
+
+void QUaOptionSet::operator=(const char* strXmlOptionSet)
+{
+	// use overloaded equality operator
+	*this = QString(strXmlOptionSet);
+}
+
+void QUaOptionSet::operator=(const QUaOptionSet& other)
+{
+	m_value     = other.m_value;
+	m_validBits = other.m_validBits;
+}
+
+bool QUaOptionSet::operator==(const QUaOptionSet& other) const
+{
+	return m_value == other.m_value && m_validBits == other.m_validBits;
+}
+
+bool QUaOptionSet::operator!=(const QUaOptionSet& other) const
+{
+	return m_value != other.m_value || m_validBits != other.m_validBits;
+}
+
+bool QUaOptionSet::operator<(const QUaOptionSet& other) const
+{
+	return this->values() < other.values();
+}
+
+quint64 QUaOptionSet::values() const
+{
+	quint64 values;
+	Q_ASSERT(m_value.size() == 8);
+	QDataStream inStream(m_value);
+	inStream.setVersion(QDataStream::Qt_5_6);
+	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream >> values;
+	return values;
+}
+
+quint64 QUaOptionSet::validBits() const
+{
+	quint64 validBits;
+	Q_ASSERT(m_validBits.size() == 8);
+	QDataStream inStream(m_validBits);
+	inStream.setVersion(QDataStream::Qt_5_6);
+	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream >> validBits;
+	return validBits;
+}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL

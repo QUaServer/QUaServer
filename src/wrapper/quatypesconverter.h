@@ -163,6 +163,12 @@ namespace QUaTypesConverter {
 		//{
 		//	return UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE);
 		//}
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		else if (std::is_same<T, QUaOptionSet>::value)
+		{
+			return UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET);
+		}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		else if (std::is_same<T, QTimeZone>::value)
 		{
@@ -273,6 +279,12 @@ namespace QUaTypesConverter {
 		//{
 		//	return QMetaType_Image;
 		//}
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		else if (std::is_same<T, QUaOptionSet>::value)
+		{
+			return QMetaType_OptionSet;
+		}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		else if (std::is_same<T, QTimeZone>::value)
 		{

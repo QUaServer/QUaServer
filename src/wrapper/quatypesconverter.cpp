@@ -306,6 +306,10 @@ UA_Variant uaVariantFromQVariant(const QVariant & var)
 		// TODO : image
 		//if (qtType == QMetaType_Image)
 		//	return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (qtType == QMetaType_OptionSet)        // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
+			return uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(var, uaType);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if (qtType == QMetaType_TimeZone)        // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 			return uaVariantFromQVariantScalar<UA_TimeZoneDataType, QTimeZone>(var, uaType);
@@ -401,6 +405,14 @@ void uaVariantFromQVariantScalar<UA_LocalizedText, QUaLocalizedText>(const QUaLo
 {
 	*ptr = value.toUaLocalizedText();
 }
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+// specialization (QUaOptionSet)
+template<>
+void uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(const QUaOptionSet& value, UA_OptionSet* ptr)
+{
+	*ptr = value;
+}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 // specialization (QTimeZone)
 template<>
@@ -488,6 +500,10 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 			// TODO : image
 			//if (qtType == QMetaType_Image)
 			//	return uaVariantFromQVariantArray<UA_ByteString, QByteArray>(var, uaType);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+			if (qtType == QMetaType_OptionSet)        // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
+				return uaVariantFromQVariantArray<UA_OptionSet, QUaOptionSet>(var, uaType);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 			if (qtType == QMetaType_TimeZone)        // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
 				return uaVariantFromQVariantArray<UA_TimeZoneDataType, QTimeZone>(var, uaType);
@@ -645,6 +661,10 @@ QVariant uaVariantToQVariant(const UA_Variant & uaVariant, const ArrayType& arrT
 		if(index == UA_TYPES_LOCALIZEDTEXT)
 			return uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText   >(uaVariant, QMetaType_LocalizedText);
 		// TODO : image
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_OPTIONSET)
+			return uaVariantToQVariantScalar<QUaOptionSet, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if(index == UA_TYPES_TIMEZONEDATATYPE)
 			return uaVariantToQVariantScalar<QTimeZone, UA_TimeZoneDataType>(uaVariant, QMetaType_TimeZone);
@@ -725,6 +745,10 @@ QVariant uaVariantToQVariantList(const UA_Variant & uaVariant)
 		// TODO : image
 		//if (index == UA_TYPES_IMAGEPNG)
 		//	return uaVariantToQVariantArray<QList<QUa>, UA_>(uaVariant, QMetaType_);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_OPTIONSET)
+			return uaVariantToQVariantArray<QList<QUaOptionSet>, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if (index == UA_TYPES_TIMEZONEDATATYPE)
 			return uaVariantToQVariantArray<QList<QTimeZone>, UA_TimeZoneDataType>(uaVariant, QMetaType_TimeZone);
@@ -791,6 +815,10 @@ QVariant uaVariantToQVariantVector(const UA_Variant & uaVariant)
 		// TODO : image
 		//if (index == UA_TYPES_IMAGEPNG)
 		//	return uaVariantToQVariantArray<QVector<QUa>, UA_>(uaVariant, QMetaType_);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_OPTIONSET)
+			return uaVariantToQVariantArray<QVector<QUaOptionSet>, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if (index == UA_TYPES_TIMEZONEDATATYPE)
 			return uaVariantToQVariantArray<QVector<QTimeZone>, UA_TimeZoneDataType>(uaVariant, QMetaType_TimeZone);
@@ -910,6 +938,16 @@ QUaLocalizedText uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText>(c
 {
 	return QUaLocalizedText(*data);
 }
+
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+// specialization (QUaOptionSet)
+template<>
+QUaOptionSet uaVariantToQVariantScalar<QUaOptionSet, UA_OptionSet>(const UA_OptionSet* data)
+{
+	return QUaOptionSet(*data);
+}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 // specialization (QTimeZone)
 template<>
@@ -1023,6 +1061,16 @@ void registerCustomTypes()
 	QMetaType::registerConverter<QString, QUaLocalizedText>([](QString strLocalText) {
 		return QUaLocalizedText(strLocalText);
 	});
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	// option set
+	Q_ASSERT(qMetaTypeId<QUaOptionSet>() >= QMetaType::User);
+	QMetaType::registerConverter<QUaOptionSet, QString>([](QUaOptionSet optionSet) {
+		return optionSet.operator QString();
+	});
+	QMetaType::registerConverter<QString, QUaOptionSet>([](QString strXmlOptionSet) {
+		return QUaOptionSet(strXmlOptionSet);
+	});
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// node id list
 	Q_ASSERT(qMetaTypeId<QList<QUaLocalizedText>>() >= QMetaType::User);
 	QMetaType::registerConverter<QList<QUaLocalizedText>, QString>([](QList<QUaLocalizedText> listLocalizedText) {
