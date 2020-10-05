@@ -1353,11 +1353,11 @@ QUaOptionSet::QUaOptionSet(const quint64& values, const quint64& validBits)
 {
 	QDataStream valueStream(&m_value, QIODevice::WriteOnly | QIODevice::Truncate);
 	valueStream.setVersion(QDataStream::Qt_5_6);
-	valueStream.setByteOrder(QDataStream::BigEndian);
+	valueStream.setByteOrder(QDataStream::LittleEndian);
 	valueStream << static_cast<quint64>(values);
 	QDataStream validBitsStream(&m_validBits, QIODevice::WriteOnly | QIODevice::Truncate);
 	validBitsStream.setVersion(QDataStream::Qt_5_6);
-	validBitsStream.setByteOrder(QDataStream::BigEndian);
+	validBitsStream.setByteOrder(QDataStream::LittleEndian);
 	validBitsStream << static_cast<quint64>(validBits);
 	Q_ASSERT(m_value.size() == 8);
 	Q_ASSERT(m_validBits.size() == 8);
@@ -1472,7 +1472,7 @@ quint64 QUaOptionSet::values() const
 	Q_ASSERT(m_value.size() == 8);
 	QDataStream inStream(m_value);
 	inStream.setVersion(QDataStream::Qt_5_6);
-	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream.setByteOrder(QDataStream::LittleEndian);
 	inStream >> values;
 	return values;
 }
@@ -1483,7 +1483,7 @@ quint64 QUaOptionSet::validBits() const
 	Q_ASSERT(m_validBits.size() == 8);
 	QDataStream inStream(m_validBits);
 	inStream.setVersion(QDataStream::Qt_5_6);
-	inStream.setByteOrder(QDataStream::BigEndian);
+	inStream.setByteOrder(QDataStream::LittleEndian);
 	inStream >> validBits;
 	return validBits;
 }

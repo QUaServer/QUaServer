@@ -13,7 +13,7 @@ UA_StatusCode QUaServer::addOptionSetValues(UA_Server* server, UA_NodeId* parent
 	attr.valueRank               = 1;
 	attr.arrayDimensionsSize     = 1;
 	UA_UInt32 arrayDimensions[1];
-	arrayDimensions[0]           = numOptionSetValues; // WHY 0; ?
+	arrayDimensions[0]           = numOptionSetValues;
 	attr.arrayDimensions         = &arrayDimensions[0];
 	attr.dataType                = UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT);
 	// create array of option set values

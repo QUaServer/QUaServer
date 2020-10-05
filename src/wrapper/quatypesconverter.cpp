@@ -307,7 +307,7 @@ UA_Variant uaVariantFromQVariant(const QVariant & var)
 		//if (qtType == QMetaType_Image)
 		//	return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
-		if (qtType == QMetaType_OptionSet)        // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
+		if (qtType == QMetaType_OptionSet)       // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
 			return uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(var, uaType);
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS

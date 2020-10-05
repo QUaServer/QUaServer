@@ -690,7 +690,7 @@ class QUaOptionSet
 public:
     QUaOptionSet();
     QUaOptionSet(const QUaOptionSet& other);
-    QUaOptionSet(const quint64 &values, const quint64 &validBits = 0xFFFFFFFF);
+    QUaOptionSet(const quint64 &values, const quint64 &validBits = 0xFFFFFFFFFFFFFFFF);
     QUaOptionSet(const UA_OptionSet& uaOptionSet);
     QUaOptionSet(const QString& strXmlOptionSet);
     QUaOptionSet(const char* strXmlOptionSet);

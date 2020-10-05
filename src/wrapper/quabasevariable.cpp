@@ -510,6 +510,12 @@ QString QUaBaseVariable::dataTypeNodeId() const
 		UA_NodeId_clear(&outDataType);
 		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_INT32));
 	}
+	// check if type is option set, if so, return type
+	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
+	{
+		UA_NodeId_clear(&outDataType);
+		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET));
+	}
 	// else return converted type
 	QString retNodeId = QUaTypesConverter::nodeIdToQString(outDataType);
 	UA_NodeId_clear(&outDataType);
@@ -753,6 +759,12 @@ QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 	{
 		UA_NodeId_clear(&outDataType);
 		return QMetaType::Int;
+	}
+	// check if type is option set, if so, return type QMetaType_OptionSet
+	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
+	{
+		UA_NodeId_clear(&outDataType);
+		return QMetaType_OptionSet;
 	}
 	// else return converted type
 	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
