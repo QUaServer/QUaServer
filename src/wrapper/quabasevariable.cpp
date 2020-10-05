@@ -510,12 +510,14 @@ QString QUaBaseVariable::dataTypeNodeId() const
 		UA_NodeId_clear(&outDataType);
 		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_INT32));
 	}
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// check if type is option set, if so, return type
 	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET));
 	}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// else return converted type
 	QString retNodeId = QUaTypesConverter::nodeIdToQString(outDataType);
 	UA_NodeId_clear(&outDataType);
@@ -760,12 +762,14 @@ QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 		UA_NodeId_clear(&outDataType);
 		return QMetaType::Int;
 	}
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// check if type is option set, if so, return type QMetaType_OptionSet
 	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QMetaType_OptionSet;
 	}
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// else return converted type
 	QMetaType::Type type = QUaTypesConverter::uaTypeNodeIdToQType(&outDataType);
 	UA_NodeId_clear(&outDataType);

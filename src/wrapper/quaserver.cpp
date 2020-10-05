@@ -32,6 +32,10 @@
 #include <QUaTransitionEvent>
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+#include <QUaOptionSetVariable>
+#endif
+
 #include <QMetaProperty>
 #include <QTimer>
 
@@ -1249,6 +1253,9 @@ void QUaServer::setupServer()
 	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	this->registerSpecificationType<QUaOptionSetVariable        >(UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSETTYPE));
+#endif
 	// set context for server
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);

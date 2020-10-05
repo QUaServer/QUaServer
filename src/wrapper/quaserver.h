@@ -149,6 +149,7 @@ public:
 	void        updateEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue, const QUaEnumEntry &enumEntry);
 	void        removeEnumEntry (const QString &strEnumName, const QUaEnumKey &enumValue);
 
+	// NOTE : not working due to https://github.com/open62541/open62541/issues/3934
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
     // register option set in order to use it as data type
     void registerOptionSet(const QString& strOptionSetName, const QUaOptionSetMap& optionSetMap, const QUaNodeId& nodeId = QUaNodeId());
@@ -312,7 +313,9 @@ private:
 	QMap <QString         , UA_NodeId    > m_mapTypes;
 	QHash<QString         , QMetaObject  > m_hashMetaObjects;
 	QHash<QString         , UA_NodeId    > m_hashEnums;
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
     QHash<QString         , UA_NodeId    > m_hashOptionSets;
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	QHash<QUaReferenceType, UA_NodeId    > m_hashRefTypes;
 	QHash<QUaReferenceType, UA_NodeId    > m_hashHierRefTypes;
 	QHash<UA_NodeId       , QUaSignaler* > m_hashSignalers;

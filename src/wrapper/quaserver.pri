@@ -25,6 +25,9 @@ INCLUDEPATH += $$PWD/
     ua_alarms_conditions {
         DEFINES += UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     }
+    ua_namespace_full || ua_events || ua_alarms_conditions {
+        DEFINES += UA_GENERATED_NAMESPACE_ZERO_FULL
+    }
     win32 {
         QMAKE_CXXFLAGS_WARN_ON -= -w14005
         QMAKE_CXXFLAGS += -wd4005
@@ -41,8 +44,7 @@ SOURCES += \
     $$PWD/quabaseobject.cpp \
     $$PWD/quafolderobject.cpp \
     $$PWD/quacustomdatatypes.cpp \
-    $$PWD/quaenum.cpp \
-    $$PWD/quaoptionset.cpp
+    $$PWD/quaenum.cpp
 
 ua_events || ua_alarms_conditions {
     SOURCES += \
@@ -84,6 +86,12 @@ ua_historizing {
     $$PWD/quahistorybackend.cpp
 }
 
+ua_namespace_full || ua_events || ua_alarms_conditions {
+    SOURCES += \
+    $$PWD/quaoptionset.cpp \
+    $$PWD/quaoptionsetvariable.cpp
+}
+
 SOURCES += \   
     $$PWD/quatypesconverter.cpp
 
@@ -97,8 +105,7 @@ HEADERS += \
     $$PWD/quabaseobject.h \
     $$PWD/quafolderobject.h \
     $$PWD/quacustomdatatypes.h \
-    $$PWD/quaenum.h \
-    $$PWD/quaoptionset.h
+    $$PWD/quaenum.h
 
 ua_events || ua_alarms_conditions {
     HEADERS += \
@@ -140,6 +147,12 @@ ua_historizing {
     $$PWD/quahistorybackend.h
 }
     
+ua_namespace_full || ua_events || ua_alarms_conditions {
+    HEADERS += \
+    $$PWD/quaoptionset.h \
+    $$PWD/quaoptionsetvariable.h
+}
+
 HEADERS += \    
     $$PWD/quatypesconverter.h
 
@@ -191,6 +204,12 @@ ua_alarms_conditions {
 ua_historizing {
     DISTFILES += \
     $$PWD/QUaHistoryBackend
+}
+
+ua_namespace_full || ua_events || ua_alarms_conditions {
+    DISTFILES += \
+    $$PWD/QUaOptionSet \
+    $$PWD/QUaOptionSetVariable
 }
 
 DISTFILES += \    
