@@ -384,10 +384,12 @@ private:
 	UA_NodeId  enumValuesNodeId(const UA_NodeId &enumNodeId) const;
 	UA_Variant enumValues(const UA_NodeId &enumNodeId) const;
 	void       updateEnum(const UA_NodeId &enumNodeId, const QUaEnumMap &mapEnum);
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
     // optionsets
     UA_NodeId  optionSetValuesNodeId(const UA_NodeId& optionSetNodeId) const;
     UA_Variant optionSetValues(const UA_NodeId& optionSetNodeId) const;
     void       updateOptionSet(const UA_NodeId& optionSetNodeId, const QUaOptionSetMap& optionSetMap);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// lifecycle
     void registerTypeLifeCycle(const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
     void registerTypeDefaults (const UA_NodeId &typeNodeId, const QMetaObject &metaObject);
@@ -523,12 +525,14 @@ private:
         const QOpcUaEnumValue *enumValues
     );
 
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
     static UA_StatusCode addOptionSetValues(
         UA_Server              *server, 
         UA_NodeId              *parent, 
         const UA_UInt32         numOptionSetValues,
         const QUaLocalizedText *optionSetValues
     );
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 
 	static UA_StatusCode activateSession(UA_Server                    *server, 
 		                                 UA_AccessControl             *ac,
