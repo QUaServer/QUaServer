@@ -3,6 +3,53 @@
 #include "quaserver_anex.h"
 #include <QUaBaseDataVariable>
 
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+// NOTE : added this ugly workaround that passes the "same datatypes" condition in
+// server/ua_services_attribute.c::compatibleDataType so we can actually set the value
+// of an optionset satatype
+/* OptionSet */
+static UA_DataTypeMember OptionSet_members[2] = {
+{
+	UA_TYPES_BYTESTRING, /* .memberTypeIndex */
+	0, /* .padding */
+	true, /* .namespaceZero */
+	false, /* .isArray */
+	false  /* .isOptional */
+	UA_TYPENAME("Value") /* .memberName */
+},
+{
+	UA_TYPES_BYTESTRING, /* .memberTypeIndex */
+	offsetof(UA_OptionSet, validBits) - offsetof(UA_OptionSet, value) - sizeof(UA_ByteString), /* .padding */
+	true, /* .namespaceZero */
+	false, /* .isArray */
+	false  /* .isOptional */
+	UA_TYPENAME("ValidBits") /* .memberName */
+}, };
+
+QHash<UA_NodeId, UA_DataType*> mapOptionSetDatatypes;
+UA_DataType* getDataTypeFromNodeId(const UA_NodeId& optNodeId)
+{
+	if (mapOptionSetDatatypes.contains(optNodeId))
+	{
+		return mapOptionSetDatatypes[optNodeId];
+	}
+	UA_DataType* tmpType = new UA_DataType({
+		optNodeId, /* .typeId */
+		{0, UA_NODEIDTYPE_NUMERIC, {12765}}, /* .binaryEncodingId */
+		sizeof(UA_OptionSet), /* .memSize */
+		UA_TYPES_OPTIONSET, /* .typeIndex */
+		UA_DATATYPEKIND_STRUCTURE, /* .typeKind */
+		false, /* .pointerFree */
+		false, /* .overlayable */
+		2, /* .membersSize */
+		OptionSet_members  /* .members */
+		UA_TYPENAME("OptionSet") /* .typeName */
+	});
+	mapOptionSetDatatypes[optNodeId] = tmpType;
+	return tmpType;
+}
+#endif // !OPEN62541_ISSUE3934_RESOLVED
+
 // [STATIC] : always called by open62541 library after a write, used by QUaServer 
 // to emit signals and to make differentiation between network or programmatic value change
 void QUaBaseVariable::onWrite(UA_Server             *server, 
@@ -288,7 +335,22 @@ void QUaBaseVariable::setValue(
 		Q_UNUSED(st);
 	}
 	// convert to UA_Variant and set new value
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+	UA_DataType* optDataType = nullptr;
+	if (m_dataType == QMetaType_OptionSet)
+	{
+		// read type
+		UA_NodeId optionSetTypeNodeId;
+		auto st = UA_Server_readDataType(m_qUaServer->m_server, m_nodeId, &optionSetTypeNodeId);
+		Q_ASSERT(st == UA_STATUSCODE_GOOD);
+		Q_UNUSED(st);
+		optDataType = getDataTypeFromNodeId(optionSetTypeNodeId);
+		UA_NodeId_clear(&optionSetTypeNodeId);
+	}
+	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue, optDataType);
+#else
 	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
+#endif // !OPEN62541_ISSUE3934_RESOLVED
 	// mask as internal write to avoid emitting valueChange signal on QUaBaseVariable::onWrite
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
@@ -314,7 +376,7 @@ void QUaBaseVariable::setValue(
 	//        is better to just set array dimensions on Variant value and leave rank as ANY
 	// update cache
 	m_dataType = newType;
-	//Q_ASSERT(this->dataTypeInternal() == m_type);
+	Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
 QDateTime QUaBaseVariable::sourceTimestamp() const
@@ -591,7 +653,7 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
 	Q_UNUSED(st);
 	// update cache
 	m_dataType = dataType;
-	//Q_ASSERT(this->dataTypeInternal() == m_dataType);
+	Q_ASSERT(this->dataTypeInternal() == m_dataType);
 }
 
 void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
@@ -726,7 +788,12 @@ void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
 		oldValue = QVariant((QVariant::Type)QMetaType_OptionSet);
 	}
 	// set converted or default value
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+	UA_DataType* optDataType = getDataTypeFromNodeId(optionSetTypeNodeId);
+	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue, optDataType);
+#else
 	auto tmpVar = QUaTypesConverter::uaVariantFromQVariant(oldValue);
+#endif // !OPEN62541_ISSUE3934_RESOLVED
 	m_bInternalWrite = true;
 	st = this->setValueInternal(tmpVar);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
@@ -735,7 +802,8 @@ void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
 	// change data type
 	st = UA_Server_writeDataType(m_qUaServer->m_server,
 		m_nodeId,
-		optionSetTypeNodeId);
+		optionSetTypeNodeId
+	);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// update cache
 	m_dataType = QMetaType_OptionSet;

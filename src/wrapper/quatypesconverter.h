@@ -30,7 +30,12 @@ namespace QUaTypesConverter {
 	// ua from qt
 	UA_NodeId          uaTypeNodeIdFromQType(const QMetaType::Type &type);
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
-	UA_Variant         uaVariantFromQVariant(const QVariant &var);
+	UA_Variant         uaVariantFromQVariant(
+		const QVariant &var
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+		, const UA_DataType * optDataType = nullptr
+#endif // !OPEN62541_ISSUE3934_RESOLVED
+	);
 	// ua from qt : scalar
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations
 	UA_Variant uaVariantFromQVariantScalar(const QVariant &var, const UA_DataType *type);

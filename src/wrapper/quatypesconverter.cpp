@@ -231,7 +231,11 @@ const UA_DataType * uaTypeFromQType(const QMetaType::Type & type)
 	return QUaDataType::dataTypeByQType(type);
 }
 
-UA_Variant uaVariantFromQVariant(const QVariant & var)
+UA_Variant uaVariantFromQVariant(const QVariant & var
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+	, const UA_DataType* optDataType/* = nullptr*/
+#endif // !OPEN62541_ISSUE3934_RESOLVED
+)
 {
 	if (!var.isValid())
 	{
@@ -307,8 +311,13 @@ UA_Variant uaVariantFromQVariant(const QVariant & var)
 		//if (qtType == QMetaType_Image)
 		//	return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+#ifndef OPEN62541_ISSUE3934_RESOLVED
+		if (qtType == QMetaType_OptionSet)       // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
+			return uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(var, optDataType);
+#else
 		if (qtType == QMetaType_OptionSet)       // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
 			return uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(var, uaType);
+#endif // !OPEN62541_ISSUE3934_RESOLVED
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 		if (qtType == QMetaType_TimeZone)        // 258 : UA_TimeZoneDataType { UA_Int16 offset; UA_Boolean daylightSavingInOffset; }
