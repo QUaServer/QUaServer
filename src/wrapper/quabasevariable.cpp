@@ -296,8 +296,7 @@ void QUaBaseVariable::setValue(
 				// can convert to old type
 				auto iter = newValue.value<QSequentialIterable>();
 				QVariant innerVar = iter.at(0);
-				if (oldType < QMetaType::User &&
-					innerVar.canConvert(oldType))
+				if (innerVar.canConvert(oldType))
 				{
 					// convert to old type
 					QVariantList listOldType;
@@ -311,18 +310,13 @@ void QUaBaseVariable::setValue(
 					newType = oldType;
 				}
 			}
-			// if scalar
-			else
+			// if scalar and can convert to old type
+			else if (newValue.canConvert(oldType))
 			{
-				// can convert to old type
-				if (oldType < QMetaType::User &&
-					newValue.canConvert(oldType))
-				{
-					// convert to old type
-					newValue.convert(oldType);
-					// preserve old type
-					newType = oldType;
-				}
+				// convert to old type
+				newValue.convert(oldType);
+				// preserve old type
+				newType = oldType;
 			}
 		}
 	}

@@ -1079,6 +1079,30 @@ void registerCustomTypes()
 	QMetaType::registerConverter<QString, QUaOptionSet>([](QString strXmlOptionSet) {
 		return QUaOptionSet(strXmlOptionSet);
 	});
+	QMetaType::registerConverter<QUaOptionSet, quint64>([](QUaOptionSet optionSet) {
+		return optionSet.values();
+	});
+	QMetaType::registerConverter<quint64, QUaOptionSet>([](quint64 optionSetValues) {
+		return QUaOptionSet(optionSetValues);
+	});
+	QMetaType::registerConverter<QUaOptionSet, qint64>([](QUaOptionSet optionSet) {
+		return static_cast<qint32>(optionSet.values());
+	});
+	QMetaType::registerConverter<qint64, QUaOptionSet>([](qint64 optionSetValues) {
+		return QUaOptionSet(optionSetValues);
+	});
+	QMetaType::registerConverter<QUaOptionSet, quint32>([](QUaOptionSet optionSet) {
+		return static_cast<quint32>(optionSet.values());
+	});
+	QMetaType::registerConverter<quint32, QUaOptionSet>([](quint32 optionSetValues) {
+		return QUaOptionSet(optionSetValues);
+	});	
+	QMetaType::registerConverter<QUaOptionSet, qint32>([](QUaOptionSet optionSet) {
+		return static_cast<qint32>(optionSet.values());
+	});
+	QMetaType::registerConverter<qint32, QUaOptionSet>([](qint32 optionSetValues) {
+		return QUaOptionSet(optionSetValues);
+	});
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// node id list
 	Q_ASSERT(qMetaTypeId<QList<QUaLocalizedText>>() >= QMetaType::User);
