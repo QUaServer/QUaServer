@@ -3,6 +3,7 @@
 #include "quaserver_anex.h"
 #include <QUaBaseDataVariable>
 
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifndef OPEN62541_ISSUE3934_RESOLVED
 // NOTE : added this ugly workaround that passes the "same datatypes" condition in
 // server/ua_services_attribute.c::compatibleDataType so we can actually set the value
@@ -49,6 +50,7 @@ UA_DataType* getDataTypeFromNodeId(const UA_NodeId& optNodeId)
 	return tmpType;
 }
 #endif // !OPEN62541_ISSUE3934_RESOLVED
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 
 // [STATIC] : always called by open62541 library after a write, used by QUaServer 
 // to emit signals and to make differentiation between network or programmatic value change
@@ -335,6 +337,7 @@ void QUaBaseVariable::setValue(
 		Q_UNUSED(st);
 	}
 	// convert to UA_Variant and set new value
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifndef OPEN62541_ISSUE3934_RESOLVED
 	UA_DataType* optDataType = nullptr;
 	if (m_dataType == QMetaType_OptionSet)
@@ -351,6 +354,9 @@ void QUaBaseVariable::setValue(
 #else
 	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
 #endif // !OPEN62541_ISSUE3934_RESOLVED
+#else
+	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	// mask as internal write to avoid emitting valueChange signal on QUaBaseVariable::onWrite
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
