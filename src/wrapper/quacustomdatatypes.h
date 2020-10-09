@@ -705,7 +705,16 @@ public:
     bool operator< (const QUaOptionSet& other) const;
 
     quint64 values() const;
+    void    setValues(const quint64& values);
+
     quint64 validBits() const;
+    void    setValidBits(const quint64& validBits);
+
+    bool    bitValue(const quint8& bit);
+    void    setBitValue(const quint8& bit, const bool& value);
+
+    bool    bitValidity(const quint8& bit);
+    void    setBitValidity(const quint8& bit, const bool& validity);
 
 private:
     QByteArray m_value;

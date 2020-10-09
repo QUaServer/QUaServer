@@ -1351,16 +1351,8 @@ QUaOptionSet::QUaOptionSet(const QUaOptionSet& other)
 
 QUaOptionSet::QUaOptionSet(const quint64& values, const quint64& validBits)
 {
-	QDataStream valueStream(&m_value, QIODevice::WriteOnly | QIODevice::Truncate);
-	valueStream.setVersion(QDataStream::Qt_5_6);
-	valueStream.setByteOrder(QDataStream::LittleEndian);
-	valueStream << static_cast<quint64>(values);
-	QDataStream validBitsStream(&m_validBits, QIODevice::WriteOnly | QIODevice::Truncate);
-	validBitsStream.setVersion(QDataStream::Qt_5_6);
-	validBitsStream.setByteOrder(QDataStream::LittleEndian);
-	validBitsStream << static_cast<quint64>(validBits);
-	Q_ASSERT(m_value.size() == 8);
-	Q_ASSERT(m_validBits.size() == 8);
+	this->setValues(values);
+	this->setValidBits(validBits);
 }
 
 QUaOptionSet::QUaOptionSet(const UA_OptionSet& uaOptionSet)
@@ -1477,6 +1469,15 @@ quint64 QUaOptionSet::values() const
 	return values;
 }
 
+void QUaOptionSet::setValues(const quint64& values)
+{
+	QDataStream valueStream(&m_value, QIODevice::WriteOnly | QIODevice::Truncate);
+	valueStream.setVersion(QDataStream::Qt_5_6);
+	valueStream.setByteOrder(QDataStream::LittleEndian);
+	valueStream << static_cast<quint64>(values);
+	Q_ASSERT(m_value.size() == 8);
+}
+
 quint64 QUaOptionSet::validBits() const
 {
 	quint64 validBits;
@@ -1487,4 +1488,45 @@ quint64 QUaOptionSet::validBits() const
 	inStream >> validBits;
 	return validBits;
 }
+
+void QUaOptionSet::setValidBits(const quint64& validBits)
+{
+	QDataStream validBitsStream(&m_validBits, QIODevice::WriteOnly | QIODevice::Truncate);
+	validBitsStream.setVersion(QDataStream::Qt_5_6);
+	validBitsStream.setByteOrder(QDataStream::LittleEndian);
+	validBitsStream << static_cast<quint64>(validBits);
+	Q_ASSERT(m_validBits.size() == 8);
+}
+
+// https://stackoverflow.com/questions/47981/how-do-you-set-clear-and-toggle-a-single-bit
+bool QUaOptionSet::bitValue(const quint8& bit)
+{
+	return (this->values() >> bit) & 1ULL;
+}
+
+void QUaOptionSet::setBitValue(const quint8& bit, const bool& value)
+{
+	Q_ASSERT_X(bit < 64, "QUaOptionSet::setBitValue", "Only 64bit optionsets are supported");
+	auto values = this->values();
+	value ?
+		values |=   1ULL << bit :
+		values &= ~(1ULL << bit);
+	this->setValues(values);
+}
+
+bool QUaOptionSet::bitValidity(const quint8& bit)
+{
+	return (this->validBits() >> bit) & 1ULL;
+}
+
+void QUaOptionSet::setBitValidity(const quint8& bit, const bool& validity)
+{
+	Q_ASSERT_X(bit < 64, "QUaOptionSet::setBitValidity", "Only 64bit optionsets are supported");
+	auto validBits = this->validBits();
+	validity ?
+		validBits |=   1ULL << bit :
+		validBits &= ~(1ULL << bit);
+	this->setValidBits(validBits);
+}
+
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
