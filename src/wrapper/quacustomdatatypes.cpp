@@ -1332,9 +1332,9 @@ uint QUa::qHash(const ChangeVerb &key, uint seed)
 }
 
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
-QUaOptionSet::QUaOptionSet()
+QUaOptionSet::QUaOptionSet() :
+	QUaOptionSet(0, 0)
 {
-    this->QUaOptionSet::QUaOptionSet(0, 0);
 	Q_ASSERT(m_value.size() == 8);
 	Q_ASSERT(m_validBits.size() == 8);
 }
@@ -1409,7 +1409,8 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 	if (components.size() != 2)
 	{
 		// if no valid xml format, assume is a number and the number is the values
-		this->QUaOptionSet::QUaOptionSet(strXmlOptionSet.toULongLong());
+		this->setValues   (strXmlOptionSet.toULongLong());
+		this->setValidBits(0xFFFFFFFFFFFFFFFF);
 		return;
 	}
 	auto firstComp   = components.at(0);
@@ -1428,7 +1429,8 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 		values    = firstPart.toULongLong();
 		validBits = secondPart.toULongLong();
 	}
-	this->QUaOptionSet::QUaOptionSet(values, validBits);
+	this->setValues(values);
+	this->setValidBits(validBits);
 }
 
 void QUaOptionSet::operator=(const char* strXmlOptionSet)
