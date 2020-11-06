@@ -259,12 +259,17 @@ inline QList<QUaNodeId> QUaBaseVariable::valueInternal(std::true_type) const
 {
     return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaNodeId>>();
 }
-
 // if array
 template<>
 inline QList<QUaLocalizedText> QUaBaseVariable::valueInternal(std::true_type) const
 {
     return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaLocalizedText>>();
+}
+// if array
+template<>
+inline QList<bool> QUaBaseVariable::valueInternal(std::true_type) const
+{
+    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<bool>>();
 }
 #endif // Q_OS_LINUX
 
