@@ -6,32 +6,34 @@ CONFIG -= flat
 
 INCLUDEPATH += $$PWD/
 
-!ua_no_pch {
+ua_pch {
     message("Enabled precompile header.")
     LANGUAGE = C++
     CONFIG += precompile_header
     PRECOMPILED_HEADER = $$PWD/pch_open62541.h
     DEFINES += UA_PCH
-    # these defines are not necessary to build but helpful for intelisense
-    ua_encryption {
-        DEFINES += UA_ENABLE_ENCRYPTION
-    }
-    ua_events || ua_alarms_conditions {
-        DEFINES += UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    }
-    ua_historizing {
-        DEFINES += UA_ENABLE_HISTORIZING
-    }
-    ua_alarms_conditions {
-        DEFINES += UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-    }
-    ua_namespace_full || ua_events || ua_alarms_conditions {
-        DEFINES += UA_GENERATED_NAMESPACE_ZERO_FULL
-    }
-    win32 {
-        QMAKE_CXXFLAGS_WARN_ON -= -w14005
-        QMAKE_CXXFLAGS += -wd4005
-    }
+}
+
+# force defines in all sources
+ua_encryption {
+    DEFINES += UA_ENABLE_ENCRYPTION
+}
+ua_events || ua_alarms_conditions {
+    DEFINES += UA_ENABLE_SUBSCRIPTIONS_EVENTS
+}
+ua_historizing {
+    DEFINES += UA_ENABLE_HISTORIZING
+}
+ua_alarms_conditions {
+    DEFINES += UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+}
+ua_namespace_full || ua_events || ua_alarms_conditions {
+    DEFINES += UA_GENERATED_NAMESPACE_ZERO_FULL
+}
+# ignore some useless warnings
+win32 {
+    QMAKE_CXXFLAGS_WARN_ON -= -w14005
+    QMAKE_CXXFLAGS += -wd4005
 }
 
 SOURCES += \

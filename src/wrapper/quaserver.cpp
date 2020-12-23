@@ -2367,7 +2367,7 @@ UA_NodeId QUaServer::createInstanceInternal(
 		QByteArray byteDisplayName = browseName.name().toUtf8();
 		vAttr.displayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
 		// add variable
-		UA_Server_addVariableNode(m_server,
+        st = UA_Server_addVariableNode(m_server,
 			reqNodeId,            // requested nodeId
 			parentNode ? parentNode->m_nodeId : UA_NODEID_NULL, // parent (can be null)
 			referenceTypeId,      // parent relation with child
