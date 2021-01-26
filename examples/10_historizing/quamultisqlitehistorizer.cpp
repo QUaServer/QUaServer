@@ -65,10 +65,10 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 		// stop timer until next write request
 		m_timerTransaction.stop();
 		// get most recent db file
-		const QString& strDbName = m_dbFiles.last().strFileName;
+		auto &dbInfo = m_dbFiles.last();
 		// commit transaction
 		QSqlDatabase db;
-		if (!this->getOpenedDatabase(strDbName, db, m_deferedLogOut))
+		if (!this->getOpenedDatabase(dbInfo, db, m_deferedLogOut))
 		{
 			return;
 		}
@@ -76,7 +76,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 		{
 			m_deferedLogOut << QUaLog({
 				QObject::tr("Failed to commit transaction in %1 database. Sql : %2.")
-					.arg(strDbName)
+					.arg(dbInfo.strFileName)
 					.arg(db.lastError().text()),
 				QUaLogLevel::Error,
 				QUaLogCategory::History
@@ -94,11 +94,11 @@ QUaMultiSqliteHistorizer::~QUaMultiSqliteHistorizer()
 	// close all db files
 	while (!m_dbFiles.isEmpty())
 	{
-		const QString& strDbName = m_dbFiles.take(m_dbFiles.firstKey()).strFileName;
-		bool ok = this->closeDatabase(strDbName, tmpLog);
+		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
+		bool ok = this->closeDatabase(dbInfo, tmpLog);
 		if (!ok)
 		{
-			qDebug() << QUaLog::toString(tmpLog);
+			//qDebug() << QUaLog::toString(tmpLog);
 		}
 		Q_ASSERT(ok);
 	}
@@ -125,8 +125,8 @@ bool QUaMultiSqliteHistorizer::setDatabasePath(
 	// close all db files
 	while (!m_dbFiles.isEmpty())
 	{
-		const QString& strDbName = m_dbFiles.take(m_dbFiles.firstKey()).strFileName;
-		bool ok = this->closeDatabase(strDbName, logOut);
+		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
+		bool ok = this->closeDatabase(dbInfo, logOut);
 		Q_ASSERT(ok);
 		Q_UNUSED(ok);
 	}
@@ -163,14 +163,6 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 	QQueue<QUaLog>& logOut
 )
 {
-	// get most recent db file
-	const QString& strDbName = m_dbFiles.isEmpty() ? "" : m_dbFiles.last().strFileName;
-	// close old database (if any)
-	bool ok = this->closeDatabase(strDbName, logOut);
-	if (!ok)
-	{
-		return false;
-	}
 	// check target path exists
 	if (!QDir(m_strDatabasePath).exists())
 	{
@@ -203,7 +195,7 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 		.arg(m_strSuffix);
 	// create and test open database handle
 	QSqlDatabase db;
-	if (!this->getOpenedDatabase(m_dbFiles[currDateTime].strFileName, db, logOut))
+	if (!this->getOpenedDatabase(m_dbFiles[currDateTime], db, logOut))
 	{
 		return false;
 	}
@@ -261,7 +253,6 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 	}
 	// get most recent db file
 	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
 	// if transactions disabled, check if need to change database here
 	// NOTE : if transactions enabled, this check if performed in transation timeout
 	if (m_timeoutTransaction == 0 && m_checkingTimer.elapsed() > 5000)
@@ -276,7 +267,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 	}
 	// get database handle
 	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
+	if (!this->getOpenedDatabase(dbInfo, db, logOut))
 	{
 		return false;
 	}
@@ -343,65 +334,75 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	// get most recent db file
-	auto& dbInfo = m_dbFiles[m_dbFiles.lastKey()];
-	const QString& strDbName = dbInfo.strFileName;
-	// get database handle
-	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
+	//qDebug() << "";
+	//qDebug() << "Request firstTimestamp for" << nodeId;
+	// look in all db files starting from the first one
+	for (auto dbCurr = m_dbFiles.begin(); dbCurr != m_dbFiles.end(); dbCurr++)
 	{
-		return QDateTime();
-	}
-	// check data table exists
-	bool dataTableExists;
-	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
-	{
-		return QDateTime();
-	}
-	if (!dataTableExists)
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying first timestamp. "
-				"History database does not contain table for node id %1")
-				.arg(nodeId),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+		auto& dbInfo = dbCurr.value();
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			// it is possible that a variable was not yet historized in an old file
+			continue;
+		}
+		Q_ASSERT(db.isValid() && db.isOpen());
+		// get prepared statement cache
+		QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].firstTimestamp;
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table for first timestamp in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
 			});
-		return QDateTime();
-	}
-	Q_ASSERT(db.isValid() && db.isOpen());
-	// get prepared statement cache
-	QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].firstTimestamp;
-	if (!query.exec())
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying [%1] table for first timestamp in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+			continue;
+		}
+		if (!query.next())
+		{
+			logOut << QUaLog({
+				QObject::tr("Empty result querying [%1] table for first timestamp in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Warning,
+				QUaLogCategory::History
 			});
-		return QDateTime();
+			continue;
+		}
+		// get time key
+		QSqlRecord rec = query.record();
+		int timeKeyCol = rec.indexOf("Time");
+		Q_ASSERT(timeKeyCol >= 0);
+		auto timeInt = query.value(timeKeyCol).toLongLong();
+		// return
+		//qDebug() << "Response firstTimestamp for" << nodeId << "=" << QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 	}
-	if (!query.next())
-	{
-		logOut << QUaLog({
-			QObject::tr("Empty result querying [%1] table for first timestamp in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
-			});
-		return QDateTime();
-	}
-	// get time key
-	QSqlRecord rec = query.record();
-	int timeKeyCol = rec.indexOf("Time");
-	Q_ASSERT(timeKeyCol >= 0);
-	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+	// if reached here means we did not find historic data for given nodeId
+	logOut << QUaLog({
+		QObject::tr("Could not find first timestamp for %1 in database.")
+			.arg(nodeId),
+		QUaLogLevel::Warning,
+		QUaLogCategory::History
+	});
+	// return invalid
+	//qDebug() << "Response firstTimestamp for" << nodeId << "= Invalid";
+	return QDateTime();
 }
 
 QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
@@ -409,65 +410,80 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
-	// get database handle
-	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
+	//qDebug() << "";
+	//qDebug() << "Request lastTimestamp for" << nodeId;	
+	// look in all db files starting from the last one
+	bool exitLoop = false;
+	for (auto dbCurr = --m_dbFiles.end(); !exitLoop; dbCurr--)
 	{
-		return QDateTime();
-	}
-	// check data table exists
-	bool dataTableExists;
-	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
-	{
-		return QDateTime();
-	}
-	if (!dataTableExists)
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying last timestamp. "
-				"History database does not contain table for node id %1")
-				.arg(nodeId),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+		if (dbCurr == m_dbFiles.begin())
+		{
+			exitLoop = true;
+		}
+		auto& dbInfo = dbCurr.value();
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			// it is possible that a variable was stopped form being historized in a newer file
+			continue;
+		}
+		Q_ASSERT(db.isValid() && db.isOpen());
+		// get prepared statement cache
+		QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].lastTimestamp;
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table for last timestamp in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
 			});
-		return QDateTime();
-	}
-	Q_ASSERT(db.isValid() && db.isOpen());
-	// get prepared statement cache
-	QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].lastTimestamp;
-	if (!query.exec())
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying [%1] table for last timestamp in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+			continue;
+		}
+		if (!query.next())
+		{
+			logOut << QUaLog({
+				QObject::tr("Empty result querying [%1] table for last timestamp in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Warning,
+				QUaLogCategory::History
 			});
-		return QDateTime();
+			continue;
+		}
+		// get time key
+		QSqlRecord rec = query.record();
+		int timeKeyCol = rec.indexOf("Time");
+		Q_ASSERT(timeKeyCol >= 0);
+		auto timeInt = query.value(timeKeyCol).toLongLong();
+		// return
+		//qDebug() << "Response lastTimestamp for" << nodeId << "=" << QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 	}
-	if (!query.next())
-	{
-		logOut << QUaLog({
-			QObject::tr("Empty result querying [%1] table for last timestamp in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
-			});
-		return QDateTime();
-	}
-	// get time key
-	QSqlRecord rec = query.record();
-	int timeKeyCol = rec.indexOf("Time");
-	Q_ASSERT(timeKeyCol >= 0);
-	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+	// if reached here means we did not find historic data for given nodeId
+	logOut << QUaLog({
+		QObject::tr("Could not find last timestamp for %1 in database.")
+			.arg(nodeId),
+		QUaLogLevel::Warning,
+		QUaLogCategory::History
+	});
+	//qDebug() << "Response lastTimestamp for" << nodeId << "= Invalid";
+	// return invalid
+	return QDateTime();
 }
 
 bool QUaMultiSqliteHistorizer::hasTimestamp(
@@ -476,19 +492,48 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
+	//qDebug() << "";
+	//qDebug() << "Request hasTimestamp for" << nodeId << "-" << timestamp;
+	// check if in range
+	if (timestamp < m_dbFiles.firstKey())
+	{
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "out of range";
+		return false;
+	}
+	// find database file where it *could* be
+	// return the first element in [first,last) which does not compare less than val
+	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timestamp);
+	// need the one before, or out of range if lower_bound returns begin
+	iter = iter == m_dbFiles.keyBegin() ? m_dbFiles.keyEnd() : *iter == timestamp ? iter : --iter;
+	// if out of range, return invalid
+	Q_ASSERT(!(iter == m_dbFiles.keyEnd() || !m_dbFiles.contains(*iter)));
+	if (iter == m_dbFiles.keyEnd() || !m_dbFiles.contains(*iter))
+	{
+		// NOTE : this one is error because should have caught it in the first check
+		logOut << QUaLog({
+			QObject::tr(" Tried to query history database for node id %1 outside available time range.")
+				.arg(nodeId),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "out of range";
+		return false;
+	}
+	// get possible db file
+	Q_ASSERT(m_dbFiles.contains(*iter));
+	auto& dbInfo = m_dbFiles[*iter];
 	// get database handle
 	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
+	if (!this->getOpenedDatabase(dbInfo, db, logOut))
 	{
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false;
 		return false;
 	}
 	// check data table exists
 	bool dataTableExists;
 	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
 	{
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "error looking for table";
 		return false;
 	}
 	if (!dataTableExists)
@@ -499,7 +544,8 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 				.arg(nodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "table does not exist";
 		return false;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -510,11 +556,12 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 		logOut << QUaLog({
 			QObject::tr("Error querying [%1] table for exact timestamp in %2 database. Sql : %3.")
 				.arg(nodeId)
-				.arg(strDbName)
+				.arg(dbInfo.strFileName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "query fail";
 		return false;
 	}
 	// exists if at least one result
@@ -523,16 +570,18 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 		logOut << QUaLog({
 			QObject::tr("Empty result querying [%1] table for exact timestamp in %2 database. Sql : %3.")
 				.arg(nodeId)
-				.arg(strDbName)
+				.arg(dbInfo.strFileName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Warning,
 			QUaLogCategory::History
-			});
+		});
+		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "no result";
 		return false;
 	}
 	QSqlRecord rec = query.record();
 	auto num = query.value(0).toULongLong();
 	bool found = num > 0;
+	//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << found;
 	return found;
 }
 
@@ -542,81 +591,51 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 	const QUaHistoryBackend::TimeMatch& match,
 	QQueue<QUaLog>& logOut
 )
-{
-	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
-	// get database handle
-	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
+{	
+	//qDebug() << "";
+	//qDebug() << "Request findTimestamp for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ")";
+	// if ClosestFromBelow look downwards from end until one sample found
+	// if ClosestFromAbove look upwards from start until one sample found
+	auto iter = match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? --m_dbFiles.keyEnd() : m_dbFiles.keyBegin();
+	auto retTimestamp = QDateTime();
+	for (bool exitLoop = false; iter != m_dbFiles.keyEnd() && !exitLoop; match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? iter-- : iter++)
 	{
-		return QDateTime();
-	}
-	// check data table exists
-	bool dataTableExists;
-	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
-	{
-		return QDateTime();
-	}
-	if (!dataTableExists)
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying around timestamp. "
-				"History database does not contain table for node id %1")
-				.arg(nodeId),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
-			});
-		return QDateTime();
-	}
-	Q_ASSERT(db.isValid() && db.isOpen());
-	// get correct query
-	QSqlQuery query;
-	switch (match)
-	{
-	case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
-	{
-		query = dbInfo.dataPrepStmts[nodeId].findTimestampAbove;
-	}
-	break;
-	case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
-	{
-		query = dbInfo.dataPrepStmts[nodeId].findTimestampBelow;
-	}
-	break;
-	default:
-	{
-		Q_ASSERT(false);
-	}
-	break;
-	}
-	// set reference time
-	query.bindValue(0, timestamp.toMSecsSinceEpoch());
-	if (!query.exec())
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying [%1] table around timestamp in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
-			});
-		return QDateTime();
-	}
-	// if there is none return either first or last
-	if (!query.next())
-	{
+		if (iter == m_dbFiles.keyBegin() && match == QUaHistoryBackend::TimeMatch::ClosestFromBelow)
+		{
+			exitLoop = true;
+		}
+		// get possible db file
+		Q_ASSERT(m_dbFiles.contains(*iter));
+		auto& dbInfo = m_dbFiles[*iter];
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			continue;
+		}
+		Q_ASSERT(db.isValid() && db.isOpen());
+		// get correct query
+		QSqlQuery query;
 		switch (match)
 		{
 		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
 		{
-			return this->lastTimestamp(nodeId, logOut);
+			query = dbInfo.dataPrepStmts[nodeId].findTimestampAbove;
 		}
 		break;
 		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
 		{
-			return this->firstTimestamp(nodeId, logOut);
+			query = dbInfo.dataPrepStmts[nodeId].findTimestampBelow;
 		}
 		break;
 		default:
@@ -625,13 +644,76 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 		}
 		break;
 		}
+		// set reference time
+		query.bindValue(0, timestamp.toMSecsSinceEpoch());
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table around timestamp in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
+			});
+			continue;
+		}
+		// if there is none continue
+		if (!query.next())
+		{
+			// if nothing found after searching all
+			if (
+				(match == QUaHistoryBackend::TimeMatch::ClosestFromBelow && iter == m_dbFiles.keyBegin()) ||
+				 match == QUaHistoryBackend::TimeMatch::ClosestFromAbove && iter == ++m_dbFiles.keyEnd()
+				)
+			{
+				switch (match)
+				{
+					case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+					{
+						auto ts = this->lastTimestamp(nodeId, logOut);
+						//qDebug() << "Response findTimestamp for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << ts << "out of range";
+						return ts;
+					}
+					break;
+					case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+					{
+						auto ts = this->firstTimestamp(nodeId, logOut);
+						//qDebug() << "Response findTimestamp for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << ts << "out of range";
+						return ts;
+					}
+					break;
+					default:
+					{
+						Q_ASSERT(false);
+						return QDateTime();
+					}
+					break;
+				}
+				exitLoop = true;
+				break;
+			}
+			continue;
+		}
+		// get time key
+		QSqlRecord rec = query.record();
+		int timeKeyCol = rec.indexOf("Time");
+		Q_ASSERT(timeKeyCol >= 0);
+		auto timeInt = query.value(timeKeyCol).toLongLong();
+		auto currTimestamp = QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+		Q_ASSERT(
+			retTimestamp == QDateTime() ||
+			match == QUaHistoryBackend::TimeMatch::ClosestFromAbove ? 
+				currTimestamp > retTimestamp :
+				currTimestamp < retTimestamp
+		);
+		// update
+		retTimestamp = currTimestamp;
+		break;
 	}
-	// get time key
-	QSqlRecord rec = query.record();
-	int timeKeyCol = rec.indexOf("Time");
-	Q_ASSERT(timeKeyCol >= 0);
-	auto timeInt = query.value(timeKeyCol).toLongLong();
-	return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+	// return
+	//qDebug() << "Response findTimestamp for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << retTimestamp << "ok";
+	return retTimestamp;
 }
 
 quint64 QUaMultiSqliteHistorizer::numDataPointsInRange(
@@ -640,73 +722,93 @@ quint64 QUaMultiSqliteHistorizer::numDataPointsInRange(
 	const QDateTime& timeEnd,
 	QQueue<QUaLog>& logOut)
 {
-	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
-	// get database handle
-	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
-	{
-		return 0;
-	}
-	// check data table exists
-	bool dataTableExists;
-	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
-	{
-		return 0;
-	}
-	if (!dataTableExists)
+	//qDebug() << "";
+	//qDebug() << "Request numDataPointsInRange for" << nodeId << "(" << timeStart << "-" << timeEnd << ")";
+	// find database file where it *could* be
+	// return the first element in [first,last) which does not compare less than val
+	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
+	// need the one before, or out of range if lower_bound returns begin
+	iter = iter == m_dbFiles.keyBegin() || *iter == timeStart ? iter : --iter;
+	// if out of range, return invalid
+	if (iter == m_dbFiles.keyEnd() || !m_dbFiles.contains(*iter))
 	{
 		logOut << QUaLog({
-			QObject::tr("Error querying number of points in range. "
-				"History database does not contain table for node id %1")
+			QObject::tr(" Tried to query history database for node id %1 outside available time range.")
 				.arg(nodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
+		//qDebug() << "Response numDataPointsInRange for" << nodeId << "(" << timeStart << "-" << timeEnd << ") =" << 0 << "out of range";
 		return 0;
 	}
-	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery query;
-	if (timeEnd.isValid())
+	quint64 count = 0;
+	// look in all db files starting from the first one
+	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
-		query = dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndValid;
-		query.bindValue(0, timeStart.toMSecsSinceEpoch());
-		query.bindValue(1, timeEnd.toMSecsSinceEpoch());
-	}
-	else
-	{
-		query = dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid;
-		query.bindValue(0, timeStart.toMSecsSinceEpoch());
-	}
-	if (!query.exec())
-	{
-		logOut << QUaLog({
-			QObject::tr("Error querying [%1] table for number of points in range in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+		// get possible db file
+		Q_ASSERT(m_dbFiles.contains(*iter));
+		auto& dbInfo = m_dbFiles[*iter];
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			continue;
+		}
+		Q_ASSERT(db.isValid() && db.isOpen());
+		QSqlQuery query;
+		if (timeEnd.isValid())
+		{
+			query = dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndValid;
+			query.bindValue(0, timeStart.toMSecsSinceEpoch());
+			query.bindValue(1, timeEnd.toMSecsSinceEpoch());
+		}
+		else
+		{
+			query = dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid;
+			query.bindValue(0, timeStart.toMSecsSinceEpoch());
+		}
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table for number of points in range in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
 			});
-		return 0;
-	}
-	if (!query.next())
-	{
-		logOut << QUaLog({
+			continue;
+		}
+		if (!query.next())
+		{
+			logOut << QUaLog({
 			QObject::tr("Empty result querying [%1] table for number of points in range in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Warning,
-			QUaLogCategory::History
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Warning,
+				QUaLogCategory::History
 			});
-		return 0;
+			continue;
+		}
+		// get number of points in range
+		QSqlRecord rec = query.record();
+		auto num = query.value(0).toULongLong();
+		count += num;
 	}
-	// get number of points in range
-	QSqlRecord rec = query.record();
-	auto num = query.value(0).toULongLong();
-	return num;
+	// return total
+	//qDebug() << "Response numDataPointsInRange for" << nodeId << "(" << timeStart << "-" << timeEnd << ") =" << count;
+	return count;
 }
 
 QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
@@ -716,72 +818,157 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 	const quint64& numPointsToRead,
 	QQueue<QUaLog>& logOut)
 {
+	//qDebug() << "";
+	//qDebug() << "Request readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ")";
 	auto points = QVector<QUaHistoryDataPoint>();
-	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
-	const QString& strDbName = dbInfo.strFileName;
-	// get database handle
-	QSqlDatabase db;
-	if (!this->getOpenedDatabase(strDbName, db, logOut))
-	{
-		return points;
-	}
-	// check data table exists
-	bool dataTableExists;
-	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
-	{
-		return points;
-	}
-	if (!dataTableExists)
+	// return the first element in [first,last) which does not compare less than val
+	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
+	// need the one before, or out of range if lower_bound returns begin
+	iter = iter == m_dbFiles.keyBegin() || *iter == timeStart ? iter : --iter;
+	// if out of range, return invalid
+	if (iter == m_dbFiles.keyEnd() || !m_dbFiles.contains(*iter))
 	{
 		logOut << QUaLog({
-			QObject::tr("Error querying data points. "
-				"History database does not contain table for node id %1")
+			QObject::tr(" Tried to query history database for node id %1 outside available time range.")
 				.arg(nodeId),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
+		//qDebug() << "Response readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ") =" << points.count() << "out of range";
 		return points;
 	}
-	Q_ASSERT(db.isValid() && db.isOpen());
-	QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].readHistoryData;
-	query.bindValue(0, timeStart.toMSecsSinceEpoch());
-	query.bindValue(1, numPointsToRead);
-	query.bindValue(2, numPointsOffset);
-	if (!query.exec())
+	quint64 count = 0;
+	// look in all db files starting from the first one
+	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
-		logOut << QUaLog({
-			QObject::tr("Error querying [%1] table for data points in %2 database. Sql : %3.")
-				.arg(nodeId)
-				.arg(strDbName)
-				.arg(query.lastError().text()),
-			QUaLogLevel::Error,
-			QUaLogCategory::History
+		// get possible db file
+		Q_ASSERT(m_dbFiles.contains(*iter));
+		auto& dbInfo = m_dbFiles[*iter];
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			continue;
+		}
+		Q_ASSERT(db.isValid() && db.isOpen());
+		QSqlQuery query = dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid;
+		query.bindValue(0, timeStart.toMSecsSinceEpoch());
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table for number of points in range in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
 			});
-		return points;
-	}
-	while (query.next())
-	{
+			continue;
+		}
+		if (!query.next())
+		{
+			logOut << QUaLog({
+			QObject::tr("Empty result querying [%1] table for number of points in range in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Warning,
+				QUaLogCategory::History
+			});
+			continue;
+		}
+		// get number of points in range
 		QSqlRecord rec = query.record();
-		int timeKeyCol = rec.indexOf("Time");
-		int valueKeyCol = rec.indexOf("Value");
-		int statusKeyCol = rec.indexOf("Status");
-		Q_ASSERT(timeKeyCol >= 0);
-		Q_ASSERT(valueKeyCol >= 0);
-		Q_ASSERT(statusKeyCol >= 0);
-		auto timeInt = query.value(timeKeyCol).toLongLong();
-		auto time = QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC); // NOTE : expensive if spec not defined
-		auto value = query.value(valueKeyCol);
-		auto status = query.value(statusKeyCol).toUInt();
-		points << QUaHistoryDataPoint({
-			time, value, status
+		auto num = query.value(0).toULongLong();
+		count += num;
+		// continue if have not reached offset
+		if (count >= numPointsOffset)
+		{
+			// NOTE : do not close db becaus ewe are gonna read from it next
+			break;
+		}
+	}
+
+	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
+	{
+		// get possible db file
+		Q_ASSERT(m_dbFiles.contains(*iter));
+		auto& dbInfo = m_dbFiles[*iter];
+		// get database handle
+		QSqlDatabase db;
+		if (!this->getOpenedDatabase(dbInfo, db, logOut))
+		{
+			continue;
+		}
+		// check data table exists
+		bool dataTableExists;
+		if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
+		{
+			continue;
+		}
+		if (!dataTableExists)
+		{
+			continue;
+		}
+		// query for reading values
+		Q_ASSERT(db.isValid() && db.isOpen());
+		QSqlQuery query = dbInfo.dataPrepStmts[nodeId].readHistoryData;
+		query.bindValue(0, timeStart.toMSecsSinceEpoch());
+		query.bindValue(1, numPointsToRead - points.count());
+		query.bindValue(2, 0 /*NOTE : no offset, read all from file above given start time*/);
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Error querying [%1] table for data points in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
 			});
+			continue;
+		}
+		while (query.next())
+		{
+			QSqlRecord rec   = query.record();
+			int timeKeyCol   = rec.indexOf("Time");
+			int valueKeyCol  = rec.indexOf("Value");
+			int statusKeyCol = rec.indexOf("Status");
+			Q_ASSERT(timeKeyCol   >= 0);
+			Q_ASSERT(valueKeyCol  >= 0);
+			Q_ASSERT(statusKeyCol >= 0);
+			auto timeInt = query.value(timeKeyCol).toLongLong();
+			auto time    = QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC); // NOTE : expensive if spec not defined
+			auto value   = query.value(valueKeyCol);
+			auto status  = query.value(statusKeyCol).toUInt();
+			points << QUaHistoryDataPoint({
+				time, value, status
+			});
+		}
+		Q_ASSERT(points.count() <= numPointsToRead);
+		if (points.count() == numPointsToRead)
+		{
+			break;
+		}
 	}
 	// NOTE : return an invalid value if API requests more values than available
 	while (points.count() < numPointsToRead)
 	{
 		points << QUaHistoryDataPoint();
 	}
+	// return
+	qDebug() << "Response readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ") =" << points.count() << "ok";
+	//qDebug() << "Response readHistoryData for" << nodeId << "(" << points.first().timestamp << "-" << points.last().timestamp << ")";
 	return points;
 }
 
@@ -1453,11 +1640,12 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 bool QUaMultiSqliteHistorizer::getOpenedDatabase(
-	const QString& strDbName,
+	DatabaseInfo& dbInfo,
 	QSqlDatabase& db,
 	QQueue<QUaLog>& logOut
 )
 {
+	const QString& strDbName = dbInfo.strFileName;
 	// add if not added
 	if (QSqlDatabase::contains(strDbName))
 	{
@@ -1486,10 +1674,11 @@ bool QUaMultiSqliteHistorizer::getOpenedDatabase(
 }
 
 bool QUaMultiSqliteHistorizer::closeDatabase(
-	const QString& strDbName,
+	DatabaseInfo& dbInfo,
 	QQueue<QUaLog>& logOut
 )
 {
+	const QString& strDbName = dbInfo.strFileName;
 	// ignore if empty
 	if (strDbName.isEmpty())
 	{
@@ -1555,7 +1744,7 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 		// close if necessary
 		if (QSqlDatabase::contains(dbInfo.strFileName))
 		{
-			this->closeDatabase(dbInfo.strFileName, logOut);
+			this->closeDatabase(dbInfo, logOut);
 		}
 		// substract size
 		auto fInfo = QFileInfo(dbInfo.strFileName);		
@@ -1634,7 +1823,7 @@ bool QUaMultiSqliteHistorizer::reloadMatchingFiles(
 			});
 			continue;
 		}
-		QDateTime dateTime = QDateTime::fromMSecsSinceEpoch(msSecSinceEpoc);
+		QDateTime dateTime = QDateTime::fromMSecsSinceEpoch(msSecSinceEpoc, Qt::UTC);
 		if (m_dbFiles.contains(dateTime))
 		{
 			// remove from extsing
@@ -1672,6 +1861,8 @@ bool QUaMultiSqliteHistorizer::reloadMatchingFiles(
 		});
 		m_dbFiles.remove(dateTime);
 	}
+	// return
+	return true;
 }
 
 bool QUaMultiSqliteHistorizer::tableExists(

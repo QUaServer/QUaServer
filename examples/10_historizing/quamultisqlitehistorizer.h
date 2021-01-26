@@ -186,13 +186,13 @@ private:
 	);
 	// get database handle, creates it if not already
 	bool getOpenedDatabase(
-		const QString& strDbName,
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		QQueue<QUaLog>& logOut
 	);
 	// closes current database if it is opened
 	bool closeDatabase(
-		const QString& strDbName,
+		DatabaseInfo& dbInfo,
 		QQueue<QUaLog>& logOut
 	);
 	// checks current database size and creates a new one if necessary
