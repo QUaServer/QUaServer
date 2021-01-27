@@ -28,6 +28,9 @@ public:
 	double totalSizeLimMb() const;
 	void setTotalSizeLimMb(const double &totalSizeLimMb);	
 
+	int autoCloseDatabaseTimeout() const;
+	void setAutoCloseDatabaseTimeout(const int& timeoutMs);
+
 	// time period between opening and commiting a database transaction
 	// this is implemented for performance reasons
 	// default is 1000ms, a value <= 0 disables the use of transactions
@@ -158,6 +161,10 @@ private:
 	QMetaObject::Connection m_fileWatchConn;
 	QElapsedTimer m_watchingTimer;
 	QElapsedTimer m_checkingTimer;
+	int     m_timeoutAutoCloseDatabases;
+	QTimer  m_timerAutoCloseDatabases;
+	bool    m_deferTotalSizeCheck;
+	QHash<uint, QDateTime> m_findTimestampCache;
 	// data prepared statements cache
 	struct DataPreparedStatements {
 		QSqlQuery writeHistoryData;
@@ -172,6 +179,7 @@ private:
 	};	
 	struct DatabaseInfo {
 		QString strFileName;
+		QElapsedTimer autoCloseTimer;
 		QHash<QUaNodeId, DataPreparedStatements> dataPrepStmts;
 	};
 	QMap<QDateTime, DatabaseInfo> m_dbFiles;
@@ -192,8 +200,7 @@ private:
 	);
 	// closes current database if it is opened
 	bool closeDatabase(
-		DatabaseInfo& dbInfo,
-		QQueue<QUaLog>& logOut
+		DatabaseInfo& dbInfo
 	);
 	// checks current database size and creates a new one if necessary
 	bool checkDatabase(
