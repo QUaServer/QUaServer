@@ -90,17 +90,13 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 
 QUaMultiSqliteHistorizer::~QUaMultiSqliteHistorizer()
 {
-	QQueue<QUaLog> tmpLog;
 	// close all db files
 	while (!m_dbFiles.isEmpty())
 	{
 		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
-		bool ok = this->closeDatabase(dbInfo, tmpLog);
-		if (!ok)
-		{
-			//qDebug() << QUaLog::toString(tmpLog);
-		}
+		bool ok = this->closeDatabase(dbInfo, m_deferedLogOut);
 		Q_ASSERT(ok);
+		Q_UNUSED(ok);
 	}
 }
 
@@ -818,8 +814,8 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 	const quint64& numPointsToRead,
 	QQueue<QUaLog>& logOut)
 {
-	//qDebug() << "";
-	//qDebug() << "Request readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ")";
+	qDebug() << "";
+	qDebug() << "Request readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ")";
 	auto points = QVector<QUaHistoryDataPoint>();
 	// return the first element in [first,last) which does not compare less than val
 	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
@@ -837,7 +833,8 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 		//qDebug() << "Response readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ") =" << points.count() << "out of range";
 		return points;
 	}
-	quint64 count = 0;
+	qDebug() << "Response readHistoryData for" << nodeId << ", start counting with file ts =" << *iter;
+	qint64 trueOffset = numPointsOffset;
 	// look in all db files starting from the first one
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
@@ -890,15 +887,17 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 		// get number of points in range
 		QSqlRecord rec = query.record();
 		auto num = query.value(0).toULongLong();
-		count += num;
+		trueOffset -= num;
 		// continue if have not reached offset
-		if (count >= numPointsOffset)
+		if (trueOffset < 0)
 		{
-			// NOTE : do not close db becaus ewe are gonna read from it next
+			trueOffset += num;			
+			Q_ASSERT(trueOffset >= 0);
+			// NOTE : do not close db because we are gonna read from it next
 			break;
 		}
-	}
-
+	}	
+	qDebug() << "Response readHistoryData for" << nodeId << ", start reading with file ts =" << *iter;
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
 		// get possible db file
@@ -921,11 +920,15 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			continue;
 		}
 		// query for reading values
+		Q_ASSERT(trueOffset >= 0);
 		Q_ASSERT(db.isValid() && db.isOpen());
 		QSqlQuery query = dbInfo.dataPrepStmts[nodeId].readHistoryData;
 		query.bindValue(0, timeStart.toMSecsSinceEpoch());
 		query.bindValue(1, numPointsToRead - points.count());
-		query.bindValue(2, 0 /*NOTE : no offset, read all from file above given start time*/);
+		query.bindValue(2, trueOffset);
+		// offset only used in first file query
+		trueOffset = 0;
+		// exec query
 		if (!query.exec())
 		{
 			logOut << QUaLog({
@@ -938,6 +941,7 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			});
 			continue;
 		}
+		qint64 currFileCount = 0;
 		while (query.next())
 		{
 			QSqlRecord rec   = query.record();
@@ -951,10 +955,13 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			auto time    = QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC); // NOTE : expensive if spec not defined
 			auto value   = query.value(valueKeyCol);
 			auto status  = query.value(statusKeyCol).toUInt();
+			Q_ASSERT(points.isEmpty() || time > points.last().timestamp);
 			points << QUaHistoryDataPoint({
 				time, value, status
 			});
+			currFileCount++;
 		}
+		qDebug() << "Response readHistoryData for" << nodeId << ", read" << currFileCount << "points from file ts =" << *iter;
 		Q_ASSERT(points.count() <= numPointsToRead);
 		if (points.count() == numPointsToRead)
 		{
@@ -1679,23 +1686,15 @@ bool QUaMultiSqliteHistorizer::closeDatabase(
 )
 {
 	const QString& strDbName = dbInfo.strFileName;
-	// ignore if empty
-	if (strDbName.isEmpty())
-	{
-		return true;
-	}
-	// close database if previously opened
+	// clear queries
+	dbInfo.dataPrepStmts.clear();
+	// close database only if previously opened
 	if (!QSqlDatabase::contains(strDbName))
 	{
-		logOut << QUaLog({
-			QObject::tr("Could not close %1 database. Database not found.")
-				.arg(strDbName),
-			QUaLogLevel::Warning,
-			QUaLogCategory::History
-			});
 		return false;
 	}
 	QSqlDatabase::database(strDbName).close();
+	QSqlDatabase::removeDatabase(strDbName);
 	return true;
 }
 
@@ -1742,10 +1741,7 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 	{
 		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
 		// close if necessary
-		if (QSqlDatabase::contains(dbInfo.strFileName))
-		{
-			this->closeDatabase(dbInfo, logOut);
-		}
+		this->closeDatabase(dbInfo, logOut);
 		// substract size
 		auto fInfo = QFileInfo(dbInfo.strFileName);		
 		totalSizeMb -= fInfo.size() / 1024.0 / 1024.0;
