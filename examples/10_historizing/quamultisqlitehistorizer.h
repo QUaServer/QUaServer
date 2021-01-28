@@ -28,6 +28,10 @@ public:
 	double totalSizeLimMb() const;
 	void setTotalSizeLimMb(const double &totalSizeLimMb);	
 
+	// time period to wait until closing an unused database file
+	// this is to allow manual move or deletion of files
+	// if != 0, then this value is limited in its lower bound by the transactionTimeout
+	// default is 5000ms, a value <= 0 disables auto closing unused files
 	int autoCloseDatabaseTimeout() const;
 	void setAutoCloseDatabaseTimeout(const int& timeoutMs);
 
@@ -177,10 +181,25 @@ private:
 		QSqlQuery numDataPointsInRangeEndInvalid;
 		QSqlQuery readHistoryData;
 	};	
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+	// event type name prepared statement cache
+	struct EventTypeNamePreparedStatements {
+		QSqlQuery insertEventTypeName;
+		QSqlQuery selectEventTypeName;
+	};
+	static QString eventTypesTable;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	struct DatabaseInfo {
 		QString strFileName;
 		QElapsedTimer autoCloseTimer;
 		QHash<QUaNodeId, DataPreparedStatements> dataPrepStmts;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+		// event type prepared statements cache
+		QHash<QUaNodeId, QSqlQuery> eventTypePrepStmts;
+		QHash<QString, EventTypeNamePreparedStatements> eventTypeNamePrepStmt;
+		// emitter prepared statements cache
+		QHash<QUaNodeId, QSqlQuery> emitterPrepStmts;
+#endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	};
 	QMap<QDateTime, DatabaseInfo> m_dbFiles;
 	// return SQL type in string form, for given Qt type (only QUaServer supported types)
@@ -269,6 +288,7 @@ private:
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// check event type node id table exists
 	bool tableEventTypeByNodeIdExists(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& eventTypeNodeId,
 		const QUaHistoryEventPoint& eventPoint,
@@ -277,6 +297,7 @@ private:
 	);
 	// create event type history table
 	bool createEventTypeTable(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId &eventTypeNodeId,
 		const QUaHistoryEventPoint& eventPoint,
@@ -284,38 +305,34 @@ private:
 	);
 	// prepare statement to insert history event of type
 	bool eventTypePrepareStmt(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& eventTypeNodeId,
 		const QUaHistoryEventPoint& eventPoint,
 		QQueue<QUaLog>& logOut
 	);
-	// event type prepared statements cache
-	QHash<QUaNodeId, QSqlQuery> m_eventTypePrepStmts;
 	// check event type name table exists
 	bool tableEventTypeNameExists(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		bool& tableExists,
 		QQueue<QUaLog>& logOut
 	);
 	// create event type name table
 	bool createEventTypeNameTable(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		QQueue<QUaLog>& logOut
 	);
 	// prepare statement to insert event type name
 	bool eventTypeNamePrepareStmt(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		QQueue<QUaLog>& logOut
 	);
-	// event type name prepared statement cache
-	struct EventTypeNamePreparedStatements {
-		QSqlQuery insertEventTypeName;
-		QSqlQuery selectEventTypeName;
-	};
-	QHash<QString, EventTypeNamePreparedStatements> m_eventTypeNamePrepStmt;
-	static QString eventTypesTable;
 	// check emitter node id table exists
 	bool tableEmitterByNodeIdExists(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& emitterNodeId,
 		bool& tableExists,
@@ -323,20 +340,21 @@ private:
 	);
 	// create emitter history table
 	bool createEmitterTable(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& emitterNodeId,
 		QQueue<QUaLog>& logOut
 	);
 	// prepare statement to insert history event in emitter table
 	bool emitterPrepareStmt(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& emitterNodeId,
 		QQueue<QUaLog>& logOut
 	);
-	// emitter prepared statements cache
-	QHash<QUaNodeId, QSqlQuery> m_emitterPrepStmts;
 	// insert new event, return unique key
 	bool insertEventPoint(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& eventTypeNodeId,
 		const QUaHistoryEventPoint& eventPoint,
@@ -345,6 +363,7 @@ private:
 	);
 	// insert new event type name if not exists, return unique key
 	bool selectOrInsertEventTypeName(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& eventTypeNodeId,
 		qint64& outEventTypeKey,
@@ -352,6 +371,7 @@ private:
 	);
 	// insert new event in emitter table
 	bool insertEventReferenceInEmitterTable(
+		DatabaseInfo& dbInfo,
 		QSqlDatabase& db,
 		const QUaNodeId& emitterNodeId,
 		const QDateTime& timestamp,

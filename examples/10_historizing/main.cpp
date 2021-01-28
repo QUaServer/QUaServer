@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 	// enable event history on custom object
 	obj->setEventHistoryRead(true);
 	QTimer timerEvts;
-	QObject::connect(&timerVars, &QTimer::timeout, srvEvt, 
+	QObject::connect(&timerEvts, &QTimer::timeout, srvEvt, 
 	[srvEvt, objEvt]() {
 		static quint32 counter = 0;
 		counter++;
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 		objEvt->trigger();
 	});	
 	// trigger event every second
-	timerVars.start(1000);
+	timerEvts.start(1000);
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 #endif // UA_ENABLE_HISTORIZING
