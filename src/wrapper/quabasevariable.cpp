@@ -270,6 +270,10 @@ void QUaBaseVariable::setValue(
 	// get modifiable copies
 	auto newValue = value;
 	auto newType  = newTypeConst;
+	// these values are maped to the same (see QUaDataType::m_custTypesByNodeId in quacustomdatatypes.cpp)
+	if (newType == QMetaType::SChar    ) { newType = QMetaType::Char; }
+	if (newType == QMetaType::LongLong ) { newType = QMetaType::Long; }
+	if (newType == QMetaType::ULongLong) { newType = QMetaType::ULong;}
 	// if new type not forced, then figure out new type from input
 	if (newType == QMetaType::UnknownType)
 	{
@@ -315,6 +319,11 @@ void QUaBaseVariable::setValue(
 			{
 				// convert to old type
 				newValue.convert(oldType);
+				// preserve old type
+				newType = oldType;
+			}
+			else if (!newValue.isValid())
+			{
 				// preserve old type
 				newType = oldType;
 			}
@@ -586,10 +595,15 @@ QString QUaBaseVariable::dataTypeNodeId() const
 	return retNodeId;
 }
 
-void QUaBaseVariable::setDataType(const QMetaType::Type & dataType)
+void QUaBaseVariable::setDataType(const QMetaType::Type & newTypeConst)
 {
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
+	auto dataType = newTypeConst;
+	// these values are maped to the same (see QUaDataType::m_custTypesByNodeId in quacustomdatatypes.cpp)
+	if (dataType == QMetaType::SChar    ) { dataType = QMetaType::Char; }
+	if (dataType == QMetaType::LongLong ) { dataType = QMetaType::Long; }
+	if (dataType == QMetaType::ULongLong) { dataType = QMetaType::ULong;}
 	// early exit if already same
 	if (dataType == m_dataType)
 	{
