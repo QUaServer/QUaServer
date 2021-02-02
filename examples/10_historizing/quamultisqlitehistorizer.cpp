@@ -238,7 +238,12 @@ double QUaMultiSqliteHistorizer::fileSizeLimMb() const
 
 void QUaMultiSqliteHistorizer::setFileSizeLimMb(const double& fileSizeLimMb)
 {
-	m_fileSizeLimMb = fileSizeLimMb;
+	if (fileSizeLimMb == m_fileSizeLimMb)
+	{
+		return;
+	}
+	// low limit
+	m_fileSizeLimMb = (std::max)(0.0, fileSizeLimMb);
 }
 
 double QUaMultiSqliteHistorizer::totalSizeLimMb() const
@@ -248,7 +253,15 @@ double QUaMultiSqliteHistorizer::totalSizeLimMb() const
 
 void QUaMultiSqliteHistorizer::setTotalSizeLimMb(const double& totalSizeLimMb)
 {
-	m_totalSizeLimMb = totalSizeLimMb;
+	if (totalSizeLimMb == m_totalSizeLimMb)
+	{
+		return;
+	}
+	// low limit
+	m_totalSizeLimMb = (std::max)(0.0, totalSizeLimMb);
+	m_totalSizeLimMb = m_totalSizeLimMb == 0 ?
+		m_totalSizeLimMb :
+		(std::max)(m_totalSizeLimMb, m_fileSizeLimMb);
 }
 
 int QUaMultiSqliteHistorizer::autoCloseDatabaseTimeout() const
@@ -384,8 +397,6 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request firstTimestamp for" << nodeId;
 	// look in all db files starting from the first one
 	for (auto dbCurr = m_dbFiles.begin(); dbCurr != m_dbFiles.end(); dbCurr++)
 	{
@@ -440,7 +451,6 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 		Q_ASSERT(timeKeyCol >= 0);
 		auto timeInt = query.value(timeKeyCol).toLongLong();
 		// return
-		//qDebug() << "Response firstTimestamp for" << nodeId << "=" << QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 	}
 	// if reached here means we did not find historic data for given nodeId
@@ -451,7 +461,6 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 		QUaLogCategory::History
 	});
 	// return invalid
-	//qDebug() << "Response firstTimestamp for" << nodeId << "= Invalid";
 	return QDateTime();
 }
 
@@ -460,8 +469,6 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request lastTimestamp for" << nodeId;	
 	// look in all db files starting from the last one
 	bool exitLoop = false;
 	for (auto dbCurr = --m_dbFiles.end(); !exitLoop; dbCurr--)
@@ -521,7 +528,6 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 		Q_ASSERT(timeKeyCol >= 0);
 		auto timeInt = query.value(timeKeyCol).toLongLong();
 		// return
-		//qDebug() << "Response lastTimestamp for" << nodeId << "=" << QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
 	}
 	// if reached here means we did not find historic data for given nodeId
@@ -531,7 +537,6 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 		QUaLogLevel::Warning,
 		QUaLogCategory::History
 	});
-	//qDebug() << "Response lastTimestamp for" << nodeId << "= Invalid";
 	// return invalid
 	return QDateTime();
 }
@@ -542,12 +547,9 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request hasTimestamp for" << nodeId << "-" << timestamp;
 	// check if in range
 	if (timestamp < m_dbFiles.firstKey())
 	{
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "out of range";
 		return false;
 	}
 	// find database file where it *could* be
@@ -566,7 +568,6 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 			QUaLogLevel::Error,
 			QUaLogCategory::History
 		});
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "out of range";
 		return false;
 	}
 	// get possible db file
@@ -576,20 +577,17 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(dbInfo, db, logOut))
 	{
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false;
 		return false;
 	}
 	// check data table exists
 	bool dataTableExists;
 	if (!this->tableDataByNodeIdExists(dbInfo, db, nodeId, dataTableExists, logOut))
 	{
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "error looking for table";
 		return false;
 	}
 	if (!dataTableExists)
 	{
 		// it is possible that a variable was not yet historized in an old file
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "table does not exist";
 		return false;
 	}
 	Q_ASSERT(db.isValid() && db.isOpen());
@@ -605,7 +603,6 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 			QUaLogLevel::Error,
 			QUaLogCategory::History
 		});
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "query fail";
 		return false;
 	}
 	// exists if at least one result
@@ -619,13 +616,11 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 			QUaLogLevel::Warning,
 			QUaLogCategory::History
 		});
-		//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << false << "no result";
 		return false;
 	}
 	QSqlRecord rec = query.record();
 	auto num = query.value(0).toULongLong();
 	bool found = num > 0;
-	//qDebug() << "Response hasTimestamp for" << nodeId << "-" << timestamp << "=" << found;
 	return found;
 }
 
@@ -637,8 +632,6 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 )
 {	
 	uint requestHash = qHash(nodeId) ^ qHash(timestamp) ^ qHash(static_cast<int>(match));
-	//qDebug() << "";
-	//qDebug() << "Request findTimestamp for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ")";
 	// if ClosestFromBelow look downwards from end until one sample found
 	// if ClosestFromAbove look upwards from start until one sample found
 	auto iter = match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? --m_dbFiles.keyEnd() : m_dbFiles.keyBegin();
@@ -722,11 +715,9 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 							ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
 							)
 						{
-							//qDebug() << "Response findTimestampOld for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << m_findTimestampCache[requestHash] << "out of range";
 							return m_findTimestampCache[requestHash];
 						}
 						m_findTimestampCache[requestHash] = ts;
-						//qDebug() << "Response findTimestampNew for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << ts << "out of range";
 						return ts;
 					}
 					break;
@@ -738,11 +729,9 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 							ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
 							)
 						{
-							//qDebug() << "Response findTimestampOld for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << m_findTimestampCache[requestHash] << "out of range";
 							return m_findTimestampCache[requestHash];
 						}
 						m_findTimestampCache[requestHash] = ts;
-						//qDebug() << "Response findTimestampNew for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << ts << "out of range";
 						return ts;
 					}
 					break;
@@ -780,10 +769,8 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 		retTimestamp.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
 		)
 	{
-		//qDebug() << "Response findTimestampOld for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << m_findTimestampCache[requestHash] << "out of range";
 		return m_findTimestampCache[requestHash];
 	}
-	//qDebug() << "Response findTimestampNew for" << nodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << retTimestamp << "ok";
 	m_findTimestampCache[requestHash] = retTimestamp;
 	return retTimestamp;
 }
@@ -794,8 +781,6 @@ quint64 QUaMultiSqliteHistorizer::numDataPointsInRange(
 	const QDateTime& timeEnd,
 	QQueue<QUaLog>& logOut)
 {
-	//qDebug() << "";
-	//qDebug() << "Request numDataPointsInRange for" << nodeId << "(" << timeStart << "-" << timeEnd << ")";
 	// find database file where first sample *could* be
 	// return the first element in [first,last) which does not compare less than val
 	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
@@ -878,7 +863,6 @@ quint64 QUaMultiSqliteHistorizer::numDataPointsInRange(
 		count += num;
 	}
 	// return total
-	//qDebug() << "Response numDataPointsInRange for" << nodeId << "(" << timeStart << "-" << timeEnd << ") =" << count;
 	return count;
 }
 
@@ -889,8 +873,6 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 	const quint64& numPointsToRead,
 	QQueue<QUaLog>& logOut)
 {
-	//qDebug() << "";
-	//qDebug() << "Request readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ")";
 	auto points = QVector<QUaHistoryDataPoint>();
 	// return the first element in [first,last) which does not compare less than val
 	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
@@ -907,7 +889,6 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 		});
 		return points;
 	}
-	//qDebug() << "Response readHistoryData for" << nodeId << ", start counting with file ts =" << *iter;
 	qint64 trueOffset = numPointsOffset;
 	// look in all db files starting from the first one
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
@@ -970,7 +951,6 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			break;
 		}
 	}	
-	//qDebug() << "Response readHistoryData for" << nodeId << ", start reading with file ts =" << *iter;
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
 		// get possible db file
@@ -1034,7 +1014,6 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			});
 			currFileCount++;
 		}
-		//qDebug() << "Response readHistoryData for" << nodeId << ", read" << currFileCount << "points from file ts =" << *iter;
 		Q_ASSERT(points.count() <= numPointsToRead);
 		if (points.count() == numPointsToRead)
 		{
@@ -1048,7 +1027,6 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 		points << QUaHistoryDataPoint();
 	}
 	// return
-	//qDebug() << "Response readHistoryData for" << nodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ") =" << points.count() << "ok";
 	return points;
 }
 
@@ -1246,8 +1224,6 @@ QDateTime QUaMultiSqliteHistorizer::findTimestampEventOfType(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request findTimestampEventOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ")";
 	// if ClosestFromBelow look downwards from end until one sample found
 	// if ClosestFromAbove look upwards from start until one sample found
 	auto iter = match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? --m_dbFiles.keyEnd() : m_dbFiles.keyBegin();
@@ -1278,7 +1254,7 @@ QDateTime QUaMultiSqliteHistorizer::findTimestampEventOfType(
 			dbInfo,
 			db,
 			eventTypeNodeId,
-			QUaHistoryEventPoint(), // TODO : this assumed there is cache, but there might not be
+			QUaHistoryEventPoint(),
 			eventTypeTableExists,
 			logOut))
 		{
@@ -1392,7 +1368,6 @@ QDateTime QUaMultiSqliteHistorizer::findTimestampEventOfType(
 		retTimestamp = currTimestamp;
 		break;
 	}
-	//qDebug() << "Response findTimestampEventOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "-" << timestamp << "(" << ((int)match == 0 ? "above" : "below") << ") =" << retTimestamp;
 	return retTimestamp;
 }
 
@@ -1404,8 +1379,6 @@ quint64 QUaMultiSqliteHistorizer::numEventsOfTypeInRange(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request numEventsOfTypeInRange for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "(" << timeStart << "-" << timeEnd << ")";
 	// find database file where first sample *could* be
 	// return the first element in [first,last) which does not compare less than val
 	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
@@ -1523,7 +1496,6 @@ quint64 QUaMultiSqliteHistorizer::numEventsOfTypeInRange(
 		count += num;
 	}
 	// return total
-	//qDebug() << "Response numEventsOfTypeInRange for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "(" << timeStart << "-" << timeEnd << ") =" << count;
 	return count;
 }
 
@@ -1537,8 +1509,6 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 	QQueue<QUaLog>& logOut
 )
 {
-	//qDebug() << "";
-	//qDebug() << "Request readHistoryEventsOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ")";
 	auto points = QVector<QUaHistoryEventPoint>();
 	// return the first element in [first,last) which does not compare less than val
 	auto iter = std::lower_bound(m_dbFiles.keyBegin(), m_dbFiles.keyEnd(), timeStart);
@@ -1555,7 +1525,6 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 			});
 		return points;
 	}
-	//qDebug() << "Response readHistoryEventsOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << ", start counting with file ts =" << *iter;
 	qint64 trueOffset = numPointsOffset;
 	// look in all db files starting from the first one
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
@@ -1663,7 +1632,6 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 	// prealloc size
 	points.resize(numPointsToRead);
 	quint64 totalNumPointsToRead = 0;
-	//qDebug() << "Response readHistoryEventsOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << ", start reading with file ts =" << *iter;
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
 		// get possible db file
@@ -1837,7 +1805,6 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 			// next row
 			totalNumPointsToRead++;
 		}
-		//qDebug() << "Response readHistoryEventsOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << ", read" << currFileCount << "points from file ts =" << *iter;
 		Q_ASSERT(totalNumPointsToRead <= numPointsToRead);
 		if (totalNumPointsToRead == numPointsToRead)
 		{
@@ -1847,7 +1814,6 @@ QVector<QUaHistoryEventPoint> QUaMultiSqliteHistorizer::readHistoryEventsOfType(
 	// NOTE : return an invalid value if API requests more values than available
 	Q_ASSERT(totalNumPointsToRead == numPointsToRead);
 	// return
-	//qDebug() << "Response readHistoryEventsOfType for emitter" << emitterNodeId << "EvtType" << eventTypeNodeId << "(" << timeStart << ", off=" << numPointsOffset << ", num=" << numPointsToRead << ") =" << points.count() << "ok";
 	return points;
 }
 
@@ -1914,6 +1880,11 @@ bool QUaMultiSqliteHistorizer::closeDatabase(
 
 bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 {
+	// check if enabled
+	if (m_fileSizeLimMb <= 0.0)
+	{
+		return true;
+	}
 	double fileSizeMb = 0.0;
 	double totalSizeMb = 0.0;
 	// get most recent db file
@@ -1949,7 +1920,10 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 	// clear this cache once in a while
 	m_findTimestampCache.clear();
 	// check total size
-	if (!totalSizeCheck && !m_deferTotalSizeCheck)
+	if (
+		m_totalSizeLimMb <= 0.0 || // ignore total size if disabled
+		(!totalSizeCheck && !m_deferTotalSizeCheck)
+		)
 	{
 		return true;
 	}

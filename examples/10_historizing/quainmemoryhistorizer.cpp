@@ -180,6 +180,28 @@ QDateTime QUaInMemoryHistorizer::findTimestamp(
 	default:
 		break;
 	}
+	if (time.isNull())
+	{
+		// if there is none return either first or last
+		switch (match)
+		{
+		case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
+		{
+			return this->lastTimestamp(nodeId, logOut);
+		}
+		break;
+		case QUaHistoryBackend::TimeMatch::ClosestFromBelow:
+		{
+			return this->firstTimestamp(nodeId, logOut);
+		}
+		break;
+		default:
+		{
+			Q_ASSERT(false);
+		}
+		break;
+		}
+	}
 	return time;
 }
 

@@ -439,6 +439,7 @@ public:
     void operator= (const char* strXmlNodeId);
     void operator= (const QUaNodeId& other);
     bool operator==(const QUaNodeId& other) const;
+    bool operator!=(const QUaNodeId& other) const;
     bool operator==(const UA_NodeId& other) const;
     bool operator< (const QUaNodeId& other) const;
 

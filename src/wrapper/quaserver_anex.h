@@ -164,14 +164,14 @@ typedef struct {
     UA_UInt16         availableContinuationPoints;
     ContinuationPoint* continuationPoints;
 #ifdef UA_ENABLE_SUBSCRIPTIONS
+    size_t subscriptionsSize;
     TAILQ_HEAD(, UA_Subscription) subscriptions; /* Late subscriptions that do eventually
                                                   * publish are moved to the tail. So that
                                                   * other late subscriptions are not
                                                   * starved. */
     SIMPLEQ_HEAD(, UA_PublishResponseEntry) responseQueue;
-    UA_UInt32         numSubscriptions;
-    UA_UInt32         numPublishReq;
-    size_t            totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
+    UA_UInt32 numPublishReq;
+    size_t totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
 #endif
 } UA_Session;
 
@@ -180,15 +180,24 @@ UA_Server_getSessionById(UA_Server * server, const UA_NodeId * sessionId);
 
 typedef void (*UA_ApplicationCallback)(void* application, void* data);
 
-typedef struct UA_DelayedCallback {
-    SIMPLEQ_ENTRY(UA_DelayedCallback) next;
+typedef struct UA_TimerEntry {
+    ZIP_ENTRY(UA_TimerEntry) zipfields;
+    UA_DateTime nextTime;                    /* The next time when the callback
+                                              * is to be executed */
+    UA_UInt64 interval;                      /* Interval in 100ns resolution. If
+                                                the interval is zero, the
+                                                callback is not repeated and
+                                                removed after execution. */
     UA_ApplicationCallback callback;
     void* application;
     void* data;
-} UA_DelayedCallback;
+
+    ZIP_ENTRY(UA_TimerEntry) idZipfields;
+    UA_UInt64 id;                            /* Id of the entry */
+} UA_TimerEntry;
 
 typedef struct session_list_entry {
-    UA_DelayedCallback cleanupCallback;
+    UA_TimerEntry cleanupCallback;
     LIST_ENTRY(session_list_entry) pointers;
     UA_Session session;
 } session_list_entry;
@@ -202,78 +211,15 @@ typedef struct UA_TimerZip UA_TimerZip;
 ZIP_HEAD(UA_TimerIdZip, UA_TimerEntry);
 typedef struct UA_TimerIdZip UA_TimerIdZip;
 
-/* Only for a single thread. Protect by a mutex if required. */
 typedef struct {
     UA_TimerZip root;     /* The root of the time-sorted zip tree */
     UA_TimerIdZip idRoot; /* The root of the id-sorted zip tree */
     UA_UInt64 idCounter;  /* Generate unique identifiers. Identifiers are always
                            * above zero. */
+#if UA_MULTITHREADING >= 100
+    UA_LOCK_TYPE(timerMutex)
+#endif
 } UA_Timer;
-
-struct UA_WorkQueue {
-    /* Worker threads and work queue. Without multithreading, work is executed
-       immediately. */
-#if UA_MULTITHREADING >= 200
-    UA_Worker* workers;
-    size_t workersSize;
-
-    /* Work queue */
-    SIMPLEQ_HEAD(, UA_DelayedCallback) dispatchQueue; /* Dispatch queue for the worker threads */
-    UA_LOCK_TYPE(dispatchQueue_accessMutex) /* mutex for access to queue */
-        pthread_cond_t dispatchQueue_condition; /* so the workers don't spin if the queue is empty */
-    UA_LOCK_TYPE(dispatchQueue_conditionMutex) /* mutex for access to condition variable */
-#endif
-
-    /* Delayed callbacks
-     * To be executed after all curretly dispatched works has finished */
-        SIMPLEQ_HEAD(, UA_DelayedCallback) delayedCallbacks;
-#if UA_MULTITHREADING >= 200
-    UA_LOCK_TYPE(delayedCallbacks_accessMutex)
-        UA_DelayedCallback* delayedCallbacks_checkpoint;
-    size_t delayedCallbacks_sinceDispatch; /* How many have been added since we
-                                            * tried to dispatch callbacks? */
-#endif
-};
-
-#ifdef UA_ENABLE_DISCOVERY
-/* Callback for RegisterServer. Data is passed from the register call */
-typedef void (*UA_Server_registerServerCallback)(const UA_RegisteredServer* registeredServer,
-    void* data);
-
-typedef struct {
-    LIST_HEAD(, periodicServerRegisterCallback_entry) periodicServerRegisterCallbacks;
-    LIST_HEAD(, registeredServer_list_entry) registeredServers;
-    size_t registeredServersSize;
-    UA_Server_registerServerCallback registerServerCallback;
-    void* registerServerCallbackData;
-
-# ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    mdns_daemon_t* mdnsDaemon;
-    UA_SOCKET mdnsSocket;
-    UA_Boolean mdnsMainSrvAdded;
-
-    /* Full Domain Name of server itself. Used to detect if received mDNS message was from itself */
-    UA_String selfFqdnMdnsRecord;
-
-    LIST_HEAD(, serverOnNetwork_list_entry) serverOnNetwork;
-
-    UA_UInt32 serverOnNetworkRecordIdCounter;
-    UA_DateTime serverOnNetworkRecordIdLastReset;
-
-    /* hash mapping domain name to serverOnNetwork list entry */
-    struct serverOnNetwork_hash_entry* serverOnNetworkHash[SERVER_ON_NETWORK_HASH_SIZE];
-
-    UA_Server_serverOnNetworkCallback serverOnNetworkCallback;
-    void* serverOnNetworkCallbackData;
-
-#if UA_MULTITHREADING >= 200
-    pthread_t mdnsThread;
-    UA_Boolean mdnsRunning;
-#  endif
-# endif /* UA_ENABLE_DISCOVERY_MULTICAST */
-} UA_DiscoveryManager;
-
-#endif /* UA_ENABLE_DISCOVERY */
 
 // NOTE : just gave it a name in order to be able to use
 //        TAILQ_LAST in QUaServer::newSession
@@ -410,7 +356,7 @@ struct UA_SecureChannel {
 };
 
 typedef struct channel_entry {
-    UA_DelayedCallback cleanupCallback;
+    UA_TimerEntry cleanupCallback;
     TAILQ_ENTRY(channel_entry) pointers;
     UA_SecureChannel channel;
 } channel_entry;
@@ -447,9 +393,6 @@ struct UA_Server {
     /* Callbacks with a repetition interval */
     UA_Timer timer;
 
-    /* WorkQueue and worker threads */
-    UA_WorkQueue workQueue;
-
     /* For bootstrapping, omit some consistency checks, creating a reference to
      * the parent and member instantiation */
     UA_Boolean bootstrapNS0;
@@ -461,12 +404,12 @@ struct UA_Server {
 
     /* Subscriptions */
 #ifdef UA_ENABLE_SUBSCRIPTIONS
+    size_t subscriptionsSize;  /* Number of active subscriptions */
+    size_t monitoredItemsSize; /* Number of active monitored items */
     LIST_HEAD(, UA_Subscription) subscriptions; /* All subscriptions in the
                                                  * server. They may be detached
                                                  * from a session. */
     UA_UInt32 lastSubscriptionId; /* To generate unique SubscriptionIds */
-    UA_UInt32 numSubscriptions;   /* Num active subscriptions */
-    UA_UInt32 numMonitoredItems;  /* Num active monitored items */
 
     /* To be cast to UA_LocalMonitoredItem to get the callback and context */
     LIST_HEAD(, UA_MonitoredItem) localMonitoredItems;
@@ -474,7 +417,7 @@ struct UA_Server {
 
 # ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
     LIST_HEAD(, UA_ConditionSource) headConditionSource;
-# endif /* UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS */
+# endif
 
 #endif
 
@@ -507,6 +450,10 @@ typedef enum {
     UA_DIAGNOSTICEVENT_PURGE
 } UA_DiagnosticEvent;
 
+typedef void
+(*UA_TimerExecutionCallback)(void* executionApplication, UA_ApplicationCallback cb,
+    void* callbackApplication, void* data);
+
 extern "C"
 void UA_Server_cleanupSessions(UA_Server* server, UA_DateTime nowMonotonic);
 
@@ -526,7 +473,10 @@ extern "C"
 void UA_Discovery_cleanupTimedOut(UA_Server * server, UA_DateTime nowMonotonic);
 
 extern "C"
-void UA_WorkQueue_manuallyProcessDelayed(UA_WorkQueue * wq);
+UA_DateTime
+UA_Timer_process(UA_Timer * t, UA_DateTime nowMonotonic,
+    UA_TimerExecutionCallback executionCallback,
+    void* executionApplication);
 
 /*********************************************************************************************
 Copied from open62541, to be able to implement:
@@ -657,57 +607,43 @@ setMethodNode_callback(UA_Server * server,
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-typedef struct UA_EventNotification {
-    UA_EventFieldList fields;
-    /* EventFilterResult currently isn't being used
-    UA_EventFilterResult result; */
-} UA_EventNotification;
-
 typedef TAILQ_HEAD(NotificationQueue, UA_Notification) NotificationQueue;
 
 struct UA_MonitoredItem {
-    UA_DelayedCallback delayedFreePointers;
+    UA_TimerEntry delayedFreePointers;
     LIST_ENTRY(UA_MonitoredItem) listEntry;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    UA_MonitoredItem* next; /* Linked list of MonitoredItems directly attached
+                             * to a Node */
+#endif
     UA_Subscription* subscription; /* Local MonitoredItem if the subscription is NULL */
     UA_UInt32 monitoredItemId;
-    UA_UInt32 clientHandle;
-    UA_Boolean registered; /* Was the MonitoredItem registered in Userland with
-                              the callback? */
 
-                              /* Settings */
-    UA_TimestampsToReturn timestampsToReturn;
+    /* Status and Settings */
+    UA_ReadValueId itemToMonitor;
     UA_MonitoringMode monitoringMode;
-    UA_NodeId monitoredNodeId;
-    UA_UInt32 attributeId;
-    UA_String indexRange;
-    UA_Double samplingInterval; // [ms]
-    UA_Boolean discardOldest;
-    union {
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-        /* If attributeId == UA_ATTRIBUTEID_EVENTNOTIFIER */
-        UA_EventFilter eventFilter;
-#endif
-        /* The DataChangeFilter always contains an absolute deadband definition.
-         * Part 8, §6.2 gives the following formula to test for percentage
-         * deadbands:
-         *
-         * DataChange if (absolute value of (last cached value - current value)
-         *                > (deadbandValue/100.0) * ((high–low) of EURange)))
-         *
-         * So we can convert from a percentage to an absolute deadband and keep
-         * the hot code path simple.
-         *
-         * TODO: Store the percentage deadband to recompute when the UARange is
-         * changed at runtime of the MonitoredItem */
-        UA_DataChangeFilter dataChangeFilter;
-    } filter;
+    UA_TimestampsToReturn timestampsToReturn;
+    UA_Boolean sampleCallbackIsRegistered;
+    UA_Boolean registered; /* Registered in the server / Subscription */
 
-    UA_DataValue lastValue;
+    /* If the filter is a UA_DataChangeFilter: The DataChangeFilter always
+     * contains an absolute deadband definition. Part 8, §6.2 gives the
+     * following formula to test for percentage deadbands:
+     *
+     * DataChange if (absolute value of (last cached value - current value)
+     *                > (deadbandValue/100.0) * ((high–low) of EURange)))
+     *
+     * So we can convert from a percentage to an absolute deadband and keep
+     * the hot code path simple.
+     *
+     * TODO: Store the percentage deadband to recompute when the UARange is
+     * changed at runtime of the MonitoredItem */
+    UA_MonitoringParameters parameters;
 
-    /* Sample Callback */
+    /* Sampling Callback */
     UA_UInt64 sampleCallbackId;
     UA_ByteString lastSampledValue;
-    UA_Boolean sampleCallbackIsRegistered;
+    UA_DataValue lastValue;
 
     /* Triggering Links */
     size_t triggeringLinksSize;
@@ -715,15 +651,10 @@ struct UA_MonitoredItem {
 
     /* Notification Queue */
     NotificationQueue queue;
-    UA_UInt32 maxQueueSize; /* The max number of enqueued notifications (not
-                             * counting overflow events) */
-    UA_UInt32 queueSize;
-    UA_UInt32 eventOverflows; /* Separate counter for the queue. Can at most
-                               * double the queue size */
-
-#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-    UA_MonitoredItem* next;
-#endif
+    size_t queueSize; /* This is the current size. See also the configured
+                       * (maximum) queueSize in the parameters. */
+    size_t eventOverflows; /* Separate counter for the queue. Can at most double
+                            * the queue size */
 };
 
 typedef struct UA_Notification {
@@ -738,6 +669,9 @@ typedef struct UA_Notification {
         UA_EventFieldList event;
 #endif
     } data;
+#ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
+    UA_Boolean isOverflowEvent; /* Counted manually */
+#endif
 } UA_Notification;
 
 extern "C"
@@ -799,7 +733,7 @@ typedef enum {
 typedef TAILQ_HEAD(ListOfNotificationMessages, UA_NotificationMessageEntry) ListOfNotificationMessages;
 
 struct UA_Subscription {
-    UA_DelayedCallback delayedFreePointers;
+    UA_TimerEntry delayedFreePointers;
     LIST_ENTRY(UA_Subscription) serverListEntry;
     TAILQ_ENTRY(UA_Subscription) sessionListEntry; /* Only set if session != NULL */
     UA_Session* session; /* May be NULL if no session is attached. */
@@ -935,6 +869,13 @@ class QUaServer_Anex
         LOG;                                         \
         UA_String_clear(&nodeIdStr);                 \
     }
+
+#if UA_LOGLEVEL <= 200
+# define UA_LOG_NODEID_DEBUG(NODEID, LOG)       \
+    UA_LOG_NODEID_INTERNAL(NODEID, LOG)
+#else
+# define UA_LOG_NODEID_DEBUG(NODEID, LOG)
+#endif
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 

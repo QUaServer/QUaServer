@@ -16,15 +16,22 @@ public:
 	QUaMultiSqliteHistorizer();
 	~QUaMultiSqliteHistorizer();
 
+	// path of directory where database files will be saved in
+	// default is "." (current directory)
 	QString databasePath() const;
 	bool setDatabasePath(
 		const QString& databasePath,
 		QQueue<QUaLog>& logOut
 	);
 
+	// maximum size in megabytes to be used by a single database file
+	// default value is 1Mb, a value <= 0 disables database size control (including max size control)
 	double fileSizeLimMb() const;
 	void setFileSizeLimMb(const double &fileSizeLimMb);
 
+	// maximum size in megabytes to be used by the sum of all database files
+	// default value is 50Mb, a value <= 0 disables maximum database size control
+	// if != 0, then this value is limited in its lower bound by the fileSizeLimMb
 	double totalSizeLimMb() const;
 	void setTotalSizeLimMb(const double &totalSizeLimMb);	
 

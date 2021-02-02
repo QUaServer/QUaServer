@@ -727,10 +727,10 @@ UA_StatusCode QUaCondition::ConditionRefresh2(
 
 void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServer* srv)
 {
-	QUaNode* node = QUaNode::getNodeContext(monitoredItem->monitoredNodeId, srv->m_server);
+	QUaNode* node = QUaNode::getNodeContext(monitoredItem->itemToMonitor.nodeId, srv->m_server);
 	// NOTE : clients can still have in their subscriptions node ids that have been deleted
     static UA_NodeId server = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
-    if (!node && !UA_NodeId_equal(&monitoredItem->monitoredNodeId, &server))
+    if (!node && !UA_NodeId_equal(&monitoredItem->itemToMonitor.nodeId, &server))
 	{
 		// TODO : log error message
 		return;

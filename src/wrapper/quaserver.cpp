@@ -1580,6 +1580,15 @@ bool QUaServer::start()
 	return true;
 }
 
+static void
+serverExecuteRepeatedCallback(UA_Server* server, UA_ApplicationCallback cb,
+	void* callbackApplication, void* data) {
+	Q_UNUSED(server);
+	/* Service mutex is not set inside the timer that triggers the callback */
+	UA_LOCK_ASSERT(server->serviceMutex, 0);
+	cb(callbackApplication, data);
+}
+
 void QUaServer::stop()
 {
 	if (!m_running)
@@ -1600,7 +1609,13 @@ void QUaServer::stop()
 #endif
 	// NOTE : need to clean delayed callbacks or they will try to cleanup timed out
 	// channels and sessions upon restart resulting in crash
-	UA_WorkQueue_manuallyProcessDelayed(&m_server->workQueue);
+	// ??? UA_WorkQueue_manuallyProcessDelayed(&m_server->workQueue);
+
+	// from void UA_Server_delete(UA_Server *server
+	/* Execute all remaining delayed events and clean up the timer */
+	UA_Timer_process(&m_server->timer, UA_DateTime_nowMonotonic() + 1,
+		(UA_TimerExecutionCallback)serverExecuteRepeatedCallback, m_server);
+
 	// emit event
 	emit this->isRunningChanged(m_running);
 }

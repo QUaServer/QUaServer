@@ -921,6 +921,11 @@ bool QUaNodeId::operator==(const QUaNodeId& other) const
 	return UA_NodeId_equal(&this->m_nodeId, &other.m_nodeId);
 }
 
+bool QUaNodeId::operator!=(const QUaNodeId& other) const
+{
+	return !UA_NodeId_equal(&this->m_nodeId, &other.m_nodeId);
+}
+
 bool QUaNodeId::operator==(const UA_NodeId& other) const
 {
 	return UA_NodeId_equal(&this->m_nodeId, &other);

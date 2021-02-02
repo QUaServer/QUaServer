@@ -1014,11 +1014,9 @@ inline bool QUaNode::deserializeInternal(
     }
     // get existing children list to match hierachical forward references
     auto existingChildren = this->browseChildren();
-    QHash<QString, QUaNode*> mapExistingChildrenNodeIds;
     QHash<QUaQualifiedName, QList<QUaNode*>> mapExistingChildrenBrowseName;
     for (auto child : existingChildren)
     {
-        mapExistingChildrenNodeIds[child->nodeId()] = child;
         mapExistingChildrenBrowseName[child->browseName()] << child;
     }
     // loop deserialized forward references
@@ -1156,6 +1154,20 @@ inline bool QUaNode::deserializeInternal(
                     });
                     continue;
                 }
+            }
+            // add warning if existing instance node id does not match serialized one
+            if (forwRef.targetNodeId != instance->nodeId())
+            {
+                logOut.enqueue({
+                tr("Could not deserialize nodeId for child of %1 with browseName %2. "
+                "Serialized nodeId is %3, new nodeId is %4. This is a limitation of the open62541 library.")
+                        .arg(this->nodeId())
+                        .arg(browseName.toXmlString())
+                        .arg(forwRef.targetNodeId)
+                        .arg(instance->nodeId()),
+                    QUaLogLevel::Warning,
+                    QUaLogCategory::Serialization
+                });
             }
             // remove from existingChildren to mark it as deserialized
             existingChildren.removeOne(instance);
