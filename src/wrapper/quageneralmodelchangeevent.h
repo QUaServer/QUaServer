@@ -22,8 +22,8 @@ public:
 
 private:
 	// ChangeStructureDataType (PArt 5 - 11.14) : UA_ModelChangeStructureDataType
-	QUaProperty * getChanges() const;
-
+	QUaProperty * getChanges();
+	QUaProperty * m_changes;
 };
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS

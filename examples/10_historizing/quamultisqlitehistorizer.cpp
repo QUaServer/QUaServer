@@ -56,9 +56,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 	m_totalSizeLimMb     = 50;
 	m_strBaseName        = "uahist";
 	m_strSuffix          = "sqlite";
-	m_deferTotalSizeCheck = false;
-	// init m_strDatabasePath and m_strDbName
-	this->setDatabasePath(".", m_deferedLogOut);
+	m_deferTotalSizeCheck = false;	
 	// handle transation
 	QObject::connect(&m_timerTransaction, &QTimer::timeout, &m_timerTransaction,
 	[this]() {
@@ -124,9 +122,7 @@ QUaMultiSqliteHistorizer::~QUaMultiSqliteHistorizer()
 	while (!m_dbFiles.isEmpty())
 	{
 		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
-		bool ok = this->closeDatabase(dbInfo);
-		Q_ASSERT(ok);
-		Q_UNUSED(ok);
+		this->closeDatabase(dbInfo);
 	}
 }
 
@@ -147,7 +143,7 @@ bool QUaMultiSqliteHistorizer::setDatabasePath(
 	}
 	QObject::disconnect(m_fileWatchConn);
 	// copy internally
-	m_strDatabasePath = databasePath;
+	m_strDatabasePath = databasePath.isEmpty() ? "." : databasePath;
 	// close all db files
 	while (!m_dbFiles.isEmpty())
 	{
@@ -225,10 +221,30 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 	{
 		return false;
 	}
-	// close
-	db.close();
 	// success
 	return true;
+}
+
+QUaMultiSqliteHistorizer::DatabaseInfo& 
+QUaMultiSqliteHistorizer::getMostRecentDbInfo(
+	bool& ok,
+	QQueue<QUaLog>& logOut
+)
+{
+	// get most recent if any exists
+	if (!m_dbFiles.isEmpty())
+	{
+		ok = true;
+		return m_dbFiles.last();
+	}	
+	// create
+	ok = this->setDatabasePath(m_strDatabasePath, logOut);
+	if (!ok && m_dbFiles.isEmpty())
+	{
+		m_dbFiles[QDateTime()].strFileName = "";
+	}
+	Q_ASSERT(!m_dbFiles.isEmpty());
+	return m_dbFiles.last();
 }
 
 double QUaMultiSqliteHistorizer::fileSizeLimMb() const
@@ -316,7 +332,12 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 		m_deferedLogOut.clear();
 	}
 	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
+	bool ok = false;
+	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	if (!ok)
+	{
+		return false;
+	}
 	// if transactions disabled, check if need to change database here
 	// NOTE : if transactions enabled, this check if performed in transation timeout
 	if (m_timeoutTransaction <= 0 && m_checkingTimer.elapsed() > 5000)
@@ -1047,7 +1068,12 @@ bool QUaMultiSqliteHistorizer::writeHistoryEventsOfType(
 		m_deferedLogOut.clear();
 	}
 	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
+	bool ok = false;
+	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	if (!ok)
+	{
+		return false;
+	}
 	// if transactions disabled, check if need to change database here
 	// NOTE : if transactions enabled, this check if performed in transation timeout
 	if (m_timeoutTransaction <= 0 && m_checkingTimer.elapsed() > 5000)
@@ -1134,7 +1160,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryEventsOfType(
 		return false;
 	}
 	// insert reference to new event and event type in each emitter
-	bool ok = true;
+	ok = true;
 	for (auto& emitterNodeId : emittersNodeIds)
 	{
 		ok = ok && this->insertEventReferenceInEmitterTable(
@@ -1888,7 +1914,12 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 	double fileSizeMb = 0.0;
 	double totalSizeMb = 0.0;
 	// get most recent db file
-	auto& dbInfo = m_dbFiles.last();
+	bool ok = false;
+	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	if (!ok)
+	{
+		return false;
+	}
 	const QString& strDbName = dbInfo.strFileName;
 	// check file exists
 	QFileInfo fileInfo(strDbName);

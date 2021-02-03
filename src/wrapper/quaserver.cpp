@@ -181,6 +181,52 @@ UA_StatusCode QUaServer::generateChildNodeId(
 	auto st = UA_Server_readBrowseName(server, *sourceNodeId, &outBrowseName);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
+	auto qserver = QUaServer::getServerNodeContext(server);
+	// if parent has string node id try to add child also as string
+	if (qserver->m_childNodeIdCallback)
+	{
+		// get child browse name
+		QUaQualifiedName childBrowseName = QUaQualifiedName(outBrowseName);		
+		// get parent node id
+		QUaNodeId parentNodeId = QUaNodeId(*targetParentNodeId);
+		// call callback
+		QUaNodeId childNodeId = qserver->m_childNodeIdCallback(parentNodeId, childBrowseName);	
+		bool isNull = childNodeId.isNull();
+		bool isUsed = false;
+		if (!isNull)
+		{
+			isUsed = qserver->isNodeIdUsed(childNodeId);
+		}		
+		// copy if success
+		if (!isNull && !isUsed)
+		{
+			// copy
+			*targetNodeId = childNodeId;
+			// cleanup
+			UA_QualifiedName_clear(&outBrowseName);
+			return UA_STATUSCODE_GOOD;
+		}
+		// log errors
+		if (isNull)
+		{
+			emit qserver->logMessage({
+				tr("Child %1 nodeId for parent %2 is null. Assigning random nodeId.")
+				.arg(childBrowseName.name()).arg(parentNodeId),
+				QUaLogLevel::Error,
+				QUaLogCategory::UserLand
+			});
+		}
+		// log errors
+		if (isUsed)
+		{
+			emit qserver->logMessage({
+				tr("Child %1 nodeId for parent %2 is already in use. Assigning random nodeId.")
+				.arg(childBrowseName.name()).arg(parentNodeId),
+				QUaLogLevel::Error,
+				QUaLogCategory::UserLand
+			});
+		}
+	}
 	// get parent node id hash
 	uint parentHash = qHash(*targetParentNodeId, targetParentNodeId->namespaceIndex);
 	// get child browse name hash
@@ -193,8 +239,7 @@ UA_StatusCode QUaServer::generateChildNodeId(
 	targetNodeId->identifier.numeric = parentHash ^ childNameHash;
 	// cleanup
 	UA_QualifiedName_clear(&outBrowseName);
-	// check 
-	auto qserver = QUaServer::getServerNodeContext(server);
+	// check 	
 	while (qserver->isNodeIdUsed(*targetNodeId))
 	{
 		targetNodeId->identifier.numeric = targetNodeId->identifier.numeric ^ childNameHash;
@@ -928,6 +973,7 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_byteCertificate = QByteArray();
 	m_byteCertificateInternal = QByteArray();
 	m_methodRetStatusCode = UA_STATUSCODE_GOOD;
+	m_childNodeIdCallback = nullptr;
 #ifdef UA_ENABLE_ENCRYPTION
 	m_bytePrivateKey = QByteArray();
 	m_bytePrivateKeyInternal = QByteArray();
@@ -974,6 +1020,7 @@ void QUaServer::addChange(const QUaChangeStructureDataType& change)
 		m_changeEvent->trigger();
 		// clean list of changes buffer
 		m_listChanges.clear();
+		m_changeEvent->setChanges(m_listChanges);
 	});
 }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1657,6 +1704,11 @@ void QUaServer::setMaxSessions(const quint16& maxSessions)
 {
 	m_maxSessions = maxSessions;
 	emit this->maxSessionsChanged(m_maxSessions);
+}
+
+void QUaServer::setChildNodeIdCallback(const QUaChildNodeIdCallback& callback)
+{
+	m_childNodeIdCallback = callback;
 }
 
 void QUaServer::registerTypeInternal(

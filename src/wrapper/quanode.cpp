@@ -226,6 +226,14 @@ QUaNode::QUaNode(
 
 QUaNode::~QUaNode()
 {
+	// [FIX] : QObject children destructors were called after this one
+	//         and the some sub-types destructors might use parent's m_nodeId
+	//         so we better destroy the children manually before deleting while
+	//         m_nodeId is still valid
+	while (this->children().count() > 0)
+	{
+		delete this->children().at(0);
+	}
 	// check if node id has been already removed from node store
 	// i.e. child of deleted parent node, or ...
 	UA_NodeId outNodeId;

@@ -26,6 +26,8 @@ class QUaRefreshRequiredEvent;
 #include <QUaHistoryBackend>
 #endif // UA_ENABLE_HISTORIZING
 
+typedef std::function<QUaNodeId(const QUaNodeId&, const QUaQualifiedName&)> QUaChildNodeIdCallback;
+
 class QUaServer : public QObject
 {
 	friend class QUaNode;
@@ -137,6 +139,11 @@ public:
 	template<typename T, typename TFunc1>
 	QMetaObject::Connection instanceCreated(typename QtPrivate::FunctionPointer<TFunc1>::Object* pObj,
 		                                    TFunc1 callback);
+    // set a callback to generate custom type children node ids
+    template<typename M>
+    void setChildNodeIdCallback(const M& callback);
+    // allow to un set the callback, i.e. QUaChildNodeIdCallback(nullptr)
+    void setChildNodeIdCallback(const QUaChildNodeIdCallback& callback);
 
 	// register enum in order to use it as data type
 	template<typename T>
@@ -323,6 +330,8 @@ private:
     QHash<QUaNodeId, QSet<QUaQualifiedName>> m_hashMandatoryChildren;
 
 	QUaValidationCallback m_validationCallback;
+
+    QUaChildNodeIdCallback m_childNodeIdCallback;
 
     const QUaSession* m_currentSession;
 
@@ -629,6 +638,15 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 	return this->instanceCreated<T>(T::staticMetaObject, pObj, f);
 }
 
+template<typename M>
+inline void QUaServer::setChildNodeIdCallback(const M& callback)
+{
+    m_childNodeIdCallback = 
+        [callback](const QUaNodeId& parentNodeId, const QUaQualifiedName& childBrowseName) {
+        return callback(parentNodeId, childBrowseName);
+    };
+}
+
 template<typename T>
 inline void QUaServer::registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract/* = false*/)
 {
@@ -931,7 +949,7 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
     auto srcNodes = nonHierRefs.keys();
     for (auto srcNode : srcNodes)
     {
-        for (auto nonHierRef : nonHierRefs[srcNode])
+        for (const auto &nonHierRef : nonHierRefs[srcNode])
         {
             auto targetNode = this->server()->nodeById(nonHierRef.targetNodeId);
             if (targetNode)
@@ -1231,7 +1249,7 @@ inline bool QUaNode::deserializeInternal(
         UA_NodeId_clear(&uaOptionalId);
         // no existing child matched by browseName, create a new one 
         // but before, check nodeId does not exist
-        auto strTargetNodeId = forwRef.targetNodeId;
+        QUaNodeId strTargetNodeId = forwRef.targetNodeId;
         if (this->server()->isNodeIdUsed(strTargetNodeId))
         {
             logOut.enqueue({

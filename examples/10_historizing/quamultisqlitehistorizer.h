@@ -218,6 +218,11 @@ private:
 	bool createNewDatabase(
 		QQueue<QUaLog>& logOut
 	);
+	// get current sqlite database file to read from or write to
+	DatabaseInfo& getMostRecentDbInfo(
+		bool &ok,
+		QQueue<QUaLog>& logOut
+	);
 	// get database handle, creates it if not already
 	bool getOpenedDatabase(
 		DatabaseInfo& dbInfo,
