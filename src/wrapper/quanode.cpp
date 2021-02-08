@@ -462,7 +462,8 @@ UA_NodeId QUaNode::typeDefinitionNodeId(
 	// make ua browse
 	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from child
-	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION), &bDesc->referenceTypeId);
+        // GCC does not like : UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION), &bDesc->referenceTypeId);
+        bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
@@ -500,7 +501,8 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&typeNodeId, &bDesc->nodeId); // from child
-	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), &bDesc->referenceTypeId);
+        // GCC does not like : UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), &bDesc->referenceTypeId);
+        bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
@@ -1927,7 +1929,8 @@ UA_NodeId QUaNode::getModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
-	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE), &bDesc->referenceTypeId);
+        // GCC does not like : UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE), &bDesc->referenceTypeId);
+        bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
 	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT; // in specific UA_NS0ID_MODELLINGRULE_MANDATORY 78 /* Object */
