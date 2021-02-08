@@ -77,7 +77,7 @@ struct QUaInMemorySerializer
 			QString browse2 = QUaQualifiedName::reduceXml(server->nodeById(nodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
 		});
-		for (auto nodeId : listNodeIds)
+		for (const auto & nodeId : listNodeIds)
 		{
 			QUaNode* node = server->nodeById(nodeId);
 			QString browse = QUaQualifiedName::reduceXml(node->nodeBrowsePath());
@@ -140,7 +140,7 @@ QUaNode::QUaNode(
 	}
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
 	QHash<QUaQualifiedName, UA_NodeId> mapChildren;
-	for (auto &childNodeId : chidrenNodeIds)
+	for (const auto &childNodeId : chidrenNodeIds)
 	{
 		// read browse name
 		QUaQualifiedName browseName = QUaNode::getBrowseName(childNodeId, server->m_server);
@@ -197,7 +197,7 @@ QUaNode::QUaNode(
 	QUaNodeId typeNodeId = this->typeDefinitionNodeId();
 	Q_ASSERT(m_qUaServer->m_hashMandatoryChildren.contains(typeNodeId));
 	const auto &mandatoryList = m_qUaServer->m_hashMandatoryChildren[typeNodeId];
-	for (const auto browseName : mandatoryList)
+	for (const auto & browseName : mandatoryList)
 	{
 		Q_ASSERT(mapChildren.contains(browseName));
 		// get child nodeId for child
@@ -218,7 +218,7 @@ QUaNode::QUaNode(
 	// if assert below fails, review filter in QUaNode::getChildrenNodeIds
 	Q_ASSERT_X(mapChildren.count() == 0, "QUaNode::QUaNode", "Children not bound properly.");
 	// cleanup
-	for (auto childNodeId : chidrenNodeIds)
+	for (auto & childNodeId : chidrenNodeIds)
 	{
 		UA_NodeId_clear(&childNodeId);
 	}
@@ -462,10 +462,10 @@ UA_NodeId QUaNode::typeDefinitionNodeId(
 	// make ua browse
 	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from child
+	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION), &bDesc->referenceTypeId);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD;
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask = UA_BROWSERESULTMASK_REFERENCETYPEID;
-	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASTYPEDEFINITION);
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
 	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
@@ -498,12 +498,12 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	}
 	UA_NodeId retTypeId = UA_NODEID_NULL;
 	// make ua browse
-	UA_BrowseDescription* bDesc = UA_BrowseDescription_new();
+	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&typeNodeId, &bDesc->nodeId); // from child
+	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE), &bDesc->referenceTypeId);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
 	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
-	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBTYPE);
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(server, 0, bDesc);
 	Q_ASSERT_X(bRes.statusCode == UA_STATUSCODE_GOOD, "QUaNode::superTypeDefinitionNodeId", "Browsing children failed.");
@@ -622,7 +622,7 @@ bool QUaNode::hasChild(const QUaQualifiedName &browseName)
 QUaNode * QUaNode::browsePath(const QUaBrowsePath& browsePath) const
 {
 	QUaNode * currNode = const_cast<QUaNode *>(this);
-	for (auto browseName : browsePath)
+	for (const auto & browseName : browsePath)
 	{
 		currNode = currNode->browseChild(browseName);
 		if (!currNode)
@@ -920,7 +920,7 @@ UA_NodeId QUaNode::getOptionalChildNodeId(
         !UA_NodeId_equal(&typeNodeId, &baseVarType))
 	{
 		auto childrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, server);
-		for (auto childNodeId : childrenNodeIds)
+		for (auto & childNodeId : childrenNodeIds)
 		{
 			// ignore if not optional
 			if (!QUaNode::hasOptionalModellingRule(childNodeId, server))
@@ -939,7 +939,7 @@ UA_NodeId QUaNode::getOptionalChildNodeId(
 			optionalFieldNodeId = childNodeId;
 		}
 		// cleanup
-		for (auto childNodeId : childrenNodeIds)
+		for (auto & childNodeId : childrenNodeIds)
 		{
 			UA_NodeId_clear(&childNodeId);
 		}
@@ -1107,10 +1107,11 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool
 	// make ua browse
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&m_nodeId, &bDesc->nodeId); // from child
+	UA_NodeId_copy(&refTypeId, &bDesc->referenceTypeId);
 	bDesc->browseDirection = isForward ? UA_BROWSEDIRECTION_FORWARD : UA_BROWSEDIRECTION_INVERSE;
 	bDesc->includeSubtypes = true;
 	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE; // only objects or variables (no types or refs)
-	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;
+	bDesc->resultMask      = UA_BROWSERESULTMASK_REFERENCETYPEID;	
 	// browse
 	UA_BrowseResult bRes = UA_Server_browse(m_qUaServer->m_server, 0, bDesc);
 	Q_ASSERT(bRes.statusCode == UA_STATUSCODE_GOOD);
@@ -1119,12 +1120,11 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool
 		for (size_t i = 0; i < bRes.referencesSize; i++)
 		{
 			UA_ReferenceDescription rDesc = bRes.references[i];
-			if (UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId))
-			{
-				UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
-				UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
-				retRefSet.insert(nodeId);
-			}
+			Q_ASSERT(UA_NodeId_equal(&rDesc.referenceTypeId, &refTypeId));
+			UA_NodeId nodeId/* = rDesc.nodeId.nodeId*/;
+			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
+			Q_ASSERT(!retRefSet.contains(nodeId));
+			retRefSet.insert(nodeId);
 		}
 		UA_BrowseResult_deleteMembers(&bRes);
 		bRes = UA_Server_browseNext(m_qUaServer->m_server, true, &bRes.continuationPoint);
@@ -1297,7 +1297,7 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 {
 	// get all ua methods of INSTANCE
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(m_nodeId, m_qUaServer->m_server);
-	for (auto methNodeId : methodsNodeIds)
+	for (const auto & methNodeId : methodsNodeIds)
 	{
 		// ignore if not optional
 		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1309,7 +1309,7 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 		if (methodName == methBrowseName)
 		{
 			// cleanup
-			for (auto methodNodeId : methodsNodeIds)
+			for (auto & methodNodeId : methodsNodeIds)
 			{
 				UA_NodeId_clear(&methodNodeId);
 			}
@@ -1317,7 +1317,7 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 		}
 	}
 	// cleanup
-	for (auto methodNodeId : methodsNodeIds)
+	for (auto & methodNodeId : methodsNodeIds)
 	{
 		UA_NodeId_clear(&methodNodeId);
 	}
@@ -1339,7 +1339,7 @@ bool QUaNode::addOptionalMethod(const QUaQualifiedName& methodName)
 		{
 		// get all ua methods of TYPE
 		auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
-		for (auto methNodeId : methodsNodeIds)
+		for (const auto & methNodeId : methodsNodeIds)
 		{
 			// ignore if not optional
 			if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1356,7 +1356,7 @@ bool QUaNode::addOptionalMethod(const QUaQualifiedName& methodName)
 			break;
 		}
 		// cleanup
-		for (auto methNodeId : methodsNodeIds)
+		for (auto & methNodeId : methodsNodeIds)
 		{
 			UA_NodeId_clear(&methNodeId);
 		}
@@ -1404,7 +1404,7 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 	// get all ua methods of TYPE
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
 	UA_NodeId methodNodeId = UA_NODEID_NULL;
-	for (auto methNodeId : methodsNodeIds)
+	for (const auto & methNodeId : methodsNodeIds)
 	{
 		// ignore if not optional
 		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1425,7 +1425,7 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 	if (UA_NodeId_isNull(&methodNodeId))
 	{
 		// cleanup
-		for (auto methodNodeId : methodsNodeIds)
+		for (auto & methodNodeId : methodsNodeIds)
 		{
 			UA_NodeId_clear(&methodNodeId);
 		}
@@ -1442,7 +1442,7 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 		true
 	);
 	// cleanup
-	for (auto methodNodeId : methodsNodeIds)
+	for (auto & methodNodeId : methodsNodeIds)
 	{
 		UA_NodeId_clear(&methodNodeId);
 	}
@@ -1509,9 +1509,9 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 {
 	QList<QUaForwardReference> retList;
 	// serialize all reference types
-	for (auto& refType : m_qUaServer->referenceTypes())
+	for (const auto & refType : m_qUaServer->referenceTypes())
 	{
-		for (auto ref : this->findReferences(refType))
+		for (const auto & ref : this->findReferences(refType))
 		{
 			QUaForwardReference fRef = { 
 				ref->nodeId(), 
@@ -1708,7 +1708,7 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(
 	QList<UA_NodeId> retListChildren;
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&parentNodeId, &bDesc->nodeId); // from parent
-	bDesc->referenceTypeId = referenceTypeId;
+	UA_NodeId_copy(&referenceTypeId, &bDesc->referenceTypeId);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
 	bDesc->nodeClassMask   = nodeClassMask; 
@@ -1808,7 +1808,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			server,
 			UA_NODECLASS_VARIABLE
 		);
-		for (auto varNodeId : varsNodeIds)
+		for (const auto & varNodeId : varsNodeIds)
 		{
 			// only children that have a modelling rule
 			UA_NodeId modellingRule = QUaNode::getModellingRule(varNodeId, server);
@@ -1874,7 +1874,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			}
 		}
 		// cleanup
-		for (auto varNodeId : varsNodeIds)
+		for (auto & varNodeId : varsNodeIds)
 		{
 			UA_NodeId_clear(&varNodeId);
 		}
@@ -1927,7 +1927,7 @@ UA_NodeId QUaNode::getModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 {
 	UA_BrowseDescription * bDesc = UA_BrowseDescription_new();
 	UA_NodeId_copy(&nodeId, &bDesc->nodeId); // from parent
-	bDesc->referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE);
+	UA_NodeId_copy(&UA_NODEID_NUMERIC(0, UA_NS0ID_HASMODELLINGRULE), &bDesc->referenceTypeId);
 	bDesc->browseDirection = UA_BROWSEDIRECTION_FORWARD; //  look downwards
 	bDesc->includeSubtypes = false;
 	bDesc->nodeClassMask   = UA_NODECLASS_OBJECT; // in specific UA_NS0ID_MODELLINGRULE_MANDATORY 78 /* Object */

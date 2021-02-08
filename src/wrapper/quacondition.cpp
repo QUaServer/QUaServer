@@ -958,7 +958,7 @@ void QUaConditionBranch::addChildren(QUaNode* node, const QUaBrowsePath& browseP
 		// no children
 	}
 	// variables
-	for (auto var : node->browseChildren<QUaBaseDataVariable>())
+	for (auto & var : node->browseChildren<QUaBaseDataVariable>())
 	{
 		auto browseName = var->browseName();
 		if (ignoreSet.contains(browseName))

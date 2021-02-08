@@ -152,7 +152,7 @@ void QUaServer::setEnumMap(const QString& strEnumName, const QUaEnumMap& enumMap
 		return;
 	}
 	// else update enum
-	auto enumNodeId = m_hashEnums[strEnumName];
+	auto & enumNodeId = m_hashEnums[strEnumName];
 	this->updateEnum(enumNodeId, enumMap);
 }
 
@@ -167,7 +167,7 @@ void QUaServer::updateEnumEntry(const QString& strEnumName, const QUaEnumKey& en
 		return;
 	}
 	// else update enum
-	auto enumNodeId = m_hashEnums[strEnumName];
+	auto & enumNodeId = m_hashEnums[strEnumName];
 	// get old map
 	auto mapValues = this->enumMap(strEnumName);
 	// update old map
@@ -185,7 +185,7 @@ void QUaServer::removeEnumEntry(const QString& strEnumName, const QUaEnumKey& en
 		return;
 	}
 	// else update enum
-	auto enumNodeId = m_hashEnums[strEnumName];
+	auto & enumNodeId = m_hashEnums[strEnumName];
 	// get old map
 	auto mapValues = this->enumMap(strEnumName);
 	// update old map

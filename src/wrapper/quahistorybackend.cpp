@@ -1042,7 +1042,7 @@ void QUaHistoryBackend::readEvent(
 				emitterNodeId,
 				logOut
 			);
-			for (auto eventTypeNodeId : eventTypeNodeIds)
+			for (const auto & eventTypeNodeId : eventTypeNodeIds)
 			{
 				QDateTime timeStartExisting = srv->m_historBackend.findTimestampEventOfType(
 					emitterNodeId,

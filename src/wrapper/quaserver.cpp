@@ -1943,7 +1943,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		m_hashMandatoryChildren.value(superTypeNodeId, QSet<QUaQualifiedName>());
 	// get mandatory children browse names
 	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
-	for (auto childNodeId : chidrenNodeIds)
+	for (const auto & childNodeId : chidrenNodeIds)
 	{
 		// ignore if not mandatory
 		if (!QUaNode::hasMandatoryModellingRule(childNodeId, m_server))
@@ -1965,7 +1965,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	// get all ua methods
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_server);
 	// try to match ua methods with qt meta methods (by browse name)
-	for (auto methodNodeId : methodsNodeIds)
+	for (const auto & methodNodeId : methodsNodeIds)
 	{
 		// ignore if not mandatory or optional
 		if (!QUaNode::hasMandatoryModellingRule(methodNodeId, m_server) &&
@@ -1990,7 +1990,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 		QUaServer::bindMethod(this, &methodNodeId, methIdx);
 	}
 	// cleanup for all ua methods
-	for (auto methNodeId : methodsNodeIds)
+	for (auto & methNodeId : methodsNodeIds)
 	{
 		UA_NodeId_clear(&methNodeId);
 	}
