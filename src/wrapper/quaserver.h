@@ -26,6 +26,11 @@ class QUaRefreshRequiredEvent;
 #include <QUaHistoryBackend>
 #endif // UA_ENABLE_HISTORIZING
 
+#ifdef UA_ENABLE_ENCRYPTION
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/x509_crl.h>
+#endif
+
 typedef std::function<QUaNodeId(const QUaNodeId&, const QUaQualifiedName&)> QUaChildNodeIdCallback;
 
 class QUaServer : public QObject
@@ -244,6 +249,17 @@ public:
 	template<typename M>
 	void        setUserValidationCallback(const M &callback);
 
+#ifdef UA_ENABLE_ENCRYPTION
+
+    bool addClientCertificate(const QByteArray& byteCertificate);
+
+    bool addCertificateAuthority(
+        const QByteArray& byteCertificate,
+        const QByteArray& byteRevocationList
+    );
+
+#endif
+
 	// Sessions API
 
     QList<const QUaSession*> sessions() const;
@@ -304,6 +320,10 @@ private:
 #ifdef UA_ENABLE_ENCRYPTION
 	QByteArray m_bytePrivateKey;
 	QByteArray m_bytePrivateKeyInternal; // NOTE : needs to exists as long as server instance
+
+    mbedtls_x509_crt m_certificateTrustList;      // cert must be in this list
+    mbedtls_x509_crt m_certificateIssuerList;     // ca that signed cert must be in this list, of the cret itself (self-signed)
+    mbedtls_x509_crl m_certificateRevocationList; // cert must not be in this list
 #endif
 
 	QByteArray m_byteApplicationName;
@@ -337,6 +357,9 @@ private:
 
     static QString m_anonUser;
     static QString m_anonUserToken;
+#ifdef UA_ENABLE_ENCRYPTION
+    static QString m_anonUserCert;
+#endif
     static QStringList m_anonUsers;
 
 	// change event instance to notify client when nodes added or removed
@@ -1178,7 +1201,7 @@ inline bool QUaNode::deserializeInternal(
             {
                 logOut.enqueue({
                 tr("Could not deserialize nodeId for child of %1 with browseName %2. "
-                "Serialized nodeId is %3, new nodeId is %4. This is a limitation of the open62541 library.")
+                "Serialized nodeId is %3, new nodeId is %4.")
                         .arg(this->nodeId())
                         .arg(browseName.toXmlString())
                         .arg(forwRef.targetNodeId)

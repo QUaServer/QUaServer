@@ -497,6 +497,15 @@ typedef struct {
 const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
 const UA_String username_policy = UA_STRING_STATIC(USERNAME_POLICY);
 
+#ifdef UA_ENABLE_ENCRYPTION
+#define CERTIFICATE_POLICY "open62541-certificate-policy"
+const UA_String certificate_policy = UA_STRING_STATIC(CERTIFICATE_POLICY);
+
+#define REMOTECERTIFICATETRUSTED 1
+#define ISSUERKNOWN              2
+#define DUALPARENT               3
+#define PARENTFOUND              4
+#endif // UA_ENABLE_ENCRYPTION
 
 #ifdef UA_ENABLE_HISTORIZING
 /*********************************************************************************************
@@ -859,6 +868,14 @@ class QUaServer_Anex
         const UA_NodeId origin,
         const QUaSaoCallback& resolveSAOCallback = nullptr
     );
+
+#ifdef UA_ENABLE_ENCRYPTION
+    static UA_StatusCode
+        certificateVerification_verify(
+            QUaServer* server,
+            const UA_ByteString* certificate
+        );
+#endif
 };
 
 /* Print a NodeId in logs */

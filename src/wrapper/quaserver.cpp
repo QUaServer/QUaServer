@@ -603,9 +603,16 @@ QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
 
 QString QUaServer::m_anonUser      = QObject::tr("[Anonymous]");
 QString QUaServer::m_anonUserToken = QObject::tr("[Anonymous:EmptyToken]");
+#ifdef UA_ENABLE_ENCRYPTION
+QString QUaServer::m_anonUserCert  = QObject::tr("[Anonymous:Certificate]");
+#endif
 QStringList QUaServer::m_anonUsers = QStringList() 
 	<< QUaServer::m_anonUser
-	<< QUaServer::m_anonUserToken;
+	<< QUaServer::m_anonUserToken
+#ifdef UA_ENABLE_ENCRYPTION
+	<< QUaServer::m_anonUserCert
+#endif
+	;
 
 // Copied from activateSession_default in open62541 and then modified to use custom stuff
 UA_StatusCode QUaServer::activateSession(UA_Server                    * server, 
@@ -660,13 +667,11 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 
 		// NOTE : custom code : add session to hash
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
-		//Q_ASSERT(!srv->m_hashSessions.contains(*sessionId));
         if(!srv->m_hashSessions.contains(*sessionId))
         {
             srv->m_hashSessions.insert(*sessionId, new QUaSession(srv));
         }
         srv->m_hashSessions[*sessionId]->m_strUserName = QUaServer::m_anonUser;
-
 		// notify client connected
 		QUaServer::newSession(srv, sessionId);
 
@@ -730,6 +735,44 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 
 		return (UA_StatusCode)UA_STATUSCODE_GOOD;
 	}
+
+#ifdef UA_ENABLE_ENCRYPTION
+	/* Certificate */
+	if (userIdentityToken->content.decoded.type == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN]) {
+		const UA_X509IdentityToken* certToken =
+			(UA_X509IdentityToken*)userIdentityToken->content.decoded.data;
+
+		if (!UA_String_equal(&certToken->policyId, &certificate_policy))
+			return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
+
+		// validate certificate
+		UA_StatusCode res = QUaServer_Anex::certificateVerification_verify(srv, &certToken->certificateData);
+		if (res != UA_STATUSCODE_GOOD)
+		{
+			return res;
+		}
+
+		// TODO : apart from validating the certificate in the user identity token, we must also verify the
+		//        userTokenSignature (which is NOT passed to this callback by the open62541 library)
+		// https://github.com/open62541/open62541/issues/3962
+		//        The userTokenSignature is part of the client's request arguments for the activateSession service
+		//        which if decrypted with the client's public key, should match the server's nonce sent during the
+		//        request made to the createSession service (should be stored in QUaServer_Anex, UA_Session::serverNonce)
+		//        Take a look at the code for `decryptPassword` and/or `checkSignature`
+
+		// add session to hash
+		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
+		if (!srv->m_hashSessions.contains(*sessionId))
+		{
+			srv->m_hashSessions.insert(*sessionId, new QUaSession(srv));
+		}
+		srv->m_hashSessions[*sessionId]->m_strUserName = QUaServer::m_anonUserCert;
+		// notify client connected
+		QUaServer::newSession(srv, sessionId);
+
+		return (UA_StatusCode)UA_STATUSCODE_GOOD;
+	}
+#endif
 
 	/* Unsupported token type */
 	return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
@@ -977,6 +1020,9 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 #ifdef UA_ENABLE_ENCRYPTION
 	m_bytePrivateKey = QByteArray();
 	m_bytePrivateKeyInternal = QByteArray();
+	mbedtls_x509_crt_init(&m_certificateTrustList);
+	mbedtls_x509_crl_init(&m_certificateRevocationList);
+	mbedtls_x509_crt_init(&m_certificateIssuerList);
 #endif
 	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -1147,30 +1193,11 @@ void QUaServer::resetConfig()
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	}
 #endif
-	
-	// setup logger
-	config->logger = this->getLogger();
 
-	// setup access control
-	AccessControlContext* context = static_cast<AccessControlContext*>(config->accessControl.context);
-	context->allowAnonymous = m_anonymousLoginAllowed;
-
-	// static methods to reimplement custom behaviour
-	config->accessControl.activateSession           = &QUaServer::activateSession;
-	config->accessControl.closeSession              = &QUaServer::closeSession;
-	config->accessControl.getUserRightsMask         = &QUaServer::getUserRightsMask;
-	config->accessControl.getUserAccessLevel        = &QUaServer::getUserAccessLevel;
-	config->accessControl.getUserExecutable         = &QUaServer::getUserExecutable;
-	config->accessControl.getUserExecutableOnObject = &QUaServer::getUserExecutableOnObject;
-
-	// TODO : implement rest of callbacks
-	//        allowAddNode_default
-	//        allowAddReference_default
-	//        allowDeleteNode_default
-	//        allowDeleteReference_default
+	// support matrikon opc ua explorer with a warning
+	config->verifyRequestTimestamp = UA_RULEHANDLING_WARN;
 
 	// setup server description
-
 	config->applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC((char*)"", m_byteApplicationName.data());
 	config->applicationDescription.applicationUri  = UA_String_fromChars(m_byteApplicationUri.data());
 	config->buildInfo.productName                  = UA_String_fromChars(m_byteProductName.data());
@@ -1186,8 +1213,59 @@ void QUaServer::resetConfig()
 	//        conf->endpointsSize = 1;
 	st = UA_ApplicationDescription_copy(&config->applicationDescription, &config->endpoints[0].server);
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
-	// setup server limits
+	
+	// setup logger
+	config->logger = this->getLogger();
 
+	// setup access control
+	AccessControlContext* context = static_cast<AccessControlContext*>(config->accessControl.context);
+	context->allowAnonymous = m_anonymousLoginAllowed;
+
+	// static methods to reimplement custom behaviour
+	auto ac = &config->accessControl;
+	ac->activateSession           = &QUaServer::activateSession;
+	ac->closeSession              = &QUaServer::closeSession;
+	ac->getUserRightsMask         = &QUaServer::getUserRightsMask;
+	ac->getUserAccessLevel        = &QUaServer::getUserAccessLevel;
+	ac->getUserExecutable         = &QUaServer::getUserExecutable;
+	ac->getUserExecutableOnObject = &QUaServer::getUserExecutableOnObject;
+
+	// TODO : implement rest of callbacks
+	//        allowAddNode_default
+	//        allowAddReference_default
+	//        allowDeleteNode_default
+	//        allowDeleteReference_default
+
+#ifdef UA_ENABLE_ENCRYPTION
+	// add support for certificate user token (not supported yet by open62541)	
+	UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
+		ac->userTokenPoliciesSize,
+		&UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+	ac->userTokenPolicies     = NULL;
+	ac->userTokenPoliciesSize = 3; // support anon, user/pass and certs
+	ac->userTokenPolicies     = (UA_UserTokenPolicy*)
+		UA_Array_new(ac->userTokenPoliciesSize, &UA_TYPES[UA_TYPES_USERTOKENPOLICY]);
+	// NOTE : support for tokens below does not mean they are used, depends on QUaServer::activateSession
+	// support anonymous
+	ac->userTokenPolicies[0].tokenType = UA_USERTOKENTYPE_ANONYMOUS;
+	ac->userTokenPolicies[0].policyId  = UA_STRING_ALLOC(ANONYMOUS_POLICY);
+	// support username and password
+	ac->userTokenPolicies[1].tokenType = UA_USERTOKENTYPE_USERNAME;
+	ac->userTokenPolicies[1].policyId  = UA_STRING_ALLOC(USERNAME_POLICY);
+	// support certs
+	ac->userTokenPolicies[2].tokenType = UA_USERTOKENTYPE_CERTIFICATE;
+	ac->userTokenPolicies[2].policyId  = UA_STRING_ALLOC(CERTIFICATE_POLICY);
+	// because we added cert support, we need to re-allocate the endpoints
+	for (size_t i = 0; i < config->endpointsSize; ++i)
+		UA_EndpointDescription_deleteMembers(&config->endpoints[i]);
+	UA_free(config->endpoints);
+	config->endpoints     = NULL;
+	config->endpointsSize = 0;
+	st = UA_ServerConfig_addAllEndpoints(config);
+	Q_ASSERT(st == UA_STATUSCODE_GOOD);
+#endif
+
+	// setup server limits
 	config->maxSecureChannels = m_maxSecureChannels;
 	config->maxSessions       = m_maxSessions;
 
@@ -1416,6 +1494,9 @@ void QUaServer::setupServer()
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	config->historyDatabase = m_historDatabase;
 #endif // UA_ENABLE_HISTORIZING
+
+	// custom instance declaration NodeId mechanism
+	config->nodeLifecycle.generateChildNodeId = &QUaServer::generateChildNodeId;
 }
 
 UA_Logger QUaServer::getLogger()
@@ -2753,6 +2834,59 @@ bool QUaServer::userExists(const QString & strUserName) const
 	}
 	return m_anonUsers.contains(strUserName) || m_hashUsers.contains(strUserName);
 }
+
+#ifdef UA_ENABLE_ENCRYPTION
+// NOTE : as in UA_CertificateVerification_Trustlist
+bool QUaServer::addClientCertificate(const QByteArray& byteCertificate)
+{
+	int err = 0;
+	size_t cert_length = static_cast<size_t>(byteCertificate.length());
+	const unsigned char* cert_data = reinterpret_cast<const unsigned char*>(byteCertificate.constData());
+
+	err = mbedtls_x509_crt_parse(
+		&m_certificateTrustList,
+		cert_data,
+		cert_length
+	);
+	if (err)
+	{
+		return false;
+	}
+
+	return true;
+}
+bool QUaServer::addCertificateAuthority(const QByteArray& byteCertificate, const QByteArray& byteRevocationList)
+{
+	int err = 0;
+	size_t cert_length = static_cast<size_t>(byteCertificate.length());
+	const unsigned char* cert_data = reinterpret_cast<const unsigned char*>(byteCertificate.constData());
+
+	err = mbedtls_x509_crt_parse(
+		&m_certificateIssuerList,
+		cert_data,
+		cert_length
+	);
+	if (err)
+	{
+		return false;
+	}
+
+	size_t clr_length = static_cast<size_t>(byteRevocationList.length());
+	const unsigned char* clr_data = reinterpret_cast<const unsigned char*>(byteRevocationList.constData());
+
+	err = mbedtls_x509_crl_parse(
+		&m_certificateRevocationList,
+		clr_data,
+		clr_length
+	);
+	if (err)
+	{
+		return false;
+	}
+
+	return true;
+}
+#endif
 
 QList<const QUaSession*> QUaServer::sessions() const
 {

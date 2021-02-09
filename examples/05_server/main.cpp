@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
 	// Add server description
 	server.setApplicationName ("my_app");
-	server.setApplicationUri  ("urn:juangburgos.com:my_app");
+	server.setApplicationUri  ("urn:unconfigured:application"); // NOTE : must match cert info
 	server.setProductName     ("my_product");
 	server.setProductUri      ("juangburgos.com");
 	server.setManufacturerName("My Company Inc.");
