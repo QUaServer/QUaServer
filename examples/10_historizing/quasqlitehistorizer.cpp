@@ -594,6 +594,9 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 			});
 		return points;
 	}
+	// prealloc memory
+	points.reserve(numPointsToRead);
+	Q_ASSERT(points.count() == 0);
 	while (query.next())
 	{
 		QSqlRecord rec = query.record();

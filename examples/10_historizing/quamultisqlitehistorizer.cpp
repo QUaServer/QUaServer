@@ -81,7 +81,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 			});
 		}
 		// check if need to change database
-		bool ok = this->checkDatabase(m_deferedLogOut);
+		bool ok = this->checkDatabase(QDateTime::currentDateTimeUtc(), m_deferedLogOut);
 		Q_ASSERT(ok);
 	}, Qt::QueuedConnection);
 	// handle auto close databases
@@ -132,6 +132,20 @@ QString QUaMultiSqliteHistorizer::databasePath() const
 }
 
 bool QUaMultiSqliteHistorizer::setDatabasePath(
+	const QString& databasePath, 
+	QQueue<QUaLog>& logOut
+)
+{
+	// call private method
+	return this->setDatabasePath(
+		QDateTime::currentDateTimeUtc(),
+		databasePath,
+		logOut
+	);
+}
+
+bool QUaMultiSqliteHistorizer::setDatabasePath(
+	const QDateTime& startTime,
 	const QString& databasePath,
 	QQueue<QUaLog>& logOut
 )
@@ -157,7 +171,7 @@ bool QUaMultiSqliteHistorizer::setDatabasePath(
 	// if no existing file, try to create on target path
 	if (m_dbFiles.isEmpty())
 	{
-		bool ok = createNewDatabase(logOut);
+		bool ok = createNewDatabase(startTime, logOut);
 		if (!ok)
 		{
 			return false;
@@ -182,6 +196,7 @@ bool QUaMultiSqliteHistorizer::setDatabasePath(
 }
 
 bool QUaMultiSqliteHistorizer::createNewDatabase(
+	const QDateTime& startTime,
 	QQueue<QUaLog>& logOut
 )
 {
@@ -207,7 +222,7 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 		}
 	}
 	// add new one
-	auto currDateTime = QDateTime::currentDateTimeUtc();
+	auto currDateTime = (std::min)(startTime, QDateTime::currentDateTimeUtc());
 	Q_ASSERT(!m_dbFiles.contains(currDateTime));
 	// NOTE : new is added here
 	m_dbFiles[currDateTime].strFileName = QString("%1/%2_%3.%4")
@@ -227,6 +242,7 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 
 QUaMultiSqliteHistorizer::DatabaseInfo& 
 QUaMultiSqliteHistorizer::getMostRecentDbInfo(
+	const QDateTime& startTime,
 	bool& ok,
 	QQueue<QUaLog>& logOut
 )
@@ -238,7 +254,11 @@ QUaMultiSqliteHistorizer::getMostRecentDbInfo(
 		return m_dbFiles.last();
 	}	
 	// create
-	ok = this->setDatabasePath(m_strDatabasePath, logOut);
+	ok = this->setDatabasePath(
+		startTime,
+		m_strDatabasePath, 
+		logOut
+	);
 	if (!ok && m_dbFiles.isEmpty())
 	{
 		m_dbFiles[QDateTime()].strFileName = "";
@@ -333,7 +353,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 	}
 	// get most recent db file
 	bool ok = false;
-	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	auto& dbInfo = this->getMostRecentDbInfo(dataPoint.timestamp, ok, logOut);
 	if (!ok)
 	{
 		return false;
@@ -343,7 +363,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 	if (m_timeoutTransaction <= 0 && m_checkingTimer.elapsed() > 5000)
 	{
 		m_checkingTimer.restart();
-		bool ok = this->checkDatabase(logOut);
+		bool ok = this->checkDatabase(dataPoint.timestamp, logOut);
 		if (!ok)
 		{
 			return ok;
@@ -569,9 +589,9 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 )
 {
 	// check if in range
-	if (timestamp < m_dbFiles.firstKey())
+	if (timestamp <= m_dbFiles.firstKey())
 	{
-		return false;
+		return timestamp == m_dbFiles.firstKey();
 	}
 	// find database file where it *could* be
 	// return the first element in [first,last) which does not compare less than val
@@ -971,7 +991,11 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 			Q_ASSERT(trueOffset >= 0);
 			break;
 		}
-	}	
+	}
+	// prealloc memory
+	points.reserve(numPointsToRead);
+	Q_ASSERT(points.count() == 0);
+	// actually read points
 	for (/*nothing*/; iter != m_dbFiles.keyEnd(); iter++)
 	{
 		// get possible db file
@@ -1069,7 +1093,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryEventsOfType(
 	}
 	// get most recent db file
 	bool ok = false;
-	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	auto& dbInfo = this->getMostRecentDbInfo(eventPoint.timestamp, ok, logOut);
 	if (!ok)
 	{
 		return false;
@@ -1079,7 +1103,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryEventsOfType(
 	if (m_timeoutTransaction <= 0 && m_checkingTimer.elapsed() > 5000)
 	{
 		m_checkingTimer.restart();
-		bool ok = this->checkDatabase(logOut);
+		bool ok = this->checkDatabase(eventPoint.timestamp, logOut);
 		if (!ok)
 		{
 			return ok;
@@ -1904,7 +1928,10 @@ bool QUaMultiSqliteHistorizer::closeDatabase(
 	return true;
 }
 
-bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
+bool QUaMultiSqliteHistorizer::checkDatabase(
+	const QDateTime& startTime,
+	QQueue<QUaLog>& logOut
+)
 {
 	// check if enabled
 	if (m_fileSizeLimMb <= 0.0)
@@ -1915,7 +1942,7 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 	double totalSizeMb = 0.0;
 	// get most recent db file
 	bool ok = false;
-	auto& dbInfo = this->getMostRecentDbInfo(ok, logOut);
+	auto& dbInfo = this->getMostRecentDbInfo(startTime, ok, logOut);
 	if (!ok)
 	{
 		return false;
@@ -1940,7 +1967,7 @@ bool QUaMultiSqliteHistorizer::checkDatabase(QQueue<QUaLog>& logOut)
 	if (fileSizeMb >= m_fileSizeLimMb)
 	{
 		// close current database and create new one
-		bool ok = this->createNewDatabase(logOut);
+		bool ok = this->createNewDatabase(startTime, logOut);
 		if (!ok)
 		{
 			return false;

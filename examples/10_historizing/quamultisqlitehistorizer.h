@@ -214,12 +214,20 @@ private:
 	static QMetaType::Type QVariantToQtType(const QVariant& value);
 	static const QString QtTypeToSqlType(const QMetaType::Type& qtType);
 
+	// set path for sqlite database files passing timestamp for first file is none exits yet
+	bool setDatabasePath(
+		const QDateTime& startTime,
+		const QString& databasePath,
+		QQueue<QUaLog>& logOut
+	);
 	// set current sqlite database file to read from or write to
 	bool createNewDatabase(
+		const QDateTime& startTime,
 		QQueue<QUaLog>& logOut
 	);
 	// get current sqlite database file to read from or write to
 	DatabaseInfo& getMostRecentDbInfo(
+		const QDateTime& startTime,
 		bool &ok,
 		QQueue<QUaLog>& logOut
 	);
@@ -235,6 +243,7 @@ private:
 	);
 	// checks current database size and creates a new one if necessary
 	bool checkDatabase(
+		const QDateTime& startTime,
 		QQueue<QUaLog>& logOut
 	);
 	// looks at current target path for matching database files and loads them to map
