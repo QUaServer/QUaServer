@@ -47,7 +47,12 @@ public:
 	// default is 1000ms, a value <= 0 disables the use of transactions
 	int transactionTimeout() const;
 	void setTransactionTimeout(const int &timeoutMs);
-	
+
+	// number of rows (samples) for SQL multirow insert
+	// default is 100 rows, a value <= 1 disables the use of multirow insert
+	int multiRowInsertSize() const;
+	int setMultiRowInserSize(const int& rows);
+
 	// required API for QUaServer::setHistorizer
 	// write data point to backend, return true on success
 	bool writeHistoryData(
@@ -167,6 +172,7 @@ private:
 	int     m_timeoutTransaction;
 	double  m_fileSizeLimMb;
 	double  m_totalSizeLimMb;
+	int     m_multiRowInsertSize;
 	QQueue<QUaLog> m_deferedLogOut;
 	QFileSystemWatcher m_watcher;
 	QMetaObject::Connection m_fileWatchConn;
@@ -176,6 +182,14 @@ private:
 	QTimer  m_timerAutoCloseDatabases;
 	bool    m_deferTotalSizeCheck;
 	QHash<uint, QDateTime> m_findTimestampCache;
+	//
+	struct DataPoint
+	{
+		QVariant  value;
+		quint32   status;
+	};
+	// NOTE : use a map to store the data points of a single node, ordered by time
+	typedef QMap<QDateTime, DataPoint> DataPointBlock;
 	// data prepared statements cache
 	struct DataPreparedStatements {
 		QSqlQuery writeHistoryData;
@@ -187,6 +201,8 @@ private:
 		QSqlQuery numDataPointsInRangeEndValid;
 		QSqlQuery numDataPointsInRangeEndInvalid;
 		QSqlQuery readHistoryData;
+		DataPointBlock multiRowBlock; // map to query on time
+		QSqlQuery writeHistoryDataMultiRow;
 	};	
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	// event type name prepared statement cache
@@ -239,7 +255,13 @@ private:
 	);
 	// closes current database if it is opened
 	bool closeDatabase(
-		DatabaseInfo& dbInfo
+		DatabaseInfo& dbInfo,
+		QQueue<QUaLog>& logOut
+	);
+	// flush outstanding row blocks
+	bool flushOutstandingRowBlocks(
+		DatabaseInfo& dbInfo,
+		QQueue<QUaLog>& logOut
 	);
 	// checks current database size and creates a new one if necessary
 	bool checkDatabase(

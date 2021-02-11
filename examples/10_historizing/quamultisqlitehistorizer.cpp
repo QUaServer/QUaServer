@@ -54,6 +54,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 	m_timeoutTransaction = 1000;
 	m_fileSizeLimMb      = 1;
 	m_totalSizeLimMb     = 50;
+	m_multiRowInsertSize = 100;
 	m_strBaseName        = "uahist";
 	m_strSuffix          = "sqlite";
 	m_deferTotalSizeCheck = false;	
@@ -85,7 +86,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 		Q_ASSERT(ok);
 	}, Qt::QueuedConnection);
 	// handle auto close databases
-	QObject::connect(&m_timerTransaction, &QTimer::timeout, &m_timerTransaction,
+	QObject::connect(&m_timerAutoCloseDatabases, &QTimer::timeout, &m_timerAutoCloseDatabases,
 	[this]() {
 		// stop temporarily
 		m_timerAutoCloseDatabases.stop();
@@ -101,7 +102,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 			{
 				continue;
 			}
-			this->closeDatabase(dbInfo);
+			this->closeDatabase(dbInfo, m_deferedLogOut);
 		}
 		// restart if required
 		if (m_timeoutAutoCloseDatabases <= 0)
@@ -122,7 +123,7 @@ QUaMultiSqliteHistorizer::~QUaMultiSqliteHistorizer()
 	while (!m_dbFiles.isEmpty())
 	{
 		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
-		this->closeDatabase(dbInfo);
+		this->closeDatabase(dbInfo, m_deferedLogOut);
 	}
 }
 
@@ -162,7 +163,7 @@ bool QUaMultiSqliteHistorizer::setDatabasePath(
 	while (!m_dbFiles.isEmpty())
 	{
 		auto dbInfo = m_dbFiles.take(m_dbFiles.firstKey());
-		bool ok = this->closeDatabase(dbInfo);
+		bool ok = this->closeDatabase(dbInfo, logOut);
 		Q_ASSERT(ok);
 		Q_UNUSED(ok);
 	}
@@ -339,6 +340,16 @@ void QUaMultiSqliteHistorizer::setTransactionTimeout(const int& timeoutMs)
 	}	
 }
 
+int QUaMultiSqliteHistorizer::multiRowInsertSize() const
+{
+	return m_multiRowInsertSize;
+}
+
+int QUaMultiSqliteHistorizer::setMultiRowInserSize(const int& rows)
+{
+	return m_multiRowInsertSize = (std::max)(rows, 1);
+}
+
 bool QUaMultiSqliteHistorizer::writeHistoryData(
 	const QUaNodeId &nodeId,
 	const QUaHistoryDataPoint& dataPoint,
@@ -351,7 +362,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryData(
 		logOut << m_deferedLogOut;
 		m_deferedLogOut.clear();
 	}
-	// get most recent db file
+	// get most recent db file, creates one of not exist
 	bool ok = false;
 	auto& dbInfo = this->getMostRecentDbInfo(dataPoint.timestamp, ok, logOut);
 	if (!ok)
@@ -1091,7 +1102,7 @@ bool QUaMultiSqliteHistorizer::writeHistoryEventsOfType(
 		logOut << m_deferedLogOut;
 		m_deferedLogOut.clear();
 	}
-	// get most recent db file
+	// get most recent db file, creates one of not exist
 	bool ok = false;
 	auto& dbInfo = this->getMostRecentDbInfo(eventPoint.timestamp, ok, logOut);
 	if (!ok)
@@ -1907,10 +1918,25 @@ bool QUaMultiSqliteHistorizer::getOpenedDatabase(
 }
 
 bool QUaMultiSqliteHistorizer::closeDatabase(
-	DatabaseInfo& dbInfo
+	DatabaseInfo& dbInfo,
+	QQueue<QUaLog>& logOut
 )
 {
 	const QString& strDbName = dbInfo.strFileName;
+	// check if there are any outstanding row blocks
+	// NOTE : we must flush the blocks because they "live" in the dbInfo.dataPrepStmts
+	//        in the DataPreparedStatements struct, so we gotta flush before we clear
+	if (m_multiRowInsertSize > 1)
+	{
+		bool ok = this->flushOutstandingRowBlocks(
+			dbInfo,
+			logOut
+		);
+		if (!ok)
+		{
+			return false;
+		}		
+	}
 	// clear queries
 	dbInfo.dataPrepStmts.clear();
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -1921,11 +1947,106 @@ bool QUaMultiSqliteHistorizer::closeDatabase(
 	// close database only if previously opened
 	if (!QSqlDatabase::contains(strDbName))
 	{
-		return false;
+		return true;
 	}
 	QSqlDatabase::database(strDbName).close();
 	QSqlDatabase::removeDatabase(strDbName);
 	return true;
+}
+
+bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
+	DatabaseInfo& dbInfo, 
+	QQueue<QUaLog>& logOut
+)
+{
+	Q_ASSERT(m_multiRowInsertSize > 1);
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(dbInfo, db, logOut))
+	{
+		return false;
+	}
+	// open new transaction if required
+	if (!db.transaction())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not flush row block. Failed to begin transaction in %1 database. Sql : %2.")
+				.arg(dbInfo.strFileName)
+				.arg(db.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+		return false;
+	}
+	// loop blocks
+	bool ok = true;
+	for (auto& nodeId : dbInfo.dataPrepStmts.keys())
+	{
+		// check if there is data in the current block
+		DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+		int blockSize = block.size();
+		if (blockSize <= 0)
+		{
+			continue;
+		}
+		// create flush query
+		QSqlQuery query(db);
+		QString strStmt;		
+		// prepared statement for multirow insert
+		strStmt = QString(
+			"INSERT INTO \"%1\" (Time, Value, Status) VALUES "
+		).arg(nodeId);
+		for (int i = 0; i < blockSize; i++)
+		{
+			if (i == blockSize - 1)
+			{
+				// last one
+				strStmt += QString("(:t%1, :v%1, :s%1);").arg(i);
+				break;
+			}
+			strStmt += QString("(:t%1, :v%1, :s%1), ").arg(i);
+		}
+		if (!this->prepareStmt(dbInfo, query, strStmt, logOut))
+		{
+			ok = false;
+			continue;
+		}
+		// flush current block
+		for (int i = 0; i < blockSize; i++)
+		{
+			auto currTime = block.firstKey();
+			auto currPoint = block.take(currTime);
+			query.bindValue(3 * i, currTime.toMSecsSinceEpoch());
+			query.bindValue(3 * i + 1, currPoint.value);
+			query.bindValue(3 * i + 2, currPoint.status);
+		}
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Could not flush row block in %1 table in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(dbInfo.strFileName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
+			});
+			ok = false;
+			continue;
+		}
+		Q_ASSERT(block.isEmpty());
+	}
+	if (!db.commit())
+	{
+		logOut << QUaLog({
+			QObject::tr("Error flushing row block. Failed to commit transaction in %1 database. Sql : %2.")
+				.arg(dbInfo.strFileName)
+				.arg(db.lastError().text()),
+			QUaLogLevel::Error,
+			QUaLogCategory::History
+		});
+	}
+	// return "ok" which must be true of all went well
+	return ok;
 }
 
 bool QUaMultiSqliteHistorizer::checkDatabase(
@@ -1940,7 +2061,7 @@ bool QUaMultiSqliteHistorizer::checkDatabase(
 	}
 	double fileSizeMb = 0.0;
 	double totalSizeMb = 0.0;
-	// get most recent db file
+	// get most recent db file, creates one of not exist
 	bool ok = false;
 	auto& dbInfo = this->getMostRecentDbInfo(startTime, ok, logOut);
 	if (!ok)
@@ -2013,17 +2134,28 @@ bool QUaMultiSqliteHistorizer::checkDatabase(
 			break;
 		}
 		// close if necessary
-		this->closeDatabase(dbInfo);
+		bool ok = this->closeDatabase(dbInfo, logOut);
+		if (!ok)
+		{
+			logOut << QUaLog({
+				QObject::tr("History file could not be deleted from file system. Failed to close %1.")
+					.arg(dbInfo.strFileName),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
+				});
+			m_deferTotalSizeCheck = true;
+			break;
+		}
 		// substract size
 		auto fInfo = QFileInfo(dbInfo.strFileName);		
 		totalSizeMb -= fInfo.size() / 1024.0 / 1024.0;
 		// remove file
 		QFile file(dbInfo.strFileName);
-		bool ok = file.remove();
+		ok = file.remove();
 		if (!ok)
 		{
 			logOut << QUaLog({
-				QObject::tr("History file could not be deleted from file system. %1.")
+				QObject::tr("History file could not be deleted from file system. Failed to remove %1.")
 					.arg(dbInfo.strFileName),
 				QUaLogLevel::Error,
 				QUaLogCategory::History
@@ -2272,23 +2404,78 @@ bool QUaMultiSqliteHistorizer::insertDataPoint(
 	const QString& strDbName = dbInfo.strFileName;
 	Q_ASSERT(db.isValid() && db.isOpen());
 	Q_ASSERT(dbInfo.dataPrepStmts.contains(nodeId));
-	QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].writeHistoryData;
-	query.bindValue(0, dataPoint.timestamp.toMSecsSinceEpoch());
-	query.bindValue(1, dataPoint.value);
-	query.bindValue(2, dataPoint.status);
+	// check if multirow disabled
+	if (m_multiRowInsertSize <= 1)
+	{
+		QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].writeHistoryData;
+		query.bindValue(0, dataPoint.timestamp.toMSecsSinceEpoch());
+		query.bindValue(1, dataPoint.value);
+		query.bindValue(2, dataPoint.status);
+		if (!query.exec())
+		{
+			logOut << QUaLog({
+				QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+					.arg(nodeId)
+					.arg(strDbName)
+					.arg(query.lastError().text()),
+				QUaLogLevel::Error,
+				QUaLogCategory::History
+			});
+			return false;
+		}
+		return true;
+	}
+	// insert first in block
+	DataPointBlock & block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+	Q_ASSERT(!block.contains(dataPoint.timestamp));
+	block[dataPoint.timestamp] = {
+		dataPoint.value,
+		dataPoint.status
+	};
+	Q_ASSERT(block.size() <= m_multiRowInsertSize);
+	// return if block not full
+	if (block.size() < m_multiRowInsertSize)
+	{
+		return true;
+	}
+	Q_ASSERT(block.size() == m_multiRowInsertSize);
+	// multirow insert if block full
+	QSqlQuery& query = dbInfo.dataPrepStmts[nodeId].writeHistoryDataMultiRow;
+	// insert block
+	for (int i = 0; i < m_multiRowInsertSize; i++)
+	{
+		auto currTime  = block.firstKey();
+		auto currPoint = block.take(currTime);
+		query.bindValue(3 * i    , currTime.toMSecsSinceEpoch());
+		query.bindValue(3 * i + 1, currPoint.value);
+		query.bindValue(3 * i + 2, currPoint.status);
+	}
 	if (!query.exec())
 	{
 		logOut << QUaLog({
-			QObject::tr("Could not insert new row in %1 table in %2 database. Sql : %3.")
+			QObject::tr("Could not insert new row block in %1 table in %2 database. Sql : %3.")
 				.arg(nodeId)
 				.arg(strDbName)
 				.arg(query.lastError().text()),
 			QUaLogLevel::Error,
 			QUaLogCategory::History
-			});
+		});
+		return false;
+	}
+	if (!block.isEmpty())
+	{
+		logOut << QUaLog({
+			QObject::tr("Could not insert complete new row block in %1 table in %2 database. Remaining block size %3.")
+				.arg(nodeId)
+				.arg(strDbName)
+				.arg(block.count()),
+			QUaLogLevel::Warning,
+			QUaLogCategory::History
+		});
 		return false;
 	}
 	return true;
+
 }
 
 bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
@@ -2309,6 +2496,27 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 		return false;
 	}
 	dbInfo.dataPrepStmts[nodeId].writeHistoryData = query;
+
+	// prepared statement for multirow insert
+	strStmt = QString(
+		"INSERT INTO \"%1\" (Time, Value, Status) VALUES "
+	).arg(nodeId);
+	for (int i = 0; i < m_multiRowInsertSize; i++)
+	{
+		if (i == m_multiRowInsertSize - 1)
+		{
+			// last one
+			strStmt += QString("(:t%1, :v%1, :s%1);").arg(i);
+			break;
+		}
+		strStmt += QString("(:t%1, :v%1, :s%1), ").arg(i);
+	}
+	if (!this->prepareStmt(dbInfo, query, strStmt, logOut))
+	{
+		return false;
+	}
+	dbInfo.dataPrepStmts[nodeId].writeHistoryDataMultiRow = query;
+
 	// prepared statement for first timestamp
 	strStmt = QString(
 		"SELECT "
@@ -2324,6 +2532,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].firstTimestamp = query;
 	// prepared statement for last timestamp
 	strStmt = QString(
@@ -2340,6 +2549,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].lastTimestamp = query;
 	// prepared statement for has timestamp
 	strStmt = QString(
@@ -2354,6 +2564,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].hasTimestamp = query;
 	// prepared statement for find timestamp from above
 	strStmt = QString(
@@ -2372,6 +2583,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].findTimestampAbove = query;
 	// prepared statement for find timestamp from below
 	strStmt = QString(
@@ -2390,6 +2602,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].findTimestampBelow = query;
 	// prepared statement for num points in range when end time is valid
 	strStmt = QString(
@@ -2408,6 +2621,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndValid = query;
 	// prepared statement for num points in range when end time is invalid
 	strStmt = QString(
@@ -2424,6 +2638,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].numDataPointsInRangeEndInvalid = query;
 	// prepared statement for reading data points
 	strStmt = QString(
@@ -2444,6 +2659,7 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 	{
 		return false;
 	}
+	query.setForwardOnly(true);
 	dbInfo.dataPrepStmts[nodeId].readHistoryData = query;
 	// success
 	return true;
