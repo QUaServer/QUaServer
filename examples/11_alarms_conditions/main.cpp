@@ -33,9 +33,9 @@ int main(int argc, char* argv[])
 			<< "] :" << log.message;
 	});
 
-	QUaFolderObject* objsFolder = server.objectsFolder();
-
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+
+	QUaFolderObject* objsFolder = server.objectsFolder();
 
 	// OffNormal Alarm Example
 

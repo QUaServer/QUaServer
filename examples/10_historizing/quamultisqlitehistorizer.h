@@ -49,9 +49,9 @@ public:
 	void setTransactionTimeout(const int &timeoutMs);
 
 	// number of rows (samples) for SQL multirow insert
-	// default is 100 rows, a value <= 1 disables the use of multirow insert
+	// default is 20 rows, a value <= 1 disables the use of multirow insert
 	int multiRowInsertSize() const;
-	int setMultiRowInserSize(const int& rows);
+	void setMultiRowInsertSize(const int& rows);
 
 	// required API for QUaServer::setHistorizer
 	// write data point to backend, return true on success
@@ -214,6 +214,7 @@ private:
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 	struct DatabaseInfo {
 		QString strFileName;
+		bool openedTransaction;
 		QElapsedTimer autoCloseTimer;
 		QHash<QUaNodeId, DataPreparedStatements> dataPrepStmts;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS

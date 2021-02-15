@@ -32,9 +32,11 @@ namespace QUaTypesConverter {
 	const UA_DataType *uaTypeFromQType      (const QMetaType::Type &type);
 	UA_Variant         uaVariantFromQVariant(
 		const QVariant &var
+#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifndef OPEN62541_ISSUE3934_RESOLVED
 		, const UA_DataType * optDataType = nullptr
 #endif // !OPEN62541_ISSUE3934_RESOLVED
+#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 	);
 	// ua from qt : scalar
 	template<typename TARGETTYPE, typename QTTYPE> // has specializations

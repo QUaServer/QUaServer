@@ -54,7 +54,7 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 	m_timeoutTransaction = 1000;
 	m_fileSizeLimMb      = 1;
 	m_totalSizeLimMb     = 50;
-	m_multiRowInsertSize = 100;
+	m_multiRowInsertSize = 20;
 	m_strBaseName        = "uahist";
 	m_strSuffix          = "sqlite";
 	m_deferTotalSizeCheck = false;	
@@ -65,21 +65,38 @@ QUaMultiSqliteHistorizer::QUaMultiSqliteHistorizer()
 		m_timerTransaction.stop();
 		// get most recent db file
 		auto &dbInfo = m_dbFiles.last();
-		// commit transaction
-		QSqlDatabase db;
-		if (!this->getOpenedDatabase(dbInfo, db, m_deferedLogOut))
+		// check if we need to flush row blocks
+		if (m_multiRowInsertSize > 1)
 		{
-			return;
+			bool ok = this->flushOutstandingRowBlocks(
+				dbInfo,
+				m_deferedLogOut
+			);
+			if (!ok)
+			{
+				return;
+			}
 		}
-		if (!db.commit())
+		// commit transaction if not yet commited
+		if (dbInfo.openedTransaction)
 		{
-			m_deferedLogOut << QUaLog({
-				QObject::tr("Failed to commit transaction in %1 database. Sql : %2.")
-					.arg(dbInfo.strFileName)
-					.arg(db.lastError().text()),
-				QUaLogLevel::Error,
-				QUaLogCategory::History
-			});
+			// get db
+			QSqlDatabase db;
+			if (!this->getOpenedDatabase(dbInfo, db, m_deferedLogOut))
+			{
+				return;
+			}
+			if(!db.commit())
+			{
+				m_deferedLogOut << QUaLog({
+					QObject::tr("Failed to commit transaction in %1 database. Sql : %2.")
+						.arg(dbInfo.strFileName)
+						.arg(db.lastError().text()),
+					QUaLogLevel::Error,
+					QUaLogCategory::History
+				});
+			}
+			dbInfo.openedTransaction = false;
 		}
 		// check if need to change database
 		bool ok = this->checkDatabase(QDateTime::currentDateTimeUtc(), m_deferedLogOut);
@@ -129,7 +146,7 @@ QUaMultiSqliteHistorizer::~QUaMultiSqliteHistorizer()
 
 QString QUaMultiSqliteHistorizer::databasePath() const
 {
-	return QString();
+	return m_strDatabasePath;
 }
 
 bool QUaMultiSqliteHistorizer::setDatabasePath(
@@ -231,6 +248,7 @@ bool QUaMultiSqliteHistorizer::createNewDatabase(
 		.arg(m_strBaseName)
 		.arg(currDateTime.toMSecsSinceEpoch())
 		.arg(m_strSuffix);
+	m_dbFiles[currDateTime].openedTransaction = false;
 	// create and test open database handle
 	QSqlDatabase db;
 	if (!this->getOpenedDatabase(m_dbFiles[currDateTime], db, logOut))
@@ -345,9 +363,51 @@ int QUaMultiSqliteHistorizer::multiRowInsertSize() const
 	return m_multiRowInsertSize;
 }
 
-int QUaMultiSqliteHistorizer::setMultiRowInserSize(const int& rows)
+void QUaMultiSqliteHistorizer::setMultiRowInsertSize(const int& rows)
 {
-	return m_multiRowInsertSize = (std::max)(rows, 1);
+	if (rows == m_multiRowInsertSize)
+	{
+		return;
+	}
+	// update multirow queries
+	m_multiRowInsertSize = (std::max)(rows, 1);
+	// get most recent db file, creates one of not exist
+	bool ok = false;
+	auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, m_deferedLogOut);
+	if (!ok)
+	{
+		return;
+	}
+	// get database handle
+	QSqlDatabase db;
+	if (!this->getOpenedDatabase(dbInfo, db, m_deferedLogOut))
+	{
+		return;
+	}	
+	QString strStmt;
+	for (auto& nodeId : dbInfo.dataPrepStmts.keys())
+	{
+		QSqlQuery query(db);
+		// prepared statement for multirow insert
+		strStmt = QString(
+			"INSERT INTO \"%1\" (Time, Value, Status) VALUES "
+		).arg(nodeId);
+		for (int i = 0; i < m_multiRowInsertSize; i++)
+		{
+			if (i == m_multiRowInsertSize - 1)
+			{
+				// last one
+				strStmt += QString("(:t%1, :v%1, :s%1);").arg(i);
+				break;
+			}
+			strStmt += QString("(:t%1, :v%1, :s%1), ").arg(i);
+		}
+		if (!this->prepareStmt(dbInfo, query, strStmt, m_deferedLogOut))
+		{
+			continue;
+		}
+		dbInfo.dataPrepStmts[nodeId].writeHistoryDataMultiRow = query;
+	}
 }
 
 bool QUaMultiSqliteHistorizer::writeHistoryData(
@@ -487,14 +547,19 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 		}
 		if (!query.next())
 		{
-			logOut << QUaLog({
-				QObject::tr("Empty result querying [%1] table for first timestamp in %2 database. Sql : %3.")
-					.arg(nodeId)
-					.arg(dbInfo.strFileName)
-					.arg(query.lastError().text()),
-				QUaLogLevel::Warning,
-				QUaLogCategory::History
-			});
+			// only print warning if no multi row
+			if(m_multiRowInsertSize <= 1)
+			{
+				logOut << QUaLog({
+					QObject::tr("Empty result querying [%1] table for first timestamp in %2 database. Sql : %3.")
+						.arg(nodeId)
+						.arg(dbInfo.strFileName)
+						.arg(query.lastError().text()),
+					QUaLogLevel::Warning,
+					QUaLogCategory::History
+				});
+			}
+			// always continue if query fails
 			continue;
 		}
 		// get time key
@@ -504,6 +569,22 @@ QDateTime QUaMultiSqliteHistorizer::firstTimestamp(
 		auto timeInt = query.value(timeKeyCol).toLongLong();
 		// return
 		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+	}
+	// check row blocks
+	if (m_multiRowInsertSize > 1)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			if (!block.isEmpty())
+			{
+				return block.firstKey();
+			}
+		}		
 	}
 	// if reached here means we did not find historic data for given nodeId
 	logOut << QUaLog({
@@ -564,14 +645,19 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 		}
 		if (!query.next())
 		{
-			logOut << QUaLog({
-				QObject::tr("Empty result querying [%1] table for last timestamp in %2 database. Sql : %3.")
-					.arg(nodeId)
-					.arg(dbInfo.strFileName)
-					.arg(query.lastError().text()),
-				QUaLogLevel::Warning,
-				QUaLogCategory::History
-			});
+			// only print warning if no multi row
+			if (m_multiRowInsertSize <= 1)
+			{
+				logOut << QUaLog({
+					QObject::tr("Empty result querying [%1] table for last timestamp in %2 database. Sql : %3.")
+						.arg(nodeId)
+						.arg(dbInfo.strFileName)
+						.arg(query.lastError().text()),
+					QUaLogLevel::Warning,
+					QUaLogCategory::History
+				});
+			}			
+			// always continue if query fails
 			continue;
 		}
 		// get time key
@@ -581,6 +667,22 @@ QDateTime QUaMultiSqliteHistorizer::lastTimestamp(
 		auto timeInt = query.value(timeKeyCol).toLongLong();
 		// return
 		return QDateTime::fromMSecsSinceEpoch(timeInt, Qt::UTC);
+	}
+	// check row blocks
+	if (m_multiRowInsertSize > 1)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			if (!block.isEmpty())
+			{
+				return block.lastKey();
+			}
+		}
 	}
 	// if reached here means we did not find historic data for given nodeId
 	logOut << QUaLog({
@@ -599,6 +701,22 @@ bool QUaMultiSqliteHistorizer::hasTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {
+	// check row blocks
+	if (m_multiRowInsertSize > 1)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			if (block.contains(timestamp))
+			{
+				return true;
+			}
+		}
+	}
 	// check if in range
 	if (timestamp <= m_dbFiles.firstKey())
 	{
@@ -683,9 +801,53 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 	QQueue<QUaLog>& logOut
 )
 {	
-	uint requestHash = qHash(nodeId) ^ qHash(timestamp) ^ qHash(static_cast<int>(match));
 	// if ClosestFromBelow look downwards from end until one sample found
 	// if ClosestFromAbove look upwards from start until one sample found
+	uint requestHash = qHash(nodeId) ^ qHash(timestamp) ^ qHash(static_cast<int>(match));
+	// if looking downwards, first check row blocks (because contains the most recent samples)
+	if (m_multiRowInsertSize > 1 && match == QUaHistoryBackend::TimeMatch::ClosestFromBelow)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			QDateTime time;
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			// return closest key from below or invalid if out of range
+			if (block.contains(timestamp) &&
+				block.constFind(timestamp) != block.begin())
+			{
+				// return previous key if available
+				auto iter = block.find(timestamp) - 1;
+				time = iter.key();
+			}
+			else
+			{
+				// return the first element in [first,last) which does not compare less than val
+				auto iter = std::lower_bound(block.keyBegin(), block.keyEnd(), timestamp);
+				// need the one before, or out of range if lower_bound returns begin
+				iter = iter == block.keyBegin() ? block.keyEnd() : --iter;
+				// if out of range, return invalid
+				time = iter == block.keyEnd() ? QDateTime() : *iter;
+			}
+			// only return if found valid
+			if (!time.isNull())
+			{
+				if (
+					m_findTimestampCache.contains(requestHash) &&
+					(std::abs)(time.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch()) < 1000
+					)
+				{
+					return m_findTimestampCache[requestHash];
+				}
+				m_findTimestampCache[requestHash] = time;
+				return time;
+			}
+		} // if ok
+	} // if row blocks
+	// loop files
 	auto iter = match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? --m_dbFiles.keyEnd() : m_dbFiles.keyBegin();
 	auto retTimestamp = QDateTime();
 	for (bool exitLoop = false; iter != m_dbFiles.keyEnd() && !exitLoop; match == QUaHistoryBackend::TimeMatch::ClosestFromBelow ? iter-- : iter++)
@@ -751,12 +913,54 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 		// if there is none continue
 		if (!query.next())
 		{
-			// if nothing found after searching all
+			// if finished searching all and no result
 			if (
 				(match == QUaHistoryBackend::TimeMatch::ClosestFromBelow && iter == m_dbFiles.keyBegin()) ||
-				 match == QUaHistoryBackend::TimeMatch::ClosestFromAbove && iter == ++m_dbFiles.keyEnd()
+				 match == QUaHistoryBackend::TimeMatch::ClosestFromAbove && iter == --m_dbFiles.keyEnd()
 				)
 			{
+				// if looking upwards, check row blocks last (because contains the most recent samples)
+				if (m_multiRowInsertSize > 1 && match == QUaHistoryBackend::TimeMatch::ClosestFromAbove)
+				{
+					// get most recent db file, creates one of not exist
+					bool ok = false;
+					auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+					if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+					{
+						QDateTime time;
+						// check if there is data in the current block
+						DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+						// return closest key from above or last one if out of range
+						if (block.contains(timestamp) &&
+							block.constFind(timestamp) + 1 != block.end())
+						{
+							// return next key if available
+							auto iter = block.find(timestamp) + 1;
+							time = iter.key();
+						}
+						else
+						{
+							// return the first element in [first,last) which compares greater than val
+							auto iter = std::upper_bound(block.keyBegin(), block.keyEnd(), timestamp);
+							// if out of range, return invalid
+							time = iter == block.keyEnd() ? QDateTime() : *iter;
+						}
+						// only return if found valid
+						if (!time.isNull())
+						{
+							if (
+								m_findTimestampCache.contains(requestHash) &&
+								(std::abs)(time.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch()) < 1000
+								)
+							{
+								return m_findTimestampCache[requestHash];
+							}
+							m_findTimestampCache[requestHash] = time;
+							return time;
+						}
+					} // if ok
+				} // if row blocks
+				// last resource are first and last timestamps
 				switch (match)
 				{
 					case QUaHistoryBackend::TimeMatch::ClosestFromAbove:
@@ -764,7 +968,7 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 						auto ts = this->lastTimestamp(nodeId, logOut);
 						if (
 							m_findTimestampCache.contains(requestHash) && 
-							ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
+							(std::abs)(ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch()) < 1000
 							)
 						{
 							return m_findTimestampCache[requestHash];
@@ -778,7 +982,7 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 						auto ts = this->firstTimestamp(nodeId, logOut);
 						if (
 							m_findTimestampCache.contains(requestHash) &&
-							ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
+							(std::abs)(ts.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch()) < 1000
 							)
 						{
 							return m_findTimestampCache[requestHash];
@@ -798,8 +1002,8 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 				break;
 			}
 			continue;
-		}
-		// get time key
+		} // if no result
+		// if result, get time key
 		QSqlRecord rec = query.record();
 		int timeKeyCol = rec.indexOf("Time");
 		Q_ASSERT(timeKeyCol >= 0);
@@ -813,12 +1017,13 @@ QDateTime QUaMultiSqliteHistorizer::findTimestamp(
 		);
 		// update
 		retTimestamp = currTimestamp;
+		// result found, exit loop
 		break;
-	}
+	} // for db files
 	// return
 	if (
 		m_findTimestampCache.contains(requestHash) &&
-		retTimestamp.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch() < 1000
+		(std::abs)(retTimestamp.toMSecsSinceEpoch() - m_findTimestampCache[requestHash].toMSecsSinceEpoch()) < 1000
 		)
 	{
 		return m_findTimestampCache[requestHash];
@@ -913,6 +1118,29 @@ quint64 QUaMultiSqliteHistorizer::numDataPointsInRange(
 		QSqlRecord rec = query.record();
 		auto num = query.value(0).toULongLong();
 		count += num;
+	}
+	// check row blocks
+	if (m_multiRowInsertSize > 1)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			// add samples from block
+			if (!block.isEmpty() && block.contains(timeEnd))
+			{
+				const auto &startTs = block.contains(timeStart) ? timeStart : block.firstKey();
+				quint64 num = static_cast<quint64>(std::distance(
+					block.find(startTs),
+					timeEnd.isValid() ? block.find(timeEnd) + 1 : block.end()
+				));
+				count += num;
+				Q_ASSERT(num <= block.count());
+			}
+		}
 	}
 	// return total
 	return count;
@@ -1074,6 +1302,34 @@ QVector<QUaHistoryDataPoint> QUaMultiSqliteHistorizer::readHistoryData(
 		if (points.count() == numPointsToRead)
 		{
 			break;
+		}
+	}
+	// check row blocks
+	if (m_multiRowInsertSize > 1 && points.count() < numPointsToRead)
+	{
+		// get most recent db file, creates one of not exist
+		bool ok = false;
+		auto& dbInfo = this->getMostRecentDbInfo(QDateTime::currentDateTimeUtc(), ok, logOut);
+		if (ok && dbInfo.dataPrepStmts.contains(nodeId))
+		{
+			// check if there is data in the current block
+			DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
+			if (!block.isEmpty())
+			{
+				Q_ASSERT(timeStart <= block.firstKey());
+				auto iter = block.begin();
+				while (points.count() < numPointsToRead && iter != block.end())
+				{
+					const auto &ts = iter.key();
+					const auto &pt = iter.value();
+					points << QUaHistoryDataPoint({
+						ts,
+						pt.value,
+						pt.status
+					});
+					iter++;
+				}
+			}
 		}
 	}
 	// NOTE : return an invalid value if API requests more values than available
@@ -1967,8 +2223,9 @@ bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
 		return false;
 	}
 	// open new transaction if required
-	if (!db.transaction())
+	if (!dbInfo.openedTransaction && !db.transaction())
 	{
+		dbInfo.openedTransaction = false;
 		logOut << QUaLog({
 			QObject::tr("Could not flush row block. Failed to begin transaction in %1 database. Sql : %2.")
 				.arg(dbInfo.strFileName)
@@ -1978,10 +2235,12 @@ bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
 		});
 		return false;
 	}
+	dbInfo.openedTransaction = true;
 	// loop blocks
 	bool ok = true;
 	for (auto& nodeId : dbInfo.dataPrepStmts.keys())
 	{
+		Q_ASSERT(dbInfo.dataPrepStmts.contains(nodeId));
 		// check if there is data in the current block
 		DataPointBlock& block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
 		int blockSize = block.size();
@@ -1990,8 +2249,8 @@ bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
 			continue;
 		}
 		// create flush query
-		QSqlQuery query(db);
-		QString strStmt;		
+		QString strStmt;	
+		QSqlQuery query(db);	
 		// prepared statement for multirow insert
 		strStmt = QString(
 			"INSERT INTO \"%1\" (Time, Value, Status) VALUES "
@@ -2035,7 +2294,7 @@ bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
 		}
 		Q_ASSERT(block.isEmpty());
 	}
-	if (!db.commit())
+	if (dbInfo.openedTransaction && !db.commit())
 	{
 		logOut << QUaLog({
 			QObject::tr("Error flushing row block. Failed to commit transaction in %1 database. Sql : %2.")
@@ -2045,6 +2304,7 @@ bool QUaMultiSqliteHistorizer::flushOutstandingRowBlocks(
 			QUaLogCategory::History
 		});
 	}
+	dbInfo.openedTransaction = false;
 	// return "ok" which must be true of all went well
 	return ok;
 }
@@ -2426,6 +2686,7 @@ bool QUaMultiSqliteHistorizer::insertDataPoint(
 		return true;
 	}
 	// insert first in block
+	Q_ASSERT(dbInfo.dataPrepStmts.contains(nodeId));
 	DataPointBlock & block = dbInfo.dataPrepStmts[nodeId].multiRowBlock;
 	Q_ASSERT(!block.contains(dataPoint.timestamp));
 	block[dataPoint.timestamp] = {
@@ -2496,7 +2757,6 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 		return false;
 	}
 	dbInfo.dataPrepStmts[nodeId].writeHistoryData = query;
-
 	// prepared statement for multirow insert
 	strStmt = QString(
 		"INSERT INTO \"%1\" (Time, Value, Status) VALUES "
@@ -2516,7 +2776,6 @@ bool QUaMultiSqliteHistorizer::dataPrepareAllStmts(
 		return false;
 	}
 	dbInfo.dataPrepStmts[nodeId].writeHistoryDataMultiRow = query;
-
 	// prepared statement for first timestamp
 	strStmt = QString(
 		"SELECT "
@@ -2704,6 +2963,7 @@ bool QUaMultiSqliteHistorizer::handleTransactions(
 	// open new transaction if required
 	if (!db.transaction())
 	{
+		dbInfo.openedTransaction = false;
 		logOut << QUaLog({
 			QObject::tr("Failed to begin transaction in %1 database. Sql : %2.")
 				.arg(dbInfo.strFileName)
@@ -2713,6 +2973,7 @@ bool QUaMultiSqliteHistorizer::handleTransactions(
 		});
 		return false;
 	}
+	dbInfo.openedTransaction = true;
 	// start timer to stop transaction after specified period (see constructor)
 	m_timerTransaction.start(m_timeoutTransaction);
 	return true;
