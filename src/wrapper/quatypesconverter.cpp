@@ -309,10 +309,9 @@ UA_Variant uaVariantFromQVariant(const QVariant & var
 			return uaVariantFromQVariantScalar<UA_QualifiedName, QUaQualifiedName>(var, uaType);
 		if (qtType == QMetaType_LocalizedText)   // 21 : UA_LocalizedText : { UA_String locale; UA_String text; }
 			return uaVariantFromQVariantScalar<UA_LocalizedText, QUaLocalizedText>(var, uaType);
-		// TODO : image
-		//if (qtType == QMetaType_Image)
-		//	return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (qtType == QMetaType_Image)
+			return uaVariantFromQVariantScalar<UA_ByteString, QByteArray>(var, uaType);
 #ifndef OPEN62541_ISSUE3934_RESOLVED
 		if (qtType == QMetaType_OptionSet)       // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
 			return uaVariantFromQVariantScalar<UA_OptionSet, QUaOptionSet>(var, optDataType);
@@ -508,10 +507,9 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 				return uaVariantFromQVariantArray<UA_QualifiedName, QUaQualifiedName>(var, uaType);
 			if (qtType == QMetaType_LocalizedText)   // 21 : UA_LocalizedText : { UA_String locale; UA_String text; }
 				return uaVariantFromQVariantArray<UA_LocalizedText, QUaLocalizedText>(var, uaType);
-			// TODO : image
-			//if (qtType == QMetaType_Image)
-			//	return uaVariantFromQVariantArray<UA_ByteString, QByteArray>(var, uaType);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+			if (qtType == QMetaType_Image)
+				return uaVariantFromQVariantArray<UA_ByteString, QByteArray>(var, uaType);
 			if (qtType == QMetaType_OptionSet)        // 108 : UA_OptionSet { UA_ByteString value; UA_ByteString validBits; }
 				return uaVariantFromQVariantArray<UA_OptionSet, QUaOptionSet>(var, uaType);
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
@@ -671,8 +669,9 @@ QVariant uaVariantToQVariant(const UA_Variant & uaVariant, const ArrayType& arrT
 			return uaVariantToQVariantScalar<QUaQualifiedName, UA_QualifiedName>(uaVariant, QMetaType_QualifiedName);
 		if(index == UA_TYPES_LOCALIZEDTEXT)
 			return uaVariantToQVariantScalar<QUaLocalizedText, UA_LocalizedText   >(uaVariant, QMetaType_LocalizedText);
-		// TODO : image
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_IMAGEPNG)
+			return uaVariantToQVariantScalar<QByteArray, UA_ImagePNG>(uaVariant, QMetaType_Image);
 		if (index == UA_TYPES_OPTIONSET)
 			return uaVariantToQVariantScalar<QUaOptionSet, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
@@ -753,10 +752,9 @@ QVariant uaVariantToQVariantList(const UA_Variant & uaVariant)
 			return uaVariantToQVariantArray<QList<QUaQualifiedName>, UA_QualifiedName>(uaVariant, QMetaType_QualifiedName);
 		if (index == UA_TYPES_LOCALIZEDTEXT)
 			return uaVariantToQVariantArray<QList<QUaLocalizedText>, UA_LocalizedText>(uaVariant, QMetaType_LocalizedText);
-		// TODO : image
-		//if (index == UA_TYPES_IMAGEPNG)
-		//	return uaVariantToQVariantArray<QList<QUa>, UA_>(uaVariant, QMetaType_);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_IMAGEPNG)
+			return uaVariantToQVariantArray<QList<QByteArray>, UA_ImagePNG>(uaVariant, QMetaType_Image);
 		if (index == UA_TYPES_OPTIONSET)
 			return uaVariantToQVariantArray<QList<QUaOptionSet>, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
@@ -823,10 +821,9 @@ QVariant uaVariantToQVariantVector(const UA_Variant & uaVariant)
 			return uaVariantToQVariantArray<QVector<QUaQualifiedName>, UA_QualifiedName>(uaVariant, QMetaType_QualifiedName);
 		if (index == UA_TYPES_LOCALIZEDTEXT)
 			return uaVariantToQVariantArray<QVector<QUaLocalizedText>, UA_LocalizedText>(uaVariant, QMetaType_LocalizedText);
-		// TODO : image
-		//if (index == UA_TYPES_IMAGEPNG)
-		//	return uaVariantToQVariantArray<QVector<QUa>, UA_>(uaVariant, QMetaType_);
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+		if (index == UA_TYPES_IMAGEPNG)
+			return uaVariantToQVariantArray<QVector<QByteArray>, UA_ImagePNG>(uaVariant, QMetaType_Image);
 		if (index == UA_TYPES_OPTIONSET)
 			return uaVariantToQVariantArray<QVector<QUaOptionSet>, UA_OptionSet>(uaVariant, QMetaType_OptionSet);
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL

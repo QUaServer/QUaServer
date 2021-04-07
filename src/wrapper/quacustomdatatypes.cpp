@@ -40,9 +40,9 @@ QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
 	{QString("QUaStatusCode")             , QMetaType_StatusCode             },
 	{QString("QUaQualifiedName")          , QMetaType_QualifiedName          },
 	{QString("QUaLocalizedText")          , QMetaType_LocalizedText          },
-	// TODO : image
-	//{QString("QImage")                    , QMetaType_Image                  },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	// TODO : image
+	{QString("QImage")                    , QMetaType_Image                  },
 	{QString("QUaOptionSet")              , QMetaType_OptionSet              },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -76,9 +76,8 @@ QHash<UA_NodeId, QMetaType::Type> QUaDataType::m_custTypesByNodeId = {
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , QMetaType_StatusCode             },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , QMetaType_QualifiedName          },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , QMetaType_LocalizedText          },
-	// TODO : image
-	//{UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , QMetaType_Image                  },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , QMetaType_Image                  },
 	{UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                   , QMetaType_OptionSet              },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -111,9 +110,8 @@ QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
 	{UA_TYPES_STATUSCODE                  , QMetaType_StatusCode             },
 	{UA_TYPES_QUALIFIEDNAME               , QMetaType_QualifiedName          },
 	{UA_TYPES_LOCALIZEDTEXT               , QMetaType_LocalizedText          },
-	// TODO : image
-	//{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
 	{UA_TYPES_OPTIONSET                   , QMetaType_OptionSet              },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
@@ -147,9 +145,9 @@ QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
 	{ QMetaType_StatusCode              , {QString("QUaStatusCode")              , UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , &UA_TYPES[UA_TYPES_STATUSCODE                  ]} },
 	{ QMetaType_QualifiedName           , {QString("QUaQualifiedName")           , UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , &UA_TYPES[UA_TYPES_QUALIFIEDNAME               ]} },
 	{ QMetaType_LocalizedText           , {QString("QUaLocalizedText")           , UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , &UA_TYPES[UA_TYPES_LOCALIZEDTEXT               ]} },
-	// TODO : image
-	//{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+	// TODO : image
+	{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
 	{ QMetaType_OptionSet               , {QString("QUaOptionSet")              , UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                    , &UA_TYPES[UA_TYPES_OPTIONSET                   ]} },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
