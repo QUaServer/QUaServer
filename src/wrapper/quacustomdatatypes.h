@@ -331,8 +331,6 @@ union QUaEventNotifier
 #define QMetaType_QualifiedName static_cast<QMetaType::Type>(qMetaTypeId<QUaQualifiedName>())
 #define QMetaType_LocalizedText static_cast<QMetaType::Type>(qMetaTypeId<QUaLocalizedText>())
 #define QMetaType_DataType      static_cast<QMetaType::Type>(qMetaTypeId<QUaDataType     >())
-// TODO :image
-//#define QMetaType_Image                   static_cast<QMetaType::Type>(qMetaTypeId<QImage>())
 
 // custom list types
 #define QMetaType_List_NodeId        static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaNodeId       >>())
@@ -342,6 +340,7 @@ union QUaEventNotifier
 #define QMetaType_List_DataType      static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaDataType     >>())
 
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
+#define QMetaType_Image              static_cast<QMetaType::Type>(qMetaTypeId<QByteArray             >())
 #define QMetaType_OptionSet          static_cast<QMetaType::Type>(qMetaTypeId<QUaOptionSet           >())
 #define QMetaType_List_OptionSet     static_cast<QMetaType::Type>(qMetaTypeId<QList<QUaOptionSet>    >())
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
