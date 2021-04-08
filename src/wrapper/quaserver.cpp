@@ -41,6 +41,17 @@
 
 #define QUA_MAX_LOG_MESSAGE_SIZE 1024
 
+/* helper null log for avoiding startup messages */
+void UA_Log_Discard_log(void *context,
+                        UA_LogLevel level,
+                        UA_LogCategory category,
+                        const char *msg,
+                        va_list args)
+{
+   // do nothing
+};
+
+
 UA_StatusCode QUaServer::uaConstructor(UA_Server       * server, 
 	                                   const UA_NodeId * sessionId, 
 	                                   void            * sessionContext, 
@@ -1331,6 +1342,8 @@ void QUaServer::setupServer()
 
 	// read initial values for server description
 	UA_ServerConfig* config = UA_Server_getConfig(m_server);
+	// avoid startup warnings with the default config
+	config->logger.log=UA_Log_Discard_log;
 	UA_ServerConfig_setMinimal(config, m_port, nullptr);
 	// setup logger
 	config->logger = this->getLogger();
