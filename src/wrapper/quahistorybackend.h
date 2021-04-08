@@ -1,13 +1,13 @@
 #ifndef QUAHISTORYBACKEND_H
 #define QUAHISTORYBACKEND_H
 
+#include <QUaNode>
+
 #ifdef UA_ENABLE_HISTORIZING
 
 #include <QVector>
 #include <QVariant>
 #include <QDateTime>
-
-#include <QUaNode>
 
 class QUaServer;
 class QUaBaseVariable;
