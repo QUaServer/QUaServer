@@ -124,21 +124,29 @@
 		# Generate CMake project
 		PROJECT_CREATED = FALSE
 		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
-		equals(BUILD_CREATED, TRUE) {
+		equals(PROJECT_CREATED, TRUE) {
 			message("CMake generate open62541 successful.")
 		}
 		else {
 			error("CMake generate open62541 failed.")
 		}
-		# Build Visual Studio project
-		PROJECT_BUILT = FALSE
-		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541.sln $${MS_PLATFORM}"): PROJECT_BUILT = TRUE
-		equals(BUILD_CREATED, TRUE) {
-			message("Open62541 build successful.")
+		# Create amalgamation sources with MsBuild
+		HEADER_CREATED = FALSE
+		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-header.vcxproj $${MS_PLATFORM}"): HEADER_CREATED = TRUE
+		equals(HEADER_CREATED, TRUE) {
+			message("Open62541 header open62541.h successful.")
 		}
 		else {
-			error("Open62541 build failed.")
-		}		
+			error("Open62541 header open62541.h failed.")
+		}
+		SOURCE_CREATED = FALSE
+		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-source.vcxproj $${MS_PLATFORM}"): SOURCE_CREATED = TRUE
+		equals(SOURCE_CREATED, TRUE) {
+			message("Open62541 source open62541.c successful.")
+		}
+		else {
+			error("Open62541 source open62541.c failed.")
+		}	
 		# Copy amalgamation locally
 		# Fix PWD slashes
 		OPEN62541_H_PATH_WIN  = $$OPEN62541_H_PATH
@@ -209,7 +217,7 @@
 		else {
 			error("CMake generate open62541 failed.")
 		}
-	            # Build project
+        # Build project
 		PROJECT_BUILT = FALSE
 		system("make -C $${OPEN62541_BUILD_PATH} all"): PROJECT_BUILT = TRUE
 		equals(BUILD_CREATED, TRUE) {
