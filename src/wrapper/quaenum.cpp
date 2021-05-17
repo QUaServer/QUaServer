@@ -228,9 +228,9 @@ UA_NodeId QUaServer::enumValuesNodeId(const UA_NodeId& enumNodeId) const
 	UA_NodeId valuesNodeId/* = rDesc.nodeId.nodeId*/;
 	UA_NodeId_copy(&rDesc.nodeId.nodeId, &valuesNodeId);
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	return valuesNodeId;
 }

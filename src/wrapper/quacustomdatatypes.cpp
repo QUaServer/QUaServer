@@ -399,7 +399,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		return;
 	}
 	// check if valid namespace found, else assume ns = 0 and given string is name
-	quint16 new_ns;
+    quint16 new_ns = m_namespace;
 	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
 	{
 		auto strNs = components.at(0).split(QLatin1String("ns=")).last();

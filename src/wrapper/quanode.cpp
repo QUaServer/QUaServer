@@ -478,9 +478,9 @@ UA_NodeId QUaNode::typeDefinitionNodeId(
 	UA_ReferenceDescription rDesc = bRes.references[0];
 	UA_NodeId_copy(&rDesc.nodeId.nodeId, &retTypeId);
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	// NOTE : need to clean up returned value
 	return retTypeId;
@@ -521,9 +521,9 @@ UA_NodeId QUaNode::superTypeDefinitionNodeId(
 	UA_ReferenceDescription rDesc = bRes.references[0];
 	UA_NodeId_copy(&rDesc.nodeId.nodeId, &retTypeId);
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	// NOTE : need to clean up returned value
 	return retTypeId;
@@ -841,7 +841,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Invalid VariableType. StatusCode %s",
 			UA_StatusCode_name(UA_STATUSCODE_BADTYPEDEFINITIONINVALID));
-		UA_VariableAttributes_deleteMembers(&vAttr);
+        UA_VariableAttributes_clear(&vAttr);
 		return UA_STATUSCODE_BADTYPEDEFINITIONINVALID;
 	}
 
@@ -860,7 +860,7 @@ UA_StatusCode QUaNode::addOptionalVariableField(
 		vAttr, NULL, outOptionalVariable);
 	Q_ASSERT(retval == UA_STATUSCODE_GOOD);
 	UA_NODESTORE_RELEASE(server, type);
-	UA_VariableAttributes_deleteMembers(&vAttr);
+    UA_VariableAttributes_clear(&vAttr);
 	return retval;
 }
 
@@ -883,7 +883,7 @@ UA_StatusCode QUaNode::addOptionalObjectField(
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
 			"Invalid ObjectType. StatusCode %s",
 			UA_StatusCode_name(UA_STATUSCODE_BADTYPEDEFINITIONINVALID));
-		UA_ObjectAttributes_deleteMembers(&oAttr);
+        UA_ObjectAttributes_clear(&oAttr);
 		return UA_STATUSCODE_BADTYPEDEFINITIONINVALID;
 	}
 
@@ -901,7 +901,7 @@ UA_StatusCode QUaNode::addOptionalObjectField(
 		oAttr, NULL, outOptionalObject);
 
 	UA_NODESTORE_RELEASE(server, type);
-	UA_ObjectAttributes_deleteMembers(&oAttr);
+    UA_ObjectAttributes_clear(&oAttr);
 	return retval;
 }
 
@@ -1128,13 +1128,13 @@ QSet<UA_NodeId> QUaNode::getRefsInternal(const QUaReferenceType& ref, const bool
 			Q_ASSERT(!retRefSet.contains(nodeId));
 			retRefSet.insert(nodeId);
 		}
-		UA_BrowseResult_deleteMembers(&bRes);
+        UA_BrowseResult_clear(&bRes);
 		bRes = UA_Server_browseNext(m_qUaServer->m_server, true, &bRes.continuationPoint);
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	return retRefSet;
 }
@@ -1678,13 +1678,13 @@ UA_NodeId QUaNode::getParentNodeId(const UA_NodeId & childNodeId, UA_Server * se
 			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 			listParents.append(nodeId);
 		}
-		UA_BrowseResult_deleteMembers(&bRes);
-		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
+        UA_BrowseResult_clear(&bRes);
+        bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// check if method
 	UA_NodeClass outNodeClass;
 	UA_Server_readNodeClass(server, childNodeId, &outNodeClass);
@@ -1746,13 +1746,13 @@ QList<UA_NodeId> QUaNode::getChildrenNodeIds(
 			Q_ASSERT(!retListChildren.contains(nodeId));
 			retListChildren << nodeId;
 		}
-		UA_BrowseResult_deleteMembers(&bRes);
+        UA_BrowseResult_clear(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	return retListChildren;
 }
@@ -1780,13 +1780,13 @@ QList<UA_NodeId> QUaNode::getMethodsNodeIds(const UA_NodeId& parentNodeId, UA_Se
 			Q_ASSERT(!retListMethods.contains(nodeId));
 			retListMethods << nodeId;
 		}
-		UA_BrowseResult_deleteMembers(&bRes);
+        UA_BrowseResult_clear(&bRes);
 		bRes = UA_Server_browseNext(server, true, &bRes.continuationPoint);
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	return retListMethods;
 }
@@ -1947,9 +1947,9 @@ UA_NodeId QUaNode::getModellingRule(const UA_NodeId& nodeId, UA_Server* server)
 		modellingRule = rDesc.nodeId.nodeId;		
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// return
 	return modellingRule;
 }

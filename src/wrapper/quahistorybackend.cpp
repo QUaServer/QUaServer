@@ -74,9 +74,9 @@ void QUaHistoryBackend::processServerLog(
 QMetaType::Type QUaHistoryBackend::QVariantToQtType(const QVariant& value)
 {
 	return static_cast<QMetaType::Type>(
-		value.type() < QMetaType::User ?
+        value.type() < static_cast<QVariant::Type>(QMetaType::User) ?
 		value.type() :
-		value.userType()
+        static_cast<QVariant::Type>(value.userType())
 	);
 }
 
@@ -1153,7 +1153,7 @@ void QUaHistoryBackend::readEvent(
 				"readHistoryEventsOfType", 
 				"readHistoryEventsOfType returned less values than requested"
 			);
-			if (eventsOfType.size() != totalToReadForThisType)
+            if (static_cast<quint64>(eventsOfType.size()) != totalToReadForThisType)
 			{
 				logOut << QUaLog({
 					QObject::tr("Reading historic events of type %1 for emitter %2 "

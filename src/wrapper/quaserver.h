@@ -1381,7 +1381,7 @@ struct QUaMethodTraitsBase
         return IsMutable;
     }
 
-    inline static const size_t getNumArgs()
+    inline static size_t getNumArgs()
     {
         return sizeof...(Args);
     }
@@ -1467,7 +1467,7 @@ struct QUaMethodTraitsBase
         return inputArgument;
     }
 
-    inline static const bool isRetUaArgumentVoid()
+    inline static bool isRetUaArgumentVoid()
     {
         return std::is_same<R, void>::value;
     }

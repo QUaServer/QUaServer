@@ -48,7 +48,12 @@ void UA_Log_Discard_log(void *context,
                         const char *msg,
                         va_list args)
 {
-   // do nothing
+    // do nothing
+    Q_UNUSED(context);
+    Q_UNUSED(level);
+    Q_UNUSED(category);
+    Q_UNUSED(msg);
+    Q_UNUSED(args);
 };
 
 
@@ -776,6 +781,7 @@ void QUaServer::newSession(QUaServer* server,
 		sizeof(struct sockaddr_storage),
 		remote_name, sizeof(remote_name),
 		NULL, 0, NI_NUMERICHOST);
+    Q_UNUSED(res);
 	strAddress = QString(remote_name);
 	// get peer port
 	switch (address.sa_family) 
@@ -1097,7 +1103,7 @@ void QUaServer::resetConfig()
 	UA_free(config->networkLayers);
 	config->networkLayers = NULL;
 	config->networkLayersSize = 0;
-	UA_String_deleteMembers(&config->customHostname);
+    UA_String_clear(&config->customHostname);
 	config->customHostname = UA_STRING_NULL;
 	/* Security Policy */
 	for (size_t i = 0; i < config->securityPoliciesSize; ++i) {
@@ -1109,7 +1115,7 @@ void QUaServer::resetConfig()
 	config->securityPoliciesSize = 0;
 	/* Endoints */
 	for (size_t i = 0; i < config->endpointsSize; ++i)
-		UA_EndpointDescription_deleteMembers(&config->endpoints[i]);
+        UA_EndpointDescription_clear(&config->endpoints[i]);
 	UA_free(config->endpoints);
 	config->endpoints = NULL;
 	config->endpointsSize = 0;
@@ -1883,13 +1889,13 @@ QList<QUaNode*> QUaServer::typeInstances(const QMetaObject& metaObject)
 			UA_NodeId_copy(&rDesc.nodeId.nodeId, &nodeId);
 			retRefSet << nodeId;
 		}
-		UA_BrowseResult_deleteMembers(&bRes);
+        UA_BrowseResult_clear(&bRes);
 		bRes = UA_Server_browseNext(m_server, true, &bRes.continuationPoint);
 	}
 	// cleanup
-	UA_BrowseDescription_deleteMembers(bDesc);
+    UA_BrowseDescription_clear(bDesc);
 	UA_BrowseDescription_delete(bDesc);
-	UA_BrowseResult_deleteMembers(&bRes);
+    UA_BrowseResult_clear(&bRes);
 	// get QUaNode references
 	for (int i = 0; i < retRefSet.count(); i++)
 	{

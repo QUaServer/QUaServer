@@ -11,9 +11,7 @@
 #include <QDataStream>
 #include <QMetaEnum>
 #include <QDebug>
-#if !defined(UA_PCH)
 #include <open62541.h>
-#endif // !UA_PCH
 
 class QUaNode;
 

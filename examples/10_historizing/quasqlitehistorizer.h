@@ -1,9 +1,9 @@
 #ifndef QUASQLITEHISTORIZER_H
 #define QUASQLITEHISTORIZER_H
 
-#ifdef UA_ENABLE_HISTORIZING
-
 #include <QUaHistoryBackend>
+
+#ifdef UA_ENABLE_HISTORIZING
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QTimer>

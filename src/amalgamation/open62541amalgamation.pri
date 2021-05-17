@@ -211,20 +211,28 @@
 		# Generate CMake project
 		PROJECT_CREATED = FALSE
 		system("cmake $${OPEN62541_PATH} -B$${OPEN62541_BUILD_PATH} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING}"): PROJECT_CREATED = TRUE
-		equals(BUILD_CREATED, TRUE) {
+		equals(PROJECT_CREATED, TRUE) {
 			message("CMake generate open62541 successful.")
 		}
 		else {
 			error("CMake generate open62541 failed.")
 		}
-        # Build project
-		PROJECT_BUILT = FALSE
-		system("make -C $${OPEN62541_BUILD_PATH} all"): PROJECT_BUILT = TRUE
-		equals(BUILD_CREATED, TRUE) {
-			message("Open62541 build successful.")
+        # Create amalgamation sources with Make
+		HEADER_CREATED = FALSE
+		system("make -C $${OPEN62541_BUILD_PATH} open62541-amalgamation-header"): HEADER_CREATED = TRUE
+		equals(HEADER_CREATED, TRUE) {
+			message("Open62541 header open62541.h successful.")
 		}
 		else {
-			error("Open62541 build failed.")
+			error("Open62541 header open62541.h failed.")
+		}
+		SOURCE_CREATED = FALSE
+		system("make -C $${OPEN62541_BUILD_PATH} open62541-amalgamation-source"): SOURCE_CREATED = TRUE
+		equals(SOURCE_CREATED, TRUE) {
+			message("Open62541 source open62541.c successful.")
+		}
+		else {
+			error("Open62541 source open62541.c failed.")
 		}
 		# Copy header
 		H_COPY = FALSE

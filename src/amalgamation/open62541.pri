@@ -35,5 +35,4 @@ ua_encryption {
         }
     }   
     LIBS += -lmbedcrypto -lmbedtls -lmbedx509
-    DEFINES += UA_ENABLE_ENCRYPTION
 }

@@ -217,7 +217,7 @@ bool isSupportedQType(const QMetaType::Type & type)
 		typeCopy = QUaTypesConverter::getQArrayType(type);
 	}
 	// NOTE : need to support QMetaType::Void for methods return value
-	bool supported = type == QMetaType::Void || QUaDataType::isSupportedQType(type);
+    bool supported = typeCopy == QMetaType::Void || QUaDataType::isSupportedQType(typeCopy);
 	return supported;
 }
 

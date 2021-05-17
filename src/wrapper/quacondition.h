@@ -259,7 +259,7 @@ public:
         QUaCondition* parent,
         const QUaNodeId& branchId = QUaNodeId()
     );
-    ~QUaConditionBranch();
+    virtual ~QUaConditionBranch();
 
     void deleteLater();
 

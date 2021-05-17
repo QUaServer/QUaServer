@@ -615,7 +615,7 @@ QVector<QUaHistoryDataPoint> QUaSqliteHistorizer::readHistoryData(
 			});
 	}
 	// NOTE : return an invalid value if API requests more values than available
-	while (points.count() < numPointsToRead)
+    while (static_cast<quint64>(points.count()) < numPointsToRead)
 	{
 		points << QUaHistoryDataPoint();
 	}
@@ -1260,7 +1260,7 @@ QVector<QUaHistoryEventPoint> QUaSqliteHistorizer::readHistoryEventsOfType(
 	}
 	// read row results
 	points.resize(numPointsToRead);
-	int pointIndex = 0;
+    quint64 pointIndex = 0;
 	static const QString strTimeColName("Time");
 	while (query.next() && pointIndex < numPointsToRead)
 	{
@@ -1675,9 +1675,9 @@ bool QUaSqliteHistorizer::handleTransactions(
 QMetaType::Type QUaSqliteHistorizer::QVariantToQtType(const QVariant& value)
 {
 	return static_cast<QMetaType::Type>(
-		value.type() < 1024 ?
+        value.type() < static_cast<QVariant::Type>(1024) ?
 		value.type() :
-		value.userType()
+        static_cast<QVariant::Type>(value.userType())
 	);
 }
 
