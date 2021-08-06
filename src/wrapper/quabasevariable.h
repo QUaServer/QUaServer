@@ -60,8 +60,8 @@ public:
 	template<typename T>
 	T value() const;
 
-	// The data value.If the StatusCode indicates an error then the value is to be
-	// ignoredand the Server shall set it to null.
+	// The data value. If the StatusCode indicates an error then the value is to be
+	// ignored and the Server shall set it to null.
 	// - If the new value is the same dataType or convertible to the old dataType, 
 	//   the old dataType is preserved
 	// - If the new value has a new type different and not convertible to the old dataType, 
@@ -287,6 +287,40 @@ inline void QUaBaseVariable::setValue(
 		sourceTimestamp,
 		serverTimestamp,
 		newDataType
+	);
+}
+
+template<>
+inline void QUaBaseVariable::setValue(
+	const qint64& value,
+	const QUaStatusCode& statusCode,
+	const QDateTime& sourceTimestamp,
+	const QDateTime& serverTimestamp,
+	const QMetaType::Type& newDataType)
+{
+	this->setValue(
+		QVariant::fromValue(value),
+		statusCode,
+		sourceTimestamp,
+		serverTimestamp,
+		newDataType == QMetaType::UnknownType ? QMetaType::Long : newDataType
+	);
+}
+
+template<>
+inline void QUaBaseVariable::setValue(
+	const quint64& value,
+	const QUaStatusCode& statusCode,
+	const QDateTime& sourceTimestamp,
+	const QDateTime& serverTimestamp,
+	const QMetaType::Type& newDataType)
+{
+	this->setValue(
+		QVariant::fromValue(value),
+		statusCode,
+		sourceTimestamp,
+		serverTimestamp,
+		newDataType == QMetaType::UnknownType ? QMetaType::ULong : newDataType
 	);
 }
 
