@@ -12,14 +12,14 @@ template <typename T>
 struct container_traits<QList<T>> : std::true_type
 {
 	using inner_type = T;
-	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QList;
+	static constexpr QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QList;
 };
 
 template <typename T>
 struct container_traits<QVector<T>> : std::true_type
 {
 	using inner_type = T;
-	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
+	static constexpr QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
 };
 
 class QUaBaseVariable : public QUaNode
@@ -250,28 +250,6 @@ inline T QUaBaseVariable::valueInternal(std::true_type) const
 {
     return this->getValueInternal(container_traits<T>::arrType).template value<T>();
 }
-
-// NOTE : gcc does not seem to be able to handle the templates, so need to explicitly define specializations
-#ifdef Q_OS_LINUX
-// if array
-template<>
-inline QList<QUaNodeId> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaNodeId>>();
-}
-// if array
-template<>
-inline QList<QUaLocalizedText> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaLocalizedText>>();
-}
-// if array
-template<>
-inline QList<bool> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<bool>>();
-}
-#endif // Q_OS_LINUX
 
 template<typename T>
 inline void QUaBaseVariable::setValue(
