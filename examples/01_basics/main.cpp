@@ -61,6 +61,22 @@ int main(int argc, char *argv[])
 	Q_ASSERT(server.browsePath(subvar->nodeBrowsePath()) == subvar);
 	Q_ASSERT(server.browsePath(prop  ->nodeBrowsePath()) == prop  );
 
+    // set and get qlist and qvector
+
+    var->setValue(QList<int>() << 1 << 22 << 333);
+    auto intlist = var->value<QList<int>>();
+    qDebug() << "list contents:" << intlist.count();
+    for(const auto& num : intlist) {
+        qDebug() << num;
+    }
+
+    subvar->setValue(QVector<QString>() << "a" << "b" << "c");
+    auto strvec = subvar->value<QVector<QString>>();
+    qDebug() << "vector contents:" << strvec.count();
+    for(const auto& str : strvec) {
+        qDebug() << str;
+    }
+
 	// temperature sensor model
 
 	QUaFolderObject * sensorsFolder = objsFolder->addFolderObject("Sensors");

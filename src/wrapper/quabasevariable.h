@@ -22,6 +22,12 @@ struct container_traits<QVector<T>> : std::true_type
 	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
 };
 
+template <typename T>
+struct is_qvector_traits : std::false_type {};
+
+template <typename T>
+struct is_qvector_traits<QVector<T>> : std::true_type {};
+
 class QUaBaseVariable : public QUaNode
 {
 	Q_OBJECT
@@ -57,8 +63,8 @@ public:
 	// Attributes API
 
 	virtual QVariant value() const;
-	template<typename T>
-	T value() const;
+    template<typename T>
+    T value() const;
 
 	// The data value. If the StatusCode indicates an error then the value is to be
 	// ignored and the Server shall set it to null.
@@ -214,13 +220,13 @@ protected:
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	void setDataTypeOptionSet(const UA_NodeId &optionSetTypeNodeId);
 #endif
-	QMetaType::Type dataTypeInternal() const;
-	// if T scalar
-	template<typename T>
-	T valueInternal(std::false_type) const;
-	// if T array
-	template<typename T>
-	T valueInternal(std::true_type) const;
+    QMetaType::Type dataTypeInternal() const;
+    // if T scalar
+    template<typename T>
+    T valueInternal(std::false_type) const;
+    // if T array
+    template<typename T>
+    T valueInternal(std::true_type) const;
 	// internal
 	QVariant getValueInternal(
 		const QUaTypesConverter::ArrayType& arrType = QUaTypesConverter::ArrayType::QList
@@ -236,7 +242,7 @@ protected:
 template<typename T>
 inline T QUaBaseVariable::value() const
 {
-    return this->template valueInternal<T>(container_traits<T>());
+    return this->template valueInternal<T>(is_qvector_traits<T>());
 }
 // if scalar
 template<typename T>
@@ -248,30 +254,8 @@ inline T QUaBaseVariable::valueInternal(std::false_type) const
 template<typename T>
 inline T QUaBaseVariable::valueInternal(std::true_type) const
 {
-    return this->getValueInternal(container_traits<T>::arrType).template value<T>();
+    return this->getValueInternal(QUaTypesConverter::ArrayType::QVector).template value<T>();
 }
-
-// NOTE : gcc does not seem to be able to handle the templates, so need to explicitly define specializations
-#ifdef Q_OS_LINUX
-// if array
-template<>
-inline QList<QUaNodeId> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaNodeId>>();
-}
-// if array
-template<>
-inline QList<QUaLocalizedText> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<QUaLocalizedText>>();
-}
-// if array
-template<>
-inline QList<bool> QUaBaseVariable::valueInternal(std::true_type) const
-{
-    return this->getValueInternal(QUaTypesConverter::ArrayType::QList).value<QList<bool>>();
-}
-#endif // Q_OS_LINUX
 
 template<typename T>
 inline void QUaBaseVariable::setValue(
