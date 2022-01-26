@@ -6,10 +6,12 @@ CONFIG -= flat
 
 INCLUDEPATH += $$PWD/
 
-# ignore some useless warnings
+# ignore some useless warnings on visual studio builds
 win32 {
-    QMAKE_CXXFLAGS_WARN_ON -= -w14005
-    QMAKE_CXXFLAGS += -wd4005
+    contains(QMAKE_CC, cl) {
+        QMAKE_CXXFLAGS_WARN_ON -= -w14005
+        QMAKE_CXXFLAGS += -wd4005
+    }
 }
 
 SOURCES += \
