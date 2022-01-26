@@ -1,4 +1,3 @@
-# TODO : help needed for MINGW on Windows
 # TODO : help needed for MAC
 
 # Only pass once
@@ -65,88 +64,129 @@
 		else {
 			message("CMake found.")
 		}
-		# Look for msbuild
-		MSBUILD_BIN = $$system(where msbuild)
-		isEmpty(MSBUILD_BIN) {
-			error("MsBuild not found. Cannot build open62541 amalgamation.")
-		}
-		else {
-			message("MsBuild found.")
-		}
-		# Clean up old build if any
-		exists($${OPEN62541_BUILD_PATH}) {
-			system("rmdir $${OPEN62541_BUILD_PATH_WIN} /s /q")
-		}
-		# Create build
-		BUILD_CREATED = FALSE
-		system("mkdir $${OPEN62541_BUILD_PATH_WIN}"): BUILD_CREATED = TRUE
-		equals(BUILD_CREATED, TRUE) {
-			message("Build directory created for open62541.")
-		}
-		else {
-			error("Build directory could not be created for open62541.")
-		}
-		# Find compatible compiler
-		MSVC_VER = $$(VisualStudioVersion)
-	    equals(MSVC_VER, 12.0){
-			message("Compiler Detected : MSVC++ 12.0 (Visual Studio 2013)")
-			COMPILER = "Visual Studio 12 2013"
-	    }
-	    equals(MSVC_VER, 14.0){
-			message("Compiler Detected : MSVC++ 14.0 (Visual Studio 2015)")
-			COMPILER = "Visual Studio 14 2015"
-	    }
-	    equals(MSVC_VER, 15.0){
-			message("Compiler Detected : MSVC++ 15.0 (Visual Studio 2017)")
-			COMPILER = "Visual Studio 15 2017"
-	    }
-	    equals(MSVC_VER, 16.0){
-			message("Compiler Detected : MSVC++ 16.0 (Visual Studio 2019)")
-			COMPILER = "Visual Studio 16 2019"
-	    }
-	    isEmpty(COMPILER) {
-			error("No compatible compiler found to generate open62541 amalgamation.")
-		}
-	    # Find platform
-		contains(QT_ARCH, i386) {
-			message("Platform Detected : 32 bits")
-			PLATFORM = "Win32"
-			MS_PLATFORM = "/p:Platform=Win32"
-		}
-		contains(QT_ARCH, x86_64) {
-			message("Platform Detected : 64 bits")
-			PLATFORM = "x64"	
-			MS_PLATFORM = ""		
-		}
-		isEmpty(PLATFORM) {
-			error("Non compatible platform $${QT_ARCH} to generate open62541 amalgamation.")
-		}
-		# Generate CMake project
-		PROJECT_CREATED = FALSE
-		system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
-		equals(PROJECT_CREATED, TRUE) {
-			message("CMake generate open62541 successful.")
-		}
-		else {
-			error("CMake generate open62541 failed.")
-		}
-		# Create amalgamation sources with MsBuild
-		HEADER_CREATED = FALSE
-		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-header.vcxproj $${MS_PLATFORM}"): HEADER_CREATED = TRUE
-		equals(HEADER_CREATED, TRUE) {
-			message("Open62541 header open62541.h successful.")
-		}
-		else {
-			error("Open62541 header open62541.h failed.")
-		}
-		SOURCE_CREATED = FALSE
-		system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-source.vcxproj $${MS_PLATFORM}"): SOURCE_CREATED = TRUE
-		equals(SOURCE_CREATED, TRUE) {
-			message("Open62541 source open62541.c successful.")
-		}
-		else {
-			error("Open62541 source open62541.c failed.")
-		}	
+
+                # Clean up old build if any
+                exists($${OPEN62541_BUILD_PATH}) {
+                        system("rmdir $${OPEN62541_BUILD_PATH_WIN} /s /q")
+                }
+                # Create build
+                BUILD_CREATED = FALSE
+                system("mkdir $${OPEN62541_BUILD_PATH_WIN}"): BUILD_CREATED = TRUE
+                equals(BUILD_CREATED, TRUE) {
+                        message("Build directory created for open62541.")
+                }
+                else {
+                        error("Build directory could not be created for open62541.")
+                }
+
+                contains(QMAKE_CC, cl) {
+                        #VisualStudio build
+                        message("Compiling open62541 with VisualStudio")
+
+                        # Look for msbuild
+                        MSBUILD_BIN = $$system(where msbuild)
+                        isEmpty(MSBUILD_BIN) {
+                                error("MsBuild not found. Cannot build open62541 amalgamation.")
+                        }
+                        else {
+                                message("MsBuild found.")
+                        }
+
+                        # Find compatible compiler
+                        MSVC_VER = $$(VisualStudioVersion)
+                        equals(MSVC_VER, 12.0){
+                                    message("Compiler Detected : MSVC++ 12.0 (Visual Studio 2013)")
+                                    COMPILER = "Visual Studio 12 2013"
+                        }
+                        equals(MSVC_VER, 14.0){
+                                    message("Compiler Detected : MSVC++ 14.0 (Visual Studio 2015)")
+                                    COMPILER = "Visual Studio 14 2015"
+                        }
+                        equals(MSVC_VER, 15.0){
+                                    message("Compiler Detected : MSVC++ 15.0 (Visual Studio 2017)")
+                                    COMPILER = "Visual Studio 15 2017"
+                        }
+                        equals(MSVC_VER, 16.0){
+                                    message("Compiler Detected : MSVC++ 16.0 (Visual Studio 2019)")
+                                    COMPILER = "Visual Studio 16 2019"
+                        }
+                        isEmpty(COMPILER) {
+                                    error("No compatible compiler found to generate open62541 amalgamation.")
+                            }
+                        # Find platform
+                        contains(QT_ARCH, i386) {
+                                message("Platform Detected : 32 bits")
+                                PLATFORM = "Win32"
+                                MS_PLATFORM = "/p:Platform=Win32"
+                        }
+                        contains(QT_ARCH, x86_64) {
+                                message("Platform Detected : 64 bits")
+                                PLATFORM = "x64"
+                                MS_PLATFORM = ""
+                        }
+                        isEmpty(PLATFORM) {
+                                error("Non compatible platform $${QT_ARCH} to generate open62541 amalgamation.")
+                        }
+                        # Generate CMake project
+                        PROJECT_CREATED = FALSE
+                        system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"$${COMPILER}\" -A $${PLATFORM} -T host=x64"): PROJECT_CREATED = TRUE
+                        equals(PROJECT_CREATED, TRUE) {
+                                message("CMake generate open62541 successful.")
+                        }
+                        else {
+                                error("CMake generate open62541 failed.")
+                        }
+                        # Create amalgamation sources with MsBuild
+                        HEADER_CREATED = FALSE
+                        system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-header.vcxproj $${MS_PLATFORM}"): HEADER_CREATED = TRUE
+                        equals(HEADER_CREATED, TRUE) {
+                                message("Open62541 header open62541.h successful.")
+                        }
+                        else {
+                                error("Open62541 header open62541.h failed.")
+                        }
+                        SOURCE_CREATED = FALSE
+                        system("msbuild $${OPEN62541_BUILD_PATH_WIN}\open62541-amalgamation-source.vcxproj $${MS_PLATFORM}"): SOURCE_CREATED = TRUE
+                        equals(SOURCE_CREATED, TRUE) {
+                                message("Open62541 source open62541.c successful.")
+                        }
+                        else {
+                                error("Open62541 source open62541.c failed.")
+                        }
+                }
+
+                contains(QMAKE_CC, gcc) {
+                        ##MinGw build
+                        message("Compiling open62541 with MinGw")
+
+                        # Generate CMake project
+                        PROJECT_CREATED = FALSE
+                        system("cmake $${OPEN62541_PATH_WIN} -B$${OPEN62541_BUILD_PATH_WIN} -DUA_ENABLE_AMALGAMATION=ON $${UA_NAMESPACE} $${UA_ENCRYPTION} $${UA_EVENTS} $${UA_ALARMS} $${UA_HISTORIZING} -G \"MinGW Makefiles\""): PROJECT_CREATED = TRUE
+                        equals(PROJECT_CREATED, TRUE) {
+                                message("CMake generate open62541 successful.")
+                        }
+                        else {
+                                error("CMake generate open62541 failed.")
+                        }
+                        # Create amalgamation sources with MsBuild
+                        HEADER_CREATED = FALSE
+                        system("mingw32-make -C $${OPEN62541_BUILD_PATH} open62541-amalgamation-header"): HEADER_CREATED = TRUE
+                        equals(HEADER_CREATED, TRUE) {
+                                message("Open62541 header open62541.h successful.")
+                        }
+                        else {
+                                error("Open62541 header open62541.h failed.")
+                        }
+                        SOURCE_CREATED = FALSE
+                        system("mingw32-make -C $${OPEN62541_BUILD_PATH} open62541-amalgamation-source"): SOURCE_CREATED = TRUE
+                        equals(SOURCE_CREATED, TRUE) {
+                                message("Open62541 source open62541.c successful.")
+                        }
+                        else {
+                                error("Open62541 source open62541.c failed.")
+                        }
+                }
+
 		# Copy amalgamation locally
 		# Fix PWD slashes
 		OPEN62541_H_PATH_WIN  = $$OPEN62541_H_PATH
@@ -217,7 +257,7 @@
 		else {
 			error("CMake generate open62541 failed.")
 		}
-        # Create amalgamation sources with Make
+                # Create amalgamation sources with Make
 		HEADER_CREATED = FALSE
 		system("make -C $${OPEN62541_BUILD_PATH} open62541-amalgamation-header"): HEADER_CREATED = TRUE
 		equals(HEADER_CREATED, TRUE) {
