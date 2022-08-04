@@ -1460,7 +1460,7 @@ struct QUaMethodTraitsBase
         UA_Argument_init(&inputArgument);
         // create n-th argument with name "Arg" + number
         inputArgument.description = UA_LOCALIZEDTEXT((char *)"", (char *)"Method Argument");
-        inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::trUtf8("Arg%1").arg(iArg));
+        inputArgument.name        = QUaTypesConverter::uaStringFromQString(QObject::tr("Arg%1").arg(iArg));
         inputArgument.dataType    = nodeId;
         inputArgument.valueRank   = UA_VALUERANK_SCALAR;
         // return
