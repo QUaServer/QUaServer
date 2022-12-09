@@ -1,7 +1,5 @@
 #include "quamultisqlitehistorizer.h"
 
-#include <QUaServer>
-
 #ifdef UA_ENABLE_HISTORIZING
 
 #include <QSqlError>

@@ -110,8 +110,12 @@
                                     message("Compiler Detected : MSVC++ 16.0 (Visual Studio 2019)")
                                     COMPILER = "Visual Studio 16 2019"
                         }
+                        equals(MSVC_VER, 17.0){
+                                    message("Compiler Detected : MSVC++ 17.0 (Visual Studio 2022)")
+                                    COMPILER = "Visual Studio 17 2022"
+                        }
                         isEmpty(COMPILER) {
-                                    error("No compatible compiler found to generate open62541 amalgamation.")
+                                    error("No compatible compiler found to generate open62541 amalgamation. VisualStudioVersion is $${MSVC_VER}.")
                             }
                         # Find platform
                         contains(QT_ARCH, i386) {

@@ -1,6 +1,8 @@
 #ifndef QUAMULTISQLITEHISTORIZER_H
 #define QUAMULTISQLITEHISTORIZER_H
 
+#include <QUaServer>
+
 #ifdef UA_ENABLE_HISTORIZING
 
 #include <QUaHistoryBackend>
