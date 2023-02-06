@@ -15,12 +15,14 @@ struct container_traits<QList<T>> : std::true_type
 	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QList;
 };
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 template <typename T>
 struct container_traits<QVector<T>> : std::true_type
 {
 	using inner_type = T;
 	static const QUaTypesConverter::ArrayType arrType = QUaTypesConverter::ArrayType::QVector;
 };
+#endif
 
 template <typename T>
 struct is_qvector_traits : std::false_type {};

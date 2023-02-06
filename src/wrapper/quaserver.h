@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include <QTimer>
+#include <QSequentialIterable>
 
 #include <QUaTypesConverter>
 #include <QUaFolderObject>

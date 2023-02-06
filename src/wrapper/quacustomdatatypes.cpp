@@ -2,6 +2,9 @@
 
 #include <QUaTypesConverter>
 
+#include <QStringView>
+#include <QChar>
+
 /* NOTE : for registering new custom types wrapping open62541 types follow steps below:
 - Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
 - Add constructors, equality operators converting the underlying type, string for serializaton
@@ -388,7 +391,11 @@ void QUaQualifiedName::operator=(const UA_QualifiedName& uaQualName)
 void QUaQualifiedName::operator=(const QString& strXmlQualName)
 {
 	m_namespace = 0;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlQualName).split(QLatin1String(";"));
+#else
+	auto components = QStringView(strXmlQualName).split(QChar(';'));
+#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -400,7 +407,11 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
     quint16 new_ns = m_namespace;
 	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
 	{
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		auto strNs = components.at(0).split(QLatin1String("ns=")).last();
+#else
+		auto strNs = components.at(0).split(QString("ns=")).last();
+#endif
 		bool success = false;
 		uint ns = components.at(0).mid(3).toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
@@ -420,7 +431,11 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		m_name = strXmlQualName;
 		return;
 	}
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto lastParts = strLast.split(QLatin1String("="));
+#else
+	auto lastParts = strLast.split(QString("="));
+#endif
 	// if reached here, xml format is correct
 	m_namespace = new_ns;
 	m_name = 
@@ -554,7 +569,11 @@ QString QUaQualifiedName::reduceName(
 QUaBrowsePath QUaQualifiedName::expandName(const QString& strPath, const QString& separator)
 {
 	QUaBrowsePath retPath;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto parts = QStringRef(&strPath).split(separator);
+#else
+	auto parts = QStringView(strPath).split(separator);
+#endif
 	for (int i = 0; i < parts.count(); i++)
 	{
 		retPath << QUaQualifiedName(0, parts[i].toString());
@@ -581,7 +600,11 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeStructure)
 {
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strChangeStructure).split(QLatin1String("|"));
+#else
+	auto components = QStringView(strChangeStructure).split(QChar('|'));
+#endif
 	if (components.count() == 0)
 	{
 		return;
@@ -714,7 +737,11 @@ void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
 	m_locale = QString();
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlLocalizedText).split(QLatin1String(";"));
+#else
+	auto components = QStringView(strXmlLocalizedText).split(QChar(';'));
+#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -726,7 +753,11 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 	QString new_locale;
 	if (components.at(0).contains(QLatin1String("l="))) 
 	{
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		auto partsLocale = components.at(0).split(QLatin1String("="));
+#else
+		auto partsLocale = components.at(0).split(QString("="));
+#endif
 		if (partsLocale.size() < 2)
 		{
 			m_text = strXmlLocalizedText;
@@ -743,7 +774,11 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 		m_text = strXmlLocalizedText;
 		return;
 	}
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto partsText = components.last().split(QLatin1String("="));
+#else
+	auto partsText = components.last().split(QString("="));
+#endif
 	// if reached here, xml format is correct
 	m_locale = new_locale;
 	m_text =
@@ -1216,8 +1251,13 @@ bool QUaEventHistoryQueryData::isValid() const
 QByteArray QUaEventHistoryQueryData::toByteArray(const QUaEventHistoryQueryData& inQueryData)
 {
 	QByteArray byteArray;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	QDataStream outStream(&byteArray, QIODevice::WriteOnly | QIODevice::Truncate);
 	outStream.setVersion(QDataStream::Qt_5_6);
+#else
+	QDataStream outStream(&byteArray, QIODeviceBase::OpenMode( QIODeviceBase::WriteOnly | QIODeviceBase::Truncate) );
+	outStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	outStream.setByteOrder(QDataStream::BigEndian);
 	outStream << inQueryData;
 	return byteArray;
@@ -1231,7 +1271,11 @@ QUaEventHistoryQueryData QUaEventHistoryQueryData::fromByteArray(const QByteArra
 		return outQueryData;
 	}
 	QDataStream inStream(byteArray);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	inStream.setVersion(QDataStream::Qt_5_6);
+#else
+	inStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	inStream.setByteOrder(QDataStream::BigEndian);
 	inStream >> outQueryData;
 	return outQueryData;
@@ -1240,8 +1284,13 @@ QUaEventHistoryQueryData QUaEventHistoryQueryData::fromByteArray(const QByteArra
 QByteArray QUaEventHistoryQueryData::ContinuationToByteArray(const QUaEventHistoryContinuationPoint& inContinuation)
 {
 	QByteArray byteArray;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	QDataStream outStream(&byteArray, QIODevice::WriteOnly | QIODevice::Truncate);
 	outStream.setVersion(QDataStream::Qt_5_6);
+#else
+	QDataStream outStream(&byteArray, QIODeviceBase::OpenMode( QIODeviceBase::WriteOnly | QIODeviceBase::Truncate) );
+	outStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	outStream.setByteOrder(QDataStream::BigEndian);
 	outStream << inContinuation;
 	return byteArray;
@@ -1255,7 +1304,11 @@ QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromByteA
 		return outContinuation;
 	}
 	QDataStream inStream(byteArray);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	inStream.setVersion(QDataStream::Qt_5_6);
+#else
+	inStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	inStream.setByteOrder(QDataStream::BigEndian);
 	inStream >> outContinuation;
 	return outContinuation;
@@ -1298,41 +1351,89 @@ QUaLog::QUaLog(const QString& strMessage,
 	timestamp = QDateTime::currentDateTimeUtc();
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const Status &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const Status &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const LogLevel &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const LogLevel &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const LogCategory &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const LogCategory &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const ExclusiveLimitState &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const ExclusiveLimitState &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const ExclusiveLimitTransition &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const ExclusiveLimitTransition &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint QUa::qHash(const ChangeVerb &key, uint seed)
 {
     Q_UNUSED(seed);
     return static_cast<uint>(key);
 }
+#else
+size_t QUa::qHash(const ChangeVerb &key, size_t seed)
+{
+    Q_UNUSED(seed);
+    return static_cast<size_t>(key);
+}
+#endif
 
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 QUaOptionSet::QUaOptionSet() :
@@ -1407,7 +1508,11 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 {
 	quint64 values;
 	quint64 validBits;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlOptionSet).split(QLatin1String(";"));
+#else
+	auto components = QStringView(strXmlOptionSet).split(QChar(';'));
+#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -1417,10 +1522,19 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 		return;
 	}
 	auto firstComp   = components.at(0);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto firstParts  = firstComp.split(QLatin1String("="));
+#else
+	auto firstParts  = firstComp.split(QChar('='));
+#endif
+
 	auto firstPart   = firstParts.count() > 1 ? firstParts.at(1) : firstParts.at(0);
 	auto secondComp  = components.at(1);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto secondParts = secondComp.split(QLatin1String("="));
+#else
+	auto secondParts = secondComp.split(QChar('='));
+#endif
 	auto secondPart  = secondParts.count() > 1 ? secondParts.at(1) : secondParts.at(0);
 	if (firstComp.contains(QString("valid")) && firstComp.contains(QString("bits")))
 	{
@@ -1468,7 +1582,11 @@ quint64 QUaOptionSet::values() const
 	quint64 values;
 	Q_ASSERT(m_value.size() == 8);
 	QDataStream inStream(m_value);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	inStream.setVersion(QDataStream::Qt_5_6);
+#else
+	inStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	inStream.setByteOrder(QDataStream::LittleEndian);
 	inStream >> values;
 	return values;
@@ -1476,8 +1594,13 @@ quint64 QUaOptionSet::values() const
 
 void QUaOptionSet::setValues(const quint64& values)
 {
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	QDataStream valueStream(&m_value, QIODevice::WriteOnly | QIODevice::Truncate);
 	valueStream.setVersion(QDataStream::Qt_5_6);
+#else
+	QDataStream valueStream(&m_value, QIODeviceBase::OpenMode( QIODeviceBase::WriteOnly | QIODeviceBase::Truncate) );
+	valueStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	valueStream.setByteOrder(QDataStream::LittleEndian);
 	valueStream << static_cast<quint64>(values);
 	Q_ASSERT(m_value.size() == 8);
@@ -1488,7 +1611,11 @@ quint64 QUaOptionSet::validBits() const
 	quint64 validBits;
 	Q_ASSERT(m_validBits.size() == 8);
 	QDataStream inStream(m_validBits);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	inStream.setVersion(QDataStream::Qt_5_6);
+#else
+	inStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	inStream.setByteOrder(QDataStream::LittleEndian);
 	inStream >> validBits;
 	return validBits;
@@ -1496,8 +1623,13 @@ quint64 QUaOptionSet::validBits() const
 
 void QUaOptionSet::setValidBits(const quint64& validBits)
 {
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	QDataStream validBitsStream(&m_validBits, QIODevice::WriteOnly | QIODevice::Truncate);
 	validBitsStream.setVersion(QDataStream::Qt_5_6);
+#else
+	QDataStream validBitsStream(&m_validBits, QIODeviceBase::OpenMode( QIODeviceBase::WriteOnly | QIODeviceBase::Truncate) );
+	validBitsStream.setVersion(QDataStream::Qt_6_3);
+#endif
 	validBitsStream.setByteOrder(QDataStream::LittleEndian);
 	validBitsStream << static_cast<quint64>(validBits);
 	Q_ASSERT(m_validBits.size() == 8);

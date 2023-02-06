@@ -30,7 +30,11 @@ inline bool operator==(const UA_NodeId &e1, const UA_NodeId &e2)
     return UA_NodeId_equal(&e1, &e2);
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const UA_NodeId &key, uint seed)
+#else
+inline size_t qHash(const UA_NodeId &key, size_t seed)
+#endif
 {
     return
             qHash(key.namespaceIndex, seed) ^
@@ -75,7 +79,11 @@ enum class Status
     BadDeadbandFilterInvalid                = static_cast<int>(UA_STATUSCODE_BADDEADBANDFILTERINVALID)
 };
 Q_ENUM_NS(Status)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const Status& key, uint seed = 0);
+#else
+size_t qHash(const Status& key, size_t seed = 0);
+#endif
 
 enum class LogLevel {
     Trace   = UA_LogLevel::UA_LOGLEVEL_TRACE,
@@ -86,7 +94,11 @@ enum class LogLevel {
     Fatal   = UA_LogLevel::UA_LOGLEVEL_FATAL
 };
 Q_ENUM_NS(LogLevel)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const LogLevel& key, uint seed = 0);
+#else
+size_t qHash(const LogLevel& key, size_t seed = 0);
+#endif
 
 enum class LogCategory {
     Network        = UA_LogCategory::UA_LOGCATEGORY_NETWORK,
@@ -101,7 +113,11 @@ enum class LogCategory {
     Application
 };
 Q_ENUM_NS(LogCategory)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const LogCategory& key, uint seed = 0);
+#else
+size_t qHash(const LogCategory& key, size_t seed = 0);
+#endif
 
 enum class ExclusiveLimitState {
     None     = 0,
@@ -112,7 +128,11 @@ enum class ExclusiveLimitState {
     LowLow   = 4
 };
 Q_ENUM_NS(ExclusiveLimitState)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const ExclusiveLimitState& key, uint seed = 0);
+#else
+size_t qHash(const ExclusiveLimitState& key, size_t seed = 0);
+#endif
 
 enum class ExclusiveLimitTransition {
     None           = 0,
@@ -123,7 +143,11 @@ enum class ExclusiveLimitTransition {
     LowToLowLow    = 4
 };
 Q_ENUM_NS(ExclusiveLimitTransition)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const ExclusiveLimitTransition& key, uint seed = 0);
+#else
+size_t qHash(const ExclusiveLimitTransition& key, size_t seed = 0);
+#endif
 
 enum class ChangeVerb
 {
@@ -134,7 +158,11 @@ enum class ChangeVerb
     DataTypeChanged  = 16
 };
 Q_ENUM_NS(ChangeVerb)
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 uint qHash(const ChangeVerb& key, uint seed = 0);
+#else
+size_t qHash(const ChangeVerb& key, size_t seed = 0);
+#endif
 }
 
 typedef QUa::LogLevel    QUaLogLevel;
@@ -471,7 +499,11 @@ private:
 
 Q_DECLARE_METATYPE(QUaNodeId);
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaNodeId& key, uint seed)
+#else
+inline size_t qHash(const QUaNodeId& key, size_t seed)
+#endif
 {
     return
             qHash(key.namespaceIndex(), seed) ^
@@ -635,12 +667,20 @@ private:
 
 Q_DECLARE_METATYPE(QUaQualifiedName);
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaQualifiedName& key)
+#else
+inline size_t qHash(const QUaQualifiedName& key)
+#endif
 {
     return qHash(key.name(), key.namespaceIndex());
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaQualifiedName& key, uint seed)
+#else
+inline size_t qHash(const QUaQualifiedName& key, size_t seed)
+#endif
 {
     return qHash(key.name(), seed) ^ key.namespaceIndex();
 }
@@ -661,9 +701,15 @@ inline QDataStream& operator>>(QDataStream& inStream, QUaQualifiedName& outQualN
 
 typedef QList<QUaQualifiedName> QUaBrowsePath;
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaBrowsePath& key)
 {
     uint outKey = 0;
+#else
+inline size_t qHash(const QUaBrowsePath& key)
+{
+    size_t outKey = 0;
+#endif
     for (const auto& elem : key)
     {
         outKey = outKey ^ qHash(elem);
@@ -671,9 +717,15 @@ inline uint qHash(const QUaBrowsePath& key)
     return outKey;
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaBrowsePath& key, uint seed)
 {
     uint outKey = 0;
+#else
+inline size_t qHash(const QUaBrowsePath& key, size_t seed)
+{
+    size_t outKey = 0;
+#endif
     for (const auto& elem : key)
     {
         outKey = outKey ^ qHash(elem, seed);
@@ -928,7 +980,11 @@ inline bool operator!=(const QUaReferenceType& e1, const QUaReferenceType& e2)
     return !(e1 == e2);
 }
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 inline uint qHash(const QUaReferenceType& key, uint seed)
+#else
+inline size_t qHash(const QUaReferenceType& key, size_t seed)
+#endif
 {
     return qHash(key.strForwardName, seed) ^ qHash(key.strInverseName, seed);
 }
