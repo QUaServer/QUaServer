@@ -184,7 +184,11 @@ QUaNode::QUaNode(
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(browseName);
 		Q_ASSERT(!this->browseChild(browseName));
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		uint key = qHash(browseName);
+#else
+		size_t key = qHash(browseName);
+#endif
 		m_browseCache[key] = nodeInstance;
 		QObject::connect(nodeInstance, &QObject::destroyed, this, [this, key]() {
 			m_browseCache.remove(key);
@@ -209,7 +213,11 @@ QUaNode::QUaNode(
 		nodeInstance->setParent(this);
 		nodeInstance->setObjectName(browseName);
 		Q_ASSERT(!this->browseChild(browseName));
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		uint key = qHash(browseName);
+#else
+		size_t key = qHash(browseName);
+#endif
 		m_browseCache[key] = nodeInstance;
 		QObject::connect(nodeInstance, &QObject::destroyed, this, [this, key]() {
 			m_browseCache.remove(key);
@@ -595,7 +603,11 @@ QUaNode* QUaNode::browseChild(
 {
 	// first check cache
 	QUaNode* child = nullptr;
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	uint key = qHash(browseName);
+#else
+	size_t key = qHash(browseName);
+#endif
 	if (m_browseCache.contains(key))
 	{
 		child = m_browseCache.value(key);
@@ -1081,7 +1093,11 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	newInstance->setParent(parent);
 	newInstance->setObjectName(browseName);
 	Q_ASSERT(!parent->browseChild(browseName));
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	uint key = qHash(browseName);
+#else
+	size_t key = qHash(browseName);
+#endif
 	parent->m_browseCache[key] = newInstance;
 	QObject::connect(newInstance, &QObject::destroyed, parent, [parent, key]() {
 		parent->m_browseCache.remove(key);
@@ -1578,7 +1594,11 @@ void QUaNode::deserializeAttrs(
 			bool ok = listAttrsNotInProps.removeOne(strPropName);
 			Q_ASSERT(ok);
 			// write property
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 			auto &val = attrs[strPropName]; // 6.34[%]
+#else
+			auto val = attrs[strPropName]; // 6.34[%]
+#endif
 			if (val.isValid() && !val.isNull())
 			{
 				ok = metaProperty.write(this, val);

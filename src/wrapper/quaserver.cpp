@@ -244,9 +244,17 @@ UA_StatusCode QUaServer::generateChildNodeId(
 		}
 	}
 	// get parent node id hash
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	uint parentHash = qHash(*targetParentNodeId, targetParentNodeId->namespaceIndex);
+#else
+	size_t parentHash = qHash(*targetParentNodeId, targetParentNodeId->namespaceIndex);
+#endif
 	// get child browse name hash
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	uint childNameHash = qHash(
+#else
+	size_t childNameHash = qHash(
+#endif
 		QByteArray::fromRawData((const char*)outBrowseName.name.data, static_cast<int>(outBrowseName.name.length)),
 			outBrowseName.namespaceIndex
 		);
@@ -345,7 +353,11 @@ UA_StatusCode QUaServer::uaConstructor(
 		newInstance->setParent(parentContext);
 		newInstance->setObjectName(browseName);
 		Q_ASSERT(!parentContext->browseChild(browseName));
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		uint key = qHash(browseName);
+#else
+		size_t key = qHash(browseName);
+#endif
 		parentContext->m_browseCache[key] = newInstance;
 		QObject::connect(newInstance, &QObject::destroyed, parentContext, [parentContext, key]() {
 			parentContext->m_browseCache.remove(key);
@@ -468,7 +480,11 @@ UA_StatusCode QUaServer::callMetaMethod(
 	// avoid Qt printing warning to console
 	if (retType != QMetaType::Void)
 	{
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		returnValue = QVariant(retType, static_cast<void*>(NULL));
+#else
+		returnValue = QVariant(QMetaType(retType), static_cast<void*>(NULL));
+#endif
 	}
 	QGenericReturnArgument returnArgument(
 		metaMethod.typeName(),
@@ -1344,7 +1360,12 @@ void QUaServer::setupServer()
 	m_hashRefTypes.insert({ "HasEffect"         , "MayBeEffectedBy"   }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEFFECT)); // Part 5 - B.4.14
 	m_hashRefTypes.insert({ "HasSubStateMachine", "SubStateMachineOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBSTATEMACHINE)); // Part 5 - B.4.15
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	m_hashRefTypes.unite(m_hashHierRefTypes);
+#else
+	for (auto it = m_hashHierRefTypes.constBegin(); it != m_hashHierRefTypes.constEnd(); ++it)
+		m_hashRefTypes.insert(it.key(), it.value());
+#endif
 
 	// read initial values for server description
 	UA_ServerConfig* config = UA_Server_getConfig(m_server);

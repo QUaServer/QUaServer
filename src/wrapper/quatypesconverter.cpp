@@ -1,6 +1,8 @@
 #include "quatypesconverter.h"
 #include <cstring>
 
+#include <QSequentialIterable>
+
 QT_BEGIN_NAMESPACE
 
 namespace QUaTypesConverter {
@@ -86,7 +88,11 @@ QString nodeIdToQString(const UA_NodeId & id)
 		const UA_Guid &src = id.identifier.guid;
 		const QUuid uuid(src.data1, src.data2, src.data3, src.data4[0], src.data4[1], src.data4[2],
 			src.data4[3], src.data4[4], src.data4[5], src.data4[6], src.data4[7]);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
         result.append(QStringLiteral("g=")).append(uuid.toString().midRef(1, 36));
+#else
+        result.append(QStringLiteral("g=")).append(uuid.toString().mid(1, 36));
+#endif
 		break;
         }
     case UA_NODEIDTYPE_BYTESTRING:
