@@ -3,6 +3,7 @@ include($$PWD/../amalgamation/open62541.pri)
 QT     += core
 CONFIG += c++11
 CONFIG -= flat
+greaterThan(QT_MAJOR_VERSION, 5): QT += core5compat
 
 INCLUDEPATH += $$PWD/
 
