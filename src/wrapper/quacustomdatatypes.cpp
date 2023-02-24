@@ -4,6 +4,9 @@
 
 #include <QStringView>
 #include <QChar>
+#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
+#include <QStringRef>
+#endif
 
 /* NOTE : for registering new custom types wrapping open62541 types follow steps below:
 - Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
@@ -391,11 +394,7 @@ void QUaQualifiedName::operator=(const UA_QualifiedName& uaQualName)
 void QUaQualifiedName::operator=(const QString& strXmlQualName)
 {
 	m_namespace = 0;
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlQualName).split(QLatin1String(";"));
-#else
-	auto components = QStringView(strXmlQualName).split(QChar(';'));
-#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -407,11 +406,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
     quint16 new_ns = m_namespace;
 	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
 	{
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		auto strNs = components.at(0).split(QLatin1String("ns=")).last();
-#else
-		auto strNs = components.at(0).split(QString("ns=")).last();
-#endif
 		bool success = false;
 		uint ns = components.at(0).mid(3).toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
@@ -431,11 +426,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		m_name = strXmlQualName;
 		return;
 	}
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto lastParts = strLast.split(QLatin1String("="));
-#else
-	auto lastParts = strLast.split(QString("="));
-#endif
 	// if reached here, xml format is correct
 	m_namespace = new_ns;
 	m_name = 
@@ -569,11 +560,7 @@ QString QUaQualifiedName::reduceName(
 QUaBrowsePath QUaQualifiedName::expandName(const QString& strPath, const QString& separator)
 {
 	QUaBrowsePath retPath;
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto parts = QStringRef(&strPath).split(separator);
-#else
-	auto parts = QStringView(strPath).split(separator);
-#endif
 	for (int i = 0; i < parts.count(); i++)
 	{
 		retPath << QUaQualifiedName(0, parts[i].toString());
@@ -600,11 +587,7 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeStructure)
 {
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strChangeStructure).split(QLatin1String("|"));
-#else
-	auto components = QStringView(strChangeStructure).split(QChar('|'));
-#endif
 	if (components.count() == 0)
 	{
 		return;
@@ -737,11 +720,7 @@ void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
 	m_locale = QString();
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlLocalizedText).split(QLatin1String(";"));
-#else
-	auto components = QStringView(strXmlLocalizedText).split(QChar(';'));
-#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -753,11 +732,7 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 	QString new_locale;
 	if (components.at(0).contains(QLatin1String("l="))) 
 	{
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		auto partsLocale = components.at(0).split(QLatin1String("="));
-#else
-		auto partsLocale = components.at(0).split(QString("="));
-#endif
 		if (partsLocale.size() < 2)
 		{
 			m_text = strXmlLocalizedText;
@@ -774,11 +749,7 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 		m_text = strXmlLocalizedText;
 		return;
 	}
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto partsText = components.last().split(QLatin1String("="));
-#else
-	auto partsText = components.last().split(QString("="));
-#endif
 	// if reached here, xml format is correct
 	m_locale = new_locale;
 	m_text =
@@ -1508,11 +1479,7 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 {
 	quint64 values;
 	quint64 validBits;
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto components = QStringRef(&strXmlOptionSet).split(QLatin1String(";"));
-#else
-	auto components = QStringView(strXmlOptionSet).split(QChar(';'));
-#endif
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -1522,19 +1489,11 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 		return;
 	}
 	auto firstComp   = components.at(0);
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto firstParts  = firstComp.split(QLatin1String("="));
-#else
-	auto firstParts  = firstComp.split(QChar('='));
-#endif
 
 	auto firstPart   = firstParts.count() > 1 ? firstParts.at(1) : firstParts.at(0);
 	auto secondComp  = components.at(1);
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	auto secondParts = secondComp.split(QLatin1String("="));
-#else
-	auto secondParts = secondComp.split(QChar('='));
-#endif
 	auto secondPart  = secondParts.count() > 1 ? secondParts.at(1) : secondParts.at(0);
 	if (firstComp.contains(QString("valid")) && firstComp.contains(QString("bits")))
 	{
