@@ -255,13 +255,13 @@ UA_Variant uaVariantFromQVariant(const QVariant & var
 	QMetaType::Type qtType = QMetaType::UnknownType;
 	const UA_DataType * uaType = nullptr;
 	// fix qt type if array
-	auto originalType  = (QMetaType::Type)var.type();
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	if (var.canConvert<QVariantList>())
 #else
 	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
 	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
 	// prevent QString and QByteArray to convert to array
+	auto originalType  = (QMetaType::Type)var.type();
 	if (var.canConvert<QVariantList>() &&
 		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
@@ -460,13 +460,13 @@ void uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStruc
 UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 {
 	Q_ASSERT(var.canConvert<QVariantList>());
-	auto originalType  = (QMetaType::Type)var.type();
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	if (!var.canConvert<QVariantList>())
 #else
 	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
 	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
 	// prevent QString and QByteArray to convert to array
+	auto originalType  = (QMetaType::Type)var.type();
 	if (!var.canConvert<QVariantList>() ||
 		(originalType == QMetaType::QString || originalType == QMetaType::QByteArray))
 #endif
