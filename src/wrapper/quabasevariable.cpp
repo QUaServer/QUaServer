@@ -1180,6 +1180,9 @@ void QUaBaseVariable::setWriteHistoryAccess(const bool& bHistoryWrite)
 // [STATIC]
 qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 {
+#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
+	auto originalType  = (QMetaType::Type)varValue.type();
+#endif
 	if ((QMetaType::Type)varValue.type() == QMetaType::UnknownType)
 	{
 		return UA_VALUERANK_ANY;
@@ -1190,7 +1193,6 @@ qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
 	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
 	// prevent QString and QByteArray to convert to array
-	auto originalType  = (QMetaType::Type)varValue.type();
 	else if (varValue.canConvert<QVariantList>() &&
 		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
