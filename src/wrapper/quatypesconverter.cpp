@@ -16,7 +16,7 @@ UA_NodeId nodeIdFromQString(const QString & name)
 	quint16 namespaceIndex;
 	QString identifierString;
 	char    identifierType;
-	bool success = nodeIdStringSplit(name.simplified().remove(' '), &namespaceIndex, &identifierString, &identifierType);
+    bool success = nodeIdStringSplit(name.simplified().remove(QChar(L' ')), &namespaceIndex, &identifierString, &identifierType);
 
 	if (!success) {
 		qWarning() << "Failed to split node id string:" << name;
@@ -156,27 +156,27 @@ QString nodeClassToQString(const UA_NodeClass & nclass)
 	switch (nclass)
 	{
 	case UA_NODECLASS_UNSPECIFIED:
-		return QString();
+		return QStringLiteral();
 	case UA_NODECLASS_OBJECT:
-		return QString("OBJECT");
+		return QStringLiteral("OBJECT");
 	case UA_NODECLASS_VARIABLE:
-		return QString("VARIABLE");
+		return QStringLiteral("VARIABLE");
 	case UA_NODECLASS_METHOD:
-		return QString("METHOD");
+		return QStringLiteral("METHOD");
 	case UA_NODECLASS_OBJECTTYPE:
-		return QString("OBJECTTYPE");
+		return QStringLiteral("OBJECTTYPE");
 	case UA_NODECLASS_VARIABLETYPE:
-		return QString("VARIABLETYPE");
+		return QStringLiteral("VARIABLETYPE");
 	case UA_NODECLASS_REFERENCETYPE:
-		return QString("REFERENCETYPE");
+		return QStringLiteral("REFERENCETYPE");
 	case UA_NODECLASS_DATATYPE:
-		return QString("DATATYPE");
+		return QStringLiteral("DATATYPE");
 	case UA_NODECLASS_VIEW:
-		return QString("VIEW");
+		return QStringLiteral("VIEW");
 	default:
 		break;
 	}
-	return QString();
+	return QStringLiteral();
 }
 
 QString uaStringToQString(const UA_String & string)
@@ -193,8 +193,8 @@ UA_String uaStringFromQString(const QString & uaString)
 bool isQTypeArray(const QMetaType::Type & type)
 {
 	auto strTypeName = QString(QMetaType::typeName(type));
-	if (strTypeName.contains("QList"  , Qt::CaseInsensitive) ||
-		strTypeName.contains("QVector", Qt::CaseInsensitive))
+	if (strTypeName.contains(QLatin1String("QList")  , Qt::CaseInsensitive) ||
+		strTypeName.contains(QLatin1String("QVector"), Qt::CaseInsensitive))
 	{
 		return true;
 	}
@@ -209,8 +209,8 @@ QMetaType::Type getQArrayType(const QMetaType::Type & type)
 	}
 	// TODO : check and use with QUaDataType::
 	auto strTypeName = QString(QMetaType::typeName(type));
-	strTypeName      = strTypeName.split("<").at(1);
-	strTypeName      = strTypeName.split(">").at(0);
+	strTypeName      = strTypeName.split(QChar(L'<')).at(1);
+	strTypeName      = strTypeName.split(QChar(L'>')).at(0);
 	auto byteName    = strTypeName.toUtf8();
 	return (QMetaType::Type)QMetaType::type(byteName.constData());
 }

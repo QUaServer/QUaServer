@@ -1075,7 +1075,7 @@ inline bool QUaNode::deserializeInternal(
             return false;
         }
         // check browse name
-        if (!attrs.contains("browseName") || attrs["browseName"].toString().isEmpty())
+        if (!attrs.contains( QStringLiteral("browseName") ) || attrs[ QStringLiteral("browseName") ].toString().isEmpty())
         {
             logOut.enqueue({
                 tr("Could not deserialize child of %1 with nodeId %2 (type %3). "
@@ -1088,7 +1088,7 @@ inline bool QUaNode::deserializeInternal(
             });
             continue;
         }
-        QUaQualifiedName browseName = QUaQualifiedName::fromXmlString(attrs["browseName"].toString());
+        QUaQualifiedName browseName = QUaQualifiedName::fromXmlString(attrs[ QStringLiteral("browseName") ].toString());
         auto existingBrowseName = mapExistingChildrenBrowseName.value(browseName, QList<QUaNode*>());
         // deserialize existing by browseName
         if (existingBrowseName.count() > 0)
@@ -1439,9 +1439,9 @@ struct QUaMethodTraitsBase
         QMetaEnum metaEnum = QMetaEnum::fromType<T>();
         // compose enum name
         #if QT_VERSION >= 0x051200
-            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+            QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
         #else
-            QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+            QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
         #endif
         // register if not exists
         if (!uaServer->m_hashEnums.contains(strEnumName))
@@ -1487,7 +1487,7 @@ struct QUaMethodTraitsBase
         UA_Argument_init(&outputArgument);
         outputArgument.description = UA_LOCALIZEDTEXT((char *)"",
                                                       (char *)"Result Value");
-        outputArgument.name        = QUaTypesConverter::uaStringFromQString((char *)"Result");
+        outputArgument.name        = QUaTypesConverter::uaStringFromQString(QStringLiteral("Result"));
         outputArgument.dataType    = QUaTypesConverter::uaTypeNodeIdFromCpp<T>();
         outputArgument.valueRank   = UA_VALUERANK_SCALAR;
         return outputArgument;

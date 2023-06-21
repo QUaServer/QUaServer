@@ -442,12 +442,12 @@ UA_StatusCode QUaServer::callMetaMethod(
 		{
 			return (UA_StatusCode)UA_STATUSCODE_BADINTERNALERROR;
 		}
-		if (strTypeName.contains("QList", Qt::CaseInsensitive))
+		if (strTypeName.contains(QLatin1String("QList"), Qt::CaseInsensitive))
 		{
 			varArg = QUaTypesConverter::uaVariantToQVariantArray(input[k],
 				QUaTypesConverter::ArrayType::QList);
 		}
-		else if (strTypeName.contains("QVector", Qt::CaseInsensitive))
+		else if (strTypeName.contains(QLatin1String("QVector"), Qt::CaseInsensitive))
 		{
 			varArg = QUaTypesConverter::uaVariantToQVariantArray(input[k],
 				QUaTypesConverter::ArrayType::QVector);
@@ -742,7 +742,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 			// Server must be aware of user name otherwise it will kick user out of session
 			// in user access callbacks
 			// NOTE : do not keep password in memory for security
-			srv->m_hashUsers.insert(userName, "");
+			srv->m_hashUsers.insert(userName, QString());
 		}
 
 		// NOTE : actually is possible for a current session to change its user while maintaining nodeId
@@ -818,7 +818,7 @@ void QUaServer::newSession(QUaServer* server,
 		{
 			// TODO : [BUG] sometimes when client keeps old session, sockFd is not valid?
 			//Q_ASSERT(false);
-			strAddress = "Unknown";
+			strAddress = QStringLiteral("Unknown");
 			intPort = 0;
 		}
 
@@ -1281,7 +1281,7 @@ void QUaServer::setupServer()
 	this->m_newNodeMetaObject = &QUaFolderObject::staticMetaObject;
 	m_pobjectsFolder = new QUaFolderObject(this);
 	m_pobjectsFolder->setParent(this);
-	m_pobjectsFolder->setObjectName("Objects");
+	m_pobjectsFolder->setObjectName( QStringLiteral("Objects") );
 	// register base types (for all types)
 	this->registerSpecificationType<QUaBaseVariable>    (UA_NODEID_NUMERIC(0, UA_NS0ID_BASEVARIABLETYPE    ), true);
 	this->registerSpecificationType<QUaBaseDataVariable>(UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE));
@@ -1340,25 +1340,25 @@ void QUaServer::setupServer()
 	st = UA_Server_setNodeContext(m_server, UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), (void*)this); Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// add default supported references
-	m_hashHierRefTypes.insert({ "Organizes"          , "OrganizedBy"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES          ));
-	m_hashHierRefTypes.insert({ "HasOrderedComponent", "OrderedComponentOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT));
-	m_hashHierRefTypes.insert({ "HasComponent"       , "ComponentOf"        }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT       ));
-	m_hashHierRefTypes.insert({ "HasProperty"        , "PropertyOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY        ));	
+	m_hashHierRefTypes.insert({ QStringLiteral("Organizes")          , QStringLiteral("OrganizedBy")        }, UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES          ));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasOrderedComponent"), QStringLiteral("OrderedComponentOf") }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASORDEREDCOMPONENT));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasComponent")       , QStringLiteral("ComponentOf")        }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT       ));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasProperty")        , QStringLiteral("PropertyOf")         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY        ));
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	m_hashHierRefTypes.insert({ "HasEventSource"     , "EventSourceOf"      }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE));
-	m_hashHierRefTypes.insert({ "HasNotifier"        , "NotifierOf"         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASNOTIFIER   ));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasEventSource")     , QStringLiteral("EventSourceOf")      }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEVENTSOURCE));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasNotifier")        , QStringLiteral("NotifierOf")         }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASNOTIFIER   ));
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	// hierarchical
-	m_hashHierRefTypes.insert({ "HasTrueSubState" , "IsTrueSubStateOf"  }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASTRUESUBSTATE ));
-	m_hashHierRefTypes.insert({ "HasFalseSubState", "IsFalseSubStateOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASFALSESUBSTATE));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasTrueSubState") , QStringLiteral("IsTrueSubStateOf")  }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASTRUESUBSTATE ));
+	m_hashHierRefTypes.insert({ QStringLiteral("HasFalseSubState"), QStringLiteral("IsFalseSubStateOf") }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASFALSESUBSTATE));
 	// non-hierarchical
-	m_hashRefTypes.insert({ "HasCondition"      , "IsConditionOf"     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCONDITION));
-	m_hashRefTypes.insert({ "FromState"         , "ToTransition"      }, UA_NODEID_NUMERIC(0, UA_NS0ID_FROMSTATE)); // Part 5 - B.4.11
-	m_hashRefTypes.insert({ "ToState"           , "FromTransition"    }, UA_NODEID_NUMERIC(0, UA_NS0ID_TOSTATE)); // Part 5 - B.4.12
-	m_hashRefTypes.insert({ "HasCause"          , "MayBeCausedBy"     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCAUSE)); // Part 5 - B.4.13
-	m_hashRefTypes.insert({ "HasEffect"         , "MayBeEffectedBy"   }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEFFECT)); // Part 5 - B.4.14
-	m_hashRefTypes.insert({ "HasSubStateMachine", "SubStateMachineOf" }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBSTATEMACHINE)); // Part 5 - B.4.15
+	m_hashRefTypes.insert({ QStringLiteral("HasCondition")      , QStringLiteral("IsConditionOf")     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCONDITION));
+	m_hashRefTypes.insert({ QStringLiteral("FromState")         , QStringLiteral("ToTransition")      }, UA_NODEID_NUMERIC(0, UA_NS0ID_FROMSTATE)); // Part 5 - B.4.11
+	m_hashRefTypes.insert({ QStringLiteral("ToState")           , QStringLiteral("FromTransition")    }, UA_NODEID_NUMERIC(0, UA_NS0ID_TOSTATE)); // Part 5 - B.4.12
+	m_hashRefTypes.insert({ QStringLiteral("HasCause")          , QStringLiteral("MayBeCausedBy")     }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASCAUSE)); // Part 5 - B.4.13
+	m_hashRefTypes.insert({ QStringLiteral("HasEffect")         , QStringLiteral("MayBeEffectedBy")   }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEFFECT)); // Part 5 - B.4.14
+	m_hashRefTypes.insert({ QStringLiteral("HasSubStateMachine"), QStringLiteral("SubStateMachineOf") }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBSTATEMACHINE)); // Part 5 - B.4.15
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	m_hashRefTypes.unite(m_hashHierRefTypes);
@@ -1803,7 +1803,7 @@ void QUaServer::registerTypeInternal(
 		// set node attributes		  
 		QByteArray byteDisplayName = strClassName.toUtf8();
 		vtAttr.displayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
-		QByteArray byteDescription = QString("").toUtf8();
+		QByteArray byteDescription;
 		vtAttr.description = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new variable type
 		auto st = UA_Server_addVariableTypeNode(m_server,
@@ -1826,7 +1826,7 @@ void QUaServer::registerTypeInternal(
 		// set node attributes		  
 		QByteArray byteDisplayName = strClassName.toUtf8();
 		otAttr.displayName = UA_LOCALIZEDTEXT((char*)"", byteDisplayName.data());
-		QByteArray byteDescription = QString("").toUtf8();
+		QByteArray byteDescription;
 		otAttr.description = UA_LOCALIZEDTEXT((char*)"", byteDescription.data());
 		// add new object type
 		auto st = UA_Server_addObjectTypeNode(m_server,
@@ -2064,9 +2064,9 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 			QMetaEnum metaEnum = metaProperty.enumerator();
 			// compose enum name
 #if QT_VERSION >= 0x051200
-			QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+			QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 #else
-			QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+			QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
 #endif
 			// must already be registered by now
 			Q_ASSERT(m_hashEnums.contains(strEnumName));
@@ -2245,7 +2245,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			UA_Argument_init(&outputArgumentInstance);
 			outputArgumentInstance.description = UA_LOCALIZEDTEXT((char*)"",
 				(char*)"Result Value");
-			outputArgumentInstance.name = QUaTypesConverter::uaStringFromQString((char*)"Result");
+			outputArgumentInstance.name = QUaTypesConverter::uaStringFromQString( QStringLiteral("Result") );
 			outputArgumentInstance.dataType = isEnumType ?
 				this->m_hashEnums.value(QString(metaMethod.typeName())) :
 				QUaTypesConverter::uaTypeNodeIdFromQType(returnType);

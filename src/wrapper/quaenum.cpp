@@ -197,9 +197,9 @@ void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QUaNodeId& nodeId/
 {
 	// compose enum name
 #if QT_VERSION >= 0x051200
-	QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	QString strBrowseName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 #else
-	QString strBrowseName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+	QString strBrowseName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
 #endif
 	// compose values
 	QUaEnumMap mapEnum;
