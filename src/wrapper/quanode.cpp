@@ -81,15 +81,15 @@ struct QUaInMemorySerializer
 		{
 			QUaNode* node = server->nodeById(nodeId);
 			QString browse = QUaQualifiedName::reduceXml(node->nodeBrowsePath());
-			qDebug() << QString("%1 [%2] (%3)")
+			qDebug() << QStringLiteral("%1 [%2] (%3)")
 				.arg(browse)
 				.arg(nodeId)
 				.arg(m_hashNodeTreeData[nodeId].typeName);
-			if (m_hashNodeTreeData[nodeId].attrs.contains("value"))
+			if (m_hashNodeTreeData[nodeId].attrs.contains( QStringLiteral("value") ))
 			{
 				qDebug()
-					<< m_hashNodeTreeData[nodeId].attrs["dataType"]
-					<< m_hashNodeTreeData[nodeId].attrs["value"];
+					<< m_hashNodeTreeData[nodeId].attrs[ QStringLiteral("dataType") ]
+					<< m_hashNodeTreeData[nodeId].attrs[ QStringLiteral("value") ];
 			}
 		}
 	}
@@ -1289,8 +1289,8 @@ QUaNode* QUaNode::cloneNode(
 	serializer.m_hashNodeTreeData[newInstance->nodeId()] =
 		serializer.m_hashNodeTreeData.take(this->nodeId());
 	// replace browseName
-	Q_ASSERT(serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs.contains("browseName"));
-	serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs["browseName"] = 
+	Q_ASSERT(serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs.contains( QStringLiteral("browseName") ));
+	serializer.m_hashNodeTreeData[newInstance->nodeId()].attrs[ QStringLiteral("browseName") ] =
 		newInstance->browseName().toXmlString();
 	// deserialize to new instance
 	newInstance->deserialize(serializer, logOut);
@@ -1550,16 +1550,16 @@ void QUaNode::deserializeAttrs(
 	QStringList listPropsNotInAttrs;
 	// first deserialize browseName
 	Q_ASSERT_X(
-		attrs.contains("browseName"), 
+		attrs.contains( QStringLiteral("browseName") ),
 		"QUaNode::deserializeAttrs", 
 		"Deserialized attributes must contain the browseName"
 	);
 	Q_ASSERT_X(
-		QUaQualifiedName::fromXmlString(attrs["browseName"].toString()) == this->browseName(),
+		QUaQualifiedName::fromXmlString(attrs[ QStringLiteral("browseName") ].toString()) == this->browseName(),
 		"QUaNode::deserializeAttrs",
 		"Deserialized browseName does not match instance browseName"
 	);
-	listAttrsNotInProps.removeOne("browseName");
+	listAttrsNotInProps.removeOne( QStringLiteral("browseName") );
 	// list meta props
 	auto metaObject = this->metaObject();
 	int  propCount  = metaObject->propertyCount();
@@ -1868,7 +1868,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 				//Q_ASSERT_X(outValueRank == UA_VALUERANK_ANY, 
 				//	"QUaNode::getTypeVars", 
 				//	"Not Supported!");
-				auto byteType = QString("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
+				auto byteType = QStringLiteral("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
 				qType = static_cast<QMetaType::Type>(QMetaType::type(byteType.data()));
 				Q_ASSERT(qType != QMetaType::UnknownType);
 			}

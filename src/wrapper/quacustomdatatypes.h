@@ -186,11 +186,11 @@ struct QUaLog
     static QMetaEnum m_metaEnumLevel;
     template<typename T>
     static QString toString(
-            const T& log,
-            const QString &separator = ", ",
-            const QString &timeFormat = "dd.MM.yyyy hh:mm:ss.zzz",
-            const QString &lineFormat = "%1%5%2%5%3%5%4"
-            );
+        const T& log,
+        const QString &separator = QStringLiteral(", "),
+        const QString &timeFormat = QStringLiteral("dd.MM.yyyy hh:mm:ss.zzz"),
+        const QString &lineFormat = QStringLiteral("%1%5%2%5%3%5%4")
+        );
 };
 Q_DECLARE_METATYPE(QUaLog);
 
@@ -210,7 +210,7 @@ inline QString QUaLog::toString(
         strOut += QUaLog::toString(log, separator, timeFormat, lineFormat);
         if (++iter != logs.end())
         {
-            strOut += "\n";
+            strOut += QChar(L'\n');
         }
     }
     return strOut;
@@ -654,8 +654,8 @@ public:
 
     static QString reduceXml(const QUaBrowsePath& browsePath);
 
-    static QString reduceName(const QUaBrowsePath& browsePath, const QString& separator = "/");
-    static QUaBrowsePath expandName(const QString& strPath, const QString& separator = "/");
+    static QString reduceName(const QUaBrowsePath& browsePath, const QString& separator = QStringLiteral("/"));
+    static QUaBrowsePath expandName(const QString& strPath, const QString& separator = QStringLiteral("/"));
 
 private:
     quint16 m_namespace;

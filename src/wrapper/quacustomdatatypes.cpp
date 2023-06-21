@@ -22,38 +22,38 @@ If array of types supported:
 - Register QString converters in QUaTypesConverter::registerCustomTypes using QMetaType::registerConverter
 */
 QHash<QString, QMetaType::Type> QUaDataType::m_custTypesByName = {
-	{QString("Bool")                      , QMetaType::Bool                  },
-	{QString("Char")                      , QMetaType::Char                  },
-	{QString("SChar")                     , QMetaType::SChar                 },
-	{QString("UChar")                     , QMetaType::UChar                 },
-	{QString("Short")                     , QMetaType::Short                 },
-	{QString("UShort")                    , QMetaType::UShort                },
-	{QString("Int")                       , QMetaType::Int                   },
-	{QString("UInt")                      , QMetaType::UInt                  },
-	{QString("Long")                      , QMetaType::Long                  },
-	{QString("LongLong")                  , QMetaType::LongLong              },
-	{QString("ULong")                     , QMetaType::ULong                 },
-	{QString("ULongLong")                 , QMetaType::ULongLong             },
-	{QString("Float")                     , QMetaType::Float                 },
-	{QString("Double")                    , QMetaType::Double                },
-	{QString("QString")                   , QMetaType::QString               },
-	{QString("QDateTime")                 , QMetaType::QDateTime             },
-	{QString("QUuid")                     , QMetaType::QUuid                 },
-	{QString("QByteArray")                , QMetaType::QByteArray            },
-	{QString("QVariant")                  , QMetaType::QVariant              },
-	{QString("UnknownType")               , QMetaType::UnknownType           },
-	{QString("QUaNodeId")                 , QMetaType_NodeId                 },
-	{QString("QUaStatusCode")             , QMetaType_StatusCode             },
-	{QString("QUaQualifiedName")          , QMetaType_QualifiedName          },
-	{QString("QUaLocalizedText")          , QMetaType_LocalizedText          },
+	{QStringLiteral("Bool")                      , QMetaType::Bool                  },
+	{QStringLiteral("Char")                      , QMetaType::Char                  },
+	{QStringLiteral("SChar")                     , QMetaType::SChar                 },
+	{QStringLiteral("UChar")                     , QMetaType::UChar                 },
+	{QStringLiteral("Short")                     , QMetaType::Short                 },
+	{QStringLiteral("UShort")                    , QMetaType::UShort                },
+	{QStringLiteral("Int")                       , QMetaType::Int                   },
+	{QStringLiteral("UInt")                      , QMetaType::UInt                  },
+	{QStringLiteral("Long")                      , QMetaType::Long                  },
+	{QStringLiteral("LongLong")                  , QMetaType::LongLong              },
+	{QStringLiteral("ULong")                     , QMetaType::ULong                 },
+	{QStringLiteral("ULongLong")                 , QMetaType::ULongLong             },
+	{QStringLiteral("Float")                     , QMetaType::Float                 },
+	{QStringLiteral("Double")                    , QMetaType::Double                },
+	{QStringLiteral("QString")                   , QMetaType::QString               },
+	{QStringLiteral("QDateTime")                 , QMetaType::QDateTime             },
+	{QStringLiteral("QUuid")                     , QMetaType::QUuid                 },
+	{QStringLiteral("QByteArray")                , QMetaType::QByteArray            },
+	{QStringLiteral("QVariant")                  , QMetaType::QVariant              },
+	{QStringLiteral("UnknownType")               , QMetaType::UnknownType           },
+	{QStringLiteral("QUaNodeId")                 , QMetaType_NodeId                 },
+	{QStringLiteral("QUaStatusCode")             , QMetaType_StatusCode             },
+	{QStringLiteral("QUaQualifiedName")          , QMetaType_QualifiedName          },
+	{QStringLiteral("QUaLocalizedText")          , QMetaType_LocalizedText          },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// TODO : image
-	{QString("QImage")                    , QMetaType_Image                  },
-	{QString("QUaOptionSet")              , QMetaType_OptionSet              },
+	{QStringLiteral("QImage")                    , QMetaType_Image                  },
+	{QStringLiteral("QUaOptionSet")              , QMetaType_OptionSet              },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	{QString("QTimeZone")                        , QMetaType_TimeZone               },
-	{QString("QUaChangeStructureDataType")       , QMetaType_ChangeStructureDataType}
+	{QStringLiteral("QTimeZone")                 , QMetaType_TimeZone               },
+	{QStringLiteral("QUaChangeStructureDataType"), QMetaType_ChangeStructureDataType}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
@@ -127,38 +127,38 @@ QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
 };
 
 QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
-	{ QMetaType::Bool                   , {QString("Bool")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)                     , &UA_TYPES[UA_TYPES_BOOLEAN                     ]} },
-	{ QMetaType::Char                   , {QString("Char")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)                       , &UA_TYPES[UA_TYPES_SBYTE                       ]} },
-	{ QMetaType::SChar                  , {QString("SChar")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)                       , &UA_TYPES[UA_TYPES_SBYTE                       ]} },
-	{ QMetaType::UChar                  , {QString("UChar")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)                        , &UA_TYPES[UA_TYPES_BYTE                        ]} },
-	{ QMetaType::Short                  , {QString("Short")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)                       , &UA_TYPES[UA_TYPES_INT16                       ]} },
-	{ QMetaType::UShort                 , {QString("UShort")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)                      , &UA_TYPES[UA_TYPES_UINT16                      ]} },
-	{ QMetaType::Int                    , {QString("Int")                        , UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)                       , &UA_TYPES[UA_TYPES_INT32                       ]} },
-	{ QMetaType::UInt                   , {QString("UInt")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)                      , &UA_TYPES[UA_TYPES_UINT32                      ]} },
-	{ QMetaType::Long                   , {QString("Long")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)                       , &UA_TYPES[UA_TYPES_INT64                       ]} },
-	{ QMetaType::LongLong               , {QString("LongLong")                   , UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)                       , &UA_TYPES[UA_TYPES_INT64                       ]} },
-	{ QMetaType::ULong                  , {QString("ULong")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)                      , &UA_TYPES[UA_TYPES_UINT64                      ]} },
-	{ QMetaType::ULongLong              , {QString("ULongLong")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)                      , &UA_TYPES[UA_TYPES_UINT64                      ]} },
-	{ QMetaType::Float                  , {QString("Float")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)                       , &UA_TYPES[UA_TYPES_FLOAT                       ]} },
-	{ QMetaType::Double                 , {QString("Double")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)                      , &UA_TYPES[UA_TYPES_DOUBLE                      ]} },
-	{ QMetaType::QString                , {QString("QString")                    , UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)                      , &UA_TYPES[UA_TYPES_STRING                      ]} },
-	{ QMetaType::QDateTime              , {QString("QDateTime")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)                    , &UA_TYPES[UA_TYPES_DATETIME                    ]} },
-	{ QMetaType::QUuid                  , {QString("QUuid")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)                        , &UA_TYPES[UA_TYPES_GUID                        ]} },
-	{ QMetaType::QByteArray             , {QString("QByteArray")                 , UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)                  , &UA_TYPES[UA_TYPES_BYTESTRING                  ]} },
-	{ QMetaType::QVariant               , {QString("QVariant")                   , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)                , &UA_TYPES[UA_TYPES_VARIANT                     ]} },
-	{ QMetaType::UnknownType            , {QString("UnknownType")                , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)                , &UA_TYPES[UA_TYPES_VARIANT                     ]} },
-	{ QMetaType_NodeId                  , {QString("QUaNodeId")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)                      , &UA_TYPES[UA_TYPES_NODEID                      ]} },
-	{ QMetaType_StatusCode              , {QString("QUaStatusCode")              , UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , &UA_TYPES[UA_TYPES_STATUSCODE                  ]} },
-	{ QMetaType_QualifiedName           , {QString("QUaQualifiedName")           , UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , &UA_TYPES[UA_TYPES_QUALIFIEDNAME               ]} },
-	{ QMetaType_LocalizedText           , {QString("QUaLocalizedText")           , UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , &UA_TYPES[UA_TYPES_LOCALIZEDTEXT               ]} },
+	{ QMetaType::Bool                   , {QStringLiteral("Bool")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_BOOLEAN)                     , &UA_TYPES[UA_TYPES_BOOLEAN                     ]} },
+	{ QMetaType::Char                   , {QStringLiteral("Char")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)                       , &UA_TYPES[UA_TYPES_SBYTE                       ]} },
+	{ QMetaType::SChar                  , {QStringLiteral("SChar")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_SBYTE)                       , &UA_TYPES[UA_TYPES_SBYTE                       ]} },
+	{ QMetaType::UChar                  , {QStringLiteral("UChar")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_BYTE)                        , &UA_TYPES[UA_TYPES_BYTE                        ]} },
+	{ QMetaType::Short                  , {QStringLiteral("Short")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_INT16)                       , &UA_TYPES[UA_TYPES_INT16                       ]} },
+	{ QMetaType::UShort                 , {QStringLiteral("UShort")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT16)                      , &UA_TYPES[UA_TYPES_UINT16                      ]} },
+	{ QMetaType::Int                    , {QStringLiteral("Int")                        , UA_NODEID_NUMERIC(0, UA_NS0ID_INT32)                       , &UA_TYPES[UA_TYPES_INT32                       ]} },
+	{ QMetaType::UInt                   , {QStringLiteral("UInt")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT32)                      , &UA_TYPES[UA_TYPES_UINT32                      ]} },
+	{ QMetaType::Long                   , {QStringLiteral("Long")                       , UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)                       , &UA_TYPES[UA_TYPES_INT64                       ]} },
+	{ QMetaType::LongLong               , {QStringLiteral("LongLong")                   , UA_NODEID_NUMERIC(0, UA_NS0ID_INT64)                       , &UA_TYPES[UA_TYPES_INT64                       ]} },
+	{ QMetaType::ULong                  , {QStringLiteral("ULong")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)                      , &UA_TYPES[UA_TYPES_UINT64                      ]} },
+	{ QMetaType::ULongLong              , {QStringLiteral("ULongLong")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_UINT64)                      , &UA_TYPES[UA_TYPES_UINT64                      ]} },
+	{ QMetaType::Float                  , {QStringLiteral("Float")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_FLOAT)                       , &UA_TYPES[UA_TYPES_FLOAT                       ]} },
+	{ QMetaType::Double                 , {QStringLiteral("Double")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_DOUBLE)                      , &UA_TYPES[UA_TYPES_DOUBLE                      ]} },
+	{ QMetaType::QString                , {QStringLiteral("QString")                    , UA_NODEID_NUMERIC(0, UA_NS0ID_STRING)                      , &UA_TYPES[UA_TYPES_STRING                      ]} },
+	{ QMetaType::QDateTime              , {QStringLiteral("QDateTime")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_DATETIME)                    , &UA_TYPES[UA_TYPES_DATETIME                    ]} },
+	{ QMetaType::QUuid                  , {QStringLiteral("QUuid")                      , UA_NODEID_NUMERIC(0, UA_NS0ID_GUID)                        , &UA_TYPES[UA_TYPES_GUID                        ]} },
+	{ QMetaType::QByteArray             , {QStringLiteral("QByteArray")                 , UA_NODEID_NUMERIC(0, UA_NS0ID_BYTESTRING)                  , &UA_TYPES[UA_TYPES_BYTESTRING                  ]} },
+	{ QMetaType::QVariant               , {QStringLiteral("QVariant")                   , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)                , &UA_TYPES[UA_TYPES_VARIANT                     ]} },
+	{ QMetaType::UnknownType            , {QStringLiteral("UnknownType")                , UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE)                , &UA_TYPES[UA_TYPES_VARIANT                     ]} },
+	{ QMetaType_NodeId                  , {QStringLiteral("QUaNodeId")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_NODEID)                      , &UA_TYPES[UA_TYPES_NODEID                      ]} },
+	{ QMetaType_StatusCode              , {QStringLiteral("QUaStatusCode")              , UA_NODEID_NUMERIC(0, UA_NS0ID_STATUSCODE)                  , &UA_TYPES[UA_TYPES_STATUSCODE                  ]} },
+	{ QMetaType_QualifiedName           , {QStringLiteral("QUaQualifiedName")           , UA_NODEID_NUMERIC(0, UA_NS0ID_QUALIFIEDNAME)               , &UA_TYPES[UA_TYPES_QUALIFIEDNAME               ]} },
+	{ QMetaType_LocalizedText           , {QStringLiteral("QUaLocalizedText")           , UA_NODEID_NUMERIC(0, UA_NS0ID_LOCALIZEDTEXT)               , &UA_TYPES[UA_TYPES_LOCALIZEDTEXT               ]} },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// TODO : image
-	{ QMetaType_Image                   , {QString("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
-	{ QMetaType_OptionSet               , {QString("QUaOptionSet")              , UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                    , &UA_TYPES[UA_TYPES_OPTIONSET                   ]} },
+	{ QMetaType_Image                   , {QStringLiteral("QImage")                     , UA_NODEID_NUMERIC(0, UA_NS0ID_IMAGE)                       , &UA_TYPES[UA_TYPES_IMAGEPNG                    ]} },
+	{ QMetaType_OptionSet               , {QStringLiteral("QUaOptionSet")               , UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET)                   , &UA_TYPES[UA_TYPES_OPTIONSET                   ]} },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	{ QMetaType_TimeZone                , {QString("QTimeZone")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE            ]} },
-	{ QMetaType_ChangeStructureDataType , {QString("QUaChangeStructureDataType") , UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), &UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE]} }
+	{ QMetaType_TimeZone                , {QStringLiteral("QTimeZone")                  , UA_NODEID_NUMERIC(0, UA_NS0ID_TIMEZONEDATATYPE)            , &UA_TYPES[UA_TYPES_TIMEZONEDATATYPE            ]} },
+	{ QMetaType_ChangeStructureDataType , {QStringLiteral("QUaChangeStructureDataType") , UA_NODEID_NUMERIC(0, UA_NS0ID_MODELCHANGESTRUCTUREDATATYPE), &UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE]} }
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
@@ -247,7 +247,7 @@ QString QUaDataType::stringByQType(const QMetaType::Type& type)
 	Q_ASSERT(m_custTypesByType.contains(type));
 	if (!m_custTypesByType.contains(type))
 	{
-		return QString("UnknownType");
+		return QStringLiteral("UnknownType");
 	}
 	return m_custTypesByType[type].name;
 }
@@ -382,7 +382,7 @@ QUaQualifiedName::operator UA_QualifiedName() const
 
 QUaQualifiedName::operator QString() const
 {
-	return QString("ns=%1;s=%2").arg(m_namespace).arg(m_name);
+	return QStringLiteral("ns=%1;s=%2").arg(m_namespace).arg(m_name);
 }
 
 void QUaQualifiedName::operator=(const UA_QualifiedName& uaQualName)
@@ -530,14 +530,14 @@ QString QUaQualifiedName::reduceXml(const QUaBrowsePath& browsePath)
 	}
 	std::for_each(browsePath.begin(), browsePath.end(),
     [&strRet](const QUaQualifiedName& browseName) {
-		strRet += "/" + browseName.toXmlString();
+		strRet += QChar(L'/') + browseName.toXmlString();
 	});
 	return strRet;
 }
 
 QString QUaQualifiedName::reduceName(
 	const QUaBrowsePath& browsePath, 
-	const QString& separator/* = QString("/")*/
+	const QString& separator/* = QStringLiteral("/")*/
 )
 {
 	if (browsePath.count() == 1)
@@ -612,7 +612,7 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeS
 QUaChangeStructureDataType::operator QString() const
 {
 	const char* verb = m_metaEnumVerb.valueToKey(static_cast<int>(m_uiVerb));
-	return QString("%1|%2|%3").arg(m_nodeIdAffected).arg(m_nodeIdAffectedType).arg(verb);
+	return QStringLiteral("%1|%2|%3").arg(m_nodeIdAffected).arg(m_nodeIdAffectedType).arg(verb);
 }
 
 QString QUaChangeStructureDataType::toString() const
@@ -708,7 +708,7 @@ QUaLocalizedText::operator UA_LocalizedText() const
 
 QUaLocalizedText::operator QString() const
 {
-	return m_locale.isEmpty() ? m_text : QString("l=%1;t=%2").arg(m_locale).arg(m_text);
+	return m_locale.isEmpty() ? m_text : QStringLiteral("l=%1;t=%2").arg(m_locale).arg(m_text);
 }
 
 void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
@@ -1464,7 +1464,7 @@ QUaOptionSet::operator UA_OptionSet() const
 
 QUaOptionSet::operator QString() const
 {
-	return QString("bits=%1;valid=%2").arg(this->values()).arg(this->validBits());
+	return QStringLiteral("bits=%1;valid=%2").arg(this->values()).arg(this->validBits());
 }
 
 void QUaOptionSet::operator=(const UA_OptionSet& uaOptionSet)
@@ -1495,7 +1495,7 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 	auto secondComp  = components.at(1);
 	auto secondParts = secondComp.split(QLatin1String("="));
 	auto secondPart  = secondParts.count() > 1 ? secondParts.at(1) : secondParts.at(0);
-	if (firstComp.contains(QString("valid")) && firstComp.contains(QString("bits")))
+	if (firstComp.contains(QStringLiteral("valid")) && firstComp.contains(QStringLiteral("bits")))
 	{
 		validBits = firstPart.toULongLong();
 		values    = secondPart.toULongLong();

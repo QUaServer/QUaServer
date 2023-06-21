@@ -593,7 +593,7 @@ QString QUaBaseVariable::dataTypeNodeId() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// check if type is enum, if so, return type int 32
-	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
+	if (!m_qUaServer->m_hashEnums.key(outDataType).isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_INT32));
@@ -702,9 +702,9 @@ void QUaBaseVariable::setDataTypeEnum(const QMetaEnum & metaEnum)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// compose enum name
 	#if QT_VERSION >= 0x051200
-		QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+		QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
 	#else
-		QString strEnumName = QString("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+		QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
 	#endif
 	// register if not exists
 	if (!m_qUaServer->m_hashEnums.contains(strEnumName))
@@ -883,7 +883,7 @@ QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	Q_UNUSED(st);
 	// check if type is enum, if so, return type int 32
-	if (!m_qUaServer->m_hashEnums.key(outDataType, "").isEmpty())
+	if (!m_qUaServer->m_hashEnums.key(outDataType).isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QMetaType::Int;
