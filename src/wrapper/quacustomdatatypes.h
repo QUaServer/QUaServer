@@ -210,7 +210,7 @@ inline QString QUaLog::toString(
         strOut += QUaLog::toString(log, separator, timeFormat, lineFormat);
         if (++iter != logs.end())
         {
-            strOut += QChar(L'\n');
+            strOut += QLatin1Char('\n');
         }
     }
     return strOut;
