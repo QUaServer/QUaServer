@@ -16,7 +16,7 @@ UA_NodeId nodeIdFromQString(const QString & name)
 	quint16 namespaceIndex;
 	QString identifierString;
 	char    identifierType;
-    bool success = nodeIdStringSplit(name.simplified().remove(QChar(L' ')), &namespaceIndex, &identifierString, &identifierType);
+    bool success = nodeIdStringSplit(name.simplified().remove(QLatin1Char(' ')), &namespaceIndex, &identifierString, &identifierType);
 
 	if (!success) {
 		qWarning() << "Failed to split node id string:" << name;
@@ -209,8 +209,8 @@ QMetaType::Type getQArrayType(const QMetaType::Type & type)
 	}
 	// TODO : check and use with QUaDataType::
 	auto strTypeName = QString(QMetaType::typeName(type));
-	strTypeName      = strTypeName.split(QChar(L'<')).at(1);
-	strTypeName      = strTypeName.split(QChar(L'>')).at(0);
+	strTypeName      = strTypeName.split(QLatin1Char('<')).at(1);
+	strTypeName      = strTypeName.split(QLatin1Char('>')).at(0);
 	auto byteName    = strTypeName.toUtf8();
 	return (QMetaType::Type)QMetaType::type(byteName.constData());
 }
