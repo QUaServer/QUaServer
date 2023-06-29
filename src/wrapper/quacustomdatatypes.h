@@ -176,6 +176,7 @@ struct QUaLog
     QUaLog();
     // consutructor accepting QString instead of QByteArray (to support generating messages with QObject::tr)
     QUaLog(const QString& strMessage, const QUaLogLevel& logLevel, const QUaLogCategory& logCategory);
+    QUaLog(const QByteArray& baMessage, const QUaLogLevel& logLevel, const QUaLogCategory& logCategory);
     // members
     QByteArray     message;
     QUaLogLevel    level;

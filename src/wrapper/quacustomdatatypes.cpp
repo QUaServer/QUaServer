@@ -1308,15 +1308,21 @@ QMetaEnum QUaLog::m_metaEnumLevel = QMetaEnum::fromType<QUa::LogLevel>();
 QUaLog::QUaLog()
 {
 	// default constructor required by Qt
-	message = QByteArray();
 	timestamp = QDateTime::currentDateTimeUtc();
 }
 
 QUaLog::QUaLog(const QString& strMessage,
 	const QUaLogLevel& logLevel,
 	const QUaLogCategory& logCategory)
+	: QUaLog(strMessage.toUtf8(), logLevel, logCategory)
 {
-	message = strMessage.toUtf8();
+}
+
+QUaLog::QUaLog(const QByteArray& baMessage,
+	const QUaLogLevel& logLevel,
+	const QUaLogCategory& logCategory)
+{
+	message = baMessage;
 	level = logLevel;
 	category = logCategory;
 	timestamp = QDateTime::currentDateTimeUtc();

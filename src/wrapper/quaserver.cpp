@@ -39,8 +39,6 @@
 #include <QMetaProperty>
 #include <QTimer>
 
-#define QUA_MAX_LOG_MESSAGE_SIZE 1024
-
 /* helper null log for avoiding startup messages */
 void UA_Log_Discard_log(void *context,
                         UA_LogLevel level,
@@ -1011,7 +1009,6 @@ QUaServer::QUaServer(QObject* parent/* = 0*/)
 	m_bytePrivateKey = QByteArray();
 	m_bytePrivateKeyInternal = QByteArray();
 #endif
-	m_logBuffer.resize(QUA_MAX_LOG_MESSAGE_SIZE);
 #ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
 	m_conditionsRefreshRequired = false;
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
@@ -1475,10 +1472,9 @@ UA_Logger QUaServer::getLogger()
 			{
 				return;
 			}
-			vsprintf(srv->m_logBuffer.data(), msg, args);
-			// NOTE : do not convert QBytearray to QString to avoid overhead
+			vsprintf(srv->m_logBuffer, msg, args);
 			emit srv->logMessage({
-				QString::fromUtf8( srv->m_logBuffer.data() ),
+				QByteArray( srv->m_logBuffer ),
 				static_cast<QUaLogLevel>(level),
 				static_cast<QUaLogCategory>(category)
 			});
