@@ -458,7 +458,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 		varListArgs.append(varArg);
 		// create generic argument only with reference to data
 		genListArgs.append(QGenericArgument(
-			QMetaType::typeName(varListArgs[k].userType()),
+			QMetaType( varListArgs[k].userType() ).name(),
 			const_cast<void*>(varListArgs[k].constData())
 		));
 	}
@@ -479,9 +479,9 @@ UA_StatusCode QUaServer::callMetaMethod(
 	if (retType != QMetaType::Void)
 	{
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-		returnValue = QVariant(retType, static_cast<void*>(NULL));
+		returnValue = QVariant(retType);
 #else
-		returnValue = QVariant(QMetaType(retType), static_cast<void*>(NULL));
+		returnValue = QVariant( QMetaType(retType) );
 #endif
 	}
 	QGenericReturnArgument returnArgument(
@@ -1357,12 +1357,8 @@ void QUaServer::setupServer()
 	m_hashRefTypes.insert({ QStringLiteral("HasEffect")         , QStringLiteral("MayBeEffectedBy")   }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASEFFECT)); // Part 5 - B.4.14
 	m_hashRefTypes.insert({ QStringLiteral("HasSubStateMachine"), QStringLiteral("SubStateMachineOf") }, UA_NODEID_NUMERIC(0, UA_NS0ID_HASSUBSTATEMACHINE)); // Part 5 - B.4.15
 #endif // UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	m_hashRefTypes.unite(m_hashHierRefTypes);
-#else
 	for (auto it = m_hashHierRefTypes.constBegin(); it != m_hashHierRefTypes.constEnd(); ++it)
 		m_hashRefTypes.insert(it.key(), it.value());
-#endif
 
 	// read initial values for server description
 	UA_ServerConfig* config = UA_Server_getConfig(m_server);
@@ -2074,37 +2070,36 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		// parent relation with child
 		UA_NodeId referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASCOMPONENT);
 		// get property name
-		QString    strPropName = QString(metaProperty.name());
-		QByteArray bytePropName = strPropName.toUtf8();
+		QByteArray bytePropName = metaProperty.name();
 		// get type node id
 		UA_NodeId propTypeNodeId;
 		if (!isEnum)
 		{
 			// check if available in meta-system
-			if (!QMetaType::metaObjectForType(metaProperty.userType()) && !isEnum)
+			const QMetaObject *propMetaObject = QMetaType(metaProperty.userType()).metaObject();
+			if (!propMetaObject)
 			{
 				continue;
 			}
 			// check if OPC UA relevant type
-			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaProperty.userType());
-			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
+			if (!propMetaObject->inherits(&QUaNode::staticMetaObject))
 			{
 				continue;
 			}
 			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&metaObject),
+			Q_ASSERT_X(!propMetaObject->inherits(&metaObject),
 				"QUaServer::addMetaProperties",
 				"Qt MetaProperty type cannot inherit from Class.");
-			if (propMetaObject.inherits(&metaObject) && !isEnum)
+			if (propMetaObject->inherits(&metaObject) && !isEnum)
 			{
 				continue;
 			}
 			// check if prop type registered, register of not
-			propTypeNodeId = this->typeIdByMetaObject(propMetaObject);
+			propTypeNodeId = this->typeIdByMetaObject(*propMetaObject);
 			// set is variable
-			isVariable = propMetaObject.inherits(&QUaBaseVariable::staticMetaObject);
+			isVariable = propMetaObject->inherits(&QUaBaseVariable::staticMetaObject);
 			// check if ua property, then set correct reference
-			if (propMetaObject.inherits(&QUaProperty::staticMetaObject))
+			if (propMetaObject->inherits(&QUaProperty::staticMetaObject))
 			{
 				referenceTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY);
 			}
@@ -2119,7 +2114,7 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		// NOTE : use namespace 0 as default to allow QUaNode::browseChild 
 		//        to work with simple strings on custom types
 		browseName.namespaceIndex = 0;
-		browseName.name = QUaTypesConverter::uaStringFromQString(strPropName);
+		browseName.name = QUaTypesConverter::uaStringFromQString( QString::fromLatin1( bytePropName ) );
 		// display name
 		UA_LocalizedText displayName = UA_LOCALIZEDTEXT((char*)"", bytePropName.data());
 		// check if variable or object

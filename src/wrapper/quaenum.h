@@ -1,6 +1,8 @@
 #ifndef QUAENUM_H
 #define QUAENUM_H
 
+#include <QUaCustomDataTypes>
+
 typedef qint64 QUaEnumKey;
 struct QUaEnumEntry
 {
