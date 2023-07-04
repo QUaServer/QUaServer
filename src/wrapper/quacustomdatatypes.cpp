@@ -1,12 +1,7 @@
 #include "quacustomdatatypes.h"
 
 #include <QUaTypesConverter>
-
 #include <QStringView>
-#include <QChar>
-#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
-#include <QStringRef>
-#endif
 
 /* NOTE : for registering new custom types wrapping open62541 types follow steps below:
 - Create a wrapper class for the underlying open62541 type (e.g. QUaQualifiedName for UA_QualifiedName)
@@ -329,7 +324,7 @@ QUaStatusCode::operator QString() const
 	{
 		code = UA_StatusCode_name(static_cast<UA_StatusCode>(m_status));
 	}
-	return QString(code);
+	return QString::fromUtf8(code);
 }
 
 bool QUaStatusCode::operator==(const QUaStatus& uaStatus) const
@@ -394,7 +389,7 @@ void QUaQualifiedName::operator=(const UA_QualifiedName& uaQualName)
 void QUaQualifiedName::operator=(const QString& strXmlQualName)
 {
 	m_namespace = 0;
-	auto components = QStringRef(&strXmlQualName).split(QLatin1String(";"));
+	auto components = QStringView(strXmlQualName).split(QLatin1Char(';'));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -404,9 +399,8 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 	}
 	// check if valid namespace found, else assume ns = 0 and given string is name
     quint16 new_ns = m_namespace;
-	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
+	if (components.size() == 2 && components.at(0).startsWith(QLatin1String("ns=")))
 	{
-		auto strNs = components.at(0).split(QLatin1String("ns=")).last();
 		bool success = false;
 		uint ns = components.at(0).mid(3).toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
@@ -426,7 +420,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 		m_name = strXmlQualName;
 		return;
 	}
-	auto lastParts = strLast.split(QLatin1String("="));
+	auto lastParts = strLast.split(QLatin1Char('='));
 	// if reached here, xml format is correct
 	m_namespace = new_ns;
 	m_name = 
@@ -440,7 +434,7 @@ void QUaQualifiedName::operator=(const QString& strXmlQualName)
 void QUaQualifiedName::operator=(const char* strXmlQualName)
 {
 	// use overloaded equality operator
-	*this = QString(strXmlQualName);
+	*this = QString::fromUtf8(strXmlQualName);
 }
 
 bool QUaQualifiedName::operator==(const QUaQualifiedName& other) const
@@ -529,8 +523,8 @@ QString QUaQualifiedName::reduceXml(const QUaBrowsePath& browsePath)
 		return browsePath.first().toXmlString();
 	}
 	std::for_each(browsePath.begin(), browsePath.end(),
-    [&strRet](const QUaQualifiedName& browseName) {
-		strRet += QChar(L'/') + browseName.toXmlString();
+	[&strRet](const QUaQualifiedName& browseName) {
+		strRet += QLatin1Char('/') + browseName.toXmlString();
 	});
 	return strRet;
 }
@@ -560,7 +554,7 @@ QString QUaQualifiedName::reduceName(
 QUaBrowsePath QUaQualifiedName::expandName(const QString& strPath, const QString& separator)
 {
 	QUaBrowsePath retPath;
-	auto parts = QStringRef(&strPath).split(separator);
+	auto parts = QStringView(strPath).split(separator);
 	for (int i = 0; i < parts.count(); i++)
 	{
 		retPath << QUaQualifiedName(0, parts[i].toString());
@@ -587,7 +581,7 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(
 
 QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeStructure)
 {
-	auto components = QStringRef(&strChangeStructure).split(QLatin1String("|"));
+	auto components = QStringView(strChangeStructure).split(QLatin1Char('|'));
 	if (components.count() == 0)
 	{
 		return;
@@ -612,7 +606,10 @@ QUaChangeStructureDataType::QUaChangeStructureDataType(const QString& strChangeS
 QUaChangeStructureDataType::operator QString() const
 {
 	const char* verb = m_metaEnumVerb.valueToKey(static_cast<int>(m_uiVerb));
-	return QStringLiteral("%1|%2|%3").arg(m_nodeIdAffected).arg(m_nodeIdAffectedType).arg(verb);
+	return QStringLiteral("%1|%2|%3")
+		.arg(m_nodeIdAffected)
+		.arg(m_nodeIdAffectedType)
+		.arg(QString::fromUtf8(verb));
 }
 
 QString QUaChangeStructureDataType::toString() const
@@ -680,7 +677,7 @@ QUaLocalizedText::QUaLocalizedText(const QString& locale, const QString& text)
 
 QUaLocalizedText::QUaLocalizedText(const char* locale, const char* text)
 {
-	*this = QUaLocalizedText(QString(locale), QString(text));
+	*this = QUaLocalizedText(QString::fromUtf8(locale), QString::fromUtf8(text));
 }
 
 QUaLocalizedText::QUaLocalizedText(const UA_LocalizedText& uaLocalizedText)
@@ -720,7 +717,7 @@ void QUaLocalizedText::operator=(const UA_LocalizedText& uaLocalizedText)
 void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 {
 	m_locale = QString();
-	auto components = QStringRef(&strXmlLocalizedText).split(QLatin1String(";"));
+	auto components = QStringView(strXmlLocalizedText).split(QLatin1Char(';'));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -732,7 +729,7 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 	QString new_locale;
 	if (components.at(0).contains(QLatin1String("l="))) 
 	{
-		auto partsLocale = components.at(0).split(QLatin1String("="));
+		auto partsLocale = components.at(0).split(QLatin1Char('='));
 		if (partsLocale.size() < 2)
 		{
 			m_text = strXmlLocalizedText;
@@ -749,7 +746,7 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 		m_text = strXmlLocalizedText;
 		return;
 	}
-	auto partsText = components.last().split(QLatin1String("="));
+	auto partsText = components.last().split(QLatin1Char('='));
 	// if reached here, xml format is correct
 	m_locale = new_locale;
 	m_text =
@@ -762,13 +759,7 @@ void QUaLocalizedText::operator=(const QString& strXmlLocalizedText)
 
 void QUaLocalizedText::operator=(const char* strXmlLocalizedText)
 {
-	*this = QString(strXmlLocalizedText);
-}
-
-void QUaLocalizedText::operator=(const QUaLocalizedText& other)
-{
-	m_locale = other.m_locale;
-	m_text = other.m_text;
+	*this = QString::fromUtf8(strXmlLocalizedText);
 }
 
 bool QUaLocalizedText::operator==(const QUaLocalizedText& other) const
@@ -839,7 +830,7 @@ QUaNodeId::QUaNodeId(const quint16& index, const QString& stringId)
 QUaNodeId::QUaNodeId(const quint16& index, const char* stringId)
 {
 	m_nodeId = UA_NODEID_NULL;
-	*this = QUaNodeId(index, QString(stringId));
+	*this = QUaNodeId(index, QString::fromUtf8(stringId));
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const QUuid& uuId)
@@ -899,7 +890,7 @@ void QUaNodeId::operator=(const QString& strXmlNodeId)
 
 void QUaNodeId::operator=(const char* strXmlNodeId)
 {
-	*this = QString(strXmlNodeId);
+	*this = QString::fromUtf8(strXmlNodeId);
 }
 
 void QUaNodeId::operator=(const QUaNodeId& other)
@@ -1130,7 +1121,7 @@ QUaExclusiveLimitState::operator QString() const
 {
 	const char* state = m_metaEnum.valueToKey(static_cast<int>(m_state));
 	Q_ASSERT(state);
-	return QString(state);
+	return QString::fromUtf8(state);
 }
 
 QString QUaExclusiveLimitState::toString() const
@@ -1197,7 +1188,7 @@ QUaExclusiveLimitTransition::operator QString() const
 {
 	const char* transition = m_metaEnum.valueToKey(static_cast<int>(m_transition));
 	Q_ASSERT(transition);
-	return QString(transition);
+	return QString::fromUtf8(transition);
 }
 
 QString QUaExclusiveLimitTransition::toString() const
@@ -1485,7 +1476,7 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 {
 	quint64 values;
 	quint64 validBits;
-	auto components = QStringRef(&strXmlOptionSet).split(QLatin1String(";"));
+	auto components = QStringView(strXmlOptionSet).split(QLatin1Char(';'));
 	// check if valid xml format
 	if (components.size() != 2)
 	{
@@ -1495,13 +1486,13 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 		return;
 	}
 	auto firstComp   = components.at(0);
-	auto firstParts  = firstComp.split(QLatin1String("="));
+	auto firstParts  = firstComp.split(QLatin1Char('='));
 
 	auto firstPart   = firstParts.count() > 1 ? firstParts.at(1) : firstParts.at(0);
 	auto secondComp  = components.at(1);
-	auto secondParts = secondComp.split(QLatin1String("="));
+	auto secondParts = secondComp.split(QLatin1Char('='));
 	auto secondPart  = secondParts.count() > 1 ? secondParts.at(1) : secondParts.at(0);
-	if (firstComp.contains(QStringLiteral("valid")) && firstComp.contains(QStringLiteral("bits")))
+	if (firstComp.contains(QLatin1String("valid")) && firstComp.contains(QLatin1String("bits")))
 	{
 		validBits = firstPart.toULongLong();
 		values    = secondPart.toULongLong();
