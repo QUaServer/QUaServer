@@ -192,7 +192,7 @@ UA_String uaStringFromQString(const QString & uaString)
 
 bool isQTypeArray(const QMetaType::Type & type)
 {
-	auto strTypeName = QString(QMetaType::typeName(type));
+	auto strTypeName = QLatin1String( QMetaType(type).name() );
 	if (strTypeName.contains(QLatin1String("QList")  , Qt::CaseInsensitive) ||
 		strTypeName.contains(QLatin1String("QVector"), Qt::CaseInsensitive))
 	{
@@ -208,11 +208,14 @@ QMetaType::Type getQArrayType(const QMetaType::Type & type)
 		return QMetaType::UnknownType;
 	}
 	// TODO : check and use with QUaDataType::
-	auto strTypeName = QString(QMetaType::typeName(type));
-	strTypeName      = strTypeName.split(QLatin1Char('<')).at(1);
-	strTypeName      = strTypeName.split(QLatin1Char('>')).at(0);
-	auto byteName    = strTypeName.toUtf8();
-	return (QMetaType::Type)QMetaType::type(byteName.constData());
+	QByteArray byteName = QMetaType(type).name();
+	byteName = byteName.split('<').value(1);
+	byteName = byteName.split('>').value(0);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+	return static_cast<QMetaType::Type>( QMetaType::type(byteName) );
+#else
+	return static_cast<QMetaType::Type>( QMetaType::fromName(byteName).id() );
+#endif
 }
 
 bool isSupportedQType(const QMetaType::Type & type)
@@ -256,12 +259,13 @@ UA_Variant uaVariantFromQVariant(const QVariant & var
 	const UA_DataType * uaType = nullptr;
 	// fix qt type if array
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+	auto originalType = static_cast<QMetaType::Type>( var.type() );
 	if (var.canConvert<QVariantList>())
 #else
 	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
 	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
 	// prevent QString and QByteArray to convert to array
-	auto originalType  = (QMetaType::Type)var.type();
+	auto originalType = static_cast<QMetaType::Type>( var.typeId() );
 	if (var.canConvert<QVariantList>() &&
 		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
@@ -270,8 +274,7 @@ UA_Variant uaVariantFromQVariant(const QVariant & var
 	}
 	else
 	{
-		qtType = (QMetaType::Type)var.type();
-		qtType = qtType != QMetaType::User ? qtType : (QMetaType::Type)var.userType();
+		qtType = (originalType != QMetaType::User) ? originalType : static_cast<QMetaType::Type>( var.userType() );
 		uaType = uaTypeFromQType(qtType);
 	}
 	// get ua type and call respective method
@@ -466,7 +469,7 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
 	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
 	// prevent QString and QByteArray to convert to array
-	auto originalType  = (QMetaType::Type)var.type();
+	auto originalType  = static_cast<QMetaType::Type>( var.typeId() );
 	if (!var.canConvert<QVariantList>() ||
 		(originalType == QMetaType::QString || originalType == QMetaType::QByteArray))
 #endif
@@ -477,8 +480,12 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	auto iter = var.value<QSequentialIterable>();
 	// NOTE : innerVar appears to get correct type even if var is empty array
 	QVariant innerVar = iter.at(0);
-	QMetaType::Type qtType = (QMetaType::Type)innerVar.type();
-	qtType = qtType != QMetaType::User ? qtType : (QMetaType::Type)innerVar.userType();
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+	QMetaType::Type qtType = static_cast<QMetaType::Type>( innerVar.type() );
+#else
+	QMetaType::Type qtType = static_cast<QMetaType::Type>( innerVar.typeId() );
+#endif
+	if (qtType == QMetaType::User) qtType = static_cast<QMetaType::Type>( innerVar.userType() );
 	auto uaType = uaTypeFromQType(qtType);
 
 	switch (qtType)
@@ -882,10 +889,18 @@ QVariant uaVariantToQVariantArray(const UA_Variant & var, QMetaType::Type type)
 		QVariant   tempVar  = QVariant::fromValue(tempTarg);
 		// convert if necessary
 		if (type != QMetaType::UnknownType && 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 			type != static_cast<QMetaType::Type>(tempVar.type()) &&
+#else
+			type != static_cast<QMetaType::Type>(tempVar.typeId()) &&
+#endif
 			type < QMetaType::User)
 		{
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 			tempVar.convert(type);
+#else
+			tempVar.convert( QMetaType(type) );
+#endif
 			tempTarg = tempVar.value<TARGETTYPE>();
 		}
 		retList.append(tempTarg);
@@ -901,12 +916,20 @@ QVariant uaVariantToQVariantScalar(const UA_Variant & uaVariant, QMetaType::Type
 	QVariant tempVar = QVariant::fromValue(uaVariantToQVariantScalar<TARGETTYPE, UATYPE>(temp));
 	if (type != QMetaType::UnknownType && 
 		type < QMetaType::User &&
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		type != static_cast<QMetaType::Type>(tempVar.type()))
+#else
+		type != static_cast<QMetaType::Type>(tempVar.typeId()))
+#endif
 	{
 		// bool QVariant::convert(int targetTypeId) : Casts the variant to the requested type, targetTypeId. 
 		// If the cast cannot be done, the variant is still changed to the requested type, 
 		// but is left in a cleared null state similar to that constructed by QVariant(Type).
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 		tempVar.convert(type);
+#else
+		tempVar.convert( QMetaType(type) );
+#endif
 	}
 	return tempVar;
 }
@@ -916,7 +939,7 @@ QVariant uaVariantToQVariantScalar<QVariant, UA_Variant>(const UA_Variant & uaVa
 {
 	Q_ASSERT(type == QMetaType::UnknownType);
 	Q_UNUSED(uaVariant);
-	return QVariant(static_cast<QVariant::Type>(QMetaType::UnknownType));
+	return QVariant();
 }
 
 template<typename TARGETTYPE, typename UATYPE>

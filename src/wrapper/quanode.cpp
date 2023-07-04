@@ -158,16 +158,16 @@ QUaNode::QUaNode(
 		if (!metaProperty.isEnumType())
 		{
 			// check if available in meta-system
-			if (!QMetaType::metaObjectForType(metaProperty.userType()))
+			const QMetaObject *propMetaObject = QMetaType(metaProperty.userType()).metaObject();
+			if (!propMetaObject)
 			{ continue; }
 			// check if OPC UA relevant type
-			const QMetaObject propMetaObject = *QMetaType::metaObjectForType(metaProperty.userType());
-			if (!propMetaObject.inherits(&QUaNode::staticMetaObject))
+			if (!propMetaObject->inherits(&QUaNode::staticMetaObject))
 			{ continue; }
 			// check if prop inherits from parent
-			Q_ASSERT_X(!propMetaObject.inherits(&metaObject), "QUaNode Constructor", 
+			Q_ASSERT_X(!propMetaObject->inherits(&metaObject), "QUaNode Constructor",
 				"Qt MetaProperty type cannot inherit from Class.");
-			if (propMetaObject.inherits(&metaObject))
+			if (propMetaObject->inherits(&metaObject))
 			{ continue; }
 		}
 		// inc number of valid props
@@ -1504,21 +1504,18 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 		}
 		Q_ASSERT(!retMap.contains(strPropName));
 		// ignore QUaNode * properties (type children)
-		int type = metaProperty.userType();
-		auto propMetaObject = QMetaType::metaObjectForType(type);
+		QMetaType metaType( metaProperty.userType() );
+		auto propMetaObject = metaType.metaObject();
 		if (propMetaObject && propMetaObject->inherits(&QUaNode::staticMetaObject))
 		{
 			continue;
 		}
-		QVariant value = metaProperty.read(this);
 		// check known type
-		auto metaType = static_cast<QMetaType::Type>(type);
-		if (metaType == QMetaType::UnknownType)
+		if (metaType.isValid())
 		{
-			continue;
+			// get the Qt meta property name
+			retMap[strPropName] = metaProperty.read(this);
 		}
-		// get the Qt meta property name
-		retMap[strPropName] = value;
 	}
 	return retMap;
 }
@@ -1532,7 +1529,7 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 		for (const auto & ref : this->findReferences(refType))
 		{
 			QUaForwardReference fRef = { 
-				ref->nodeId(), 
+				ref->nodeId(),
 				ref->metaObject()->className(),
 				refType 
 			};
@@ -1575,15 +1572,14 @@ void QUaNode::deserializeAttrs(
 			continue;
 		}
 		// ignore QUaNode * properties (type children)
-		int type = metaProperty.userType();
-		auto propMetaObject = QMetaType::metaObjectForType(type);
+		QMetaType metaType( metaProperty.userType() );
+		auto propMetaObject = metaType.metaObject();
 		if (propMetaObject && propMetaObject->inherits(&QUaNode::staticMetaObject))
 		{
 			continue;
 		}
 		// check known type
-		auto metaType = static_cast<QMetaType::Type>(type);
-		if (metaType == QMetaType::UnknownType)
+		if (!metaType.isValid())
 		{
 			continue;
 		}
@@ -1868,8 +1864,12 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 				//Q_ASSERT_X(outValueRank == UA_VALUERANK_ANY, 
 				//	"QUaNode::getTypeVars", 
 				//	"Not Supported!");
-				auto byteType = QStringLiteral("QList<%1>").arg(QMetaType::typeName(qType)).toUtf8();
-				qType = static_cast<QMetaType::Type>(QMetaType::type(byteType.data()));
+				QByteArray byteType = QByteArrayLiteral("QList<") + QMetaType(qType).name() + '>';
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+				qType = static_cast<QMetaType::Type>( QMetaType::type(byteType) );
+#else
+				qType = static_cast<QMetaType::Type>( QMetaType::fromName(byteType).id() );
+#endif
 				Q_ASSERT(qType != QMetaType::UnknownType);
 			}
 			// add to return list
