@@ -429,7 +429,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 	{
 		QVariant varArg;
 		auto metaType    = (QMetaType::Type)metaMethod.parameterType(k);
-		auto strTypeName = QString(listTypeNames.at(k));
+		auto strTypeName = QString::fromUtf8(listTypeNames.at(k));
 		// NOTE : enums are QMetaType::UnknownType
 		Q_ASSERT_X(metaType != QMetaType::UnknownType ||
 			server->m_hashEnums.contains(strTypeName),
@@ -466,7 +466,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 	int retType = metaMethod.returnType();
 	// NOTE : enums are QMetaType::UnknownType
 	Q_ASSERT_X(retType != QMetaType::UnknownType ||
-		server->m_hashEnums.contains(metaMethod.typeName()),
+		server->m_hashEnums.contains( QString::fromUtf8(metaMethod.typeName()) ),
 		"QUaServer::callMetaMethod",
 		"Return type is not registered. Try using qRegisterMetaType."
 	);
@@ -585,7 +585,7 @@ QHash<QUaQualifiedName, int> QUaServer::metaMethodIndexes(const QMetaObject& met
 			continue;
 		}
 		// add method
-		QUaQualifiedName methName = QString(metaMethod.name());
+		QUaQualifiedName methName = QString::fromUtf8(metaMethod.name());
 		retHash[methName] = methIdx;
 	}
 	return retHash;
@@ -796,7 +796,7 @@ void QUaServer::newSession(QUaServer* server,
 		remote_name, sizeof(remote_name),
 		NULL, 0, NI_NUMERICHOST);
     Q_UNUSED(res);
-	strAddress = QString(remote_name);
+	strAddress = QString::fromUtf8(remote_name);
 	// get peer port
 	switch (address.sa_family) 
 	{
@@ -1533,7 +1533,7 @@ void QUaServer::setPrivateKey(const QByteArray& bytePrivateKey)
 
 QString QUaServer::applicationName() const
 {
-	return QString(m_byteApplicationName);
+	return QString::fromUtf8(m_byteApplicationName);
 }
 
 void QUaServer::setApplicationName(const QString& strApplicationName)
@@ -1546,7 +1546,7 @@ void QUaServer::setApplicationName(const QString& strApplicationName)
 
 QString QUaServer::applicationUri() const
 {
-	return QString(m_byteApplicationUri);
+	return QString::fromUtf8(m_byteApplicationUri);
 }
 
 void QUaServer::setApplicationUri(const QString& strApplicationUri)
@@ -1559,7 +1559,7 @@ void QUaServer::setApplicationUri(const QString& strApplicationUri)
 
 QString QUaServer::productName() const
 {
-	return QString(m_byteProductName);
+	return QString::fromUtf8(m_byteProductName);
 }
 
 void QUaServer::setProductName(const QString& strProductName)
@@ -1572,7 +1572,7 @@ void QUaServer::setProductName(const QString& strProductName)
 
 QString QUaServer::productUri() const
 {
-	return QString(m_byteProductUri);
+	return QString::fromUtf8(m_byteProductUri);
 }
 
 void QUaServer::setProductUri(const QString& strProductUri)
@@ -1585,7 +1585,7 @@ void QUaServer::setProductUri(const QString& strProductUri)
 
 QString QUaServer::manufacturerName() const
 {
-	return QString(m_byteManufacturerName);
+	return QString::fromUtf8(m_byteManufacturerName);
 }
 
 void QUaServer::setManufacturerName(const QString& strManufacturerName)
@@ -1598,7 +1598,7 @@ void QUaServer::setManufacturerName(const QString& strManufacturerName)
 
 QString QUaServer::softwareVersion() const
 {
-	return QString(m_byteSoftwareVersion);
+	return QString::fromUtf8(m_byteSoftwareVersion);
 }
 
 void QUaServer::setSoftwareVersion(const QString& strSoftwareVersion)
@@ -1611,7 +1611,7 @@ void QUaServer::setSoftwareVersion(const QString& strSoftwareVersion)
 
 QString QUaServer::buildNumber() const
 {
-	return QString(m_byteBuildNumber);
+	return QString::fromUtf8(m_byteBuildNumber);
 }
 
 void QUaServer::setBuildNumber(const QString& strBuildNumber)
@@ -1755,7 +1755,7 @@ void QUaServer::registerTypeInternal(
 		return;
 	}
 	// check if already registered
-	QString   strClassName = QString(metaObject.className());
+	QString   strClassName = QString::fromUtf8(metaObject.className());
 	UA_NodeId newTypeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (!UA_NodeId_isNull(&newTypeNodeId))
 	{
@@ -1767,7 +1767,7 @@ void QUaServer::registerTypeInternal(
 	browseName.namespaceIndex = 0;
 	browseName.name = QUaTypesConverter::uaStringFromQString(strClassName);
 	// check if base class is registered
-	QString strBaseClassName = QString(metaObject.superClass()->className());
+	QString strBaseClassName = QString::fromUtf8(metaObject.superClass()->className());
 	if (!m_mapTypes.contains(strBaseClassName))
 	{
 		// recursive
@@ -2011,7 +2011,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 			"Qt type does not implement method. Qt types must implement both mandatory and optional.");
 		if (!hashQtMethods.contains(methBrowseName))
 		{
-			QString strClassName = QString(metaObject.className());
+			QString strClassName = QString::fromUtf8(metaObject.className());
 			qDebug() << "Error Registering" << methBrowseName << "for" << strClassName;
 			continue;
 		}
@@ -2055,10 +2055,12 @@ void QUaServer::addMetaProperties(const QMetaObject& metaObject)
 		{
 			QMetaEnum metaEnum = metaProperty.enumerator();
 			// compose enum name
-#if QT_VERSION >= 0x051200
-			QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+			QString strEnumName = QStringLiteral("%1::%2").arg(
+						QString::fromLatin1(metaEnum.scope()),
+#if (QT_VERSION >= QT_VERSION_CHECK(5,12,0))
+						QString::fromLatin1(metaEnum.enumName()));
 #else
-			QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+						QString::fromLatin1(metaEnum.name()));
 #endif
 			// must already be registered by now
 			Q_ASSERT(m_hashEnums.contains(strEnumName));
@@ -2212,7 +2214,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 		// validate return type
 		auto returnType = (QMetaType::Type)metaMethod.returnType();
 		bool isSupported = QUaTypesConverter::isSupportedQType(returnType);
-		bool isEnumType = this->m_hashEnums.contains(metaMethod.typeName());
+		bool isEnumType = this->m_hashEnums.contains( QString::fromUtf8(metaMethod.typeName()) );
 		bool isArrayType = QUaTypesConverter::isQTypeArray(returnType);
 		bool isValidType = isSupported || isEnumType || isArrayType;
 		// NOTE : enums are QMetaType::UnknownType
@@ -2238,7 +2240,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 				(char*)"Result Value");
 			outputArgumentInstance.name = QUaTypesConverter::uaStringFromQString( QStringLiteral("Result") );
 			outputArgumentInstance.dataType = isEnumType ?
-				this->m_hashEnums.value(QString(metaMethod.typeName())) :
+				this->m_hashEnums.value(QString::fromUtf8(metaMethod.typeName())) :
 				QUaTypesConverter::uaTypeNodeIdFromQType(returnType);
 			outputArgumentInstance.valueRank = isArrayType ?
 				UA_VALUERANK_ONE_DIMENSION :
@@ -2261,7 +2263,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 		{
 			auto argType = (QMetaType::Type)metaMethod.parameterType(k);
 			isSupported = QUaTypesConverter::isSupportedQType(argType);
-			isEnumType  = this->m_hashEnums.contains(listTypeNames[k]);
+			isEnumType  = this->m_hashEnums.contains( QString::fromUtf8(listTypeNames[k]) );
 			isArrayType = QUaTypesConverter::isQTypeArray(argType);
 			isValidType = isSupported || isEnumType || isArrayType;
 			// NOTE : enums are QMetaType::UnknownType
@@ -2282,11 +2284,11 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 			UA_Argument_init(&inputArgument);
 			// check if type is registered enum
 			UA_NodeId uaType = isEnumType ?
-				this->m_hashEnums.value(listTypeNames[k]) :
+				this->m_hashEnums.value( QString::fromUtf8(listTypeNames[k]) ) :
 				QUaTypesConverter::uaTypeNodeIdFromQType(argType);
 			// create n-th argument
 			inputArgument.description = UA_LOCALIZEDTEXT((char*)"", (char*)"Method Argument");
-			inputArgument.name = QUaTypesConverter::uaStringFromQString(listArgNames[k]);
+			inputArgument.name = QUaTypesConverter::uaStringFromQString( QString::fromUtf8(listArgNames[k]) );
 			inputArgument.dataType = uaType;
 			inputArgument.valueRank = UA_VALUERANK_SCALAR;
 			if (isArrayType)
@@ -2374,7 +2376,7 @@ void QUaServer::addMetaMethods(const QMetaObject& parentMetaObject)
 // NOTE : do not clean
 UA_NodeId QUaServer::typeIdByMetaObject(const QMetaObject& metaObject)
 {
-	QString   strClassName = QString(metaObject.className());
+	QString   strClassName = QString::fromUtf8(metaObject.className());
 	UA_NodeId typeNodeId   = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{

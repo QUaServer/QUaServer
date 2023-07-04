@@ -101,7 +101,7 @@ public:
 	)
 	{
 		this->setValue(
-			QString(value),
+			QString::fromUtf8(value),
 			statusCode,
 			sourceTimestamp,
 			serverTimestamp,

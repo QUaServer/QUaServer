@@ -115,7 +115,6 @@ QUaNode::QUaNode(
 	Q_CHECK_PTR(server->m_newNodeMetaObject);
 	const UA_NodeId   &nodeId     = *server->m_newNodeNodeId;
 	const QMetaObject &metaObject = *server->m_newNodeMetaObject;
-	QString strClassName = QString(metaObject.className());
 	// check
 	Q_ASSERT(server && !UA_NodeId_isNull(&nodeId));
 	// bind itself, only good for constructors of derived classes, because UA constructor overwrites it
@@ -173,7 +172,7 @@ QUaNode::QUaNode(
 		// inc number of valid props
 		numProps++;
 		// the Qt meta property name must match the UA browse name
-		QUaQualifiedName browseName = QString(metaProperty.name());
+		QUaQualifiedName browseName = QString::fromUtf8(metaProperty.name());
 		Q_ASSERT(mapChildren.contains(browseName));
 		// get child nodeId for child
 		auto childNodeId = mapChildren.take(browseName);
@@ -1051,14 +1050,13 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	// else the type is not registered, so we need to create an instance of its
 	// base class at least
 	QMetaObject metaObject;
-	switch (nodeClass) {
-	case UA_NODECLASS_VARIABLE: {
+	if (nodeClass == UA_NODECLASS_VARIABLE) {
 		metaObject = QUaBaseDataVariable::staticMetaObject;
 	}
-	case UA_NODECLASS_OBJECT: {
+	else if (nodeClass == UA_NODECLASS_OBJECT) {
 		metaObject = QUaBaseObject::staticMetaObject;
 	}
-	default:
+	else {
 		Q_ASSERT(false);
 		return nullptr;
 	}
@@ -1487,7 +1485,7 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 {
 	QMap<QString, QVariant> retMap;
 	// first serialize browseName
-	retMap["browseName"] = this->browseName().toXmlString();
+	retMap[QStringLiteral("browseName")] = this->browseName().toXmlString();
 	// list meta props
 	auto metaObject = this->metaObject();
 	int  propCount  = metaObject->propertyCount();
@@ -1495,7 +1493,7 @@ const QMap<QString, QVariant> QUaNode::serializeAttrs() const
 	for (int i = propOffset; i < propCount; i++)
 	{
 		QMetaProperty metaProperty = metaObject->property(i);
-		QString strPropName = QString(metaProperty.name());
+		QString strPropName = QString::fromUtf8(metaProperty.name());
 		Q_ASSERT(metaProperty.isReadable());
 		// non-writabe props cannot be restored
 		if (!metaProperty.isWritable())
@@ -1530,7 +1528,7 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 		{
 			QUaForwardReference fRef = { 
 				ref->nodeId(),
-				ref->metaObject()->className(),
+				QString::fromUtf8( ref->metaObject()->className() ),
 				refType 
 			};
 			retList << fRef;
@@ -1564,7 +1562,7 @@ void QUaNode::deserializeAttrs(
 	for (int i = propOffset; i < propCount; i++)
 	{
 		QMetaProperty metaProperty = metaObject->property(i);
-		QString strPropName = QString(metaProperty.name());
+		QString strPropName = QString::fromUtf8(metaProperty.name());
 		Q_ASSERT(metaProperty.isReadable());
 		// non-writabe props cannot be restored
 		if (!metaProperty.isWritable())
@@ -1611,7 +1609,7 @@ void QUaNode::deserializeAttrs(
 		logOut.enqueue({
 			tr("Node %1 has attributes that were not found in data; %2. Ignoring.")
 				.arg(this->nodeId())
-				.arg(listPropsNotInAttrs.join(", ")),
+				.arg(listPropsNotInAttrs.join( QLatin1String(", ") )),
 			QUaLogLevel::Warning,
 			QUaLogCategory::Serialization
 		});
@@ -1622,7 +1620,7 @@ void QUaNode::deserializeAttrs(
 		logOut.enqueue({
 			tr("Node %1 does not have attributes that were found in data; %2. Ignoring.")
 				.arg(this->nodeId())
-				.arg(listAttrsNotInProps.join(", ")),
+				.arg(listAttrsNotInProps.join( QLatin1String(", ") )),
 			QUaLogLevel::Warning,
 			QUaLogCategory::Serialization
 		});
@@ -1667,7 +1665,7 @@ bool QUaNode::userExecutable(const QString & strUserName)
 
 QString QUaNode::className() const
 {
-	return QString(this->metaObject()->className());
+	return QString::fromUtf8(this->metaObject()->className());
 }
 
 // NOTE : need to cleanup result after calling this method

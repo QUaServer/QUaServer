@@ -654,7 +654,7 @@ template<typename T>
 inline void QUaServer::registerSpecificationType(const UA_NodeId& typeNodeId, const bool abstract/* = false*/)
 {
     auto& metaObject = T::staticMetaObject;
-    QString strClassName = QString(metaObject.className());
+    QString strClassName = QString::fromUtf8(metaObject.className());
     m_mapTypes.insert(strClassName, typeNodeId);
     m_hashMetaObjects.insert(strClassName, metaObject);
     // register for default mandatory children and so on
@@ -697,7 +697,7 @@ inline QMetaObject::Connection QUaServer::instanceCreated(
 		return QMetaObject::Connection();
 	}
 	// try to get typeNodeId, if null, then register it
-	QString   strClassName = QString(metaObject.className());
+	QString   strClassName = QString::fromUtf8(metaObject.className());
 	UA_NodeId typeNodeId = m_mapTypes.value(strClassName, UA_NODEID_NULL);
 	if (UA_NodeId_isNull(&typeNodeId))
 	{
@@ -1440,11 +1440,13 @@ struct QUaMethodTraitsBase
     {
         QMetaEnum metaEnum = QMetaEnum::fromType<T>();
         // compose enum name
-        #if QT_VERSION >= 0x051200
-            QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
-        #else
-            QString strEnumName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
-        #endif
+            QString strEnumName = QStringLiteral("%1::%2").arg(
+                        QString::fromLatin1(metaEnum.scope()),
+#if (QT_VERSION >= QT_VERSION_CHECK(5,12,0))
+                        QString::fromLatin1(metaEnum.enumName()));
+#else
+                        QString::fromLatin1(metaEnum.name()));
+#endif
         // register if not exists
         if (!uaServer->m_hashEnums.contains(strEnumName))
         {

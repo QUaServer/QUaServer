@@ -196,10 +196,12 @@ void QUaServer::removeEnumEntry(const QString& strEnumName, const QUaEnumKey& en
 void QUaServer::registerEnum(const QMetaEnum& metaEnum, const QUaNodeId& nodeId/* = ""*/)
 {
 	// compose enum name
-#if QT_VERSION >= 0x051200
-	QString strBrowseName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.enumName());
+	QString strBrowseName = QStringLiteral("%1::%2").arg(
+				QString::fromLatin1(metaEnum.scope()),
+#if (QT_VERSION >= QT_VERSION_CHECK(5,12,0))
+				QString::fromLatin1(metaEnum.enumName()));
 #else
-	QString strBrowseName = QStringLiteral("%1::%2").arg(metaEnum.scope()).arg(metaEnum.name());
+				QString::fromLatin1(metaEnum.name()));
 #endif
 	// compose values
 	QUaEnumMap mapEnum;
