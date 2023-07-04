@@ -98,7 +98,7 @@ QString nodeIdToQString(const UA_NodeId & id)
     case UA_NODEIDTYPE_BYTESTRING:
         {
 		const QByteArray temp(reinterpret_cast<char *>(id.identifier.byteString.data), static_cast<int>(id.identifier.byteString.length));
-		result.append(QStringLiteral("b=")).append(temp.toBase64());
+		result.append(QStringLiteral("b=")).append( QString::fromLatin1(temp.toBase64()) );
 		break;
         }
     }
@@ -108,16 +108,15 @@ QString nodeIdToQString(const UA_NodeId & id)
 bool nodeIdStringSplit(const QString & nodeIdString, quint16 * nsIndex, QString * identifier, char * identifierType)
 {
 	quint16 namespaceIndex = 0;
-	QStringList components = nodeIdString.split(QLatin1String(";"));
+	auto components = QStringView(nodeIdString).split(QLatin1Char(';'));
 	if (components.size() > 2)
 	{
 		return false;
 	}
-	if (components.size() == 2 && components.at(0).contains(QLatin1String("ns=")))
+	if (components.size() == 2 && components.at(0).startsWith(QLatin1String("ns=")))
 	{
-		QString strNs = components.at(0).split(QLatin1String("ns=")).last();
 		bool success = false;
-		uint ns = strNs.toUInt(&success);
+		uint ns = components.at(0).mid(3).toUInt(&success);
 		if (!success || ns > (std::numeric_limits<quint16>::max)())
 			return false;
 		namespaceIndex = ns;
@@ -130,7 +129,7 @@ bool nodeIdStringSplit(const QString & nodeIdString, quint16 * nsIndex, QString 
 	{
 		return false;
 	}
-	auto lastParts = strLast.split(QLatin1String("="));
+	auto lastParts = strLast.toString().split(QLatin1Char('='));
 	if (nsIndex)
 	{
 		*nsIndex = namespaceIndex;
@@ -146,7 +145,7 @@ bool nodeIdStringSplit(const QString & nodeIdString, quint16 * nsIndex, QString 
 			QString() : // NOTE : possible that just "i="
 			lastParts.size() == 2 ?
 			lastParts.last() : 
-			lastParts.mid(1).join(QLatin1String("="));
+			lastParts.mid(1).join(QLatin1Char('='));
 	}
 	return true;
 }
@@ -156,7 +155,7 @@ QString nodeClassToQString(const UA_NodeClass & nclass)
 	switch (nclass)
 	{
 	case UA_NODECLASS_UNSPECIFIED:
-		return QStringLiteral();
+		return QString();
 	case UA_NODECLASS_OBJECT:
 		return QStringLiteral("OBJECT");
 	case UA_NODECLASS_VARIABLE:
@@ -176,7 +175,7 @@ QString nodeClassToQString(const UA_NodeClass & nclass)
 	default:
 		break;
 	}
-	return QStringLiteral();
+	return QString();
 }
 
 QString uaStringToQString(const UA_String & string)
