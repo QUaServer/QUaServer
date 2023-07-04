@@ -226,13 +226,13 @@ inline QString QUaLog::toString(
         )
 {
     QString strTime  = log.timestamp.toLocalTime().toString(timeFormat);
-    QString strLevel = QUaLog::m_metaEnumLevel.valueToKey(static_cast<int>(log.level));
-    QString strCateg = QUaLog::m_metaEnumCategory.valueToKey(static_cast<int>(log.category));
+    QString strLevel = QString::fromLatin1( QUaLog::m_metaEnumLevel.valueToKey(static_cast<int>(log.level)) );
+    QString strCateg = QString::fromLatin1( QUaLog::m_metaEnumCategory.valueToKey(static_cast<int>(log.category)) );
     return lineFormat
             .arg(strTime)
             .arg(strLevel)
             .arg(strCateg)
-            .arg(QString(log.message))
+            .arg(QString::fromUtf8(log.message))
             .arg(separator);
 }
 
@@ -597,7 +597,6 @@ public:
     void operator= (const UA_LocalizedText& uaLocalizedText);
     void operator= (const QString& strXmlLocalizedText);
     void operator= (const char* strXmlLocalizedText);
-    void operator= (const QUaLocalizedText& other);
     bool operator==(const QUaLocalizedText& other) const;
     bool operator< (const QUaLocalizedText& other) const;
 
