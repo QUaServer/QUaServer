@@ -479,7 +479,7 @@ UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 	// assume that the type of the first elem of the array is the type of all the array
 	auto iter = var.value<QSequentialIterable>();
 	// NOTE : innerVar appears to get correct type even if var is empty array
-	QVariant innerVar = iter.at(0);
+	QVariant innerVar = (iter.size() > 0) ? iter.at(0) : QVariant();
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	QMetaType::Type qtType = static_cast<QMetaType::Type>( innerVar.type() );
 #else
