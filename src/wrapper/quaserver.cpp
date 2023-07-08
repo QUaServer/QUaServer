@@ -735,7 +735,7 @@ UA_StatusCode QUaServer::activateSession(UA_Server                    * server,
 		{
 			return UA_STATUSCODE_BADUSERACCESSDENIED;			
 		}
-		else if (match && !srv->m_hashUsers.contains(userName))
+		else if (!srv->m_hashUsers.contains(userName))
 		{
 			// Server must be aware of user name otherwise it will kick user out of session
 			// in user access callbacks
@@ -1974,7 +1974,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	m_hashMandatoryChildren[typeNodeId] =
 		m_hashMandatoryChildren.value(superTypeNodeId, QSet<QUaQualifiedName>());
 	// get mandatory children browse names
-	auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
+	const auto chidrenNodeIds = QUaNode::getChildrenNodeIds(typeNodeId, m_server);
 	for (const auto & childNodeId : chidrenNodeIds)
 	{
 		// ignore if not mandatory
@@ -1997,7 +1997,7 @@ void QUaServer::registerTypeDefaults(const UA_NodeId& typeNodeId, const QMetaObj
 	// get all ua methods
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_server);
 	// try to match ua methods with qt meta methods (by browse name)
-	for (const auto & methodNodeId : methodsNodeIds)
+	for (const auto & methodNodeId : qAsConst(methodsNodeIds))
 	{
 		// ignore if not mandatory or optional
 		if (!QUaNode::hasMandatoryModellingRule(methodNodeId, m_server) &&
@@ -2690,7 +2690,7 @@ QUaNode * QUaServer::browsePath(const QUaBrowsePath& browsePath) const
 		return this->objectsFolder()->browsePath(browsePath.mid(1));
 	}
 	// then check if first is a child of ObjectsFolder
-	auto listChildren = this->objectsFolder()->browseChildren();
+	const auto listChildren = this->objectsFolder()->browseChildren();
 	for (auto child : listChildren)
 	{
 		if (first == child->browseName())
@@ -2790,7 +2790,8 @@ bool QUaServer::userExists(const QString & strUserName) const
 QList<const QUaSession*> QUaServer::sessions() const
 {
     QList<const QUaSession*> listConstSessions;
-    for (auto session : m_hashSessions.values())
+    const auto hashSessions = m_hashSessions.values();
+    for (auto session : hashSessions)
     {
         listConstSessions << session;
     }
