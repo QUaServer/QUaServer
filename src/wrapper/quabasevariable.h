@@ -209,7 +209,7 @@ private:
 		                const UA_NumericRange *range,
 		                const UA_DataValue    *data);
 
-	bool m_bInternalWrite;
+	bool m_bInternalWrite = false;
 	std::function<QVariant()> m_readCallback;
 	bool m_readCallbackRunning = false;
 #ifdef UA_ENABLE_HISTORIZING
