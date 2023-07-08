@@ -831,39 +831,39 @@ QUaNodeId::QUaNodeId(const quint16& index, const char* stringId)
 
 QUaNodeId::QUaNodeId(const quint16& index, const QUuid& uuId)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	this->setNamespaceIndex(index);
 	this->setUuId(uuId);
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const QByteArray& byteArrayId)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	this->setNamespaceIndex(index);
 	this->setByteArrayId(byteArrayId);
 }
 
 QUaNodeId::QUaNodeId(const QUaNodeId& other)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	*this = other;
 }
 
 QUaNodeId::QUaNodeId(const UA_NodeId& uaNodeId)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	*this = uaNodeId;
 }
 
 QUaNodeId::QUaNodeId(const QString& strXmlNodeId)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	*this = strXmlNodeId;
 }
 
 QUaNodeId::QUaNodeId(const char* strXmlNodeId)
 	: m_nodeId(UA_NODEID_NULL)
-{	
+{
 	*this = strXmlNodeId;
 }
 
