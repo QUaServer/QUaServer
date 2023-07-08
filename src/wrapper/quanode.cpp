@@ -980,7 +980,6 @@ QUaNode * QUaNode::instantiateOptionalChild(
 	UA_NodeId parentNodeId = parent->nodeId();
 	// get the internal node
 	const UA_Node* optionalFieldNode = UA_NODESTORE_GET(server, &optionalFieldNodeId);
-	UA_NodeClass nodeClass = optionalFieldNode->head.nodeClass;
 	if (optionalFieldNode == NULL)
 	{
 		UA_LOG_WARNING(&server->config.logger, UA_LOGCATEGORY_USERLAND,
@@ -988,6 +987,7 @@ QUaNode * QUaNode::instantiateOptionalChild(
 			UA_StatusCode_name(UA_STATUSCODE_BADNOTFOUND));
 		return nullptr;
 	}
+	UA_NodeClass nodeClass = optionalFieldNode->head.nodeClass;
 	switch (nodeClass) {
 	case UA_NODECLASS_VARIABLE:
 	{
