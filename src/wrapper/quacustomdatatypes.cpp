@@ -158,13 +158,13 @@ QHash<QMetaType::Type, QUaDataType::TypeData> QUaDataType::m_custTypesByType = {
 };
 
 QUaDataType::QUaDataType()
+	: m_type(QMetaType::UnknownType)
 {
-	m_type = QMetaType::UnknownType;
 }
 
 QUaDataType::QUaDataType(const QMetaType::Type& metaType)
+	: m_type(metaType)
 {
-	m_type = metaType;
 }
 
 QUaDataType::QUaDataType(const QString& strType)
@@ -337,16 +337,14 @@ void QUaStatusCode::operator=(const QString& strStatus)
 	*this = QUaStatusCode(strStatus.toUtf8());
 }
 
-QUaQualifiedName::QUaQualifiedName()
+QUaQualifiedName::QUaQualifiedName() : m_namespace(0)
 {
-	m_namespace = 0;
-	m_name = QString();
 }
 
-QUaQualifiedName::QUaQualifiedName(const quint16& namespaceIndex, const QString& name)
+QUaQualifiedName::QUaQualifiedName(const quint16& namespaceIndex, const QString& name) :
+	m_namespace(namespaceIndex),
+	m_name(name)
 {
-	m_namespace = namespaceIndex;
-	m_name = name;
 }
 
 QUaQualifiedName::QUaQualifiedName(const UA_QualifiedName& uaQualName)
@@ -617,10 +615,11 @@ QString QUaChangeStructureDataType::toString() const
 	return *this;
 }
 
-QUaSession::QUaSession(QObject* parent/* = 0*/)
-	: QObject(parent)
+QUaSession::QUaSession(QObject* parent/* = 0*/) :
+	QObject(parent),
+	m_intPort(0),
+	m_timestamp(QDateTime::currentDateTimeUtc())
 {
-	m_timestamp = QDateTime::currentDateTimeUtc();
 }
 
 QString QUaSession::sessionId() const
@@ -665,14 +664,12 @@ QDateTime QUaSession::timestamp() const
 
 QUaLocalizedText::QUaLocalizedText()
 {
-	m_locale = QString();
-	m_text   = QString();
 }
 
-QUaLocalizedText::QUaLocalizedText(const QString& locale, const QString& text)
+QUaLocalizedText::QUaLocalizedText(const QString& locale, const QString& text) :
+	m_locale(locale),
+	m_text(text)
 {
-	m_locale = locale;
-	m_text   = text;
 }
 
 QUaLocalizedText::QUaLocalizedText(const char* locale, const char* text)
@@ -809,65 +806,64 @@ UA_LocalizedText QUaLocalizedText::toUaLocalizedText() const
 	return *this;
 }
 
-QUaNodeId::QUaNodeId()
+QUaNodeId::QUaNodeId() : m_nodeId(UA_NODEID_NULL)
 {
-	m_nodeId = UA_NODEID_NULL;
 }
 QUaNodeId::QUaNodeId(const quint16& index, const quint32& numericId)
+	: m_nodeId(UA_NODEID_NULL)
 {
-	m_nodeId = UA_NODEID_NULL;
 	this->setNamespaceIndex(index);
 	this->setNumericId(numericId);
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const QString& stringId)
+	: m_nodeId(UA_NODEID_NULL)
 {
-	m_nodeId = UA_NODEID_NULL;
 	this->setNamespaceIndex(index);
 	this->setStringId(stringId);
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const char* stringId)
+	: m_nodeId(UA_NODEID_NULL)
 {
-	m_nodeId = UA_NODEID_NULL;
 	*this = QUaNodeId(index, QString::fromUtf8(stringId));
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const QUuid& uuId)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	this->setNamespaceIndex(index);
 	this->setUuId(uuId);
 }
 
 QUaNodeId::QUaNodeId(const quint16& index, const QByteArray& byteArrayId)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	this->setNamespaceIndex(index);
 	this->setByteArrayId(byteArrayId);
 }
 
 QUaNodeId::QUaNodeId(const QUaNodeId& other)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	*this = other;
 }
 
 QUaNodeId::QUaNodeId(const UA_NodeId& uaNodeId)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	*this = uaNodeId;
 }
 
 QUaNodeId::QUaNodeId(const QString& strXmlNodeId)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	*this = strXmlNodeId;
 }
 
 QUaNodeId::QUaNodeId(const char* strXmlNodeId)
-{
-	m_nodeId = UA_NODEID_NULL;
+	: m_nodeId(UA_NODEID_NULL)
+{	
 	*this = strXmlNodeId;
 }
 
@@ -1296,10 +1292,11 @@ QUaEventHistoryContinuationPoint QUaEventHistoryQueryData::ContinuationFromUaByt
 QMetaEnum QUaLog::m_metaEnumCategory = QMetaEnum::fromType<QUa::LogCategory>();
 QMetaEnum QUaLog::m_metaEnumLevel = QMetaEnum::fromType<QUa::LogLevel>();
 
-QUaLog::QUaLog()
+QUaLog::QUaLog() :
+	level(QUaLogLevel::Info),
+	category(QUaLogCategory::Application),
+	timestamp(QDateTime::currentDateTimeUtc())
 {
-	// default constructor required by Qt
-	timestamp = QDateTime::currentDateTimeUtc();
 }
 
 QUaLog::QUaLog(const QString& strMessage,
@@ -1311,12 +1308,12 @@ QUaLog::QUaLog(const QString& strMessage,
 
 QUaLog::QUaLog(const QByteArray& baMessage,
 	const QUaLogLevel& logLevel,
-	const QUaLogCategory& logCategory)
+	const QUaLogCategory& logCategory) :
+	message(baMessage),
+	level(logLevel),
+	category(logCategory),
+	timestamp(QDateTime::currentDateTimeUtc())
 {
-	message = baMessage;
-	level = logLevel;
-	category = logCategory;
-	timestamp = QDateTime::currentDateTimeUtc();
 }
 
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
