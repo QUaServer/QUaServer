@@ -893,9 +893,11 @@ inline bool QUaNode::serializeInternal(T& serializer, QQueue<QUaLog> &logOut)
         return false;
     }
     // recurse children (only hierarchical references)
-    for (auto& refType : m_qUaServer->m_hashHierRefTypes.keys())
+    const auto refTypes = m_qUaServer->m_hashHierRefTypes.keys();
+    for (const auto& refType : refTypes)
     {
-        for (auto ref : this->findReferences(refType))
+        const auto references = this->findReferences(refType);
+        for (auto ref : references)
         {
             if (!ref->serializeInternal(serializer, logOut))
             {
@@ -949,10 +951,10 @@ inline bool QUaNode::deserialize(T& deserializer, QQueue<QUaLog> &logOut)
         return false;
     }
     // non-hierarchical at the end
-    auto srcNodes = nonHierRefs.keys();
-    for (auto srcNode : srcNodes)
+    const auto srcNodes = nonHierRefs.keys();
+    for (const auto srcNode : srcNodes)
     {
-        for (const auto &nonHierRef : nonHierRefs[srcNode])
+        for (const auto &nonHierRef : qAsConst(nonHierRefs[srcNode]))
         {
             auto targetNode = this->server()->nodeById(nonHierRef.targetNodeId);
             if (targetNode)
@@ -1036,7 +1038,7 @@ inline bool QUaNode::deserializeInternal(
     // get existing children list to match hierachical forward references
     auto existingChildren = this->browseChildren();
     QHash<QUaQualifiedName, QList<QUaNode*>> mapExistingChildrenBrowseName;
-    for (auto child : existingChildren)
+    for (auto child : qAsConst(existingChildren))
     {
         mapExistingChildrenBrowseName[child->browseName()] << child;
     }

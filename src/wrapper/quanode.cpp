@@ -57,7 +57,7 @@ struct QUaInMemorySerializer
 			// the show must go on
 			return true;
 		}
-		auto& data  = m_hashNodeTreeData[nodeId];
+		const auto& data = m_hashNodeTreeData[nodeId];
 		typeName    = data.typeName;
 		attrs       = data.attrs;
 		forwardRefs = data.forwardRefs;
@@ -77,7 +77,7 @@ struct QUaInMemorySerializer
 			QString browse2 = QUaQualifiedName::reduceXml(server->nodeById(nodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
 		});
-		for (const auto & nodeId : listNodeIds)
+		for (const auto & nodeId : qAsConst(listNodeIds))
 		{
 			QUaNode* node = server->nodeById(nodeId);
 			QString browse = QUaQualifiedName::reduceXml(node->nodeBrowsePath());
@@ -139,7 +139,7 @@ QUaNode::QUaNode(
 	}
 	// create hash of nodeId's by browse name, which must match Qt's metaprops
 	QHash<QUaQualifiedName, UA_NodeId> mapChildren;
-	for (const auto &childNodeId : chidrenNodeIds)
+	for (const auto &childNodeId : qAsConst(chidrenNodeIds))
 	{
 		// read browse name
 		QUaQualifiedName browseName = QUaNode::getBrowseName(childNodeId, server->m_server);
@@ -1313,7 +1313,7 @@ bool QUaNode::hasOptionalMethod(const QUaQualifiedName& methodName) const
 {
 	// get all ua methods of INSTANCE
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(m_nodeId, m_qUaServer->m_server);
-	for (const auto & methNodeId : methodsNodeIds)
+	for (const auto & methNodeId : qAsConst(methodsNodeIds))
 	{
 		// ignore if not optional
 		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1355,7 +1355,7 @@ bool QUaNode::addOptionalMethod(const QUaQualifiedName& methodName)
 		{
 		// get all ua methods of TYPE
 		auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
-		for (const auto & methNodeId : methodsNodeIds)
+		for (const auto & methNodeId : qAsConst(methodsNodeIds))
 		{
 			// ignore if not optional
 			if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1420,7 +1420,7 @@ bool QUaNode::removeOptionalMethod(const QUaQualifiedName& methodName)
 	// get all ua methods of TYPE
 	auto methodsNodeIds = QUaNode::getMethodsNodeIds(typeNodeId, m_qUaServer->m_server);
 	UA_NodeId methodNodeId = UA_NODEID_NULL;
-	for (const auto & methNodeId : methodsNodeIds)
+	for (const auto & methNodeId : qAsConst(methodsNodeIds))
 	{
 		// ignore if not optional
 		if (!QUaNode::hasOptionalModellingRule(methNodeId, m_qUaServer->m_server))
@@ -1524,7 +1524,8 @@ const QList<QUaForwardReference> QUaNode::serializeRefs() const
 	// serialize all reference types
 	for (const auto & refType : m_qUaServer->referenceTypes())
 	{
-		for (const auto & ref : this->findReferences(refType))
+		const auto references = this->findReferences(refType);
+		for (const auto & ref : references)
 		{
 			QUaForwardReference fRef = { 
 				ref->nodeId(),
@@ -1824,7 +1825,7 @@ QUaNode::QUaEventFieldMetaData QUaNode::getTypeVars(
 			server,
 			UA_NODECLASS_VARIABLE
 		);
-		for (const auto & varNodeId : varsNodeIds)
+		for (const auto & varNodeId : qAsConst(varsNodeIds))
 		{
 			// only children that have a modelling rule
 			UA_NodeId modellingRule = QUaNode::getModellingRule(varNodeId, server);
