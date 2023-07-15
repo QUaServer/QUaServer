@@ -479,7 +479,7 @@ UA_StatusCode QUaServer::callMetaMethod(
 	if (retType != QMetaType::Void)
 	{
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-		returnValue = QVariant(retType);
+		returnValue = QVariant( static_cast<QVariant::Type>(retType) );
 #else
 		returnValue = QVariant( QMetaType(retType) );
 #endif

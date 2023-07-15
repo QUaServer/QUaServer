@@ -18,9 +18,15 @@ namespace QUaTypesConverter {
 	UA_String uaStringFromQString(const QString &uaString);
 
 	// qt supported
-	bool            isQTypeArray    (const QMetaType::Type &type);
-	QMetaType::Type getQArrayType   (const QMetaType::Type &type);
+	bool            isQTypeArray (const QMetaType::Type &type);
+	bool            isQTypeArray (const QMetaType &metaType);
+	bool            isQTypeArray (const QByteArray &typeName);
+	QMetaType::Type getQArrayType(const QMetaType::Type &type);
+	QMetaType::Type getQArrayType(const QMetaType &metaType);
+	QMetaType::Type getQArrayType(const QByteArray &typeName);
 	bool            isSupportedQType(const QMetaType::Type &type);
+	bool            canConvertQVariantList(const QVariant &value);
+
 	// ua from c++
 	template<typename T>
 	UA_NodeId uaTypeNodeIdFromCpp();

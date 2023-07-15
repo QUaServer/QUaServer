@@ -191,9 +191,19 @@ UA_String uaStringFromQString(const QString & uaString)
 
 bool isQTypeArray(const QMetaType::Type & type)
 {
-	auto strTypeName = QLatin1String( QMetaType(type).name() );
-	if (strTypeName.contains(QLatin1String("QList")  , Qt::CaseInsensitive) ||
-		strTypeName.contains(QLatin1String("QVector"), Qt::CaseInsensitive))
+	return isQTypeArray( QMetaType(type) );
+}
+
+bool isQTypeArray(const QMetaType &metaType)
+{
+	return isQTypeArray( metaType.name() );
+}
+
+bool isQTypeArray(const QByteArray &typeName)
+{
+	if (typeName.startsWith( QByteArrayLiteral("QList")       ) ||
+		typeName.startsWith( QByteArrayLiteral("QVector")     ) ||
+		typeName.startsWith( QByteArrayLiteral("QStringList") ) )
 	{
 		return true;
 	}
@@ -202,14 +212,24 @@ bool isQTypeArray(const QMetaType::Type & type)
 
 QMetaType::Type getQArrayType(const QMetaType::Type & type)
 {
-	if (!QUaTypesConverter::isQTypeArray(type))
-	{
+	return getQArrayType( QMetaType(type) );
+}
+
+QMetaType::Type getQArrayType(const QMetaType &metaType)
+{
+	return getQArrayType( metaType.name() );
+}
+
+QMetaType::Type getQArrayType(const QByteArray &typeName)
+{
+	if (typeName.startsWith( QByteArrayLiteral("QStringList") )){
+		return QMetaType::QString;
+	}
+	if (!QUaTypesConverter::isQTypeArray(typeName)){
 		return QMetaType::UnknownType;
 	}
 	// TODO : check and use with QUaDataType::
-	QByteArray byteName = QMetaType(type).name();
-	byteName = byteName.split('<').value(1);
-	byteName = byteName.split('>').value(0);
+	QByteArray byteName = typeName.split('<').value(1).split('>').value(0);
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	return static_cast<QMetaType::Type>( QMetaType::type(byteName) );
 #else
@@ -229,6 +249,21 @@ bool isSupportedQType(const QMetaType::Type & type)
 	return supported;
 }
 
+bool canConvertQVariantList(const QVariant &value)
+{
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+		return value.canConvert<QVariantList>();
+#else
+		// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
+		// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
+		// prevent QString and QByteArray to convert to array
+		auto typeId = static_cast<QMetaType::Type>( value.typeId() );
+		return value.canConvert<QVariantList>() &&
+				(typeId != QMetaType::QString) &&
+				(typeId != QMetaType::QByteArray);
+#endif
+}
+
 UA_NodeId uaTypeNodeIdFromQType(const QMetaType::Type & type)
 {
 	return QUaDataType::nodeIdByQType(type);
@@ -238,7 +273,6 @@ const UA_DataType * uaTypeFromQType(const QMetaType::Type & type)
 {
 	return QUaDataType::dataTypeByQType(type);
 }
-
 UA_Variant uaVariantFromQVariant(const QVariant & var
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifndef OPEN62541_ISSUE3934_RESOLVED
@@ -254,26 +288,21 @@ UA_Variant uaVariantFromQVariant(const QVariant & var
 		return var;
 	}
 	// TODO : support multidimentional arrays
-	QMetaType::Type qtType = QMetaType::UnknownType;
+	QMetaType::Type qtType;
 	const UA_DataType * uaType = nullptr;
 	// fix qt type if array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	auto originalType = static_cast<QMetaType::Type>( var.type() );
-	if (var.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
-	auto originalType = static_cast<QMetaType::Type>( var.typeId() );
-	if (var.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
-#endif
+	if (canConvertQVariantList(var))
 	{
 		qtType = QMetaType::QVariantList;
 	}
 	else
 	{
-		qtType = (originalType != QMetaType::User) ? originalType : static_cast<QMetaType::Type>( var.userType() );
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+		qtType = static_cast<QMetaType::Type>( var.type() );
+#else
+		qtType = static_cast<QMetaType::Type>( var.typeId() );
+#endif
+		if (qtType == QMetaType::User) qtType = static_cast<QMetaType::Type>( var.userType() );
 		uaType = uaTypeFromQType(qtType);
 	}
 	// get ua type and call respective method
@@ -461,30 +490,24 @@ void uaVariantFromQVariantScalar<UA_ModelChangeStructureDataType, QUaChangeStruc
 
 UA_Variant uaVariantFromQVariantArray(const QVariant & var)
 {
-	Q_ASSERT(var.canConvert<QVariantList>());
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	if (!var.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
-	auto originalType  = static_cast<QMetaType::Type>( var.typeId() );
-	if (!var.canConvert<QVariantList>() ||
-		(originalType == QMetaType::QString || originalType == QMetaType::QByteArray))
-#endif
-	{
-		return UA_Variant();
-	}
+	Q_ASSERT(canConvertQVariantList(var));
+	if (!canConvertQVariantList(var)) return UA_Variant();
+
 	// assume that the type of the first elem of the array is the type of all the array
 	auto iter = var.value<QSequentialIterable>();
-	// NOTE : innerVar appears to get correct type even if var is empty array
-	QVariant innerVar = (iter.size() > 0) ? iter.at(0) : QVariant();
+	QMetaType::Type qtType;
+	if (iter.size() > 0)
+	{
+		QVariant innerVar = iter.at(0);
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	QMetaType::Type qtType = static_cast<QMetaType::Type>( innerVar.type() );
+		qtType = static_cast<QMetaType::Type>( innerVar.type() );
 #else
-	QMetaType::Type qtType = static_cast<QMetaType::Type>( innerVar.typeId() );
+		qtType = static_cast<QMetaType::Type>( innerVar.typeId() );
 #endif
-	if (qtType == QMetaType::User) qtType = static_cast<QMetaType::Type>( innerVar.userType() );
+		if (qtType == QMetaType::User) qtType = static_cast<QMetaType::Type>( innerVar.userType() );
+	}
+	else qtType = QUaTypesConverter::getQArrayType( var.typeName() );
+
 	auto uaType = uaTypeFromQType(qtType);
 
 	switch (qtType)
