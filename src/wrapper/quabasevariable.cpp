@@ -266,63 +266,59 @@ void QUaBaseVariable::setValue(
 	Q_CHECK_PTR(m_qUaServer);
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	// get types
-	auto oldType = this->dataType();
+#define oldType m_dataType
 	// get modifiable copies
 	auto newValue = value;
 	auto newType  = newTypeConst;
-	// these values are maped to the same (see QUaDataType::m_custTypesByNodeId in quacustomdatatypes.cpp)
-	if (newType == QMetaType::SChar    ) { newType = QMetaType::Char; }
-	if (newType == QMetaType::LongLong ) { newType = QMetaType::Long; }
-	if (newType == QMetaType::ULongLong) { newType = QMetaType::ULong;}
+
 	// if new type not forced, then figure out new type from input
 	if (newType == QMetaType::UnknownType)
 	{
-		// if array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-		auto originalType = static_cast<QMetaType::Type>( value.type() );
-		if (newValue.canConvert<QVariantList>())
-#else
-		// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-		// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-		// prevent QString and QByteArray to convert to array
-		auto originalType = static_cast<QMetaType::Type>( value.typeId() );
-		if (newValue.canConvert<QVariantList>() &&
-			(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
-#endif
+		bool isArray = QUaTypesConverter::canConvertQVariantList(value);
+		if (isArray)
 		{
-			auto iter = newValue.value<QSequentialIterable>();
-			Q_ASSERT(iter.size() > 0); // The list must not be empty.
-			QVariant innerVar = (iter.size() > 0) ? iter.at(0) : QVariant();
+			auto iter = value.value<QSequentialIterable>();
+			if (iter.size() > 0)
+			{
+				QVariant innerVar = iter.at(0);
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-			newType = static_cast<QMetaType::Type>( innerVar.type() );
+				newType = static_cast<QMetaType::Type>( innerVar.type() );
 #else
-			newType = static_cast<QMetaType::Type>( innerVar.typeId() );
+				newType = static_cast<QMetaType::Type>( innerVar.typeId() );
 #endif
-			if (newType == QMetaType::User) newType = static_cast<QMetaType::Type>( innerVar.userType() );
+				if (newType == QMetaType::User) newType = static_cast<QMetaType::Type>( innerVar.userType() );
+			}
+			else newType = QUaTypesConverter::getQArrayType( value.typeName() );
 		}
 		// if scalar
 		else
 		{
-			newType = (originalType != QMetaType::User) ? originalType : static_cast<QMetaType::Type>( value.userType() );
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+			newType = static_cast<QMetaType::Type>( value.type() );
+#else
+			newType = static_cast<QMetaType::Type>( value.typeId() );
+#endif
+			if (newType == QMetaType::User) newType = static_cast<QMetaType::Type>( value.userType() );
 		}
+
 		// if new type different from old type, try to keep old type
 		if (newType != oldType)
 		{
-			// if array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-			if (newValue.canConvert<QVariantList>())
-#else
+#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
 			QMetaType oldMetaType(oldType);
-			// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-			// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-			// prevent QString and QByteArray to convert to array
-			if (newValue.canConvert<QVariantList>() &&
-				(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
+			if (isArray)
 			{
 				// can convert to old type
-				auto iter = newValue.value<QSequentialIterable>();
-				QVariant innerVar = (iter.size() > 0) ? iter.at(0) : QVariant();
+				QVariant innerVar;
+				auto iter = value.value<QSequentialIterable>();
+				if (iter.size()>0) innerVar = iter.at(0);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+				else { innerVar = QVariant( static_cast<QVariant::Type>(newType) ); }
+#else
+				else { innerVar = QVariant( QMetaType(newType) ); }
+#endif
+
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 				if (innerVar.canConvert(oldType))
 #else
@@ -331,15 +327,17 @@ void QUaBaseVariable::setValue(
 				{
 					// convert to old type
 					QVariantList listOldType;
-					for (int i = 0; i < iter.size(); i++)
+					for (auto it = iter.begin(), itEnd = iter.end(); it != itEnd; ++it)
 					{
-						listOldType.append(iter.at(i));
+						QVariant val = *it;
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-						listOldType[i].convert(oldType);
+						val.convert(oldType);
 #else
-						listOldType[i].convert(oldMetaType);
+						val.convert(oldMetaType);
 #endif
+						listOldType.append(val);
 					}
+
 					newValue = listOldType;
 					// preserve old type
 					newType = oldType;
@@ -348,14 +346,13 @@ void QUaBaseVariable::setValue(
 			// if scalar and can convert to old type
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 			else if (newValue.canConvert(oldType))
-#else
-			else if (newValue.canConvert(oldMetaType))
-#endif
 			{
 				// convert to old type
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 				newValue.convert(oldType);
 #else
+			else if (newValue.canConvert(oldMetaType))
+			{
+				// convert to old type
 				newValue.convert(oldMetaType);
 #endif
 				// preserve old type
@@ -368,21 +365,25 @@ void QUaBaseVariable::setValue(
 			}
 		}
 	}
+	// these values are maped to the same (see QUaDataType::m_custTypesByNodeId in quacustomdatatypes.cpp)
+	else if (newType == QMetaType::SChar    ) { newType = QMetaType::Char; }
+	else if (newType == QMetaType::LongLong ) { newType = QMetaType::Long; }
+	else if (newType == QMetaType::ULongLong) { newType = QMetaType::ULong;}
+
 	// wether new type is forced or could not be converted to old type, we need type convertion
 	if (newType != oldType)
 	{
-		// need to set type to UA_NS0ID_BASEDATATYPE to avoid "BadTypeMismatch" error
 		auto st = UA_Server_writeDataType(m_qUaServer->m_server,
 			m_nodeId,
-			UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATATYPE));
+			QUaTypesConverter::uaTypeNodeIdFromQType(newType));
 		Q_ASSERT(st == UA_STATUSCODE_GOOD);
 		Q_UNUSED(st);
 	}
+
 	// convert to UA_Variant and set new value
-#ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
-#ifndef OPEN62541_ISSUE3934_RESOLVED
+#if defined(UA_GENERATED_NAMESPACE_ZERO_FULL) && !defined(OPEN62541_ISSUE3934_RESOLVED)
 	UA_DataType* optDataType = nullptr;
-	if (m_dataType == QMetaType_OptionSet)
+	if (oldType == QMetaType_OptionSet)
 	{
 		// read type
 		UA_NodeId optionSetTypeNodeId;
@@ -395,10 +396,8 @@ void QUaBaseVariable::setValue(
 	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue, optDataType);
 #else
 	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
-#endif // !OPEN62541_ISSUE3934_RESOLVED
-#else
-	auto uaVar = QUaTypesConverter::uaVariantFromQVariant(newValue);
-#endif // UA_GENERATED_NAMESPACE_ZERO_FULL
+#endif
+
 	// mask as internal write to avoid emitting valueChange signal on QUaBaseVariable::onWrite
 	m_bInternalWrite = true;
 	auto st = this->setValueInternal(
@@ -411,15 +410,7 @@ void QUaBaseVariable::setValue(
 	Q_UNUSED(st);
 	// clean up
 	UA_Variant_clear(&uaVar);
-	// if type had to be converted we need to set new type
-	if (newType != oldType)
-	{
-		st = UA_Server_writeDataType(m_qUaServer->m_server,
-			m_nodeId,
-			QUaTypesConverter::uaTypeNodeIdFromQType(newType));
-		Q_ASSERT(st == UA_STATUSCODE_GOOD);
-		Q_UNUSED(st);
-	}
+
 	// [NOTE] do not set rank or arrayDimensions because they are permanent
 	//        is better to just set array dimensions on Variant value and leave rank as ANY
 	// update cache
@@ -640,9 +631,9 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & newTypeConst)
 	Q_ASSERT(!UA_NodeId_isNull(&m_nodeId));
 	auto dataType = newTypeConst;
 	// these values are maped to the same (see QUaDataType::m_custTypesByNodeId in quacustomdatatypes.cpp)
-	if (dataType == QMetaType::SChar    ) { dataType = QMetaType::Char; }
-	if (dataType == QMetaType::LongLong ) { dataType = QMetaType::Long; }
-	if (dataType == QMetaType::ULongLong) { dataType = QMetaType::ULong;}
+	if      (dataType == QMetaType::SChar    ) { dataType = QMetaType::Char; }
+	else if (dataType == QMetaType::LongLong ) { dataType = QMetaType::Long; }
+	else if (dataType == QMetaType::ULongLong) { dataType = QMetaType::ULong;}
 	// early exit if already same
 	if (dataType == m_dataType)
 	{
@@ -655,38 +646,23 @@ void QUaBaseVariable::setDataType(const QMetaType::Type & newTypeConst)
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// get old value
 	QVariant oldValue = this->value();
-	// handle array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	if (oldValue.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
+#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
 	QMetaType dataMetaType(dataType);
-	auto originalType = static_cast<QMetaType::Type>( oldValue.typeId() );
-	if (oldValue.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
+	// handle array
+	if (QUaTypesConverter::canConvertQVariantList(oldValue))
 	{
 		QVariantList listConvValues;
 		auto iter = oldValue.value<QSequentialIterable>();
 		// loop scalar or array
-		for (int i = 0; i < iter.size(); i++)
+		for (auto it = iter.begin(), itEnd = iter.end(); it != itEnd; ++it)
 		{
-			QVariant varCurr = iter.at(i);
+			QVariant varCurr = *it;
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-			if (varCurr.canConvert(dataType))
+			if (varCurr.canConvert(dataType)) { varCurr.convert(dataType); }
 #else
-			if (varCurr.canConvert(dataMetaType))
+			if (varCurr.canConvert(dataMetaType)) { varCurr.convert(dataMetaType); }
 #endif
-			{
-				// convert in place
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-				varCurr.convert(dataType);
-#else
-				varCurr.convert(dataMetaType);
-#endif
-			}
 			else
 			{
 				// else set default value for type
@@ -793,17 +769,10 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 	// get old value
 	QVariant oldValue = this->value();
 	// handle array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	if (oldValue.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
+#if (QT_VERSION >= QT_VERSION_CHECK(6,0,0))
 	QMetaType metaTypeInt = QMetaType::fromType<int>();
-	auto originalType = static_cast<QMetaType::Type>( oldValue.typeId() );
-	if (oldValue.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
 #endif
+	if (QUaTypesConverter::canConvertQVariantList(oldValue))
 	{
 		auto iter = oldValue.value<QSequentialIterable>();
 		// get first value if any
@@ -883,18 +852,8 @@ void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
 	// get old value
 	QVariant oldValue = this->value();
 	// handle array
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	if (oldValue.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
-	auto originalType  = (QMetaType::Type)oldValue.type();
-	if (oldValue.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
-#endif
+	if (QUaTypesConverter::canConvertQVariantList(oldValue))
 	{
-		QVariantList listConvValues;
 		auto iter = oldValue.value<QSequentialIterable>();
 		// get first value if any
 		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant((QVariant::Type)QMetaType::ULongLong);
@@ -1256,15 +1215,7 @@ qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 	{
 		return UA_VALUERANK_ANY;
 	}
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	else if (varValue.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
-	else if (varValue.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
-#endif
+	else if (QUaTypesConverter::canConvertQVariantList(varValue))
 	{
 		return UA_VALUERANK_ONE_DIMENSION;
 	}
@@ -1275,16 +1226,7 @@ qint32 QUaBaseVariable::GetValueRankFromQVariant(const QVariant & varValue)
 // [STATIC]
 QVector<quint32> QUaBaseVariable::GetArrayDimensionsFromQVariant(const QVariant & varValue)
 {
-#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-	if (varValue.canConvert<QVariantList>())
-#else
-	// NOTE: Qt5 and Qt6 variant canConvert<QVariantList> result is different
-	// Qt6 QString and QByteArray can convert to QVariantList but Qt5 cannot
-	// prevent QString and QByteArray to convert to array
-	auto originalType = static_cast<QMetaType::Type>(varValue.typeId());
-	if (varValue.canConvert<QVariantList>() &&
-		(originalType != QMetaType::QString && originalType != QMetaType::QByteArray))
-#endif
+	if (QUaTypesConverter::canConvertQVariantList(varValue))
 	{
 		auto iter = varValue.value<QSequentialIterable>();
 		auto size = (quint32)iter.size();
