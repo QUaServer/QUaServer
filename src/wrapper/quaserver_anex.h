@@ -78,11 +78,6 @@ struct {								\
     struct type **tqe_prev;	/* address of previous next element */	\
 }
 
-#define ZIP_HEAD(name, type)                    \
-struct name {                                   \
-    struct type *zip_root;                      \
-}
-
    /*
     * tail queue access methods
     */
@@ -146,6 +141,9 @@ struct ContinuationPoint;
 typedef struct UA_SessionHeader {
     SLIST_ENTRY(UA_SessionHeader) next;
     UA_NodeId authenticationToken;
+#if UA_OPEN62541_VER_MINOR > 2
+    UA_Boolean serverSession; /* Disambiguate client and server session */
+#endif
     UA_SecureChannel* channel; /* The pointer back to the SecureChannel in the session. */
 } UA_SessionHeader;
 
@@ -154,7 +152,7 @@ typedef struct {
     UA_ApplicationDescription clientDescription;
     UA_String         sessionName;
     UA_Boolean        activated;
-    void* sessionHandle; /* pointer assigned in userland-callback */
+    void*             sessionHandle; /* pointer assigned in userland-callback */
     UA_NodeId         sessionId;
     UA_UInt32         maxRequestMessageSize;
     UA_UInt32         maxResponseMessageSize;
@@ -163,16 +161,43 @@ typedef struct {
     UA_ByteString     serverNonce;
     UA_UInt16         availableContinuationPoints;
     ContinuationPoint* continuationPoints;
+
+#if UA_OPEN62541_VER_MINOR > 2
+    size_t paramsSize;
+    UA_KeyValuePair *params;
+
+    /* Localization information */
+    size_t localeIdsSize;
+    UA_String *localeIds;
+#endif
+
 #ifdef UA_ENABLE_SUBSCRIPTIONS
+    /* The queue is ordered according to the priority byte (higher bytes come
+     * first). When a late subscription finally publishes, then it is pushed to
+     * the back within the sub-set of subscriptions that has the same priority
+     * (round-robin scheduling). */
     size_t subscriptionsSize;
-    TAILQ_HEAD(, UA_Subscription) subscriptions; /* Late subscriptions that do eventually
-                                                  * publish are moved to the tail. So that
-                                                  * other late subscriptions are not
-                                                  * starved. */
+    TAILQ_HEAD(, UA_Subscription) subscriptions;
+
+#if UA_OPEN62541_VER_MINOR > 2
+    size_t responseQueueSize;
+#endif
+
     SIMPLEQ_HEAD(, UA_PublishResponseEntry) responseQueue;
+
+#if UA_OPEN62541_VER_MINOR < 3
     UA_UInt32 numPublishReq;
+#endif
+
     size_t totalRetransmissionQueueSize; /* Retransmissions of all subscriptions */
 #endif
+
+#if UA_OPEN62541_VER_MINOR > 2
+#ifdef UA_ENABLE_DIAGNOSTICS
+    UA_SessionSecurityDiagnosticsDataType securityDiagnostics;
+    UA_SessionDiagnosticsDataType diagnostics;
+#endif // UA_ENABLE_DIAGNOSTICS
+#endif // UA_OPEN62541_VER_MINOR
 } UA_Session;
 
 extern "C" UA_Session *
@@ -181,6 +206,7 @@ UA_Server_getSessionById(UA_Server * server, const UA_NodeId * sessionId);
 typedef void (*UA_ApplicationCallback)(void* application, void* data);
 
 typedef struct UA_TimerEntry {
+#if UA_OPEN62541_VER_MINOR < 3
     ZIP_ENTRY(UA_TimerEntry) zipfields;
     UA_DateTime nextTime;                    /* The next time when the callback
                                               * is to be executed */
@@ -193,6 +219,21 @@ typedef struct UA_TimerEntry {
     void* data;
 
     ZIP_ENTRY(UA_TimerEntry) idZipfields;
+#else
+    struct aa_entry treeEntry;
+    UA_TimerPolicy timerPolicy;              /* Timer policy to handle cycle misses */
+    UA_DateTime nextTime;                    /* The next time when the callback
+                                              * is to be executed */
+    UA_UInt64 interval;                      /* Interval in 100ns resolution. If
+                                                the interval is zero, the
+                                                callback is not repeated and
+                                                removed after execution. */
+    UA_ApplicationCallback callback;
+    void* application;
+    void* data;
+
+    struct aa_entry idTreeEntry;
+#endif
     UA_UInt64 id;                            /* Id of the entry */
 } UA_TimerEntry;
 
@@ -212,6 +253,7 @@ ZIP_HEAD(UA_TimerIdZip, UA_TimerEntry);
 typedef struct UA_TimerIdZip UA_TimerIdZip;
 
 typedef struct {
+#if UA_OPEN62541_VER_MINOR < 3
     UA_TimerZip root;     /* The root of the time-sorted zip tree */
     UA_TimerIdZip idRoot; /* The root of the id-sorted zip tree */
     UA_UInt64 idCounter;  /* Generate unique identifiers. Identifiers are always
@@ -219,6 +261,15 @@ typedef struct {
 #if UA_MULTITHREADING >= 100
     UA_LOCK_TYPE(timerMutex)
 #endif
+#else
+    struct aa_head root;   /* The root of the time-sorted tree */
+    struct aa_head idRoot; /* The root of the id-sorted tree */
+    UA_UInt64 idCounter;   /* Generate unique identifiers. Identifiers are
+                            * always above zero. */
+#if UA_MULTITHREADING >= 100
+    UA_Lock timerMutex;
+#endif
+#endif // UA_OPEN62541_VER_MINOR
 } UA_Timer;
 
 // NOTE : just gave it a name in order to be able to use
@@ -382,6 +433,9 @@ struct UA_Server {
     /* Session Management */
     LIST_HEAD(session_list, session_list_entry) sessions;
     UA_UInt32 sessionCount;
+#if UA_OPEN62541_VER_MINOR > 2
+    UA_UInt32 activeSessionCount;
+#endif
     UA_Session adminSession; /* Local access to the services (for startup and
                               * maintenance) uses this Session with all possible
                               * access rights (Session Id: 1) */
@@ -416,7 +470,11 @@ struct UA_Server {
     UA_UInt32 lastLocalMonitoredItemId;
 
 # ifdef UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS
+#if UA_OPEN62541_VER_MINOR < 3
     LIST_HEAD(, UA_ConditionSource) headConditionSource;
+#else
+    LIST_HEAD(, UA_ConditionSource) conditionSources;
+#endif
 # endif
 
 #endif
@@ -427,12 +485,23 @@ struct UA_Server {
 #endif
 
 #if UA_MULTITHREADING >= 100
+#if UA_OPEN62541_VER_MINOR < 3
     UA_LOCK_TYPE(networkMutex)
-        UA_LOCK_TYPE(serviceMutex)
+    UA_LOCK_TYPE(serviceMutex)
+#else
+    UA_Lock networkMutex;
+    UA_Lock serviceMutex;
+#endif
 #endif
 
         /* Statistics */
-        UA_ServerStatistics serverStats;
+#if UA_OPEN62541_VER_MINOR < 3
+    UA_ServerStatistics serverStats;
+#else
+    UA_NetworkStatistics networkStatistics;
+    UA_SecureChannelStatistics secureChannelStatistics;
+    UA_ServerDiagnosticsSummaryDataType serverDiagnosticsSummary;
+#endif
 };
 
 /*********************************************************************************************
@@ -490,13 +559,16 @@ typedef struct {
     UA_Boolean allowAnonymous;
     size_t usernamePasswordLoginSize;
     UA_UsernamePasswordLogin* usernamePasswordLogin;
+#if UA_OPEN62541_VER_MINOR > 2
+    UA_CertificateVerification verifyX509;
+#endif
 } AccessControlContext;
 
-#define ANONYMOUS_POLICY "open62541-anonymous-policy"
-#define USERNAME_POLICY "open62541-username-policy"
-const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
-const UA_String username_policy = UA_STRING_STATIC(USERNAME_POLICY);
-
+extern "C" const UA_String anonymous_policy;
+extern "C" const UA_String username_policy;
+#if UA_OPEN62541_VER_MINOR > 2
+extern "C" const UA_String certificate_policy;
+#endif
 
 #ifdef UA_ENABLE_HISTORIZING
 /*********************************************************************************************
@@ -608,30 +680,60 @@ setMethodNode_callback(UA_Server * server,
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
 typedef TAILQ_HEAD(NotificationQueue, UA_Notification) NotificationQueue;
+#if UA_OPEN62541_VER_MINOR > 2
+typedef TAILQ_HEAD(NotificationMessageQueue, UA_NotificationMessageEntry)
+    NotificationMessageQueue;
+
+/* The type of sampling for MonitoredItems depends on the sampling interval.
+ *
+ * >0: Cyclic callback
+ * =0: Attached to the node. Sampling is triggered after every "write".
+ * <0: Attached to the subscription. Triggered just before every "publish". */
+typedef enum {
+    UA_MONITOREDITEMSAMPLINGTYPE_NONE = 0,
+    UA_MONITOREDITEMSAMPLINGTYPE_CYCLIC, /* Cyclic callback */
+    UA_MONITOREDITEMSAMPLINGTYPE_EVENT,  /* Attached to the node. Can be a "write
+                                          * event" for DataChange MonitoredItems
+                                          * with a zero sampling interval .*/
+    UA_MONITOREDITEMSAMPLINGTYPE_PUBLISH /* Attached to the subscription */
+} UA_MonitoredItemSamplingType;
+#endif
 
 struct UA_MonitoredItem {
     UA_TimerEntry delayedFreePointers;
     LIST_ENTRY(UA_MonitoredItem) listEntry;
+#if UA_OPEN62541_VER_MINOR < 3
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     UA_MonitoredItem* next; /* Linked list of MonitoredItems directly attached
                              * to a Node */
 #endif
-    UA_Subscription* subscription; /* Local MonitoredItem if the subscription is NULL */
+#endif // UA_OPEN62541_VER_MINOR
+    UA_Subscription* subscription; /* If NULL, then this is a Local MonitoredItem */
     UA_UInt32 monitoredItemId;
 
     /* Status and Settings */
     UA_ReadValueId itemToMonitor;
     UA_MonitoringMode monitoringMode;
     UA_TimestampsToReturn timestampsToReturn;
+#if UA_OPEN62541_VER_MINOR < 3
     UA_Boolean sampleCallbackIsRegistered;
+#endif
     UA_Boolean registered; /* Registered in the server / Subscription */
-
+#if UA_OPEN62541_VER_MINOR > 2
+    UA_DateTime triggeredUntil;  /* If the MonitoringMode is SAMPLING,
+                                  * triggering the MonitoredItem puts the latest
+                                  * Notification into the publishing queue (of
+                                  * the Subscription). In addition, the first
+                                  * new sample is also published (and not just
+                                  * sampled) if it occurs within the duration of
+                                  * one publishing cycle after the triggering. */
+#endif
     /* If the filter is a UA_DataChangeFilter: The DataChangeFilter always
-     * contains an absolute deadband definition. Part 8, §6.2 gives the
+     * contains an absolute deadband definition. Part 8, Â§6.2 gives the
      * following formula to test for percentage deadbands:
      *
      * DataChange if (absolute value of (last cached value - current value)
-     *                > (deadbandValue/100.0) * ((high–low) of EURange)))
+     *                > (deadbandValue/100.0) * ((highâ€“low) of EURange)))
      *
      * So we can convert from a percentage to an absolute deadband and keep
      * the hot code path simple.
@@ -641,8 +743,18 @@ struct UA_MonitoredItem {
     UA_MonitoringParameters parameters;
 
     /* Sampling Callback */
+#if UA_OPEN62541_VER_MINOR < 3
     UA_UInt64 sampleCallbackId;
     UA_ByteString lastSampledValue;
+#else
+    UA_MonitoredItemSamplingType samplingType;
+    union {
+        UA_UInt64 callbackId;
+        UA_MonitoredItem *nodeListNext; /* Event-Based: Attached to Node */
+        LIST_ENTRY(UA_MonitoredItem) samplingListEntry; /* Publish-interval: Linked in
+                                                         * Subscription */
+    } sampling;
+#endif
     UA_DataValue lastValue;
 
     /* Triggering Links */
@@ -658,7 +770,11 @@ struct UA_MonitoredItem {
 };
 
 typedef struct UA_Notification {
+#if UA_OPEN62541_VER_MINOR < 3
     TAILQ_ENTRY(UA_Notification) listEntry;   /* Notification list for the MonitoredItem */
+#else
+    TAILQ_ENTRY(UA_Notification) localEntry;  /* Notification list for the MonitoredItem */
+#endif
     TAILQ_ENTRY(UA_Notification) globalEntry; /* Notification list for the Subscription */
 
     UA_MonitoredItem* mon; /* Always set */
@@ -671,6 +787,9 @@ typedef struct UA_Notification {
     } data;
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
     UA_Boolean isOverflowEvent; /* Counted manually */
+#if UA_OPEN62541_VER_MINOR > 2
+    UA_EventFilterResult result;
+#endif // UA_OPEN62541_VER_MINOR
 #endif
 } UA_Notification;
 
@@ -735,7 +854,9 @@ typedef TAILQ_HEAD(ListOfNotificationMessages, UA_NotificationMessageEntry) List
 struct UA_Subscription {
     UA_TimerEntry delayedFreePointers;
     LIST_ENTRY(UA_Subscription) serverListEntry;
-    TAILQ_ENTRY(UA_Subscription) sessionListEntry; /* Only set if session != NULL */
+    /* Ordered according to the priority byte and round-robin scheduling for
+     * late subscriptions. See ua_session.h. Only set if session != NULL. */
+    TAILQ_ENTRY(UA_Subscription) sessionListEntry;
     UA_Session* session; /* May be NULL if no session is attached. */
     UA_UInt32 subscriptionId;
 
@@ -745,7 +866,11 @@ struct UA_Subscription {
     UA_Double publishingInterval; /* in ms */
     UA_UInt32 notificationsPerPublish;
     UA_Boolean publishingEnabled;
+#if UA_OPEN62541_VER_MINOR < 3
     UA_UInt32 priority;
+#else
+    UA_Byte priority;
+#endif
 
     /* Runtime information */
     UA_SubscriptionState state;
@@ -764,21 +889,60 @@ struct UA_Subscription {
     LIST_HEAD(, UA_MonitoredItem) monitoredItems;
     UA_UInt32 monitoredItemsSize;
 
+#if UA_OPEN62541_VER_MINOR > 2
+    /* MonitoredItems that are sampled in every publish callback (with the
+     * publish interval of the subscription) */
+    LIST_HEAD(, UA_MonitoredItem) samplingMonitoredItems;
+#endif
+
     /* Global list of notifications from the MonitoredItems */
+#if UA_OPEN62541_VER_MINOR < 3
     NotificationQueue notificationQueue;
+#else
+    TAILQ_HEAD(, UA_Notification) notificationQueue;
+#endif
     UA_UInt32 notificationQueueSize; /* Total queue size */
     UA_UInt32 dataChangeNotifications;
     UA_UInt32 eventNotifications;
 
+#if UA_OPEN62541_VER_MINOR < 3
     /* Notifications to be sent out now (already late). In a regular publish
      * callback, all queued notifications are sent out. In a late publish
      * response, only the notifications left from the last regular publish
      * callback are sent. */
     UA_UInt32 readyNotifications;
+#endif
 
     /* Retransmission Queue */
+#if UA_OPEN62541_VER_MINOR < 3
     ListOfNotificationMessages retransmissionQueue;
+#else
+    NotificationMessageQueue retransmissionQueue;
+#endif
     size_t retransmissionQueueSize;
+
+#if UA_OPEN62541_VER_MINOR > 2
+    /* Statistics for the server diagnostics. The fields are defined according
+     * to the SubscriptionDiagnosticsDataType (Part 5, Â§12.15). */
+#ifdef UA_ENABLE_DIAGNOSTICS
+    UA_UInt32 modifyCount;
+    UA_UInt32 enableCount;
+    UA_UInt32 disableCount;
+    UA_UInt32 republishRequestCount;
+    UA_UInt32 republishMessageCount;
+    UA_UInt32 transferRequestCount;
+    UA_UInt32 transferredToAltClientCount;
+    UA_UInt32 transferredToSameClientCount;
+    UA_UInt32 publishRequestCount;
+    UA_UInt32 dataChangeNotificationsCount;
+    UA_UInt32 eventNotificationsCount;
+    UA_UInt32 notificationsCount;
+    UA_UInt32 latePublishRequestCount;
+    UA_UInt32 discardedMessageCount;
+    UA_UInt32 monitoringQueueOverflowCount;
+    UA_UInt32 eventQueueOverFlowCount;
+#endif // UA_ENABLE_DIAGNOSTICS
+#endif // UA_OPEN62541_VER_MINOR
 };
 
 extern "C"
@@ -789,16 +953,26 @@ extern "C"
 UA_StatusCode
 UA_Server_evaluateWhereClauseContentFilter(
     UA_Server * server,
+#if UA_OPEN62541_VER_MINOR < 3
     const UA_NodeId * eventNode,
     const UA_ContentFilter * contentFilter);
+#else
+    UA_Session *session,
+    const UA_NodeId * eventNode,
+    const UA_ContentFilter * contentFilter,
+    UA_ContentFilterResult * contentFilterResult);
+#endif
 
 extern "C"
 UA_Notification *
 UA_Notification_new(void);
 
 extern "C"
-void
-UA_Notification_delete(UA_Server* server, UA_Notification* n);
+#if UA_OPEN62541_VER_MINOR < 3
+void UA_Notification_delete(UA_Server* server, UA_Notification* n);
+#else
+void UA_Notification_delete(UA_Notification *n);
+#endif
 
 extern "C"
 void
@@ -843,6 +1017,9 @@ class QUaServer_Anex
         const UA_NodeId* eventNode,
         UA_EventFilter* filter,
         UA_EventFieldList* efl,
+#if UA_OPEN62541_VER_MINOR > 2
+        UA_EventFilterResult *result,
+#endif
         const QUaSaoCallback& resolveSAOCallback
     );
 
@@ -878,4 +1055,3 @@ class QUaServer_Anex
 #endif
 
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
-

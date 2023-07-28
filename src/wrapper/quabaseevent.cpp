@@ -239,15 +239,6 @@ UA_ByteString QUaBaseEvent::generateEventIdInternal()
 	return ret;
 }
 
-static const UA_NodeId objectsFolderId = { 0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_OBJECTSFOLDER} };
-#define EMIT_REFS_ROOT_COUNT 4
-static const UA_NodeId emitReferencesRoots[EMIT_REFS_ROOT_COUNT] ={ 
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_ORGANIZES     }},
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASCOMPONENT  }},
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASEVENTSOURCE}},
-    {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASNOTIFIER   }} 
-};
-
 void QUaBaseEvent::triggerInternal()
 {
     if (!this->shouldTrigger())

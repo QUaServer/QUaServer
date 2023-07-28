@@ -11,6 +11,7 @@
 /* OptionSet */
 static UA_DataTypeMember OptionSet_members[2] = {
 {
+#if UA_OPEN62541_VER_MINOR < 3
 	UA_TYPES_BYTESTRING, /* .memberTypeIndex */
 	0, /* .padding */
 	true, /* .namespaceZero */
@@ -25,6 +26,20 @@ static UA_DataTypeMember OptionSet_members[2] = {
 	false, /* .isArray */
 	false  /* .isOptional */
 	UA_TYPENAME("ValidBits") /* .memberName */
+#else
+	UA_TYPENAME("Value") /* .memberName */
+	&UA_TYPES[UA_TYPES_BYTESTRING], /* .memberType */
+	0, /* .padding */
+	false, /* .isArray */
+	false  /* .isOptional */
+},
+{
+	UA_TYPENAME("ValidBits") /* .memberName */
+	&UA_TYPES[UA_TYPES_BYTESTRING], /* .memberType */
+	offsetof(UA_OptionSet, validBits) - offsetof(UA_OptionSet, value) - sizeof(UA_ByteString), /* .padding */
+	false, /* .isArray */
+	false  /* .isOptional */
+#endif
 }, };
 
 QHash<UA_NodeId, UA_DataType*> mapOptionSetDatatypes;
@@ -35,6 +50,7 @@ UA_DataType* getDataTypeFromNodeId(const UA_NodeId& optNodeId)
 		return mapOptionSetDatatypes[optNodeId];
 	}
 	UA_DataType* tmpType = new UA_DataType({
+#if UA_OPEN62541_VER_MINOR < 3
 		optNodeId, /* .typeId */
 		{0, UA_NODEIDTYPE_NUMERIC, {12765}}, /* .binaryEncodingId */
 		sizeof(UA_OptionSet), /* .memSize */
@@ -45,6 +61,17 @@ UA_DataType* getDataTypeFromNodeId(const UA_NodeId& optNodeId)
 		2, /* .membersSize */
 		OptionSet_members  /* .members */
 		UA_TYPENAME("OptionSet") /* .typeName */
+#else
+		UA_TYPENAME("OptionSet") /* .typeName */
+		optNodeId, /* .typeId */
+		{0, UA_NODEIDTYPE_NUMERIC, {12765LU}}, /* .binaryEncodingId */
+		sizeof(UA_OptionSet), /* .memSize */
+		UA_DATATYPEKIND_STRUCTURE, /* .typeKind */
+		false, /* .pointerFree */
+		false, /* .overlayable */
+		2, /* .membersSize */
+		OptionSet_members  /* .members */
+#endif
 	});
 	mapOptionSetDatatypes[optNodeId] = tmpType;
 	return tmpType;
@@ -613,7 +640,7 @@ QString QUaBaseVariable::dataTypeNodeId() const
 	}
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// check if type is option set, if so, return type
-	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
+	if (!m_qUaServer->m_hashOptionSets.key(outDataType).isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QUaTypesConverter::nodeIdToQString(UA_NODEID_NUMERIC(0, UA_NS0ID_OPTIONSET));
@@ -777,7 +804,7 @@ void QUaBaseVariable::setDataTypeEnum(const UA_NodeId & enumTypeNodeId)
 		auto iter = oldValue.value<QSequentialIterable>();
 		// get first value if any
 #if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
-		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant(static_cast<QVariant::Type>(QMetaType::Int));
+		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant(QVariant::Int);
 #else
 		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant(metaTypeInt);
 #endif
@@ -856,12 +883,20 @@ void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
 	{
 		auto iter = oldValue.value<QSequentialIterable>();
 		// get first value if any
-		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant((QVariant::Type)QMetaType::ULongLong);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant(QVariant::ULongLong);
+#else
+		QVariant varFirst = iter.size() > 0 ? iter.at(0) : QVariant( QMetaType(QMetaType::ULongLong) );
+#endif
 		// overwrite old value
 		oldValue = varFirst;
 	}
 	// handle scalar
-	if (oldValue.canConvert(QMetaType::ULongLong))
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+	if (oldValue.canConvert(QVariant::ULongLong))
+#else
+	if (oldValue.canConvert( QMetaType(QMetaType::ULongLong) ))
+#endif
 	{
 		// convert in place
 		oldValue = QVariant::fromValue(QUaOptionSet(oldValue.toULongLong()));
@@ -869,7 +904,11 @@ void QUaBaseVariable::setDataTypeOptionSet(const UA_NodeId& optionSetTypeNodeId)
 	else
 	{
 		// else set default value for type
-		oldValue = QVariant((QVariant::Type)QMetaType_OptionSet);
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+		oldValue = QVariant(static_cast<QVariant::Type>(QMetaType_OptionSet));
+#else
+		oldValue = QVariant( QMetaType(QMetaType_OptionSet) );
+#endif
 	}
 	// set converted or default value
 #ifndef OPEN62541_ISSUE3934_RESOLVED
@@ -916,7 +955,7 @@ QMetaType::Type QUaBaseVariable::dataTypeInternal() const
 	}
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
 	// check if type is option set, if so, return type QMetaType_OptionSet
-	if (!m_qUaServer->m_hashOptionSets.key(outDataType, "").isEmpty())
+	if (!m_qUaServer->m_hashOptionSets.key(outDataType).isEmpty())
 	{
 		UA_NodeId_clear(&outDataType);
 		return QMetaType_OptionSet;

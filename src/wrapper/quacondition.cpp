@@ -84,7 +84,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	bool isRetained = this->retain();
 	if (m_sourceNode)
 	{
-		m_sourceNode->removeReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		m_sourceNode->removeReference({ QStringLiteral("HasCondition"), QStringLiteral("IsConditionOf") }, this, true);
 		// remove destroy connections
 		QObject::disconnect(m_sourceDestroyed);
 		QObject::disconnect(m_retainedDestroyed);
@@ -104,7 +104,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 	if (m_sourceNode)
 	{
 		// NOTE : references are RAM hungry and is not worth having them for branches
-		m_sourceNode->addReference({ "HasCondition" , "IsConditionOf" }, this, true);
+		m_sourceNode->addReference({ QStringLiteral("HasCondition"), QStringLiteral("IsConditionOf") }, this, true);
 		// add destroy connection
 		m_sourceDestroyed = QObject::connect(m_sourceNode, &QObject::destroyed, this,
 		[this]() {
@@ -121,7 +121,7 @@ void QUaCondition::setSourceNode(const QUaNodeId& sourceNodeId)
 				return;
 			}
 			this->setSourceNode(QUaNodeId());
-			this->setSourceName("");
+			this->setSourceName(QString());
 		});
 		// add to hash
 		if (isRetained)
@@ -811,20 +811,20 @@ void QUaCondition::processMonitoredItem(UA_MonitoredItem* monitoredItem, QUaServ
 */
 
 // QUaBaseEvent
-QUaBrowsePath QUaConditionBranch::EventId     ({ { 0, "EventId"      } }); // [ByteString]
-QUaBrowsePath QUaConditionBranch::Message     ({ { 0, "Message"      } }); // [LocalizedText]
-QUaBrowsePath QUaConditionBranch::Time        ({ { 0, "Time"         } }); // [UtcTime]
-QUaBrowsePath QUaConditionBranch::ClientUserId({ { 0, "ClientUserId" } }); // [String]
+QUaBrowsePath QUaConditionBranch::EventId     ({ { 0, QStringLiteral("EventId")      } }); // [ByteString]
+QUaBrowsePath QUaConditionBranch::Message     ({ { 0, QStringLiteral("Message")      } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::Time        ({ { 0, QStringLiteral("Time")         } }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::ClientUserId({ { 0, QStringLiteral("ClientUserId") } }); // [String]
 // QUaCondition
-QUaBrowsePath QUaConditionBranch::BranchId({ { 0, "BranchId" } }); // [NodeId]
-QUaBrowsePath QUaConditionBranch::Retain  ({ { 0, "Retain"   } }); // [Boolean]
-QUaBrowsePath QUaConditionBranch::EnabledState               ({ { 0, "EnabledState" } }); // [LocalizedText]
-QUaBrowsePath QUaConditionBranch::EnabledState_Id            ({ { 0, "EnabledState" },{ 0, "Id"             } }); // [Boolean]
-//QUaBrowsePath QUaConditionBranch::EnabledState_FalseState    ({ { 0, "EnabledState" },{ 0, "FalseState"     } }); // [LocalizedText]
-//QUaBrowsePath QUaConditionBranch::EnabledState_TrueState     ({ { 0, "EnabledState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QUaBrowsePath QUaConditionBranch::EnabledState_TransitionTime({ { 0, "EnabledState" },{ 0, "TransitionTime" } }); // [UtcTime]
-QUaBrowsePath QUaConditionBranch::Comment                ({ { 0, "Comment" } }); // [LocalizedText]
-QUaBrowsePath QUaConditionBranch::Comment_SourceTimestamp({ { 0, "Comment" },{0, "SourceTimestamp"} }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::BranchId({ { 0, QStringLiteral("BranchId") } }); // [NodeId]
+QUaBrowsePath QUaConditionBranch::Retain  ({ { 0, QStringLiteral("Retain")   } }); // [Boolean]
+QUaBrowsePath QUaConditionBranch::EnabledState               ({ { 0, QStringLiteral("EnabledState") } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::EnabledState_Id            ({ { 0, QStringLiteral("EnabledState") },{ 0, QStringLiteral("Id")             } }); // [Boolean]
+//QUaBrowsePath QUaConditionBranch::EnabledState_FalseState    ({ { 0, QStringLiteral("EnabledState") },{ 0, QStringLiteral("FalseState")     } }); // [LocalizedText]
+//QUaBrowsePath QUaConditionBranch::EnabledState_TrueState     ({ { 0, QStringLiteral("EnabledState") },{ 0, QStringLiteral("TrueState")      } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::EnabledState_TransitionTime({ { 0, QStringLiteral("EnabledState") },{ 0, QStringLiteral("TransitionTime") } }); // [UtcTime]
+QUaBrowsePath QUaConditionBranch::Comment                ({ { 0, QStringLiteral("Comment") } }); // [LocalizedText]
+QUaBrowsePath QUaConditionBranch::Comment_SourceTimestamp({ { 0, QStringLiteral("Comment") },{0, QStringLiteral("SourceTimestamp")} }); // [UtcTime]
 
 QUaConditionBranch::QUaConditionBranch(QUaCondition* parent, const QUaNodeId& branchId/* = QUaNodeId()*/)
 {
@@ -937,8 +937,8 @@ void QUaConditionBranch::setComment(const QUaLocalizedText& comment, const QStri
 }
 
 QSet<QUaQualifiedName> ignoreSet = QSet<QUaQualifiedName>()
-<< QUaQualifiedName( 0, "FalseState" )
-<< QUaQualifiedName( 0, "TrueState"  );
+<< QUaQualifiedName( 0, QStringLiteral("FalseState") )
+<< QUaQualifiedName( 0, QStringLiteral("TrueState")  );
 
 void QUaConditionBranch::addChildren(QUaNode* node, const QUaBrowsePath& browsePath/* = QUaBrowsePath()*/)
 {
