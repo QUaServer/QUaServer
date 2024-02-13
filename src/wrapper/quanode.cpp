@@ -1263,7 +1263,11 @@ QUaNode* QUaNode::cloneNode(
 	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, m_qUaServer->m_server);
 	QUaNode* newInstance = qobject_cast<QUaNode*>(tmp);
 	Q_CHECK_PTR(newInstance);
+
+#if UA_OPEN62541_VER_MINOR < 3
 	UA_NodeId_clear(&newInstanceNodeId);
+#endif
+
 	if (!newInstance)
 	{
 		return newInstance;
