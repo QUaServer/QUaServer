@@ -118,7 +118,7 @@ void QUaServer::registerOptionSet(const QString& strOptionSetName, const QUaOpti
 			vectOptionSetValues[b] = { "", "" };
 		}
 	}
-	Q_ASSERT(vectOptionSetValues.count() == maxBit);
+	Q_ASSERT(vectOptionSetValues.count() == static_cast<long long>(maxBit));
 	st = QUaServer::addOptionSetValues(m_server, &reqNodeId, maxBit, vectOptionSetValues.data());
 	Q_ASSERT(st == UA_STATUSCODE_GOOD);
 	// finally append to map

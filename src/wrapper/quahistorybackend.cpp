@@ -40,14 +40,14 @@ QUaHistoryDataPoint QUaHistoryBackend::dataValueToPoint(const UA_DataValue* valu
 	};
 }
 
-UA_DataValue QUaHistoryBackend::dataPointToValue(const QUaHistoryDataPoint* point)
+UA_DataValue QUaHistoryBackend::dataPointToValue(const QUaHistoryDataPoint& point)
 {
 	UA_DataValue retVal;
 	// set values
-	retVal.value = QUaTypesConverter::uaVariantFromQVariant(point->value);
-	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point->timestamp, &retVal.serverTimestamp);
-	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point->timestamp, &retVal.sourceTimestamp);
-	retVal.status = point->status;
+	retVal.value = QUaTypesConverter::uaVariantFromQVariant(point.value);
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point.timestamp, &retVal.serverTimestamp);
+	QUaTypesConverter::uaVariantFromQVariantScalar<UA_DateTime, QDateTime>(point.timestamp, &retVal.sourceTimestamp);
+	retVal.status = point.status;
 	retVal.serverPicoseconds = 0;
 	retVal.sourcePicoseconds = 0;
 	// let know it has htem
@@ -74,9 +74,15 @@ void QUaHistoryBackend::processServerLog(
 QMetaType::Type QUaHistoryBackend::QVariantToQtType(const QVariant& value)
 {
 	return static_cast<QMetaType::Type>(
-        value.type() < static_cast<QVariant::Type>(QMetaType::User) ?
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+		value.type() < QVariant::UserType ?
 		value.type() :
-        static_cast<QVariant::Type>(value.userType())
+		value.userType()
+#else
+		value.typeId() < QMetaType::User ?
+		value.typeId() :
+		value.userType()
+#endif
 	);
 }
 
@@ -95,20 +101,32 @@ void QUaHistoryBackend::fixOutputVariantType(
 		return;
 	}
 	// special cases
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	if (metaType == QMetaType::QDateTime && value.canConvert(QMetaType::ULongLong))
+#else
+	if (metaType == QMetaType::QDateTime && value.canConvert( QMetaType(QMetaType::ULongLong) ))
+#endif
 	{
 		qulonglong iTime = value.toULongLong();
 		value = QDateTime::fromMSecsSinceEpoch(iTime, Qt::UTC);  // NOTE : expensive if spec not defined
 		return;
 	}
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	if (metaType == QMetaType_StatusCode && value.canConvert(QMetaType::UInt))
+#else
+	if (metaType == QMetaType_StatusCode && value.canConvert( QMetaType(QMetaType::UInt) ))
+#endif
 	{
 		uint iStatusCode = value.toUInt();
 		value = QVariant::fromValue(static_cast<QUaStatusCode>(iStatusCode));
 		return;
 	}
 	// generic case
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
 	if (!value.canConvert(metaType))
+#else
+	if (!value.canConvert( QMetaType(metaType) ))
+#endif
 	{
 		//qWarning() << "[OLD TYPE]" << QMetaType::typeName(oldType);  
 		//qWarning() << "[NEW TYPE]" << QMetaType::typeName(metaType); 
@@ -116,7 +134,11 @@ void QUaHistoryBackend::fixOutputVariantType(
 		return;
 	}
 	// NOTE : expensive to convert QString to QUaNodeId
-	value.convert(metaType); 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+	value.convert(metaType);
+#else
+	value.convert( QMetaType(metaType) );
+#endif
 }
 
 UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
@@ -204,8 +226,8 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		Q_UNUSED(nodeId);
-		// simplify API by returning always LLONG_MAX
-		return LLONG_MAX;
+		// simplify API by returning always SIZE_MAX
+		return SIZE_MAX;
 	};
 	// 4) It returns the index of the first element in the database for a node.
 	result.firstIndex = [](
@@ -230,7 +252,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// check
 		if (!time.isValid())
 		{
-			return LLONG_MAX;
+			return SIZE_MAX;
 		}
 		// return first available timestamp as index
 		return static_cast<size_t>(time.toMSecsSinceEpoch());
@@ -258,7 +280,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// check
 		if (!time.isValid())
 		{
-			return LLONG_MAX;
+			return SIZE_MAX;
 		}
 		// return first available timestamp as index
 		return static_cast<size_t>(time.toMSecsSinceEpoch());
@@ -327,7 +349,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// check
 		if (!outTime.isValid())
 		{
-			return LLONG_MAX;
+			return SIZE_MAX;
 		}
 		// return first available timestamp as index
 		return static_cast<size_t>(outTime.toMSecsSinceEpoch());
@@ -346,8 +368,8 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		QUaNodeId nodeIdQt  = *nodeId;
-		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
-		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
+		QDateTime timeStart = startIndex == SIZE_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
+		QDateTime timeEnd = endIndex == SIZE_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
 		// get server
 		QQueue<QUaLog> logOut;
 		QUaServer* srv = QUaServer::getServerNodeContext(server);
@@ -357,7 +379,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 			"Error; startIndex not found"
 		);
 		Q_ASSERT_X(
-			timeEnd.isValid() && srv->m_historBackend.hasTimestamp(nodeIdQt, timeEnd, logOut) ? true : endIndex == LLONG_MAX,
+			timeEnd.isValid() && srv->m_historBackend.hasTimestamp(nodeIdQt, timeEnd, logOut) ? true : endIndex == SIZE_MAX,
 			"QUaHistoryBackend::resultSize",
 			"Error; endIndex not found");
 		// get number of data points in time range
@@ -389,8 +411,8 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(releaseContinuationPoints); // not used?
 		// convert inputs
 		QUaNodeId nodeIdQt = *nodeId;
-		QDateTime timeStart = startIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
-		QDateTime timeEnd = endIndex == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
+		QDateTime timeStart = startIndex == SIZE_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(startIndex, Qt::UTC);
+		QDateTime timeEnd = endIndex == SIZE_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(endIndex, Qt::UTC);
 		// get offset wrt to previous call
 		quint64 offset = 0;
 		if (continuationPoint->length > 0)
@@ -445,17 +467,17 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		// set provided values
 		*providedValues = valueSize;
 		// copy data
-		auto iterIni = !reverse ? points.begin() : points.end() - 1;
+		auto iterIni = !reverse ? points.constBegin() : points.constEnd() - 1;
 		std::generate(values, values + valueSize,
 		[&iterIni, &range, &reverse]() {
 			UA_DataValue retVal;
 			if (range.dimensionsSize > 0)
 			{
-				UA_DataValue_backend_copyRange(QUaHistoryBackend::dataPointToValue(iterIni), retVal, range);
+				UA_DataValue_backend_copyRange(QUaHistoryBackend::dataPointToValue(*iterIni), retVal, range);
 			}
 			else
 			{
-				retVal = QUaHistoryBackend::dataPointToValue(iterIni);
+				retVal = QUaHistoryBackend::dataPointToValue(*iterIni);
 			}
 			(!reverse) ? iterIni++ : iterIni--;
 			return retVal;
@@ -485,7 +507,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		Q_UNUSED(sessionId);
 		Q_UNUSED(sessionContext);
 		QUaNodeId nodeIdQt = *nodeId;
-		QDateTime time = index == LLONG_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index, Qt::UTC);
+		QDateTime time = index == SIZE_MAX ? QDateTime() : QDateTime::fromMSecsSinceEpoch(index, Qt::UTC);
 		Q_ASSERT(time.isValid());
 		// get server
 		QQueue<QUaLog> logOut;
@@ -506,7 +528,7 @@ UA_HistoryDataBackend QUaHistoryBackend::CreateUaBackend()
 		}
 		QUaHistoryBackend::processServerLog(srv, logOut);
 		// TODO : find better way to store the instance of the returned address
-		static auto retVal = QUaHistoryBackend::dataPointToValue(points.begin());
+		static auto retVal = QUaHistoryBackend::dataPointToValue(points.constFirst());
 		return &retVal;
 	};
 
@@ -1014,7 +1036,7 @@ void QUaHistoryBackend::readEvent(
 		auto sao = &historyReadDetails->filter.selectClauses[col];
 		if (sao->browsePathSize == 0)
 		{
-			const static auto eventNodeIdPath = QUaBrowsePath() << QUaQualifiedName(0, "EventNodeId");
+			const static auto eventNodeIdPath = QUaBrowsePath() << QUaQualifiedName(0, QStringLiteral("EventNodeId"));
 			colBrowsePaths << eventNodeIdPath;
 			continue;
 		}
@@ -1149,7 +1171,7 @@ void QUaHistoryBackend::readEvent(
 				logOut
 			);
 			Q_ASSERT_X(
-				eventsOfType.size() == totalToReadForThisType, 
+				static_cast<quint64>(eventsOfType.size()) == totalToReadForThisType,
 				"readHistoryEventsOfType", 
 				"readHistoryEventsOfType returned less values than requested"
 			);

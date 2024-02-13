@@ -278,11 +278,11 @@ void QUaAlarmCondition::resetInternals()
 /***************************************************************************************
 */
 
-QUaBrowsePath QUaAlarmConditionBranch::ActiveState               ({ { 0, "ActiveState" } }); // [LocalizedText]
-QUaBrowsePath QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, "ActiveState" },{ 0, "Id"             } }); // [Boolean]
-//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, "ActiveState" },{ 0, "FalseState"     } }); // [LocalizedText]
-//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, "ActiveState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, "ActiveState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState               ({ { 0, QStringLiteral("ActiveState") } }); // [LocalizedText]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_Id            ({ { 0, QStringLiteral("ActiveState") },{ 0, QStringLiteral("Id")             } }); // [Boolean]
+//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_FalseState    ({ { 0, QStringLiteral("ActiveState") },{ 0, QStringLiteral("FalseState")     } }); // [LocalizedText]
+//QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TrueState     ({ { 0, QStringLiteral("ActiveState") },{ 0, QStringLiteral("TrueState")      } }); // [LocalizedText]
+QUaBrowsePath QUaAlarmConditionBranch::ActiveState_TransitionTime({ { 0, QStringLiteral("ActiveState") },{ 0, QStringLiteral("TransitionTime") } }); // [UtcTime]
 
 QUaAlarmConditionBranch::QUaAlarmConditionBranch(
 	QUaCondition* parent,

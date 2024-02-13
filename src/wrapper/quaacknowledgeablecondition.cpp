@@ -360,10 +360,10 @@ void QUaAcknowledgeableCondition::Confirm(QByteArray EventId, QUaLocalizedText C
 	this->setConfirmed(true);
 }
 
-QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateTrueState      = {0, QObject::tr("Acknowledged")};
-QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateFalseState     = {0, QObject::tr("Unacknowledged")};
-QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateTrueState  = {0, QObject::tr("Confirmed")};
-QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateFalseState = {0, QObject::tr("Unconfirmed")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateTrueState      = {0, QT_TR_NOOP("Acknowledged")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_ackedStateFalseState     = {0, QT_TR_NOOP("Unacknowledged")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateTrueState  = {0, QT_TR_NOOP("Confirmed")};
+QUaLocalizedText QUaAcknowledgeableCondition::m_confirmedStateFalseState = {0, QT_TR_NOOP("Unconfirmed")};
 
 void QUaAcknowledgeableCondition::resetInternals()
 {
@@ -456,16 +456,16 @@ QUaTwoStateVariable* QUaAcknowledgeableCondition::getConfirmedState()
 /****************************************************************************************
 */
 
-QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, "AckedState" } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, "AckedState" },{ 0, "Id"             } }); // [Boolean]
-//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, "AckedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, "AckedState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, "AckedState" },{ 0, "TransitionTime" } }); // [UtcTime]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, "ConfirmedState" } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, "ConfirmedState" },{ 0, "Id"             } }); // [Boolean]
-//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, "ConfirmedState" },{ 0, "FalseState"     } }); // [LocalizedText]
-//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, "ConfirmedState" },{ 0, "TrueState"      } }); // [LocalizedText]
-QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, "ConfirmedState" },{ 0, "TransitionTime" } }); // [UtcTime]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState               ({ { 0, QStringLiteral("AckedState") } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_Id            ({ { 0, QStringLiteral("AckedState") },{ 0, QStringLiteral("Id")             } }); // [Boolean]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_FalseState    ({ { 0, QStringLiteral("AckedState") },{ 0, QStringLiteral("FalseState")     } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TrueState     ({ { 0, QStringLiteral("AckedState") },{ 0, QStringLiteral("TrueState")      } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::AckedState_TransitionTime({ { 0, QStringLiteral("AckedState") },{ 0, QStringLiteral("TransitionTime") } }); // [UtcTime]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState               ({ { 0, QStringLiteral("ConfirmedState") } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_Id            ({ { 0, QStringLiteral("ConfirmedState") },{ 0, QStringLiteral("Id")             } }); // [Boolean]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_FalseState    ({ { 0, QStringLiteral("ConfirmedState") },{ 0, QStringLiteral("FalseState")     } }); // [LocalizedText]
+//QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TrueState     ({ { 0, QStringLiteral("ConfirmedState") },{ 0, QStringLiteral("TrueState")      } }); // [LocalizedText]
+QUaBrowsePath QUaAcknowledgeableConditionBranch::ConfirmedState_TransitionTime({ { 0, QStringLiteral("ConfirmedState") },{ 0, QStringLiteral("TransitionTime") } }); // [UtcTime]
 
 QUaAcknowledgeableConditionBranch::QUaAcknowledgeableConditionBranch(
 	QUaCondition* parent,

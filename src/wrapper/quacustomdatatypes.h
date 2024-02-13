@@ -396,16 +396,16 @@ public:
 
     static bool               isSupportedQType(const QMetaType::Type& type);
     static QMetaType::Type    qTypeByNodeId   (const UA_NodeId &nodeId);
-    static QMetaType::Type    qTypeByTypeIndex(const int& typeIndex);
+    static QMetaType::Type    qTypeByDataType (const UA_DataType* dataType);
     static UA_NodeId          nodeIdByQType   (const QMetaType::Type& type);
     static const UA_DataType* dataTypeByQType (const QMetaType::Type& type);
     static QString            stringByQType   (const QMetaType::Type& type);
 
 private:
     QMetaType::Type m_type;
-    static QHash<QString  , QMetaType::Type> m_custTypesByName;
-    static QHash<UA_NodeId, QMetaType::Type> m_custTypesByNodeId;
-    static QHash<int      , QMetaType::Type> m_custTypesByTypeIndex;
+    static QHash<QString,            QMetaType::Type> m_custTypesByName;
+    static QHash<UA_NodeId,          QMetaType::Type> m_custTypesByNodeId;
+    static QHash<const UA_DataType*, QMetaType::Type> m_custTypesByDataType;
     struct TypeData
     {
         QString            name;

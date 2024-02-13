@@ -151,7 +151,7 @@ private:
 
 	// helpers
 	static QUaHistoryDataPoint dataValueToPoint(const UA_DataValue *value);
-	static UA_DataValue dataPointToValue(const QUaHistoryDataPoint *point);
+	static UA_DataValue dataPointToValue(const QUaHistoryDataPoint& point);
 	static void processServerLog(QUaServer* server, QQueue<QUaLog>& logOut);
 	static QMetaType::Type QVariantToQtType(const QVariant& value);
 	static void fixOutputVariantType(QVariant& value, const QMetaType::Type& metaType);

@@ -87,37 +87,37 @@ QHash<UA_NodeId, QMetaType::Type> QUaDataType::m_custTypesByNodeId = {
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
-QHash<int, QMetaType::Type> QUaDataType::m_custTypesByTypeIndex = {
-	{UA_TYPES_BOOLEAN                     , QMetaType::Bool                  },
-	{UA_TYPES_SBYTE                       , QMetaType::Char                  },
-	//{UA_TYPES_SBYTE                       , QMetaType::SChar                 },
-	{UA_TYPES_BYTE                        , QMetaType::UChar                 },
-	{UA_TYPES_INT16                       , QMetaType::Short                 },
-	{UA_TYPES_UINT16                      , QMetaType::UShort                },
-	{UA_TYPES_INT32                       , QMetaType::Int                   },
-	{UA_TYPES_UINT32                      , QMetaType::UInt                  },
-	{UA_TYPES_INT64                       , QMetaType::Long                  },
-	//{UA_TYPES_INT64                       , QMetaType::LongLong              },
-	{UA_TYPES_UINT64                      , QMetaType::ULong                 },
-	//{UA_TYPES_UINT64                      , QMetaType::ULongLong             },
-	{UA_TYPES_FLOAT                       , QMetaType::Float                 },
-	{UA_TYPES_DOUBLE                      , QMetaType::Double                },
-	{UA_TYPES_STRING                      , QMetaType::QString               },
-	{UA_TYPES_DATETIME                    , QMetaType::QDateTime             },
-	{UA_TYPES_GUID                        , QMetaType::QUuid                 },
-	{UA_TYPES_BYTESTRING                  , QMetaType::QByteArray            },
-	{UA_TYPES_VARIANT                     , QMetaType::QVariant              },
-	{UA_TYPES_NODEID                      , QMetaType_NodeId                 },
-	{UA_TYPES_STATUSCODE                  , QMetaType_StatusCode             },
-	{UA_TYPES_QUALIFIEDNAME               , QMetaType_QualifiedName          },
-	{UA_TYPES_LOCALIZEDTEXT               , QMetaType_LocalizedText          },
+QHash<const UA_DataType*, QMetaType::Type> QUaDataType::m_custTypesByDataType = {
+	{&UA_TYPES[UA_TYPES_BOOLEAN]                     , QMetaType::Bool                  },
+	{&UA_TYPES[UA_TYPES_SBYTE]                       , QMetaType::Char                  },
+	//{&UA_TYPES[UA_TYPES_SBYTE]                       , QMetaType::SChar                 },
+	{&UA_TYPES[UA_TYPES_BYTE]                        , QMetaType::UChar                 },
+	{&UA_TYPES[UA_TYPES_INT16]                       , QMetaType::Short                 },
+	{&UA_TYPES[UA_TYPES_UINT16]                      , QMetaType::UShort                },
+	{&UA_TYPES[UA_TYPES_INT32]                       , QMetaType::Int                   },
+	{&UA_TYPES[UA_TYPES_UINT32]                      , QMetaType::UInt                  },
+	{&UA_TYPES[UA_TYPES_INT64]                       , QMetaType::Long                  },
+	//{&UA_TYPES[UA_TYPES_INT64]                       , QMetaType::LongLong              },
+	{&UA_TYPES[UA_TYPES_UINT64]                      , QMetaType::ULong                 },
+	//{&UA_TYPES[UA_TYPES_UINT64]                      , QMetaType::ULongLong             },
+	{&UA_TYPES[UA_TYPES_FLOAT]                       , QMetaType::Float                 },
+	{&UA_TYPES[UA_TYPES_DOUBLE]                      , QMetaType::Double                },
+	{&UA_TYPES[UA_TYPES_STRING]                      , QMetaType::QString               },
+	{&UA_TYPES[UA_TYPES_DATETIME]                    , QMetaType::QDateTime             },
+	{&UA_TYPES[UA_TYPES_GUID]                        , QMetaType::QUuid                 },
+	{&UA_TYPES[UA_TYPES_BYTESTRING]                  , QMetaType::QByteArray            },
+	{&UA_TYPES[UA_TYPES_VARIANT]                     , QMetaType::QVariant              },
+	{&UA_TYPES[UA_TYPES_NODEID]                      , QMetaType_NodeId                 },
+	{&UA_TYPES[UA_TYPES_STATUSCODE]                  , QMetaType_StatusCode             },
+	{&UA_TYPES[UA_TYPES_QUALIFIEDNAME]               , QMetaType_QualifiedName          },
+	{&UA_TYPES[UA_TYPES_LOCALIZEDTEXT]               , QMetaType_LocalizedText          },
 #ifdef UA_GENERATED_NAMESPACE_ZERO_FULL
-	{UA_TYPES_IMAGEPNG                    , QMetaType_Image                  },
-	{UA_TYPES_OPTIONSET                   , QMetaType_OptionSet              },
+	{&UA_TYPES[UA_TYPES_IMAGEPNG]                    , QMetaType_Image                  },
+	{&UA_TYPES[UA_TYPES_OPTIONSET]                   , QMetaType_OptionSet              },
 #endif // UA_GENERATED_NAMESPACE_ZERO_FULL
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
-	{UA_TYPES_TIMEZONEDATATYPE            , QMetaType_TimeZone               },
-	{UA_TYPES_MODELCHANGESTRUCTUREDATATYPE, QMetaType_ChangeStructureDataType}
+	{&UA_TYPES[UA_TYPES_TIMEZONEDATATYPE]            , QMetaType_TimeZone               },
+	{&UA_TYPES[UA_TYPES_MODELCHANGESTRUCTUREDATATYPE], QMetaType_ChangeStructureDataType}
 #endif // UA_ENABLE_SUBSCRIPTIONS_EVENTS
 };
 
@@ -211,10 +211,10 @@ QMetaType::Type QUaDataType::qTypeByNodeId(const UA_NodeId& nodeId)
 	return m_custTypesByNodeId.value(nodeId, QMetaType::UnknownType);
 }
 
-QMetaType::Type QUaDataType::qTypeByTypeIndex(const int& typeIndex)
+QMetaType::Type QUaDataType::qTypeByDataType(const UA_DataType* dataType)
 {
-	Q_ASSERT(m_custTypesByTypeIndex.contains(typeIndex));
-	return m_custTypesByTypeIndex.value(typeIndex, QMetaType::UnknownType);
+	Q_ASSERT(m_custTypesByDataType.contains(dataType));
+	return m_custTypesByDataType.value(dataType, QMetaType::UnknownType);
 }
 
 UA_NodeId QUaDataType::nodeIdByQType(const QMetaType::Type& type)
@@ -1443,7 +1443,7 @@ QUaOptionSet::QUaOptionSet(const QString& strXmlOptionSet)
 QUaOptionSet::QUaOptionSet(const char* strXmlOptionSet)
 {
 	// use overloaded equality operator
-	*this = QString(strXmlOptionSet);
+	*this = QString::fromUtf8(strXmlOptionSet);
 	Q_ASSERT(m_value.size() == 8);
 	Q_ASSERT(m_validBits.size() == 8);
 }
@@ -1506,7 +1506,7 @@ void QUaOptionSet::operator=(const QString& strXmlOptionSet)
 void QUaOptionSet::operator=(const char* strXmlOptionSet)
 {
 	// use overloaded equality operator
-	*this = QString(strXmlOptionSet);
+	*this = QString::fromUtf8(strXmlOptionSet);
 }
 
 void QUaOptionSet::operator=(const QUaOptionSet& other)

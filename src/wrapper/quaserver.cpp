@@ -607,17 +607,6 @@ bool QUaServer::isNodeBound(const UA_NodeId & nodeId, UA_Server *server)
 	return true;
 }
 
-extern "C" {
-	typedef UA_StatusCode(*UA_exchangeEncodeBuffer)(void *handle, UA_Byte **bufPos,
-		const UA_Byte **bufEnd);
-
-	UA_EXPORT extern UA_StatusCode
-		UA_encodeBinary(const void *src, const UA_DataType *type,
-			UA_Byte **bufPos, const UA_Byte **bufEnd,
-			UA_exchangeEncodeBuffer exchangeCallback,
-			void *exchangeHandle) UA_FUNC_ATTR_WARN_UNUSED_RESULT;
-}
-
 QUaServer * QUaServer::getServerNodeContext(UA_Server * server)
 {
 	auto context = QUaNode::getVoidContext(UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER), server);

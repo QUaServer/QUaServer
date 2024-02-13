@@ -72,7 +72,7 @@ struct QUaInMemorySerializer
 		qDebug() << header;
 		auto listNodeIds = m_hashNodeTreeData.keys();
 		std::sort(listNodeIds.begin(), listNodeIds.end(),
-		[this, server](const QUaNodeId& nodeId1, const QUaNodeId& nodeId2) -> bool {
+		[server](const QUaNodeId& nodeId1, const QUaNodeId& nodeId2) -> bool {
 			QString browse1 = QUaQualifiedName::reduceXml(server->nodeById(nodeId1)->nodeBrowsePath());
 			QString browse2 = QUaQualifiedName::reduceXml(server->nodeById(nodeId2)->nodeBrowsePath());
 			return browse1 < browse2;
@@ -149,7 +149,6 @@ QUaNode::QUaNode(
 	// list meta props
 	int propCount  = metaObject.propertyCount();
 	int propOffset = QUaNode::getPropsOffsetHelper(metaObject);
-	int numProps   = 0;
 	for (int i = propOffset; i < propCount; i++)
 	{
 		QMetaProperty metaProperty = metaObject.property(i);
@@ -169,8 +168,6 @@ QUaNode::QUaNode(
 			if (propMetaObject->inherits(&metaObject))
 			{ continue; }
 		}
-		// inc number of valid props
-		numProps++;
 		// the Qt meta property name must match the UA browse name
 		QUaQualifiedName browseName = QString::fromUtf8(metaProperty.name());
 		Q_ASSERT(mapChildren.contains(browseName));
@@ -1266,7 +1263,11 @@ QUaNode* QUaNode::cloneNode(
 	auto tmp = QUaNode::getNodeContext(newInstanceNodeId, m_qUaServer->m_server);
 	QUaNode* newInstance = qobject_cast<QUaNode*>(tmp);
 	Q_CHECK_PTR(newInstance);
+
+#if UA_OPEN62541_VER_MINOR < 3
 	UA_NodeId_clear(&newInstanceNodeId);
+#endif
+
 	if (!newInstance)
 	{
 		return newInstance;

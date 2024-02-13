@@ -755,7 +755,9 @@ inline T * QUaServer::createInstance(
 	Q_CHECK_PTR(newInstance);
     Q_ASSERT(newInstance->parent() == parentNode);
 	// return c++ instance
+#if UA_OPEN62541_VER_MINOR < 3
 	UA_NodeId_clear(&newInstanceNodeId);
+#endif
 	return newInstance;
 }
 
@@ -1292,7 +1294,9 @@ inline bool QUaNode::deserializeInternal(
         // get new c++ instance created in UA constructor
         auto instance = QUaNode::getNodeContext(newInstanceNodeId, this->m_qUaServer->m_server);
         // return c++ instance
+#if UA_OPEN62541_VER_MINOR < 3
         UA_NodeId_clear(&newInstanceNodeId);
+#endif
         // deserialize (recursive)
         bool ok = instance->deserializeInternal<T>(
             deserializer,
